@@ -1,0 +1,22 @@
+node_modules/
+dist/
+build/
+coverage/
+*.log
+.DS_Store
+
+# secrets
+.env
+.env.*
+!.env.example
+
+# base de jeu (SQLite) — jamais versionnée
+*.db
+*.db-wal
+*.db-shm
+data/
+
+# outils
+.turbo/
+.vite/
+*.tsbuildinfo
