@@ -39,7 +39,7 @@ Scope npm : `@for/*` (prive, jamais publie ; `"private": true` partout).
 | `@for/content` | `packages/content` | Donnees de jeu versionnees (JSON) + registre typé + libelles francais. Aucun acces disque a l'execution. | `@for/contracts` |
 | `@for/testkit` | `packages/testkit` | RNG scriptes, constructeurs de fixtures, runner de corpus dores, assertions de domaine. | `@for/engine`, `@for/contracts` |
 | `@for/db` | `packages/db` | Schema Drizzle, migrations SQL, ouverture SQLite WAL, repositories, journal d'evenements, snapshots. | `drizzle-orm`, `better-sqlite3`, `@for/contracts` |
-| `@for/ai` | `packages/ai` | Client Claude, assemblage de contexte, prompts, surface d'outils, parseurs de sortie, **assertions de style** (partagees eval / post-filtre), construction des requetes de forge et de chronique. **Pas de persistance, pas d'ordonnancement de job.** | `@anthropic-ai/sdk`, `@for/contracts`, `@for/content` |
+| `@for/ai` | `packages/ai` | **Adaptateurs du port du conteur** (`02-mj-ia.md` §0.3 a §0.5), assemblage de contexte, prompts, surface d'outils, parseurs de sortie, **assertions de style** (partagees eval / post-filtre), construction des requetes de forge et de chronique. **Pas de persistance, pas d'ordonnancement de job, aucune lecture de `process.env`.** | `@anthropic-ai/sdk` (**optionnelle** : seul l'adaptateur `anthropic` l'utilise), `@for/contracts`, `@for/content` |
 | `@for/server` | `packages/server` | Fastify : HTTP, OAuth Discord, sessions, hub WebSocket, **service applicatif de table** (orchestration intent -> engine -> db -> diffusion -> IA). | Fastify & co, tous les packages ci-dessus |
 | `@for/client` | `packages/client` | SPA Vite + React. Affichage, saisie d'intentions, rendu du journal. | `react`, `@for/contracts`, `@for/engine` (lecture seule) |
 | `@for/ai-eval` | `packages/ai-eval` | Harnais d'eval des sorties IA : corpus de cas, sorties enregistrees, runners N0/N1/N2, graders. **Ne contient aucune assertion** : elles vivent dans `@for/ai/src/assertions/`. | `@for/ai`, `@for/content`, `@for/testkit` |
@@ -165,7 +165,7 @@ feeders-of-runeterra/
   prettier.config.js
   tsconfig.json                       # solution-style : references vers chaque package
   vitest.workspace.ts
-  turbo.json                          # ou pnpm -r ; voir 2.2
+  turbo.json                          # Turborepo — decision actee (ADR 0001)
   README.md
   CLAUDE.md                           # instructions agent : rappel des invariants + commandes
   .env.example
@@ -197,18 +197,44 @@ Scripts racine :
 ```
 pnpm dev            # turbo run dev --parallel   (server tsx watch + client vite)
 pnpm build
-pnpm verify         # lint + format:check + typecheck + deps + test  <- porte de merge locale
+pnpm verify         # voir la definition exacte ci-dessous  <- porte de merge locale
 pnpm test
+pnpm lint           # turbo run lint
+pnpm typecheck      # tsc -b --pretty false
+pnpm format:check   # prettier --check .
+pnpm format         # prettier --write .
+pnpm depcruise      # depcruise --config .dependency-cruiser.cjs packages tooling
+pnpm check:workspace # scripts/check-workspace.ts
 pnpm test:golden    # corpus dores uniquement
 pnpm golden:update  # regenere les corpus (GOLDEN_UPDATE=1)
-pnpm sim            # @for/sim CLI
+pnpm sim            # @for/sim CLI  (les sous-commandes : pnpm sim run|list|record|replay|fuzz)
 pnpm db:generate    # drizzle-kit generate
+pnpm db:check-schema # drizzle-kit check + dump normalise == schema.expected.sql
 pnpm db:migrate
 pnpm db:studio
 pnpm db:seed
 pnpm content:index  # scripts/generate-content-index.ts
-pnpm ai:eval
+pnpm content:check  # chargeur 4 passes ; sort en code 1 sur la moindre erreur
+pnpm db:reset       # rm data/app.db* + migrate + seed  <- commande du quotidien
+pnpm db:rebuild     # reconstruit les projections depuis le journal
+pnpm db:check       # 12 oracles d'integrite
+pnpm eval:offline   # N0 — zero appel API, tourne sur chaque PR
+pnpm eval:record    # rafraichit les sorties enregistrees de N0 (necessite un fournisseur configure)
+pnpm eval:live      # N1 — necessite un fournisseur configure ; --provider=<id> pour en cibler un autre
+pnpm eval:judge     # N2
+pnpm eval:probe     # sonde un fournisseur candidat contre le corpus d'assertions (M0-31)
 ```
+
+**Cette liste est exhaustive et contractuelle.** Toute commande citee dans un critere
+d'acceptation de `docs/M0-TASKS.md` ou dans un job de CI doit y figurer ; `scripts/check-workspace.ts`
+echoue si le `package.json` racine perd l'une d'elles. Les commandes d'exploitation citees
+par `03-donnees.md` mais **hors M0** (`db:snapshot`, `db:gc`, `db:backfill`,
+`db:export-campaign`, `db:import-campaign`, `db:purge-player`, `hooks:install`) ne sont pas
+livrees en M0 et ne doivent apparaitre dans aucun critere d'acceptation de ce jalon.
+
+`pnpm verify` = `format:check` + `lint` + `typecheck` + `depcruise` + `check:workspace` +
+`content:check` + `test` + `test:golden` + `eval:offline`. C'est exactement la porte de merge
+locale : si elle passe, les jobs 2 a 10 de la CI passent.
 
 ### 2.3 `packages/engine`
 
@@ -438,19 +464,26 @@ moteur. Interdiction d'ecrire a la main une interface qui duplique un `z.output`
 
 ### 2.5 `packages/content`
 
+Les **donnees de jeu** vivent a la racine du depot dans `content/` (arborescence exhaustive :
+`03-donnees.md` §4.1). `packages/content` ne contient que le chargeur, le registre typé et
+les libelles d'interface.
+
 ```
+content/                           # A LA RACINE DU DEPOT, pas dans packages/
+  manifest.json
+  moves/*.json  champions/*.json  regions/*.json  oracles/*.json
+  tables/{pay-the-price,presages}.json  assets/*.json
+  conditions.json  truths/*.json
+  fallbacks/narration.json         # gabarits de la narration de repli (moteur)
+
 packages/content/
   data/
-    champions/ashe.json ... (20 fiches ecrites a la main en V1)
-    oracles/{action-theme,places,names,npc-roles,yes-no}.json
-    tables/{pay-the-price,omens}.json
-    regions/{avarosa,frostguard,winters-claw,ursine,...}.json
-    moves/*.json                 # texte francais des mouvements
-    labels/{attributes,gauges,outcomes,ui}.json
+    labels/{attributes,gauges,outcomes,ui}.json   # libelles d'interface uniquement
   src/
     index.ts                     # registre COMPLET — serveur / sim uniquement
     ui.ts                        # sous-entree "@for/content/ui" : libelles seuls, leger
-    generated/index.ts           # GENERE — imports statiques de tous les JSON
+    generated/index.ts           # GENERE — imports statiques de tous les JSON de content/
+    load.ts                      # loadContent(): ContentBundle, 4 passes (03-donnees.md §4.8)
     registry.ts                  # getChampion(), listChampions(), getOracle(), ...
     validate.ts                  # validateContent(): parse tout via @for/contracts/content
     manifest.ts                  # hash de contenu + CONTENT_VERSION
@@ -478,55 +511,96 @@ packages/db/
     client.ts        # openDatabase(path): Database — PRAGMA journal_mode=WAL, foreign_keys=ON,
                      #   busy_timeout=5000, synchronous=NORMAL
     schema/
-      index.ts  users.ts  sessions.ts  tables.ts  members.ts  characters.ts
-      events.ts  snapshots.ts  chronicle.ts  ai-calls.ts  reservations.ts
+      index.ts  players.ts  auth-sessions.ts  oauth-states.ts  campaigns.ts
+      campaign-members.ts  play-sessions.ts  events.ts  snapshots.ts
+      projections.ts   # characters, progress_tracks, clocks, entities, champion_locks
+      ai.ts            # chronicles, chronicle_jobs, champion_sheets, ai_calls, ai_turn_renders
+      intents.ts  content-packs.ts
     repositories/
       events.ts      # appendEvents (transaction), readSince(seq), lastSeq
-      tables.ts  characters.ts  users.ts  chronicle.ts  aiCalls.ts
+      campaigns.ts  characters.ts  players.ts  chronicles.ts  aiCalls.ts
     migrate.ts       # runMigrations(db) — appelee au demarrage du conteneur
-    seed/demo.ts     # seed de demo M0 : 1 table, 3 persos, ~40 evenements
+    rebuild.ts       # db:rebuild — tronque les projections, rejoue le journal
+    check.ts         # db:check — les 12 oracles d'integrite (03-donnees.md §7.3)
+    seed/demo.ts     # seed de demo M0 : 1 campagne, 3 persos, 248 evenements
+                     #   (`--minimal` s'arrete a la fin de la 1re scene, ~40 evenements)
   tests/
     migrations.test.ts    # migre a blanc sur base memoire, puis verifie le schema
     events-repo.test.ts   # append-only, seq monotone, transaction atomique
 ```
 
-`events` est la table sacree : `PRIMARY KEY (campaign_id, seq)`, insertion uniquement, aucun
-`UPDATE`/`DELETE` (garanti par un trigger SQLite `BEFORE UPDATE/DELETE ... RAISE(ABORT)`).
-Detail des colonnes : `docs/design/02-data-model.md`.
+`events` est la table sacree : PK `id` (ULID), index unique `(campaign_id, seq)`, insertion
+uniquement, aucun `UPDATE`/`DELETE` (triggers SQLite `RAISE(ABORT)`), plus un trigger
+`events_seq_dense` qui refuse tout `seq` non alloue par `campaigns.seq`.
+**DDL complet, catalogue des 71 types d'evenements, migrations et exploitation :
+`docs/design/03-donnees.md`, qui fait autorite sur la base.**
 
 ### 2.7 `packages/ai`
+
+L'arborescence qui fait autorite est celle de `02-mj-ia.md` §10 ; celle-ci en est le reflet.
+**Aucun fichier de ce paquet ne nomme un fournisseur en dehors de `narrator/adapters/`**, et
+aucun ne lit `process.env` : ce sont les deux frontieres qui rendent l'eval executable hors
+serveur et le conteur remplacable sans toucher a la couche de jeu.
 
 ```
 packages/ai/
   src/
-    index.ts
-    client.ts             # createClaudeClient(config) — cle API lue par le serveur, injectee ici
-    models.ts             # MODELS = { narration: 'sonnet-5', forge: 'opus-5', chronicle: 'opus-5' }
+    index.ts              # seule surface publique
+    narrator/
+      port.ts             # re-export du port (02-mj-ia.md §0.1) + NarratorError
+      select.ts           # selectNarrator(config): NarratorPort — AUCUN acces a process.env
+      adapters/{stub,anthropic,openai-compatible,ollama}.ts
+      # LE SEUL dossier du paquet qui connaisse un fournisseur : identifiant de modele,
+      # code d'arret, mise en cache, format d'appel d'outils, classe d'exception de SDK.
+      # Il n'existe AUCUN client de fournisseur ailleurs (pas de `src/client.ts`).
+    prompts/
+      conteur.system.ts   # CONTEUR_SYSTEM_PROMPT + CONTEUR_PROMPT_VERSION
+      conteur.campaign.ts # buildCampaignBlock()
+      chronicle.system.ts  forge.system.ts
     context/
-      assemble.ts         # assembleNarrationContext(input): PromptPayload
-      budget.ts           # bornes de tokens par section
-    prompts/              # .md versionnes, charges par import ?raw
-      gm-system.md  narration-user.md  forge-system.md  chronicle-system.md
+      builder.ts          # construction de la NarrateRequest (02-mj-ia.md §4.1)
+      budget.ts           # estimateur local + echelle de troncature T1->T8
+      scene-render.ts     # rendu DETERMINISTE du bloc <scene> depuis SceneState (§4.5)
     tools/
       index.ts            # TOOL_REGISTRY
-      get-state.ts  get-lore.ts  roll-oracle.ts        # lecture
-      propose-npc.ts  propose-clock.ts  propose-price.ts # PROPOSITION -> Intent
+      definitions.ts      # TOOL_DEFINITIONS : les 12 outils, ORDRE FIGE, + TOOLS_VERSION
+      handlers.ts         # execution des lectures, validation des propositions
+      # lecture     : get_state, get_lore, get_chronicle, check_name_allowed, roll_oracle
+      # proposition : propose_npc_introduce, propose_clock_create, propose_clock_advance,
+      #               propose_thread_open, propose_lore_fact, propose_scene_transition,
+      #               propose_vow_hook
+      # Il n'existe AUCUN outil de prix, et il n'existe plus de `price_choice` :
+      # le moteur tire le d12 de « payer le prix », applique l'entree tiree et la
+      # transmet au conteur comme un FAIT IMPOSE (02-mj-ia.md §3.4, 03-donnees.md §3.4).
+      # `propose_scene_transition` ne porte QU'UN LIEU : pas de `time_shift`.
     outputs/
-      narration.ts  forge.ts  chronicle.ts             # safeParse + repli
-    eval/
-      cases/*.json        # cas d'eval (entree figee + criteres)
-      runner.ts  graders/{schema,lockout,fact-fidelity,style}.ts
-      report.ts
+      narration.ts  forge.ts  chronicle.ts   # safeParse + repli
+      scene.ts            # F1->F8 puis mergeSceneBlock S1->S10 (PURE, 02 §2.3 / §4.7.3)
+      refusal.ts          # proveRefusal R1->R7 (PURE, 02 §4.8.2)
+    narration/
+      run.ts              # appel streame + boucle d'outils bornee AU-DESSUS du port
+      postfilter.ts       # importe ../assertions
+    assertions/*.ts       # SOURCE UNIQUE — partagees avec @for/ai-eval ET le post-filtre
+    chronicle/{build,validate}.ts     # C1->C9 (PURES)
+    forge/{build,validate}.ts         # V1->V12 (PURES)
   tests/
-    tool-surface.test.ts  context-budget.test.ts  outputs.test.ts
+    tool-surface.test.ts  prompt-size.test.ts  tools.snapshot.json
+    narrator-port.contract.test.ts  narrator-errors.test.ts  no-env.test.ts
+    spec-neutrality.test.ts  degradation.test.ts
+    context-budget.test.ts  outputs.test.ts  scene-merge.test.ts  refusal-proof.test.ts
 ```
 
-`@for/ai` ne connait ni SQLite ni Fastify : il recoit un `NarrationRequest` deja hydrate.
-C'est ce qui permet a `eval/runner.ts` de tourner sur fixtures.
+**Il n'y a pas de dossier `eval/` ici.** Les corpus, les runners N0/N1/N2 et les graders vivent
+dans `@for/ai-eval`, qui depend de `@for/ai` et **jamais l'inverse** (§1) ; les assertions, elles,
+restent ici parce qu'elles servent aussi de post-filtre d'execution. Reintroduire un `eval/` dans
+ce paquet recreerait le cycle que `dependency-cruiser` interdit.
 
-**Verrouillage de distribution.** `assembleNarrationContext` injecte toujours
-`reservedChampions` et `allowedNpcs`. Le grader `lockout` echoue si une sortie mentionne un
-champion reserve. Le serveur refait la verification a la reception (defense en profondeur) :
+`@for/ai` ne connait ni SQLite ni Fastify : il recoit un `NarrationBrief` deja hydrate.
+C'est ce qui permet aux runners de `@for/ai-eval` de tourner sur fixtures, sans base et sans cle.
+
+**Verrouillage de distribution.** `context/builder.ts` injecte toujours
+`reservedChampions` et `allowedNpcs`. L'assertion `no_reserved_champion` echoue si une sortie
+mentionne un champion reserve. Le serveur refait la verification a la reception (defense en profondeur) :
 `packages/server/src/ai/lockout.ts`.
 
 ### 2.8 `packages/server`
@@ -551,11 +625,24 @@ packages/server/
     game/
       campaign-service.ts    # LE point d'orchestration (voir signature ci-dessous)
       intent-pipeline.ts  # validation -> autorisation -> decide -> persist -> diffuse -> narre
-      narrator.ts         # Narrator (interface) + ClaudeNarrator + StubNarrator
+      write-queue.ts      # une file par campagne ; code de refus `move_in_progress`
+      revert.ts           # revertTurn(campaignId, correlationId, reason) — LE seul chemin
+                          #   d'annulation (03-donnees.md §3.7), partage par la correction
+                          #   d'administration et par le droit de refus du conteur
       snapshots.ts        # politique de snapshot (tous les 200 evenements)
       chronicle.ts        # declenchement de la compaction
+    ai/                   # tout ce qui, dans la couche IA, touche persistance, verrous, diffusion
+      narrator.ts         # construit NarratorConfig depuis env.ts puis appelle selectNarrator()
+                          #   — LE SEUL endroit du serveur qui lise la config du conteur
+      scene-state.ts      # fusion de l'etat de scene ; emet scene.facts_updated si delta (02 §4.7)
+      refusal.ts          # applique un refus prouve : revertTurn + quota (02 §4.8)
+      broadcast.ts        # NarrationBroadcast : fragments, buffer, rattrapage (02 §6)
+      lockout.ts          # revalidation des champions reserves (defense en profondeur)
+      chronicle-worker.ts  forge-worker.ts
+      calls.ts            # journalisation ai_calls + compteur de cout + coupe-circuit
   tests/
-    http/*.test.ts  ws/*.test.ts  game/*.test.ts
+    http/*.test.ts  ws/*.test.ts  game/*.test.ts  ai/*.test.ts
+    proposal-surface.test.ts     # invariant 1 : les TROIS listes closes (03-donnees.md §0.5)
 ```
 
 ```ts
@@ -573,13 +660,27 @@ export interface SubmitIntentResult {
 }
 export interface CampaignService {
   submitIntent(input: SubmitIntentInput): Promise<Result<SubmitIntentResult, AppError>>;
-  getSnapshot(campaignId: CampaignId): Promise<{ state: CampaignState; lastSeq: number }>;
+  /** Projection par spectateur : les lignes `visibility: 'gm'` sont retirees. */
+  getSnapshot(campaignId: CampaignId, viewerId: PlayerId): Promise<{ state: TableStateDto; lastSeq: number }>;
   readEventsSince(campaignId: CampaignId, seq: number): Promise<readonly PersistedEvent[]>;
 }
 
-// src/game/narrator.ts — permet a @for/sim de tourner sans appel IA
-export interface Narrator {
-  narrate(brief: NarrationBrief, ctx: NarrationContext): AsyncIterable<NarrationChunk>;
+// src/ai/narrator.ts — le serveur ne connait que le port (02-mj-ia.md §0.1).
+// `NARRATOR_PROVIDER=stub` permet a @for/sim et a la CI de tourner sans reseau.
+import type { NarratorPort, NarratorConfig } from '@for/contracts';
+import { selectNarrator } from '@for/ai';
+
+export function buildNarrator(env: Env): NarratorPort {
+  return selectNarrator({
+    provider: env.NARRATOR_PROVIDER,
+    baseUrl: env.NARRATOR_BASE_URL ?? null,
+    apiKey: env.NARRATOR_API_KEY ?? null,
+    model: env.NARRATOR_MODEL ?? null,
+    modelStructured: env.NARRATOR_MODEL_STRUCTURED ?? null,
+    tools: env.NARRATOR_TOOLS,
+    timeoutMs: env.NARRATOR_TIMEOUT_MS,
+    contextWindowTokens: env.NARRATOR_CONTEXT_WINDOW ?? null,
+  } satisfies NarratorConfig);
 }
 ```
 
@@ -595,7 +696,7 @@ packages/client/
     api/http.ts  api/queries.ts       # TanStack Query
     ws/socket.ts        # connexion, reconnexion exponentielle, resume via lastSeq
     ws/store.ts         # reduce local des s2c.event -> etat affiche (miroir, jamais autorite)
-    routes/{Login,TableList,TableRoom,CharacterPicker}.tsx
+    routes/{Login,CampaignList,TableRoom,CharacterPicker}.tsx
     features/table/{Log,Sheet,Gauges,MoveBar,Clocks,Vows}/
     components/ui/*     # primitives sans logique metier
     styles/
@@ -619,23 +720,26 @@ sur les evenements recus **uniquement pour l'affichage** ; a chaque `s2c.snapsho
 | Fichier de source | `kebab-case.ts` | `face-danger.ts`, `campaign-service.ts` |
 | Composant React | `PascalCase.tsx`, un composant exporte par defaut par fichier | `MoveBar.tsx` |
 | Hook React | `use-*.ts`, export nomme `useX` | `use-table-socket.ts` |
-| Type / interface | `PascalCase`, **sans** prefixe `I` | `TableState` |
-| Schema Zod | prefixe `z` + `PascalCase` | `zTableState` |
+| Type / interface | `PascalCase`, **sans** prefixe `I` | `CampaignState` |
+| Schema Zod | prefixe `z` + `PascalCase` | `zCampaignState` |
 | Type deduit d'un schema | suffixe `Dto` si distinct du type moteur | `TableStateDto` |
 | Constante module | `SCREAMING_SNAKE_CASE` | `TICKS_PER_MILESTONE` |
 | Fonction | `camelCase`, verbe en tete | `rollChallenge`, `appendEvents` |
-| Type d'evenement | `domain.past_tense` en anglais | `dice.challenge_rolled`, `gauge.changed` |
-| Type d'intention | `domain.imperative` en anglais | `move.strike`, `table.join` |
+| Type d'evenement | `domain.past_tense` en anglais ; **catalogue ferme** : `03-donnees.md` §3.4 | `roll.action_resolved`, `character.gauge_changed` |
+| Type d'intention | `domain.imperative` en anglais | `move.strike`, `campaign.join` |
 | Message WS | `c2s.*` / `s2c.*` | `c2s.intent`, `s2c.event` |
-| Table SQL / colonne | `snake_case` pluriel pour les tables | `campaign_events`, `created_at` |
+| Table SQL / colonne | `snake_case` pluriel pour les tables | `campaign_members`, `created_at` |
 | Id de contenu | slug latin minuscule sans accent | `ashe`, `pay-the-price` |
 | Branche git | `m<jalon>/<scope>-<sujet>` | `m0/engine-challenge-roll` |
-| Commit | Conventional Commits, scope = package | `feat(engine): add omen detection` |
+| Commit | Conventional Commits, scope = package | `feat(engine): add presage detection` |
 
-Les identifiants de mecanique gardent leur nom **francais** cote donnees (`vif`, `coeur`, `fer`,
-`ombre`, `esprit`, `vigueur`, `ame`, `vivres`, `souffle`, `franche`, `partielle`, `echec`,
-`presage`) : ce sont des valeurs de domaine, pas du code. Les fonctions qui les manipulent sont
-en anglais (`burnMomentum`, `gaugeDelta`).
+**Regle de langue, sans exception** (arbitrage : `docs/ARCHITECTURE.md` §4) : les **valeurs**
+d'enumeration de mecanique sont en **francais** — attributs `vif|coeur|fer|ombre|esprit`,
+jauges `vigueur|ame|vivres`, issues `franche|partielle|echec`, rangs
+`genant|dangereux|redoutable|extreme|epique`, `presage`. Elles apparaissent telles quelles dans
+les colonnes SQL, les payloads d'evenements, les schemas Zod et les JSON de contenu.
+Tout le reste — noms de tables, de colonnes, de champs, de fonctions, de types, de fichiers,
+d'identifiants de mouvement (`face-danger`, `probe-a-soul`) — est en **anglais**.
 
 ### 3.2 Style TypeScript
 
@@ -658,6 +762,9 @@ Trois familles, jamais melangees :
 1. **`RuleViolation` (moteur).** Une intention invalide au regard des regles n'est pas une
    exception : `decide()` retourne `err({ code, details })`. `code` appartient a une union
    fermee (`'move_in_progress' | 'gauge_out_of_range' | 'unknown_move' | 'character_dead' | ...`).
+   **Il n'y a pas de verrou de tour** : la table est libre, les ecritures sont serialisees par
+   campagne (`write-queue.ts`). `move_in_progress` ne se declenche que si l'acteur a un jet en
+   attente de decision (fenetre de brulure du souffle).
    Aucun texte humain dans le moteur.
 2. **`AppError` (serveur).** Classe unique, `packages/server/src/errors.ts` :
 
@@ -696,7 +803,7 @@ Cote client, aucune erreur n'est affichee brute : mapping `AppErrorCode -> texte
 - Un appel IA log toujours : `model`, `promptTokens`, `outputTokens`, `latencyMs`, `attempt`,
   `outcome` (`ok|invalid_output|timeout|refused`). Ces memes champs sont persistes dans `ai_calls`.
 - Redaction : `req.headers.authorization`, `req.headers.cookie`, `*.accessToken`,
-  `*.refreshToken`, `ANTHROPIC_API_KEY`, `DISCORD_CLIENT_SECRET`.
+  `*.refreshToken`, `NARRATOR_API_KEY`, `DISCORD_CLIENT_SECRET`.
 - **Jamais** de texte de narration complet en `info` (volume) : `debug` seulement, tronque a 500
   caracteres ; le texte integral vit en base.
 - `@for/engine`, `@for/contracts` et `@for/content` **ne loggent pas** (pas de `console.*`,
@@ -712,8 +819,8 @@ Cote client, aucune erreur n'est affichee brute : mapping `AppErrorCode -> texte
   dore doit etre justifiee dans le message de commit.
 - **Fixtures** : `packages/testkit/src/fixtures/`, jamais dupliquees dans un package consommateur.
 - Un test ne cree jamais de fichier hors `os.tmpdir()`, n'ouvre jamais le reseau, n'appelle
-  jamais l'API Claude (interdit par `packages/ai/tests/setup.ts` qui stub `fetch` et fait
-  echouer tout appel sortant).
+  jamais un fournisseur de modele — quel qu'il soit (interdit par `packages/ai/tests/setup.ts`
+  qui stub `fetch` et fait echouer tout appel sortant ; en CI, `NARRATOR_PROVIDER=stub`).
 
 ---
 
@@ -862,7 +969,7 @@ serveur toutes les 25 s, fermeture si pas de `pong` en 60 s.
 | `c2s.typing` | `{ typing: boolean }` | Ephemere, non journalise |
 | `c2s.resume` | `{ sinceSeq: number }` | Redemande les evenements manquants |
 | `c2s.pong` | `{}` | Reponse au heartbeat |
-| `c2s.subscribe_narration` | `{ eventId: string }` | Redemande le flux de narration d'un evenement (apres reconnexion) |
+| `c2s.resume_narration` | `{ narrationId: string, lastChunk: number }` | Redemande les fragments manquants du flux de narration en cours (apres reconnexion). Ne declenche **jamais** une seconde generation. |
 
 Il n'existe **aucun** message client contenant une jauge, un resultat de de, un `GameEvent`, un
 `CampaignState` ou un identifiant de PNJ a faire apparaitre. `zC2SMessage` est verifie par test
@@ -873,9 +980,9 @@ refusee en revue.
 
 | `intent.type` | Charge | Notes |
 |---|---|---|
-| `table.join` | `{ characterId }` | rattachement d'un joueur a son champion |
-| `table.leave` | `{}` | |
-| `character.create_draft` | `{ championSlug, spread, background }` | declenche la forge IA si la fiche n'est pas ecrite a la main |
+| `campaign.join` | `{ characterId }` | rattachement d'un joueur a son champion |
+| `campaign.leave` | `{}` | |
+| `character.create_draft` | `{ championSlug, spread, background }` | declenche la forge IA si la fiche n'est pas ecrite a la main. **Passe par le meme journal que la partie** : c'est `character.created` qui pose le verrou de distribution |
 | `move.face_danger` | `{ attribute, description, bonus? }` | affronter le danger |
 | `move.secure_advantage` | `{ attribute, description, bonus? }` | assurer un avantage |
 | `move.gather_information` | `{ description, bonus? }` | attribut force a `esprit` par le moteur |
@@ -884,12 +991,18 @@ refusee en revue.
 | `move.endure_harm` | `{ amount? }` | encaisser |
 | `move.endure_cold` | `{ }` | endurer le froid |
 | `move.swear_a_vow` | `{ text, rank }` | jurer un serment |
-| `progress.roll` | `{ trackId }` | jet de progression (serment / affrontement) |
-| `momentum.burn` | `{ rollId }` | bruler le souffle sur un jet en attente |
-| `oracle.ask` | `{ question, odds }` | oracle oui/non ponderes |
-| `oracle.draw` | `{ campaignId: OracleTableId }` | table evocatrice |
+| `move.reach_a_milestone` | `{ trackId }` | atteindre un jalon : marque des crans |
+| `move.fulfill_your_vow` | `{ trackId }` | jet de progression de resolution |
+| `move.forsake_your_vow` | `{ trackId, reason }` | renier un serment |
+| `momentum.burn` | `{ rollId }` | bruler le souffle sur un jet dont la fenetre est ouverte (`roll.action_resolved.burnWindow`) |
+| `oracle.ask` | `{ question, likelihood }` | oracle oui/non pondere (d100, seuils du contenu) |
+| `oracle.draw` | `{ oracleId: OracleId }` | table evocatrice |
 | `speech.say` | `{ channel, text }` | genere par `c2s.speak` |
-| `session.begin` / `session.end` | `{}` | bornes de seance (utilisees par la chronique) |
+| `play_session.begin` / `play_session.end` | `{}` | bornes de seance (utilisees par la chronique) |
+
+Il n'existe **aucune** intention `gauge.set`, `clock.advance`, `price.apply` ni `narration.*` :
+ces effets ne sont produits que par le moteur, en consequence d'un mouvement resolu. Une
+proposition de nouvelle intention qui transporterait un resultat est refusee en revue.
 
 Le client **propose** ; le serveur peut refuser (`s2c.rejected`). Le client n'affiche jamais un
 resultat avant d'avoir recu le `s2c.event` correspondant (pas d'optimistic update sur le jeu ;
@@ -900,17 +1013,23 @@ autorise uniquement pour `speech.say`, marque `pending`).
 | `t` | Charge utile `p` |
 |---|---|
 | `s2c.welcome` | `{ protocolVersion, playerId, campaignId, you: { characterId \| null }, contentVersion, lastSeq }` |
-| `s2c.snapshot` | `{ state: CampaignStateDto, lastSeq }` — envoye si `lastSeq` client trop ancien ou absent |
+| `s2c.snapshot` | `{ state: TableStateDto, lastSeq }` — projection par spectateur ; envoyee si `lastSeq` client trop ancien ou absent |
 | `s2c.event` | `{ event: GameEvent }` + `seq` dans l'enveloppe. **Unique vecteur de mutation d'etat.** |
 | `s2c.events_batch` | `{ events: Array<{ seq, event }> }` — rattrapage apres `c2s.resume` |
-| `s2c.narration_started` | `{ eventId, narrationId }` |
-| `s2c.narration_delta` | `{ narrationId, text }` — flux token par token |
-| `s2c.narration_done` | `{ narrationId, eventId, text, model, degraded: boolean }` |
+| `s2c.narration_started` | `{ narrationId, eventSeq, actorCharacterId, chunk: 0 }` |
+| `s2c.narration_delta` | `{ narrationId, chunk, text }` — fragments coalesces par fenetres de 50 ms |
+| `s2c.narration_snapshot` | `{ narrationId, chunk, text, status }` — buffer complet : arrivant en cours de generation, rattrapage apres coupure |
+| `s2c.narration_done` | `{ narrationId, eventSeq, text, model, source: 'ai' \| 'engine' }` |
+| `s2c.narration_error` | `{ narrationId, code: 'rate_limited' \| 'refused' \| 'engine_fallback' \| 'aborted' \| 'action_impossible' }` — `action_impossible` est le **droit de refus du conteur** (`02-mj-ia.md` §4.8) : il est emis **apres** `s2c.narration_done`, parce que la prose est valide et doit s'afficher ; ce sont les `s2c.event` du `system.reverted` qui suivent qui retirent les lignes du tour annule |
 | `s2c.rejected` | `{ intentId, code: RuleViolationCode \| AppErrorCode, message }` |
 | `s2c.error` | `{ code, message, requestId, intentId? }` |
 | `s2c.presence` | `{ members: Array<{ playerId, characterId \| null, online, typing }> }` |
 | `s2c.ping` | `{}` |
 | `s2c.resync_required` | `{ reason }` — le client doit refaire `c2s.hello` |
+
+**Vocabulaire des compteurs.** `seq` (enveloppe) est le **numero de journal**, present sur
+`s2c.event` uniquement. `chunk` (charge utile de narration) est le **numero de fragment** d'un
+flux de narration. Les deux n'ont pas la meme origine ; ne jamais les confondre.
 
 **Ordre et livraison.** Les `s2c.event` d'une table arrivent dans l'ordre strict des `seq`, sans
 trou. Le client qui detecte un trou envoie `c2s.resume { sinceSeq }`. La narration est
@@ -919,8 +1038,9 @@ l'invariant 1 — la partie avance meme si le modele est indisponible.
 
 ### 5.5 Codes de fermeture
 
-`4001` protocol_version · `4002` unauthenticated · `4003` forbidden_table ·
-`4004` table_not_found · `4008` rate_limited · `4009` payload_too_large · `4010` server_shutdown.
+`4001` protocol_version · `4002` unauthenticated · `4003` forbidden_campaign ·
+`4004` campaign_not_found · `4008` rate_limited · `4009` payload_too_large ·
+`4010` server_shutdown · `4011` campaign_rebuilding (reconstruction de projections en cours).
 
 ### 5.6 Limitation de debit
 
@@ -939,12 +1059,16 @@ Par connexion : 5 `c2s.intent` / 10 s (rafale 10), 20 `c2s.speak` / 60 s, 2 `c2s
 | `GET` | `/api/auth/discord/start` | redirection OAuth (state + PKCE en cookie `HttpOnly`) |
 | `GET` | `/api/auth/discord/callback` | echange du code, creation d'utilisateur, cookie de session |
 | `POST` | `/api/auth/logout` | invalide la session |
-| `GET` | `/api/me` | `{ user, characters, tables }` |
-| `GET` | `/api/campaigns` · `POST /api/campaigns` | liste / creation de table |
+| `GET` | `/api/me` | `{ player, characters, campaigns }` |
+| `GET` | `/api/campaigns` · `POST /api/campaigns` | liste / creation de campagne |
 | `GET` | `/api/campaigns/:id` | metadonnees + `lastSeq` |
 | `GET` | `/api/campaigns/:id/log?sinceSeq=` | journal pagine (rendu du carnet de campagne) |
 | `GET` | `/api/content/manifest` | `{ contentVersion, counts, etag }` |
 | `GET` | `/api/content/:kind/:id` | fiche de contenu (cache `immutable` clefe sur `contentVersion`) |
+| `GET` | `/api/admin/health` | **admin uniquement** : `quick_check`, taille du WAL, age de la derniere sauvegarde, espace disque, hash de contenu (03-donnees.md §6.7) |
+
+`/healthz` et `/readyz` ne font **jamais** de controle profond : un WAL volumineux ou une
+sauvegarde vieillissante ne doivent pas sortir le conteneur de la rotation.
 
 Cookie de session : `fr_session`, `HttpOnly`, `Secure`, `SameSite=Lax`, duree 30 jours,
 rotation a chaque connexion. CSRF : les mutations exigent l'en-tete `X-Requested-With: for-app`
@@ -967,10 +1091,11 @@ Aucune suite ne depend de l'ordre d'execution ni d'un etat global partage.
 | `contracts` | parse/refuse sur cas limites ; invariant 3 (aucun `c2s.*` porteur d'etat) ; exhaustivite des unions (chaque `GameEvent.type` du moteur a un schema) ; compatibilite ascendante : un evenement dore de version anterieure doit toujours parser | |
 | `content` | tout JSON valide contre son schema ; unicite des ids ; references croisees resolues (region -> champion, oracle -> table) ; index genere a jour ; les 20 fiches manuelles couvrent les champs obligatoires | |
 | `testkit` | ses propres helpers (le RNG scripte epuise -> erreur explicite ; le runner dore detecte une derive) | |
-| `db` | migration a blanc puis assertions de schema ; append-only (l'`UPDATE` d'un evenement doit lever) ; monotonie de `seq` sous concurrence ; atomicite d'`appendEvents` ; seed de demo idempotent. Base sur fichier temporaire, pas `:memory:` (WAL) | |
+| `db` | migration a blanc puis assertions de schema ; migration depuis `prev-release.sqlite` ; append-only (l'`UPDATE` d'un evenement doit lever) ; densite de `seq` ; atomicite d'`appendEvents` ; seed de demo **deterministe octet pour octet** ; les 12 oracles de `db:check`, dont la reconstruction idempotente. Base sur fichier temporaire, pas `:memory:` (WAL) | |
 | `ai` | surface d'outils (invariant 1) ; budget de contexte (invariant 2) ; parseurs de sortie sur corpus de sorties modele **enregistrees** ; verrouillage de distribution. **Zero appel reseau** : `setup.ts` fait echouer tout `fetch` | tout test qui appelle l'API |
-| `server` | routes via `app.inject()` ; garde d'auth ; pipeline d'intention de bout en bout avec `StubNarrator` et RNG seede ; WS : handshake, ordre des `seq`, resume apres coupure, idempotence d'un `intentId` rejoue, limitation de debit | serveur reellement en ecoute |
+| `server` | routes via `app.inject()` ; garde d'auth ; pipeline d'intention de bout en bout avec l'adaptateur `stub` et RNG seede ; WS : handshake, ordre des `seq`, resume apres coupure, idempotence d'un `intentId` rejoue, limitation de debit | serveur reellement en ecoute |
 | `client` | composants purs (Vitest + Testing Library) ; le store WS applique correctement les evenements ; ecrasement par `s2c.snapshot`. E2E Playwright : non bloquant en M0 | |
+| `ai-eval` | chemin **N0** uniquement en CI bloquante : instantane de requete octet a octet, assertions rejouees sur sorties enregistrees, faits dores de chronique. **Zero appel API, zero cle** | N1 / N2 sur chaque PR (cout, non-determinisme) |
 | `sim` | voir §7.4 ; les scenarios eux-memes sont la suite de tests | |
 
 ### 7.2 Fixtures (`@for/testkit`)
@@ -996,10 +1121,12 @@ toucher cinquante fichiers.
 
 Trois corpus obligatoires en M0 :
 
-1. `engine/tests/golden/challenge-matrix.golden.json` — produit cartesien
-   attribut (1..3) x bonus (-2..+4) x souffle (-6..+10) x paires de des de defi remarquables,
-   avec pour chaque ligne le `ChallengeRoll` complet attendu. C'est l'oracle de reference des
-   regles : si quelqu'un modifie le calcul, la diff est lisible ligne a ligne.
+1. `engine/tests/golden/challenge-matrix.golden.json` — **pas** un produit cartesien complet :
+   uniquement les combinaisons qui portent une decision, soit environ 300 lignes — bornes du
+   souffle (-6, -1, 0, +1, +2, +9, +10), egalite `|souffle| == de d'action`, franchissement du
+   plafond a 10, des de defi egaux, et les trois issues autour de chaque seuil. C'est l'oracle
+   de reference des regles : si quelqu'un modifie le calcul, la diff reste lisible.
+   Un corpus genere « large » produirait une diff illisible et ne serait plus relu.
 2. `engine/tests/golden/replay-*.golden.json` — pour chaque scenario du simulateur, l'etat final
    serialise. Verifie invariants 1 et 4.
 3. `ai/eval/golden/context-*.golden.txt` — le prompt assemble pour des entrees figees. Un
@@ -1019,7 +1146,7 @@ packages/sim/
   src/
     cli.ts                    # POINT D'ENTREE : pnpm sim run|list|record|replay
     harness.ts                # createSimHarness(options): SimHarness
-    scripted-narrator.ts      # implemente Narrator sans IA (texte deterministe)
+    scripted-narrator.ts      # implemente NarratorPort sans IA (texte deterministe)
     scenario.ts               # types + chargeur
     checks/
       invariants.ts           # etat valide apres CHAQUE evenement
@@ -1043,13 +1170,14 @@ packages/sim/
 1. Cree une base SQLite dans un dossier temporaire et applique **les vraies migrations**.
 2. Construit l'application avec `buildApp()` et des dependances injectees :
    `createSeededRng(scenario.seed)`, `fixedClock(scenario.startedAt)`, `counterIds()`,
-   `ScriptedNarrator`, contenu reel. Fastify n'ecoute pas ; le WS est court-circuite : le
+   `ScriptedNarrator` (une implementation du port), contenu reel. Fastify n'ecoute pas ; le WS est court-circuite : le
    harnais parle au `TableHub` en memoire via une paire de sockets factices, ce qui **teste le
    vrai routage de messages** (`c2s.*` -> pipeline -> `s2c.*`).
 3. Cree les joueurs et leurs champions selon le scenario (auth stubee au niveau de la garde,
    pas du pipeline de jeu).
-4. Deroule la liste d'`Intent` du scenario, joueur par joueur, en respectant les tours et les
-   attentes declarees (`waitFor: "s2c.event"`).
+4. Deroule la liste d'`Intent` du scenario, joueur par joueur, en respectant les attentes
+   declarees (`waitFor: "s2c.event"`). **Il n'y a pas de verrou de tour** : l'ordre est celui du
+   scenario, la serialisation est celle de la file d'ecriture par campagne.
 5. Apres **chaque** evenement : `checkInvariants(state)` ; toute violation arrete le scenario
    avec le `seq` fautif et le dernier intent.
 6. A la fin : rejoue tout le journal depuis l'etat initial et exige l'egalite stricte avec le
@@ -1066,6 +1194,9 @@ packages/sim/
   production ; consequence directe de l'invariant 4).
 - `pnpm sim fuzz --iterations=500 --seed=…` : genere des intentions aleatoires **valides
   syntaxiquement** et verifie qu'aucune ne produit d'exception non geree ni d'etat invalide.
+  Il ne couvre **pas** les trames malformees : ce cas est traite par un fuzz separe au niveau
+  de `zC2SEnvelope.safeParse` (`packages/contracts/tests/envelope-fuzz.test.ts`), sinon un
+  plantage de parsing passe entre les mailles.
   Un rejet propre (`s2c.rejected`) est un succes ; un `500` ou un etat invalide est un echec.
   La graine d'un echec est imprimee pour reproduction exacte.
 
@@ -1088,29 +1219,45 @@ Runner `ubuntu-latest`, Node 24, `pnpm/action-setup`, cache pnpm + cache Turbore
 | 4 | `typecheck` | `pnpm tsc -b` | **oui** |
 | 5 | `deps` | `pnpm depcruise` + `pnpm check:workspace` (graphe, cycles, purete du moteur, scripts obligatoires) | **oui** |
 | 6 | `test:unit` | `pnpm turbo run test` avec couverture ; seuils : `engine` 95 %/90 %, `contracts` 90 %, `db` 80 %, global 70 % | **oui** |
-| 7 | `test:golden` | `pnpm test:golden` ; echoue aussi si `GOLDEN_UPDATE` est present dans l'environnement | **oui** |
-| 8 | `migrations` | `pnpm db:generate --check` (aucune migration en attente) + migration a blanc + `pnpm db:seed` sur base jetable | **oui** |
-| 9 | `content` | `pnpm content:index && git diff --exit-code` + validation du contenu | **oui** |
-| 10 | `sim` | `pnpm sim run --format=json` (tous les scenarios) + `pnpm sim fuzz --iterations=200 --seed=$GITHUB_SHA` | **oui** |
-| 11 | `build` | `pnpm turbo run build` | **oui** |
-| 12 | `docker` | `docker build -f infra/Dockerfile .` (sans push sur PR) | **oui** |
-| 13 | `e2e` | Playwright | non (informatif en M0) |
-| 14 | `ai-eval` | workflow separe | non (voir ci-dessous) |
 
-Les jobs 2 a 5 tournent en parallele apres 1 ; 6 a 10 apres 5 ; 11 et 12 apres 6.
+> **Ou vivent ces seuils.** Dans `vitest.workspace.ts` a la racine et dans le
+> `vitest.config.ts` de chaque paquet concerne (`coverage.thresholds`), ecrits **une fois**
+> par la tache qui cree le squelette du monorepo. La CI ne fait que lancer `vitest` : un seuil
+> qui n'existe que dans un tableau de documentation n'est pas un seuil.
+| 7 | `test:golden` | `pnpm test:golden` ; echoue aussi si `GOLDEN_UPDATE` est present dans l'environnement | **oui** |
+| 8 | `migrations` | `pnpm db:check-schema` (aucune migration en attente, dump == `schema.expected.sql`) + migration a blanc + `pnpm db:seed` sur base jetable | **oui** |
+| 9 | `content` | `pnpm content:check` (chargeur 4 passes, code 1 en cas d'erreur) + `pnpm content:index && git diff --exit-code` | **oui** |
+| 10 | `ai-eval-offline` | `pnpm eval:offline` — niveau **N0**, zero appel API, zero cle (02-mj-ia.md §8.5) | **oui** |
+| 11 | `sim` | `pnpm sim run --format=json` (tous les scenarios). **`pnpm sim fuzz` n'est PAS dans la porte de PR en M0** : la trame malformee — le seul cas dangereux — est deja couverte par `packages/contracts/tests/envelope-fuzz.test.ts` (job 6), et fuzzer des intentions valides contre un moteur sans feature de jeu achete peu pour un risque d'instabilite reel sur une porte visee a 8 minutes. Le mode existe et tourne a la demande ; il devient bloquant en M1 (M0-28) | **oui** |
+| 12 | `build` | `pnpm turbo run build` | **oui** |
+| — | `docker` | `docker build -f infra/Dockerfile .` | **non bloquant sur PR**, bloquant en post-merge sur `main` |
+| — | `e2e` | Playwright | **hors M0** (voir ci-dessous) |
+| — | `ai-eval-live` | workflow separe `ai-eval.yml` | non (voir ci-dessous) |
+
+Les jobs 2 a 5 tournent en parallele apres 1 ; 6 a 11 apres 5 ; 12 apres 6.
 Concurrence : `group: ci-${{ github.ref }}`, `cancel-in-progress: true`.
 Protection de branche sur `main` : PR obligatoire, 1 revue, checks 1-12 verts, historique lineaire
 (squash merge uniquement), pas de push direct.
 
+**Budget de temps.** La porte de PR vise **moins de 8 minutes**. `docker build` (module natif
+`better-sqlite3`) est deplace en post-merge precisement pour tenir ce budget : une porte lente
+est une porte que les agents contournent. Si le build alpine devient instable, le repli est
+`node:24-bookworm-slim` — decide d'avance, pas a chaud.
+
+**Playwright est hors M0.** Le cout d'installation en CI n'est pas justifie tant qu'il n'y a
+aucune feature de jeu a piloter. Les tests de bout en bout de M0 sont ceux de `@for/sim`, qui
+couvrent le vrai pipeline sans navigateur. Playwright revient en M1, non bloquant d'abord.
+
 `.github/workflows/ai-eval.yml` : nocturne (`cron`) + manuel + sur PR portant le label
-`run-ai-eval`. Consomme `ANTHROPIC_API_KEY` (secret de depot), lance `pnpm ai:eval`, publie le
+`run-ai-eval`. Consomme `NARRATOR_API_KEY` (secret de depot), lance `pnpm eval:live` puis `pnpm eval:judge`, publie le
 rapport en commentaire de PR et en artefact. Il n'est **pas** bloquant (cout et non-determinisme)
 mais une regression de score ouvre une issue automatiquement. Les graders `schema` et `lockout`
 sont, eux, deterministes : ils sont reproduits en test unitaire sur sorties enregistrees dans le
 job 6 (bloquant).
 
 **Definition de « rouge »** : un agent developpeur lance `pnpm verify` en local ; s'il passe, les
-jobs 2 a 9 passent. Les jobs 10 a 12 sont les seuls a exiger un environnement complet.
+jobs 2 a 10 passent (`verify` inclut `content:check`, `test:golden` et `eval:offline`). Seuls
+les jobs 11 (`sim`) et 12 (`build`) exigent un environnement complet.
 
 ---
 
@@ -1140,7 +1287,14 @@ redemarre, l'ancien reste en place tant que le healthcheck n'est pas vert.
 ### 9.2 Composition
 
 `infra/docker-compose.yml` : services `app` (image GHCR, `restart: unless-stopped`, volume
-`/srv/for/data:/data`) et `caddy` (volumes `caddy_data`, `caddy_config`, `Caddyfile`).
+`/srv/feeders/data:/app/data`, **`deploy.replicas: 1` obligatoire**) et `caddy` (volumes
+`caddy_data`, `caddy_config`, `Caddyfile`).
+
+> **SQLite WAL suppose un ecrivain unique.** Il n'existe aucune montee en charge horizontale :
+> deux instances de `app` sur le meme fichier corrompraient la serialisation par campagne et
+> feraient perdre les buffers de narration en memoire. C'est ecrit noir sur blanc dans
+> `docs/runbook/deploy.md`, et le compose ne declare qu'un replica. Passer a plusieurs
+> instances exige de changer de base — c'est une decision d'architecture, pas de deploiement.
 `Caddyfile` : TLS automatique, reverse proxy vers `app:8787`, `header` HSTS, compression,
 et `@ws` pour l'upgrade WebSocket (pas de buffering, `flush_interval -1`).
 
@@ -1159,7 +1313,7 @@ et `@ws` pour l'upgrade WebSocket (pas de buffering, `flush_interval -1`).
    restaure la sauvegarde **seulement** si une migration a ete appliquee, et echoue le workflow.
 
 Environnement GitHub `production` avec approbation manuelle requise, secrets :
-`DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`, `ANTHROPIC_API_KEY`, `DISCORD_CLIENT_ID`,
+`DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`, `NARRATOR_API_KEY`, `DISCORD_CLIENT_ID`,
 `DISCORD_CLIENT_SECRET`, `SESSION_SECRET`.
 
 ### 9.4 Variables d'environnement (`.env.example`, schema `zEnv`)
@@ -1168,27 +1322,48 @@ Environnement GitHub `production` avec approbation manuelle requise, secrets :
 NODE_ENV=production
 PORT=8787
 PUBLIC_URL=https://feeders.example.com
-DATABASE_PATH=/data/for.sqlite
+DATABASE_PATH=/app/data/app.db
 SESSION_SECRET=            # 32+ octets
 DISCORD_CLIENT_ID=
 DISCORD_CLIENT_SECRET=
 DISCORD_REDIRECT_URI=https://feeders.example.com/api/auth/discord/callback
-ANTHROPIC_API_KEY=
-AI_MODEL_NARRATION=claude-sonnet-5
-AI_MODEL_FORGE=claude-opus-5
-AI_ENABLED=true            # false => StubNarrator (mode degrade volontaire)
+NARRATOR_PROVIDER=anthropic   # stub | anthropic | openai-compatible | ollama
+NARRATOR_BASE_URL=            # obligatoire pour openai-compatible et ollama
+NARRATOR_API_KEY=             # peut etre vide pour ollama et stub
+NARRATOR_MODEL=               # vide => defaut de l'adaptateur
+NARRATOR_MODEL_STRUCTURED=    # vide => defaut de l'adaptateur
 LOG_LEVEL=info
 ```
+
+Variables d'appoint, toutes facultatives et toutes propres a un adaptateur : `NARRATOR_TOOLS`
+(`on` | `off` | `probe`, defaut `probe`), `NARRATOR_TIMEOUT_MS`, `NARRATOR_CONTEXT_WINDOW`.
 
 `env.ts` parse au demarrage ; toute variable manquante ou invalide arrete le processus avec un
 message explicite. Aucune variable n'est lue ailleurs que dans `env.ts`.
 
+**Resolution du modele, ordre unique** : `campaigns.settings_json.models.<usage>` (par campagne)
+> `NARRATOR_MODEL` / `NARRATOR_MODEL_STRUCTURED` (par deploiement) > le defaut de l'adaptateur
+selectionne. `<usage>` vaut `narration` (pour `narrer()`) ou `structured` (pour `structurer()` :
+forge, chronique, juge). Il n'existe **aucune** table de modeles partagee dans le code : un
+identifiant de modele est une donnee d'adaptateur, jamais une constante du projet.
+
+**`NARRATOR_PROVIDER=stub` est le seul interrupteur de mode degrade volontaire** : il selectionne
+une implementation du port qui rend les gabarits de repli du moteur sans aucune sortie reseau.
+C'est ce qui permet a `@for/sim` et a `pnpm eval:offline` de tourner sans cle. L'ancienne
+variable `AI_ENABLED` n'existe plus.
+
 ### 9.5 Sauvegarde et restauration
 
-`infra/scripts/backup.sh` : `sqlite3 "$DATABASE_PATH" "VACUUM INTO '/backups/for-$(date -u +%FT%TZ).sqlite'"`,
-compression, retention 7 jours + 4 hebdomadaires, copie hors site optionnelle (`restic`).
-Cron hote quotidien + appel pre-deploiement. `infra/scripts/restore.sh` documente dans
+`infra/scripts/backup.sh` : `VACUUM INTO` (**jamais** `cp` sur un fichier WAL vivant),
+verification `integrity_check` + `foreign_key_check` de la copie, compression `zstd`,
+chiffrement `age`, retention **14 quotidiennes + 8 hebdomadaires**, copie hors site `restic`.
+Script complet et procedure de restauration pas a pas : `03-donnees.md` §6.3 a §6.6.
+Cron hote toutes les 6 h + appel pre-deploiement. `infra/scripts/restore.sh` documente dans
 `docs/runbook/backup-restore.md` ; la restauration est **testee** une fois en M0 (case de sortie).
+
+**Litestream n'est pas livre en M0** : pas de vrais joueurs, donc pas de minutes de partie a
+perdre. Le fichier `litestream.yml` et le service compose sont ecrits dans le runbook et
+actives au premier joueur reel — c'est une ligne a decommenter, pas un chantier.
 
 ---
 
@@ -1201,7 +1376,8 @@ M0 est termine quand, sur un poste neuf :
    affiche `s2c.welcome`, le snapshot du seed et la presence, sans aucune feature de jeu ;
 3. la connexion Discord fonctionne de bout en bout en local ;
 4. `pnpm sim run` execute les 7 scenarios, tous verts, en moins de 20 s ;
-5. `pnpm ai:eval --dry-run` produit un rapport sur fixtures sans appeler l'API ;
+5. `pnpm eval:offline` (N0) produit un rapport sur fixtures **sans cle d'API** ;
+5bis. `pnpm db:check` passe les 12 oracles d'integrite sur la base semee ;
 6. la CI est verte sur une PR de demonstration et un `push` sur `main` deploie sur le VPS ;
 7. une modification volontaire d'une constante de regle (par exemple `TICKS_PER_MILESTONE.dangereux`)
    fait echouer, **en local et en moins de 30 secondes**, au moins : un test unitaire du moteur,
@@ -1209,11 +1385,14 @@ M0 est termine quand, sur un poste neuf :
 
 ---
 
-## 11. Points laisses ouverts
+## 11. Ce qui est traite ailleurs
 
-Ils sont traites dans les documents suivants, pas ici :
-
-- Modele de donnees detaille, colonnes JSON, politique de snapshot -> `02-data-model.md`.
-- Formules exactes des mouvements, tables d'oracle, table du prix -> `03-rules-engine.md`.
-- Prompts, decoupage du contexte, schema de forge, compaction de chronique -> `04-ai-game-master.md`.
-- Ecrans, ergonomie de la table, rendu du journal -> `05-ux-table.md`.
+- Decisions transverses, arbitrages entre documents, vocabulaire -> **`docs/ARCHITECTURE.md`**
+  (document de reference, a lire en premier).
+- Socle technique et son raisonnement -> `docs/adr/0001-socle-technique.md`.
+- Schema SQLite, catalogue des evenements, migrations, format du contenu, sauvegarde et
+  restauration -> `docs/design/03-donnees.md`.
+- Prompts, surface d'outils, construction du contexte, chronique, forge, harnais d'eval ->
+  `docs/design/02-mj-ia.md`.
+- Ecrans et ergonomie de la table : **non specifie**, hors M0. A ecrire en M1
+  (`docs/design/04-ux-table.md`), en respectant le protocole WS de la §5.

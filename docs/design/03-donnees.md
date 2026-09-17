@@ -3,9 +3,11 @@
 Statut : **prescriptif pour M0**. Ce document fait autorité sur le schéma SQLite, le
 journal d'événements, les migrations, le format du contenu versionné, les fixtures et
 l'exploitation du fichier de base.
+**Autorité supérieure : `docs/ARCHITECTURE.md`.** Les divergences de vocabulaire entre les
+trois specs y ont été tranchées et sont déjà appliquées ci-dessous (§0.5).
 
 Public visé : l'agent développeur qui implémente `packages/db`, `packages/content`,
-`packages/contracts` et `apps/server` au jalon M0, puis celui qui prend une tâche au
+`packages/contracts` et `packages/server` au jalon M0, puis celui qui prend une tâche au
 jalon suivant et doit savoir en quelques secondes s'il a cassé quelque chose.
 
 ---
@@ -17,7 +19,7 @@ Rappel des quatre invariants, traduits en contraintes de données :
 | Invariant | Conséquence sur les données |
 |---|---|
 | 1. Le moteur décide, l'IA raconte | Tout résultat de dé est un **fait persisté** (`roll.*`) écrit **avant** l'appel au modèle. Une sortie IA n'entre jamais en base autrement que comme `narration.*` (texte) ou `*.proposal` (proposition rejetable). |
-| 2. La mémoire est dans la base | L'état structuré vit dans les projections, la mémoire narrative dans `chronicles` (compaction hiérarchique). La fenêtre de contexte est reconstruite à chaque appel, jamais accumulée. |
+| 2. La mémoire est dans la base | L'état structuré vit dans les projections, la mémoire narrative dans `chronicles` (**un document unique versionné**, §1.5 — la compaction hiérarchique est abandonnée, cf. `ARCHITECTURE.md` §4.3). La fenêtre de contexte est reconstruite à chaque appel, jamais accumulée. |
 | 3. Le serveur est l'autorité | Le client écrit dans `intents` (intentions), jamais dans `events`. Aucune table d'état n'est exposée en écriture. |
 | 4. Tout état de partie est rejouable | `events` est append-only (triggers `RAISE(ABORT)`), les projections et `snapshots` sont des **caches reconstructibles**. |
 
@@ -55,14 +57,14 @@ PRAGMA wal_autocheckpoint = 1000; -- ~4 Mo de WAL avant checkpoint
 ```
 
 `foreign_keys` est la seule qui se rate silencieusement : le harnais de test contient
-un cas doré qui vérifie qu'une FK invalide **lève** (`test/db/pragmas.test.ts`).
+un cas doré qui vérifie qu'une FK invalide **lève** (`packages/db/tests/pragmas.test.ts`).
 
 ### 0.3 Écrivain unique
 
 SQLite n'a qu'un écrivain. Toutes les écritures de partie passent par un **sérialiseur
 par campagne** côté serveur (une file par `campaign_id`). Une transaction d'écriture
 tient au plus quelques millisecondes : allocation de `seq`, insertion des événements,
-mise à jour des projections. Aucun appel réseau (Claude, Discord) n'est fait à
+mise à jour des projections. Aucun appel réseau (conteur, Discord) n'est fait à
 l'intérieur d'une transaction — c'est une règle de revue.
 
 ### 0.4 Zones du schéma
@@ -71,7 +73,7 @@ l'intérieur d'une transaction — c'est une règle de revue.
 |---|---|---|---|
 | **A — Plateforme** | `players`, `auth_sessions`, `campaigns`, `campaign_members`, `play_sessions`, `content_packs`, `intents`, `ai_calls` | Les lignes elles-mêmes | Non — à sauvegarder |
 | **B — Journal** | `events` | Append-only | Non — **c'est** la sauvegarde |
-| **C — Caches** | `snapshots`, `characters`, `progress_tracks`, `clocks`, `entities`, `campaign_champion_locks` | `events` | **Oui**, `pnpm db:rebuild` |
+| **C — Caches** | `snapshots`, `characters`, `progress_tracks`, `clocks`, `entities`, `scene_state`, `campaign_champion_locks` | `events` | **Oui**, `pnpm db:rebuild` |
 | **D — Mémoire IA** | `chronicles`, `champion_sheets` | Produites par l'IA, validées serveur | Non (coût d'un ré-appel), mais non critiques |
 
 La zone C est jetable : c'est le test le plus fort de l'invariant 4. La CI exécute
@@ -82,23 +84,27 @@ Une duplication est **volontaire** : `campaign_members` (zone A, c'est le contr�
 d'accès, lu à chaque requête HTTP) et l'événement `party.member_joined` (zone B, c'est
 l'histoire). L'ACL ne doit jamais dépendre d'un rejeu.
 
-### 0.5 Réconciliation avec `01-architecture.md` et `02-mj-ia.md`
+### 0.5 Vocabulaire arbitré (décisions actées, plus rien à trancher)
 
-Les trois documents ont été écrits en parallèle et divergent sur quelques noms. Ce
-tableau fait foi pour l'implémentation ; les points marqués **à trancher** doivent l'être
-avant la première migration, parce qu'après, ce sont des renommages de colonnes.
+Les trois documents ont été écrits en parallèle et divergeaient sur quelques noms. Le tech
+lead a tranché ; les décisions sont **déjà appliquées** dans les trois fichiers. Ce tableau
+sert de mémoire, pas de débat. Référence : `docs/ARCHITECTURE.md` §4.
 
-| Concept | `01-architecture.md` | Ce document | Décision |
-|---|---|---|---|
-| L'entité de jeu persistante | `tables` / `table_id` / `TableState` | `campaigns` / `campaign_id` / `CampaignState` | **À trancher.** Recommandation : garder `campaigns` en base (c'est le mot du cahier des charges, et « la table `tables` » est illisible en SQL) et **`TableState` comme nom du DTO** envoyé au client, puisque « table » est le mot de l'interface. `TableState = project(CampaignState, viewerId)`. |
-| Identité Discord | `users` | `players` | **À trancher.** Recommandation : `players` (mot du cahier des charges, et `users` se confondra avec l'admin). |
-| Session web (cookie) | `sessions` | `auth_sessions` | `auth_sessions`. `sessions` seul est ambigu avec la séance de jeu. |
-| Séance de jeu (soirée) | — | `play_sessions` | `play_sessions`. |
-| Participations | `members` | `campaign_members` | Alignement sur le nom de l'entité retenue. |
-| Verrouillage de distribution | `reservations` | `campaign_champion_locks` | Peu importe ; c'est la table qui répond à l'outil `check_name_allowed` de `02-mj-ia.md`. |
-| Compaction de mémoire | `chronicle` (module, clé de modèle) | `chronicles` (table) | Table au pluriel, clé de modèle `chronicle`. Corrigé ci-dessous. |
-| Cadence d'instantané | tous les 200 événements | 250 | **200**, aligné sur `01`. Corrigé ci-dessous. |
-| Renvoi de fichier | `01` cite `docs/design/02-data-model.md` | ce fichier est `03-donnees.md` | Corriger le renvoi dans `01`. |
+| Concept | Nom retenu | Note |
+|---|---|---|
+| L'entité de jeu persistante | `campaigns` / `campaign_id` / `CampaignState` | « la table `tables` » est illisible en SQL, et `campagne` est le mot du cahier des charges |
+| Ce que voit un joueur | `TableState` (**DTO seulement**) | `TableState = project(CampaignState, viewerId)` : retire les lignes `visibility = 'gm'`. Déclaré dans `packages/contracts/src/dto/table-state.ts` |
+| Identité Discord | `players` / `player_id` / `PlayerId` | `users` se confondrait avec l'administration |
+| Session web (cookie) | `auth_sessions` | `sessions` seul est ambigu avec la séance de jeu |
+| Séance de jeu (soirée) | `play_sessions` | |
+| Participations | `campaign_members` | c'est l'ACL |
+| Verrouillage de distribution | `campaign_champion_locks` | alimente `check_name_allowed` |
+| Compaction de mémoire | table `chronicles`, clé de modèle `chronicle` | modèle de document : §1.5, aligné sur `02-mj-ia.md` §5 |
+| Cadence d'instantané | **200** événements + jalons | |
+| Présage (dés de défi identiques) | `presage`, table de contenu `presages` | ni `omen` ni `portent` |
+| Issue d'un jet | `franche` / `partielle` / `echec` | valeurs de domaine en français (§0.1) |
+| Jauges | `vigueur` / `ame` / `vivres` | idem |
+| Ordre du tour | **il n'y en a pas** | la table est libre ; les écritures sont sérialisées par campagne. Le code de refus est `move_in_progress`, jamais `not_your_turn` |
 
 Rattachements à `02-mj-ia.md` (couche IA), sans ambiguïté :
 
@@ -106,18 +112,63 @@ Rattachements à `02-mj-ia.md` (couche IA), sans ambiguïté :
 |---|---|---|
 | `get_state` | `CampaignState` chargé (§3.5), projeté et filtré par visibilité | non |
 | `get_lore` | `ContentBundle` (fichiers JSON, §4) + `entities` | non |
-| `get_chronicle` | `chronicles` où `superseded_by IS NULL`, `scope` = la « section » demandée | non |
+| `get_chronicle` | la ligne `chronicles` de `version` maximale pour la campagne ; la « section » est un champ du document | non |
 | `check_name_allowed` | `campaign_champion_locks` | non |
 | `roll_oracle` | tire via le moteur, écrit **un** `roll.oracle_resolved` / `roll.yes_no_resolved` | oui, journal seul |
 | `propose_npc_introduce` | — | via validation serveur → `entity.introduced` |
 | `propose_clock_create` / `propose_clock_advance` | `clocks` | via validation serveur → `clock.created` / `clock.advanced` |
 | `propose_thread_open` | — | via validation serveur → `entity.introduced` (`kind: 'thread'`) |
 | `propose_lore_fact` | — | via validation serveur → `entity.updated` |
+| `propose_scene_transition` | `entities` (lieux) | via validation serveur → `scene.started` / `scene.ended` |
+| bloc `<scene_apres>` *(pas un outil)* | `scene_state`, `entities`, `characters` | via validation et fusion serveur → `scene.facts_updated`, seulement si la fusion produit un changement (`02-mj-ia.md` §4.7) |
+| `refus` du bloc `<scene_apres>` *(pas un outil)* | `scene_state`, `entities`, inventaire | via **preuve** serveur → `system.reverted` sur le groupe `correlation_id` du tour, ou rien du tout (`02-mj-ia.md` §4.8) |
+| `propose_vow_hook` | — | **aucun événement d'état** : l'offre est éphémère et seul le joueur peut jurer (`move.swear_a_vow`). Comme toute proposition, elle produit malgré tout son `narration.gm_proposal` puis son `narration.proposal_accepted`/`_rejected` — une proposition sans trace est un bug |
 
-`chronicle_version`, renvoyé par `get_chronicle`, vaut
-`SELECT count(*) FROM chronicles WHERE campaign_id = ?` : monotone, trivial à calculer,
-suffisant pour que le modèle détecte qu'il lit une mémoire plus fraîche qu'à son appel
-précédent.
+**Règle de fermeture de l'invariant 1, vérifiée en CI** : aucune proposition du modèle ne peut
+produire un événement `character.*` ni `roll.*`. Il existe **trois** circuits par lesquels le
+modèle atteint le journal **d'état**, et **trois listes closes**, tenues séparément. Le test
+`packages/server/tests/proposal-surface.test.ts` échoue si l'une d'elles est élargie.
+
+Ces listes portent sur l'**état de partie**. La famille `narration.*` en est exclue par nature :
+`narration.gm_message`, `narration.gm_proposal`, `narration.gm_failed`,
+`narration.proposal_accepted` et `narration.proposal_rejected` sont la **trace** de ce que le
+modèle a dit et de ce que le serveur en a fait. Ils ne portent aucune valeur de jeu, aucun
+`EngineEffect`, et le réducteur ne les lit pas pour calculer un état. C'est pour cela qu'ajouter
+`kind: 'scene_facts'` et `kind: 'refusal'` à `narration.gm_proposal` n'élargit aucune liste
+close : ce qui compte est ce que le **serveur** écrit ensuite, et c'est exactement ce que les
+trois listes énumèrent.
+
+| # | Circuit | Types atteignables, et rien d'autre |
+|---|---|---|
+| 1 | une **proposition** du modèle validée par le serveur — un outil `propose_*` **ou** le bloc `<scene_apres>`, qui n'est pas un outil mais emprunte le même circuit de validation | `entity.introduced`, `entity.updated`, `entity.status_changed`, `clock.created`, `clock.advanced`, `scene.started`, `scene.ended`, `scene.facts_updated` |
+| 2 | `roll_oracle`, seul outil de **lecture** qui écrive | `roll.oracle_resolved`, `roll.yes_no_resolved` |
+| 3 | le **droit de refus** du conteur (`02-mj-ia.md` §4.8) | `system.reverted` |
+
+**Pourquoi trois listes et pas une.** Fondre les trois donnerait une liste unique de onze types
+où plus personne ne saurait quel garde-fou protège quoi ; élargir l'une en croyant toucher
+l'autre deviendrait une erreur d'inattention. Chacune a ses préconditions propres, écrites au
+même endroit que le test qui les vérifie.
+
+**Le circuit 3 mérite sa justification, parce qu'il touche des jauges.** `system.reverted`
+restaure des valeurs, et l'invariant 1 interdit au modèle de décider d'une mutation, même
+indirectement. La brèche est fermée par la **nature de ce que le modèle transmet** : une `cause`
+d'une énumération de quatre valeurs et un nom de cible. Aucune valeur, aucun `targetSeqs`, aucun
+`EngineEffect`. Le serveur recalcule seul la preuve depuis l'état structuré **au moment du
+`move.declared`**, jamais depuis l'issue du jet, et il calcule seul les séquences à annuler
+depuis le `correlation_id` du tour. Une annulation ne produit donc aucune valeur nouvelle : elle
+ne fait que rejouer le journal sans les lignes annulées. Si l'état ne prouve pas la cause, le
+refus tombe sans effet. Le détail, y compris le test anti-abus qui rejoue le corpus avec les dés
+inversés, est en `02-mj-ia.md` §4.8.
+
+`scene.facts_updated` appartient au circuit 1 et ne porte **que** des faits de présence : lieu,
+personnes présentes, personnes parties. Jamais une jauge, jamais un chiffre, jamais un statut
+d'entité — le passage d'un PNJ en `dead` reste au moteur via `entity.status_changed`, et la
+validation ramène à `parti` toute cause `mort` que le journal n'établit pas (`02-mj-ia.md`
+§4.7.3, règle S4).
+
+`chronicle_version`, renvoyé par `get_chronicle`, est la colonne `chronicles.version` :
+entier monotone par campagne, alloué à l'insertion. Le modèle détecte ainsi qu'il lit une
+mémoire plus fraîche qu'à son appel précédent.
 
 Toute proposition `propose_*` produit, dans **tous** les cas, un
 `narration.proposal_accepted` ou `narration.proposal_rejected` dans le journal. Une
@@ -399,9 +450,9 @@ CREATE TABLE characters (
   attr_esprit       INTEGER NOT NULL CHECK (attr_esprit BETWEEN 1 AND 3),
 
   -- Jauges 0-5.
-  vigor             INTEGER NOT NULL DEFAULT 5 CHECK (vigor    BETWEEN 0 AND 5),
-  soul              INTEGER NOT NULL DEFAULT 5 CHECK (soul     BETWEEN 0 AND 5),
-  supplies          INTEGER NOT NULL DEFAULT 5 CHECK (supplies BETWEEN 0 AND 5),
+  vigueur             INTEGER NOT NULL DEFAULT 5 CHECK (vigueur    BETWEEN 0 AND 5),
+  ame              INTEGER NOT NULL DEFAULT 5 CHECK (ame     BETWEEN 0 AND 5),
+  vivres          INTEGER NOT NULL DEFAULT 5 CHECK (vivres BETWEEN 0 AND 5),
 
   -- Souffle (momentum) -6..+10, départ +2.
   momentum          INTEGER NOT NULL DEFAULT 2  CHECK (momentum BETWEEN -6 AND 10),
@@ -479,7 +530,7 @@ CREATE TABLE clocks (
   campaign_id  TEXT    NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
   title        TEXT    NOT NULL,
   description  TEXT    NOT NULL DEFAULT '',
-  segments     INTEGER NOT NULL CHECK (segments IN (4,6,8,10,12)),
+  segments     INTEGER NOT NULL CHECK (segments IN (4,6,8,10)),
   filled       INTEGER NOT NULL DEFAULT 0 CHECK (filled >= 0),
   status       TEXT    NOT NULL DEFAULT 'ticking'
                  CHECK (status IN ('ticking','filled','resolved','cancelled')),
@@ -499,7 +550,7 @@ CREATE TABLE entities (
   id             TEXT    PRIMARY KEY,
   campaign_id    TEXT    NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
   kind           TEXT    NOT NULL
-                   CHECK (kind IN ('npc','place','faction','item','beast','thread','omen')),
+                   CHECK (kind IN ('npc','place','faction','item','beast','thread','presage')),
   slug           TEXT    NOT NULL,                        -- 'olaf-le-borgne'
   name           TEXT    NOT NULL,
   summary        TEXT    NOT NULL DEFAULT '',             -- 1-2 phrases, injecté au prompt
@@ -516,6 +567,47 @@ CREATE UNIQUE INDEX entities_slug_uq     ON entities (campaign_id, slug);
 CREATE INDEX entities_kind_idx           ON entities (campaign_id, kind, status);
 CREATE INDEX entities_recent_idx         ON entities (campaign_id, last_seen_seq DESC);
 
+-- ------------------------------------------------------------- scene_state
+-- PROJECTION. L'état de scène : où l'on est, qui est là, et qui n'y est PLUS.
+-- Source de vérité : les événements `scene.*` du journal. Reconstruite par le
+-- réducteur, jamais écrite ailleurs.
+--
+-- Pourquoi cette table existe. Le prototype transmettait au conteur les dernières
+-- entrées du journal EN PROSE ; le modèle les réinterprétait, et il a suffi de trois
+-- échanges pour qu'un personnage en fuite se retrouve endormi dans son abri. Les faits
+-- de présence quittent donc la prose et deviennent une donnée : c'est cette table qui
+-- alimente le bloc <scene> du prompt (02-mj-ia.md §4.5) et get_state(scope:'scene').
+--
+-- Une ligne par campagne : une campagne n'a qu'une scène ouverte à la fois.
+-- Pas de ligne = aucune scène en cours (CampaignState.scene vaut null).
+CREATE TABLE scene_state (
+  campaign_id   TEXT    PRIMARY KEY REFERENCES campaigns(id) ON DELETE CASCADE,
+  scene_id      TEXT    NOT NULL,
+  place_id      TEXT    NOT NULL DEFAULT '',
+  place_name    TEXT    NOT NULL DEFAULT '',
+  time_of_day   TEXT    NOT NULL DEFAULT '',
+  -- ScenePresence[] : [{ ref:{kind,id}, name, state, sinceSeq }], 8 au maximum,
+  -- trié par ref.id pour que le rendu du bloc <scene> soit déterministe (cache de prompt).
+  present_json  TEXT    NOT NULL DEFAULT '[]' CHECK (json_valid(present_json)),
+  -- SceneAbsence[] : [{ ref:{kind,id}, name, cause, sinceSeq }], 8 au maximum.
+  -- cause ∈ ('parti','mort','hors_de_portee'). MONOTONE dans une scène : on n'en sort
+  -- que par scene.started, une intention de joueur validée, ou une correction admin.
+  absent_json   TEXT    NOT NULL DEFAULT '[]' CHECK (json_valid(absent_json)),
+  updated_seq   INTEGER NOT NULL,
+  CONSTRAINT scene_state_present_bounded CHECK (json_array_length(present_json) <= 8),
+  CONSTRAINT scene_state_absent_bounded  CHECK (json_array_length(absent_json)  <= 8)
+) WITHOUT ROWID;
+```
+
+Les deux `CHECK` de cardinalité sont une seconde ligne de défense, exactement comme les
+bornes de jauges plus haut : si un bug de fusion laissait passer une neuvième entrée, la
+transaction échoue au lieu d'écrire un contexte qui déborde son budget à chaque tour.
+
+`present_json` et `absent_json` sont du JSON parce que ce sont des listes courtes, de forme
+souple, jamais filtrées en SQL et toujours lues en entier. `scene_id`, `place_id` et
+`updated_seq` sont des colonnes parce qu'on les joint et qu'on les compare.
+
+```sql
 -- ------------------------------------------- campaign_champion_locks
 -- PROJECTION. Verrouillage de distribution : le MJ IA ne doit JAMAIS faire
 -- apparaître un champion réservé (c'est le PJ d'un autre joueur).
@@ -539,47 +631,73 @@ seule voie d'accès.
 
 ### 1.5 Mémoire IA
 
+> **Arbitrage.** Deux modèles de chronique coexistaient : une compaction hiérarchique à
+> trois couches (ce document, version initiale) et un **document unique versionné** avec
+> provenance obligatoire, immuabilité des faits et reconstruction périodique depuis le
+> journal (`02-mj-ia.md` §5). Le second est retenu : la hiérarchie à trois couches empile
+> des résumés de résumés — exactement la dérive que l'invariant 2 doit empêcher — et n'offre
+> aucun mécanisme de détection de reformulation. Le schéma ci-dessous porte le modèle retenu.
+
 ```sql
 -- -------------------------------------------------------------- chronicles
--- Mémoire narrative compactée (invariant 2). Compaction HIÉRARCHIQUE :
---   layer 0 = résumé de scène    (~150 mots, couvre ~20-60 événements)
---   layer 1 = résumé de chapitre (~300 mots, couvre ~8-15 entrées de layer 0)
---   layer 2 = saga de campagne   (~600 mots, couvre tout le layer 1)
--- Le prompt reçoit : layer 2 (toujours) + les 3 derniers layer 1 + les 5 derniers
--- layer 0 + le tail brut d'événements depuis la dernière compaction.
+-- Mémoire narrative compactée (invariant 2). UN DOCUMENT COMPLET PAR VERSION,
+-- append-only : on n'écrase jamais, on ajoute une version. Le contexte lit MAX(version).
+-- Structure du document (ChronicleDoc) et mécanismes anti-dérive : 02-mj-ia.md §5.
+-- Zone D : DÉRIVÉE, donc jetable — elle se reconstruit intégralement depuis `events`.
 CREATE TABLE chronicles (
   id              TEXT    PRIMARY KEY,
-  campaign_id     TEXT    NOT NULL REFERENCES campaigns(id) ON DELETE RESTRICT,
-  layer           INTEGER NOT NULL CHECK (layer IN (0,1,2)),
-  scope           TEXT    NOT NULL DEFAULT 'campaign'
-                    CHECK (scope IN ('campaign','session','character','thread')),
-  scope_ref       TEXT,                                   -- id du personnage / du fil
-  covers_from_seq INTEGER NOT NULL,
-  covers_to_seq   INTEGER NOT NULL,
-  title           TEXT    NOT NULL DEFAULT '',
-  text_md         TEXT    NOT NULL,                       -- français, markdown léger
-  facts_json      TEXT    NOT NULL DEFAULT '[]' CHECK (json_valid(facts_json)),
-  tokens_estimate INTEGER NOT NULL DEFAULT 0,
-  model           TEXT    NOT NULL,                       -- 'claude-opus-5'
-  prompt_version  TEXT    NOT NULL,
+  campaign_id     TEXT    NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+  version         INTEGER NOT NULL,                       -- 1..N, dense, par campagne
+  kind            TEXT    NOT NULL DEFAULT 'incremental'
+                    CHECK (kind IN ('incremental','rebuild','handwritten')),
+  source_event_seq INTEGER NOT NULL,                      -- dernier seq couvert
+  doc_json        TEXT    NOT NULL CHECK (json_valid(doc_json)),   -- ChronicleDoc
+  rendered_md     TEXT    NOT NULL,                       -- projection markdown DÉTERMINISTE
+  token_count     INTEGER NOT NULL DEFAULT 0,             -- mesuré, plafond dur 2500
+  model           TEXT    NOT NULL,                       -- identifiant brut du fournisseur
+  prompt_version  TEXT    NOT NULL,                       -- 'chronicle/1.0.0'
   ai_call_id      TEXT,
-  superseded_by   TEXT    REFERENCES chronicles(id) ON DELETE SET NULL,
-  created_at      INTEGER NOT NULL,
-  CONSTRAINT chronicles_range CHECK (covers_to_seq >= covers_from_seq)
+  created_at      INTEGER NOT NULL
 );
-CREATE INDEX chronicles_live_idx ON chronicles (campaign_id, layer, covers_to_seq DESC)
-  WHERE superseded_by IS NULL;
-CREATE INDEX chronicles_scope_idx ON chronicles (campaign_id, scope, scope_ref);
+CREATE UNIQUE INDEX chronicles_version_uq ON chronicles (campaign_id, version);
+CREATE INDEX chronicles_live_idx ON chronicles (campaign_id, version DESC);
+
+-- ----------------------------------------------------------- chronicle_jobs
+-- Verrou de régénération : UN SEUL job en vol par campagne, avec BAIL qui expire.
+-- Sans expiration, un worker tué laisse une campagne sans mémoire longue pour toujours.
+CREATE TABLE chronicle_jobs (
+  campaign_id      TEXT    PRIMARY KEY REFERENCES campaigns(id) ON DELETE CASCADE,
+  started_at       INTEGER NOT NULL,
+  lease_expires_at INTEGER NOT NULL,                      -- started_at + 10 min
+  source_event_seq INTEGER NOT NULL,
+  attempt          INTEGER NOT NULL DEFAULT 1,
+  worker_id        TEXT    NOT NULL
+) WITHOUT ROWID;
+
+-- --------------------------------------------------------- ai_turn_renders
+-- Rendu FIGÉ d'un tour passé, pour la fenêtre roulante du prompt (02-mj-ia.md §4.1).
+-- Il n'est jamais recalculé : tout recalcul (format de date, ordre de clés, arrondi)
+-- changerait le préfixe et ferait manquer le cache de prompt sur toute la fenêtre.
+CREATE TABLE ai_turn_renders (
+  campaign_id   TEXT    NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+  event_seq     INTEGER NOT NULL,                         -- le roll.* qui ouvre le tour
+  rendered_fact TEXT    NOT NULL,
+  created_at    INTEGER NOT NULL,
+  PRIMARY KEY (campaign_id, event_seq)
+) WITHOUT ROWID;
 ```
 
-Une chronique n'est jamais mise à jour en place : une recompaction insère une nouvelle
-ligne et pose `superseded_by` sur l'ancienne. On garde ainsi l'historique de ce que le
-MJ « croyait savoir » à chaque instant — c'est ce qui permet de déboguer une dérive de
-continuité trois mois plus tard.
+Une chronique n'est jamais mise à jour en place : une régénération insère la version
+suivante. On garde ainsi l'historique de ce que le MJ « croyait savoir » à chaque instant —
+c'est ce qui permet de déboguer une dérive de continuité trois mois plus tard, et de
+comparer deux versions de prompt sur la même campagne.
 
-`facts_json` contient les faits atomiques extraits par le modèle et **validés** contre
-`entities` (un fait qui référence une entité inexistante est écarté au moment de la
-compaction, pas au moment de la lecture).
+Les faits atomiques vivent dans `doc_json.facts`, chacun portant un `event_seq` de
+**provenance obligatoire** : la validation serveur (C2, `02-mj-ia.md` §5.6) rejette tout fait
+dont le `event_seq` n'existe pas dans le journal. Un modèle ne peut donc pas introduire un
+souvenir qu'il a inventé — il n'a pas de numéro d'événement à lui donner. La validation C3
+compare **textuellement** les `statement` à `fact_id` constant : une reformulation silencieuse
+est rejetée. C'est l'anti-dérive principal.
 
 ```sql
 -- --------------------------------------------------------- champion_sheets
@@ -590,13 +708,15 @@ CREATE TABLE champion_sheets (
   champion_id       TEXT    NOT NULL,                     -- slug canonique, ex. 'lissandra'
   campaign_id       TEXT    REFERENCES campaigns(id) ON DELETE SET NULL, -- NULL = cache global
   schema_version    INTEGER NOT NULL,
-  sheet_json        TEXT    NOT NULL CHECK (json_valid(sheet_json)),
-  content_hash      TEXT    NOT NULL,                     -- sha256 du JSON canonique
-  status            TEXT    NOT NULL DEFAULT 'pending_review'
-                      CHECK (status IN ('pending_review','approved','rejected','superseded')),
-  forged_by_player_id TEXT  REFERENCES players(id) ON DELETE SET NULL,
-  model             TEXT    NOT NULL,                     -- 'claude-opus-5'
   prompt_version    TEXT    NOT NULL,
+  sheet_json        TEXT    NOT NULL CHECK (json_valid(sheet_json)),   -- Champion (§4.5)
+  raw_output_json   TEXT    CHECK (raw_output_json IS NULL OR json_valid(raw_output_json)),
+  repairs_json      TEXT    NOT NULL DEFAULT '[]' CHECK (json_valid(repairs_json)),
+  content_hash      TEXT    NOT NULL,                     -- sha256 du JSON canonique
+  status            TEXT    NOT NULL DEFAULT 'active'
+                      CHECK (status IN ('draft','active','approved','rejected','superseded')),
+  forged_by_player_id TEXT  REFERENCES players(id) ON DELETE SET NULL,
+  model             TEXT    NOT NULL,                     -- identifiant brut du fournisseur
   ai_call_id        TEXT,
   review_notes      TEXT,
   created_at        INTEGER NOT NULL,
@@ -604,27 +724,59 @@ CREATE TABLE champion_sheets (
 );
 CREATE UNIQUE INDEX champion_sheets_hash_uq ON champion_sheets (champion_id, content_hash);
 CREATE INDEX champion_sheets_lookup_idx     ON champion_sheets (champion_id, status);
+```
 
+**Portée du cache des fiches forgées — arbitré.** Une fiche forgée est **immédiatement
+jouable** dans la campagne qui l'a demandée (`status: 'active'`, `campaign_id` renseigné) :
+faire attendre une relecture humaine pour créer un personnage rendrait le produit inutilisable.
+Elle n'est **réutilisable par une autre campagne** (`campaign_id IS NULL`) qu'après passage en
+`approved`, et `requireForgeReview` ne gouverne que ce second cas. `status: 'draft'` est
+réservé à l'échec de forge après deux relances : la fiche est conservée pour analyse mais ne
+peut pas être jouée. La promotion vers `content/champions/` reste une pull request manuelle.
+`raw_output_json` et `repairs_json` conservent la sortie brute et la liste des réparations
+serveur (§9.5 de `02-mj-ia.md`) : c'est ce qui permet de mesurer la qualité de la forge
+dans le temps.
+
+```sql
 -- ----------------------------------------------------------------- ai_calls
--- Audit de TOUS les appels au modèle. Alimente le harnais d'éval (M0) et la
--- facture. Aucun appel IA ne part sans une ligne ici.
+-- Audit de TOUS les appels au conteur, quel que soit le fournisseur derrière le
+-- port. Alimente le harnais d'éval (M0) et la facture. Aucun appel ne part sans
+-- une ligne ici. Les colonnes sont écrites dans le vocabulaire DU PORT
+-- (02-mj-ia.md §0.1) : `provider` dit d'où ça vient, `model` garde l'identifiant
+-- brut pour le débogage, et rien d'autre n'est propre à une API.
 CREATE TABLE ai_calls (
   id                 TEXT    PRIMARY KEY,
   campaign_id        TEXT    REFERENCES campaigns(id) ON DELETE SET NULL,
   purpose            TEXT    NOT NULL
-                       CHECK (purpose IN ('narration','forge','chronicle','oracle_flavor','eval')),
-  model              TEXT    NOT NULL,
+                       -- EXACTEMENT les usages du port (02-mj-ia.md §0.1) : 'narration' pour
+                       -- narrer(), 'forge' | 'chronicle' | 'judge' pour structurer(). Rien
+                       -- d'autre n'est appelable, donc rien d'autre ne s'insère ici. Une
+                       -- exécution d'éval se distingue par `eval_tags_json`, pas par `purpose` :
+                       -- un purpose sans usage de port n'a aucune résolution de modèle (§0.6)
+                       -- et produirait un `undefined` en production.
+                       CHECK (purpose IN ('narration','forge','chronicle','judge')),
+  provider           TEXT    NOT NULL                    -- NarratorProviderId (02-mj-ia.md §0.1)
+                       CHECK (provider IN ('stub','anthropic','openai-compatible','ollama')),
+  model              TEXT    NOT NULL,                   -- identifiant BRUT rendu par le fournisseur
   prompt_version     TEXT    NOT NULL,
   system_hash        TEXT    NOT NULL,                    -- sha256 du prompt système rendu
   request_json       TEXT    CHECK (request_json IS NULL OR json_valid(request_json)),
   response_text      TEXT,
   tool_calls_json    TEXT    CHECK (tool_calls_json IS NULL OR json_valid(tool_calls_json)),
-  stop_reason        TEXT,
+  finish_reason      TEXT                                -- NarrateFinish, jamais un code de fournisseur
+                       CHECK (finish_reason IS NULL OR finish_reason IN
+                              ('complete','truncated','tool_call','refused','aborted')),
+  error_code         TEXT,                                -- NarratorErrorCode (02-mj-ia.md §0.1)
+  repair_passes      INTEGER NOT NULL DEFAULT 0,          -- structurer() : 0 = JSON valide du premier coup
   input_tokens       INTEGER NOT NULL DEFAULT 0,
   output_tokens      INTEGER NOT NULL DEFAULT 0,
-  cache_read_tokens  INTEGER NOT NULL DEFAULT 0,
-  cache_write_tokens INTEGER NOT NULL DEFAULT 0,
+  cache_read_tokens  INTEGER NOT NULL DEFAULT 0,          -- 0 si l'adaptateur ne sait pas cacher
+  cache_write_tokens INTEGER NOT NULL DEFAULT 0,          -- idem
   latency_ms         INTEGER NOT NULL DEFAULT 0,
+  trim_level         INTEGER NOT NULL DEFAULT 0 CHECK (trim_level BETWEEN 0 AND 8),
+                                                        -- échelle de troncature T1..T8 appliquée au
+                                                        -- contexte (02-mj-ia.md §4.4). 0 = aucune.
+  context_hash       TEXT,                                -- sha256 du contexte assemblé
   status             TEXT    NOT NULL
                        CHECK (status IN ('ok','refused','invalid_output','error','timeout')),
   error_text         TEXT,
@@ -647,11 +799,11 @@ CREATE TABLE intents (
   campaign_id     TEXT    NOT NULL REFERENCES campaigns(id) ON DELETE RESTRICT,
   player_id       TEXT    NOT NULL REFERENCES players(id) ON DELETE RESTRICT,
   character_id    TEXT,
-  type            TEXT    NOT NULL,                       -- 'move.strike', 'chat.say', ...
+  type            TEXT    NOT NULL,                       -- 'move.strike', 'speech.say', ...
   payload_json    TEXT    NOT NULL CHECK (json_valid(payload_json)),
   status          TEXT    NOT NULL DEFAULT 'received'
                     CHECK (status IN ('received','applied','rejected','superseded')),
-  rejection_code  TEXT,                                   -- 'not_your_turn', 'gauge_locked', ...
+  rejection_code  TEXT,                                   -- 'move_in_progress', 'gauge_locked', ...
   rejection_detail TEXT,
   first_event_seq INTEGER,
   last_event_seq  INTEGER,
@@ -692,13 +844,14 @@ CREATE INDEX content_packs_version_idx ON content_packs (version, first_seen_at 
 |---|---|---|
 | `campaigns.settings_json` | `CampaignSettings` | Blob de config, lu en entier, forme instable |
 | `campaigns.truths_json` | `CampaignTruth[]` | Liste courte, jamais filtrée en SQL |
-| `events.payload_json` | union discriminée ~60 formes | Une table par type serait ingérable |
+| `events.payload_json` | union discriminée de 71 formes | Une table par type serait ingérable |
 | `snapshots.state_json` | `CampaignState` | Sérialisation opaque d'un objet moteur |
 | `characters.sheet_snapshot_json` | `Champion` gelé | Copie figée, lue en entier |
 | `characters.conditions_json` / `assets_json` / `bonds_json` / `notes_json` | listes variables | Taille et forme variables, jamais requêtées |
 | `progress_tracks.tags_json`, `clocks`… | listes de chaînes | Trivial |
 | `entities.details_json` | fiche libre de PNJ/lieu | Forme ouverte par nature |
-| `chronicles.facts_json` | faits extraits | Sortie IA structurée, forme évolutive |
+| `scene_state.present_json` / `absent_json` | `ScenePresence[]` / `SceneAbsence[]`, 8 au maximum | Listes courtes et bornées, lues en entier, jamais filtrées en SQL |
+| `chronicles.doc_json` | `ChronicleDoc` (dont les faits sourcés) | Sortie IA structurée, forme évolutive |
 | `champion_sheets.sheet_json` | `Champion` forgé | Même schéma que le contenu fichier |
 | `ai_calls.request_json` / `tool_calls_json` | trace d'appel | Audit, jamais requêté en SQL |
 | `intents.payload_json` | intention client | Union discriminée |
@@ -732,15 +885,16 @@ Client                Serveur (autorité)                          Base
   │                            UPDATE intents SET status='applied'
   │                       5. Diffusion WebSocket des événements à la table
   │ ◄──────────────────────────────
-  │                       6. HORS transaction : appel Claude (Sonnet 5) avec les
-  │                          résultats de dés DÉJÀ ACQUIS comme faits à habiller
+  │                       6. HORS transaction : appel `narrer()` sur le port du
+  │                          conteur, avec les résultats de dés DÉJÀ ACQUIS
+  │                          comme faits à habiller
   │                       7. Sortie IA validée → INSERT events ('narration.gm_message')
   │ ◄──────────────────────────────
 ```
 
 Points non négociables :
 
-- L'étape 3 se produit **avant** l'étape 6. Le modèle reçoit `outcome: 'weak_hit'` comme
+- L'étape 3 se produit **avant** l'étape 6. Le modèle reçoit `outcome: 'partielle'` comme
   un fait, pas comme une question.
 - L'étape 6 est **hors** transaction. Aucun appel réseau sous verrou d'écriture SQLite.
 - Si l'étape 6 échoue, l'état de jeu est déjà correct et durable ; on insère un
@@ -774,11 +928,18 @@ export const EventEnvelopeSchema = z.object({
   createdAt: z.number().int(),
 });
 
+import type { GameEvent } from '@for/engine';   // type CANONIQUE : il vient du moteur
+
 export const GameEventSchema = z.discriminatedUnion('type', [
   CampaignCreatedSchema, /* ... toutes les variantes de §3.4 ... */
-]);
-export type GameEvent = z.infer<typeof GameEventSchema>;
+]) satisfies z.ZodType<GameEvent>;
+export type GameEventDto = z.output<typeof GameEventSchema>;
 ```
+
+**Règle de miroir** (`ARCHITECTURE.md` §4.3) : le type canonique `GameEvent` est déclaré dans
+`@for/engine` et importé ici en `import type`. Écrire `type GameEvent = z.infer<…>` créerait
+une dépendance runtime `engine -> contracts` et tuerait la pureté du moteur. Le `satisfies`
+fait échouer `typecheck` dès que l'un des deux dérive.
 
 Chaque variante est `EventEnvelopeSchema.extend({ type: z.literal('x.y'), payload: … })`.
 Le réducteur prend `GameEvent`, donc TypeScript force l'exhaustivité du `switch` : ajouter
@@ -856,9 +1017,9 @@ le journal lisible et débogable.
 
 | Type | Acteur | Payload |
 |---|---|---|
-| `character.created` | player | `{ characterId, playerId, championId, displayName, sheetSource, sheetRef, sheetSnapshot: Champion, attributes: {vif,coeur,fer,ombre,esprit}, gauges: {vigor,soul,supplies}, momentum }` |
+| `character.created` | player | `{ characterId, playerId, championId, displayName, sheetSource, sheetRef, sheetSnapshot: Champion, attributes: {vif,coeur,fer,ombre,esprit}, gauges: {vigueur,ame,vivres}, momentum }` |
 | `character.renamed` | player | `{ characterId, from, to }` |
-| `character.gauge_changed` | engine | `{ characterId, gauge: 'vigor'\|'soul'\|'supplies', delta, from, to, clamped: boolean, cause }` |
+| `character.gauge_changed` | engine | `{ characterId, gauge: 'vigueur'\|'ame'\|'vivres', delta, from, to, clamped: boolean, cause }` |
 | `character.momentum_changed` | engine | `{ characterId, delta, from, to, clamped, cause }` |
 | `character.momentum_burned` | engine | `{ characterId, spent, resetTo, appliedToRollSeq }` |
 | `character.momentum_negated` | engine | `{ characterId, actionDie, momentumValue, rollSeq }` |
@@ -876,7 +1037,7 @@ le journal lisible et débogable.
 
 **Aucun de ces événements n'est émissible par le modèle.** `actorKind` vaut `engine`,
 `player` ou `system` ; le validateur d'entrée rejette tout événement de jauge portant
-`actorKind: 'gm_ai'` (test doré `test/engine/ai-cannot-mutate.test.ts`).
+`actorKind: 'gm_ai'` (test doré `packages/engine/tests/ai-cannot-mutate.test.ts`).
 
 #### `roll.*` — le moteur décide
 
@@ -884,13 +1045,21 @@ C'est le cœur de l'invariant 1. Ces événements sont écrits **avant** tout ap
 
 | Type | Payload |
 |---|---|
-| `roll.action_resolved` | `{ rollId, characterId, moveId, attribute, attributeValue, actionDie, adds: {source,value}[], rawTotal, total, cappedAtTen: boolean, challengeDice: [number, number], outcome: 'strong'\|'weak'\|'miss', isPortent: boolean, momentumBefore, momentumNegated: boolean, burnedMomentum: null \| {spent, resetTo}, rngStream: 'action', rngDrawIndex }` |
-| `roll.progress_resolved` | `{ rollId, trackId, ticks, filledBoxes, challengeDice: [number,number], outcome, isPortent }` |
+| `roll.action_resolved` | `{ rollId, characterId, moveId, attribute, attributeValue, actionDie, adds: {source,value}[], rawTotal, total, cappedAtTen: boolean, challengeDice: [number, number], outcome: 'franche'\|'partielle'\|'echec', isPresage: boolean, momentumBefore, momentumNegated: boolean, burnWindow: boolean, rngStream: 'action', rngDrawIndex }` |
+| `roll.action_revised` | `{ rollId, revisedFromSeq, total, outcome, isPresage }` — **seule** conséquence d'une brûlure de souffle sur un jet déjà écrit |
+| `roll.progress_resolved` | `{ rollId, trackId, ticks, filledBoxes, challengeDice: [number,number], outcome, isPresage }` |
 | `roll.oracle_resolved` | `{ rollId, tableId, tableVersion, dieSize, value, entryId, text, tags: string[], question?: string }` |
 | `roll.yes_no_resolved` | `{ rollId, question, likelihood: 'quasi-certain'\|'probable'\|'incertain'\|'peu-probable'\|'improbable', threshold, value, answer: 'oui'\|'non', isExtreme: boolean }` |
-| `roll.price_paid` | `{ rollId, value, entryId, text, severity, targetCharacterId?, chosenByPlayer: boolean }` |
-| `roll.portent_drawn` | `{ rollId, tableId, value, entryId, text, triggeredByRollSeq }` |
+| `roll.price_paid` | `{ rollId, value, entryId, text, severity, effectIndex, targetCharacterId? }` — `value` est le d12 tiré par le moteur, `effectIndex` l'effet retenu quand l'entrée en propose plusieurs (second tirage sur le flux `price`). **Aucun champ de choix** : ni modèle, ni joueur |
+| `roll.presage_drawn` | `{ rollId, tableId, value, entryId, text, triggeredByRollSeq }` |
 | `roll.raw` | `{ rollId, label, dice: {sides, value}[], reason }` |
+
+**La brûlure du souffle est en deux temps**, parce que la règle veut qu'on voie les dés avant
+de décider. `roll.action_resolved` porte `burnWindow: true` quand la brûlure est légale ;
+l'intention `momentum.burn { rollId }` produit alors `character.momentum_burned` **puis**
+`roll.action_revised`, et c'est seulement après que `move.resolved` applique les effets. Le
+journal étant append-only, on ne réécrit jamais le premier jet : on ajoute sa révision. Si le
+joueur ne brûle pas, la fenêtre se ferme au premier événement suivant du même personnage.
 
 `total` est la valeur **plafonnée à 10** ; `rawTotal` garde la valeur non plafonnée pour
 la lisibilité du journal et les tests. `cappedAtTen` explicite le plafonnement au lieu de
@@ -902,7 +1071,7 @@ recalculer vaut cher au débogage.
 | Type | Payload |
 |---|---|
 | `move.declared` | `{ moveId, characterId, narrativeInput, chosenAttribute?, declaredAdds? }` |
-| `move.resolved` | `{ moveId, characterId, rollSeq, outcome, effectsApplied: EngineEffect[], playerChoices?: {optionId}[] }` |
+| `move.resolved` | `{ moveId, characterId, rollSeq, outcome, effectsApplied: EngineEffect[] }` — **plus de `playerChoices`** : aucune conséquence de prix n'est choisie, ni par le modèle ni par le joueur |
 | `move.aborted` | `{ moveId, characterId, reason }` |
 
 `effectsApplied` est la liste **déjà exécutée** d'effets moteur (cf. `EffectSchema`, §4.3),
@@ -939,16 +1108,66 @@ Rappel de règle encodée côté moteur : un jalon vaut 12 crans en *gênant*, 8
 |---|---|---|
 | `scene.started` | gm_ai/player | `{ sceneId, title, regionId?, entityIds: string[], presentCharacterIds: string[] }` |
 | `scene.ended` | system | `{ sceneId, outcome? }` |
+| `scene.facts_updated` | gm_ai/engine/player | `{ sceneId, placeId?, placeName?, timeOfDay?, present: ScenePresence[], absent: SceneAbsence[], source: 'gm_ai'\|'engine'\|'player', aiCallId? }` — **instantané complet et borné** de la scène (8 + 8), jamais un delta |
 | `narration.player_message` | player | `{ text, kind: 'ic'\|'ooc', characterId? }` |
-| `narration.gm_message` | gm_ai | `{ text, aiCallId, model, promptVersion, respondsToSeq?, citedEventSeqs: number[] }` |
-| `narration.gm_failed` | system | `{ aiCallId?, errorKind, fallbackText }` |
-| `narration.gm_proposal` | gm_ai | `{ proposalId, kind: 'entity'\|'clock'\|'track'\|'scene'\|'price_choice', payload: unknown }` |
+| `narration.gm_message` | gm_ai | `{ text, aiCallId, model, promptVersion, source: 'ai'\|'engine', respondsToSeq?, citedEventSeqs: number[] }` |
+| `narration.gm_failed` | system | `{ aiCallId?, errorKind: 'api_error'\|'refused'\|'invalid_output'\|'rejected_by_postfilter'\|'aborted', fallbackText }` |
+| `narration.gm_proposal` | gm_ai | `{ proposalId, kind: 'entity'\|'clock'\|'thread'\|'lore_fact'\|'scene'\|'scene_facts'\|'refusal', payload: unknown }` — **il n'existe pas de `price_choice`** |
 | `narration.proposal_accepted` | system | `{ proposalId, resultingEventSeqs: number[] }` |
 | `narration.proposal_rejected` | system | `{ proposalId, reasonCode, validationErrors: string[] }` |
 | `narration.safety_flag` | player | `{ kind: 'pause'\|'rewind'\|'veil', note? }` |
 
 `narration.proposal_rejected` est un événement de premier rang, pas un log : le taux de
 rejet par `reasonCode` est une métrique de qualité du MJ IA suivie par le harnais d'éval.
+C'est aussi par lui que passe la surveillance du droit de refus : un refus non prouvé
+(`refusal_unproven`, `refusal_off_target`, `refusal_targetless_move`, `refusal_quota`, …) est
+un `proposal_rejected` ordinaire, et un déséquilibre de ces codes selon l'issue du tour est
+exactement le signal d'abus décrit en `02-mj-ia.md` §4.8.5.
+
+**`scene.facts_updated` — pourquoi un événement, alors qu'il y a déjà une projection.** Les
+deux, et pas au même titre : l'événement est la source de vérité, la table `scene_state` (§1.4)
+en est la projection. Une projection seule ne serait pas rejouable — un `db:rebuild` perdrait
+« Keld est mort et ne revient pas », qui est un état de partie au sens plein, et même le seul
+qui ait fait sortir le prototype de route. Un événement seul obligerait à remonter le journal à
+chaque rendu du bloc `<scene>`, c'est-à-dire à chaque tour. Le raisonnement complet est en
+`02-mj-ia.md` §4.7.1.
+
+L'événement n'est émis **que si la fusion change quelque chose** (comparaison du JSON canonique
+avant/après) : un tour qui ne déplace personne n'écrit rien. Le payload est un instantané
+complet plutôt qu'un delta, parce qu'un delta forcerait le réducteur à raisonner sur un ordre
+d'application, et que le réducteur doit rester total et sans jugement (§3.3, règle 2). Il est
+borné à huit présents et huit partis : le coût de l'instantané est négligeable.
+
+**`kind: 'refusal'`** ne transporte ni valeur, ni effet, ni numéro de séquence : seulement
+`{ cause, target }`, où `cause` appartient à une énumération de quatre valeurs. Le serveur
+recalcule seul la preuve et les séquences à annuler. Ajouter `'scene_facts'` et `'refusal'` à
+l'énumération `kind` n'exige **aucun upcaster** : les payloads déjà écrits restent valides,
+c'est une extension par le haut.
+
+**« Payer le prix » — comment on ferme la seule brèche apparente de l'invariant 1.**
+**Le moteur tire, point final.** Quand un mouvement appelle « payer le prix », le moteur lance
+un d12 sur la table de contenu `pay-the-price`, applique l'entrée tirée et écrit
+`roll.price_paid` (fait acquis, avant tout appel au conteur). L'entrée tirée est ensuite
+**transmise au conteur comme un fait imposé**, dans le bloc `<fait>` du tour
+(`02-mj-ia.md` §4.5) : il l'intègre telle quelle dans sa prose, il ne la choisit pas, ne la
+propose pas et ne la reformule pas en autre chose.
+
+Il n'existe donc **aucun** circuit de choix de conséquence : ni outil `propose_price`, ni
+payload `kind: 'price_choice'`, ni `optionId`, ni `playerChoices` sur `move.resolved`. Les
+trois mécanismes décrits par les versions précédentes des specs sont supprimés. Toute PR qui
+ferait transiter un `EngineEffect` construit par le modèle — ou un index le désignant — est à
+refuser.
+
+**Quand l'entrée tirée porte plusieurs `suggestedEffects`**, le moteur tranche lui-même, de
+façon **déterministe et rejouable** : un second tirage sur le flux RNG `price` désigne l'effet
+appliqué, et son index est écrit dans `roll.price_paid.effectIndex`. Le journal reste donc
+rejouable à l'identique (invariant 4), et personne d'autre que le moteur n'a rien décidé.
+
+**Ce qui n'est PAS un événement de journal.** Les faits d'exploitation de la couche IA —
+troncature de contexte, dérive de chronique détectée, élagage, réparation de fiche forgée,
+échec de régénération — ne sont pas des événements de partie : ils ne changent aucun état de
+jeu et n'ont rien à faire dans un rejeu. Ils vivent dans `ai_calls` (`trim_level`, `status`),
+`champion_sheets.repairs_json` et les logs. Le journal reste le récit de la partie.
 
 #### `entity.*` — la mémoire structurée
 
@@ -965,21 +1184,22 @@ rejet par `reasonCode` est une métrique de qualité du MJ IA suivie par le harn
 |---|---|
 | `session.opened` | `{ playSessionId, ordinal, title?, presentPlayerIds }` |
 | `session.closed` | `{ playSessionId, firstSeq, lastSeq, recapChronicleId? }` |
-| `chronicle.compacted` | `{ chronicleId, layer, coversFromSeq, coversToSeq, supersededIds: string[], aiCallId, tokensEstimate }` |
+| `chronicle.compacted` | `{ chronicleId, version, kind: 'incremental'\|'rebuild', sourceEventSeq, aiCallId, tokenCount }` |
 
 #### `system.*` — administration et rejouabilité
 
 | Type | Payload |
 |---|---|
-| `system.reverted` | `{ targetSeqs: number[], reason, byPlayerId }` — **annulation** (§3.7) |
+| `system.reverted` | `{ targetSeqs: number[], reason, byPlayerId: string \| null }` — **annulation** (§3.7). `byPlayerId` est `null` quand l'émetteur n'est pas un humain : c'est le cas du droit de refus du conteur, qui porte `actorKind: 'system'` et `reason: 'gm_refusal:<cause>'` |
 | `system.correction` | `{ targetSeq, field, from, to, reason }` — correction manuelle tracée |
 | `system.rules_version_migrated` | `{ from, to, note }` |
 | `system.payload_upcast` | `{ fromVersion, toVersion, affectedTypes }` |
 | `system.note` | `{ text, byPlayerId }` — marque-page libre dans le journal |
 
-Total : **69 types**. Ajouter un type impose : la variante Zod, la branche du réducteur,
-un cas doré dans `test/engine/golden/`, et une ligne dans ce tableau. La CI échoue si
-`GameEventSchema` contient un `type` absent de ce fichier (`test/docs/event-catalog.test.ts`
+Total : **71 types** (`scene.facts_updated` ajouté avec l'état de scène structuré,
+`02-mj-ia.md` §4.7). Ajouter un type impose : la variante Zod, la branche du réducteur,
+un cas doré dans `packages/engine/tests/golden/`, et une ligne dans ce tableau. La CI échoue si
+`GameEventSchema` contient un `type` absent de ce fichier (`packages/contracts/tests/event-catalog.test.ts`
 lit le markdown et compare les deux listes).
 
 ### 3.5 Rejeu et instantanés
@@ -999,11 +1219,53 @@ export type CampaignState = {
   clocks: Record<string, ClockState>;
   entities: Record<string, EntityState>;
   championLocks: Record<string, ChampionLock>;
-  scene: SceneState | null;
+  scene: SceneState | null;                      // voir juste après : les faits de présence
   party: { memberPlayerIds: string[]; ownerPlayerId: string };
   rng: { seed: string; draws: Record<string, number> };  // index par flux
 };
 ```
+
+`SceneState` est le type qui porte les faits de présence. Il était cité ici sans être défini ;
+il l'est désormais, parce que c'est lui qui ferme la classe de bug d'incohérence factuelle
+décrite en `02-mj-ia.md` §4.7.
+
+```ts
+export type ScenePresence = {
+  ref:      { kind: 'character' | 'entity'; id: string };
+  name:     string;      // ≤ 40 car. Toujours celui de la projection, jamais celui du modèle
+  state:    string;      // ≤ 60 car. Sans chiffre, sans lexique de règle
+  sinceSeq: number;
+};
+
+export type SceneAbsence = {
+  ref:      { kind: 'character' | 'entity'; id: string };
+  name:     string;
+  cause:    'parti' | 'mort' | 'hors_de_portee';
+  sinceSeq: number;
+};
+
+export type SceneState = {
+  sceneId:    string;
+  placeId:    string;
+  placeName:  string;
+  timeOfDay:  string;          // ≤ 40 car.
+  present:    ScenePresence[]; // ≤ 8, trié par ref.id
+  absent:     SceneAbsence[];  // ≤ 8, trié par ref.id
+  updatedSeq: number;
+};
+```
+
+Trois propriétés à ne pas perdre de vue en implémentant le réducteur :
+
+1. **Aucun chiffre de jeu.** Pas de jauge, pas de segment, pas de rang. Les nombres vivent
+   dans `characters` et `clocks`, qui sont toujours frais. C'est la même séparation que
+   celle qui protège la chronique (`02-mj-ia.md` §5.1), et pour la même raison.
+2. **Les listes sont triées par `ref.id`**, pas par ordre d'arrivée. Le rendu du bloc
+   `<scene>` doit être identique d'un appel à l'autre à faits égaux, sinon le préfixe de
+   cache du prompt change sans raison.
+3. **`absent` est monotone à l'intérieur d'une scène.** `scene.started` la vide et
+   reconstruit `present` ; `scene.ended` remet `scene` à `null`. Rien d'autre n'en retire
+   une entrée.
 
 Algorithme de chargement :
 
@@ -1064,26 +1326,40 @@ rejeu plus long, jamais une erreur.
 Le générateur est **sans état**, dérivé par hachage. Cela permet de rejouer un tirage
 depuis n'importe quel point sans reconstruire une séquence.
 
+Le moteur n'a **aucune dépendance** et ne peut pas appeler `node:crypto` : la dérivation
+utilise un hachage écrit à la main (cyrb128 + sfc32, une vingtaine de lignes), pas SHA-256.
+SHA-256 reste utilisé pour `state_hash`, `content_hash` et `ip_hash`, mais dans `@for/db` et
+`@for/content`, qui ont le droit d'importer `node:crypto`.
+
+Le moteur ne voit qu'un **port** `Rng` (`01-architecture.md` §2.3) ; la dérivation déterministe
+est l'implémentation derrière ce port, jamais une API que les mouvements appellent.
+
 ```ts
 // packages/engine/src/rng.ts
-export function drawUint32(seed: string, seq: number, stream: string, index: number): number {
-  const h = sha256(`${seed}|${seq}|${stream}|${index}`);     // hex
-  return parseInt(h.slice(0, 8), 16);
-}
-export function rollDie(sides: number, ...args): number {
-  // Rejet du biais modulo : on retire tant que la valeur tombe dans la zone tronquée.
-  ...
-}
+export interface Rng { roll(sides: number): number }
+
+/** Dérivation sans état : (graine de campagne, seq, flux) -> tirages reproductibles.
+ *  Implémentée sans aucune dépendance et sans accès à node:crypto. */
+export function createCampaignRng(seed: string, seq: number, stream: RngStream): TracingRng;
+
+// Rejet du biais modulo : on retire tant que la valeur tombe dans la zone tronquée.
 ```
 
 Flux (`stream`) normalisés : `action`, `challenge-a`, `challenge-b`, `oracle`, `price`,
-`portent`, `forge`. Chaque événement de tirage persiste `rng_stream` et `rng_draw_index`,
+`presage`, `fallback` (choix du gabarit de narration de repli — déterministe, donc rejouable). Chaque événement de tirage persiste `rng_stream` et `rng_draw_index`,
 donc **tout jet de la campagne est reproductible à l'octet** à partir de
 `campaigns.rng_seed`. C'est ce qui rend le corpus de cas dorés possible.
 
 En test, le port `Rng` est substitué par `scriptedRng([3, 7, 9, ...])`, qui consomme une
 liste de valeurs et **échoue si la liste est épuisée** — un test qui tire plus de dés que
 prévu casse au lieu de dériver.
+
+**`rng_draw_index` est monotone, et une annulation ne le rembobine pas.** Un jet annulé
+(§3.7 — correction humaine ou refus du conteur) laisse son index consommé : le jet suivant du
+même flux prend le suivant. C'est ce qui garantit que rejouer une intention après annulation ne
+redonne pas les mêmes dés. La règle vaut pour les trois émetteurs de `system.reverted` et elle
+n'a pas d'exception : `collectRevertedSeqs` filtre les événements au rejeu, il ne rend jamais
+un index au générateur.
 
 ### 3.7 Annulation et correction
 
@@ -1097,12 +1373,41 @@ Le journal étant append-only, on n'annule jamais en supprimant.
 3. **Événement compensatoire** : la voie **normale** en jeu. On n'annule pas un dégât,
    on applique un soin ; l'histoire garde la trace des deux.
 
-L'annulation est réservée au propriétaire de la campagne et à un administrateur, limitée
-aux 50 derniers événements, et produit elle-même une ligne de journal. Le bouton
+L'annulation humaine est réservée au propriétaire de la campagne et à un administrateur,
+limitée aux 50 derniers événements, et produit elle-même une ligne de journal. Le bouton
 « annuler le dernier jet » de l'UI émet un `system.reverted` sur le groupe
 `correlation_id` complet (l'intention et toute sa cascade), jamais sur une seule ligne :
 annuler un `roll.action_resolved` sans annuler le `character.gauge_changed` qu'il a causé
 produirait un état incohérent.
+
+**Un troisième émetteur : le droit de refus du conteur.** Quand un fait établi rend une action
+matériellement impossible — la cible est partie, elle est morte, elle est hors de portée,
+l'objet n'existe pas —, le conteur le signale, le serveur **revérifie la cause sur l'état
+structuré au moment du `move.declared`**, et si elle est prouvée le tour est annulé par le même
+mécanisme : `system.reverted { targetSeqs, reason: 'gm_refusal:<cause>' }`, `actorKind:
+'system'`, sur le groupe `correlation_id` complet. La spécification du droit de refus, de sa
+preuve et de son garde-fou anti-abus est en `02-mj-ia.md` §4.8 ; ce qui relève de ce
+document-ci tient en quatre points :
+
+1. **Rien de neuf n'est inventé.** Le retour en arrière est celui décrit ci-dessus, avec les
+   mêmes conséquences : suppression des instantanés `>= min(targetSeqs)`, reconstruction des
+   projections, pré-passe de `loadState`. Jauges, souffle, conditions, crans de progression,
+   segments d'horloge, bonus en attente et fenêtre de brûlure reviennent tous à l'état d'avant
+   la déclaration, **parce qu'ils sont tous dérivés du journal et de rien d'autre**. Il n'y a
+   aucune liste de champs à restaurer à la main : c'est l'intérêt entier de l'invariant 4.
+2. **Le groupe annulé est calculé par le serveur**, depuis le `correlation_id` du tour, jamais
+   fourni par le modèle. Le modèle transmet une `cause` d'une énumération de quatre valeurs et
+   un nom de cible, et rien d'autre.
+3. **Le jet annulé laisse une trace, et c'est tranché.** Le journal est append-only et
+   `system.reverted` est lui-même un événement ; les clients ont déjà reçu les `s2c.event` du
+   jet, puisque la diffusion précède la narration (`ARCHITECTURE.md` §6), donc effacer sans
+   trace les laisserait sur un état que le serveur ne reconnaît plus ; et sans trace, l'abus du
+   droit de refus serait invisible — on ne mesure pas ce qu'on efface.
+4. **Le RNG ne rejoue pas.** Un jet annulé **ne libère pas son index de tirage** : le flux
+   `action` avance et le jet suivant consomme l'index suivant (§3.6). Sans cette règle, rejouer
+   la même intention après annulation redonnerait exactement les mêmes dés, et le droit de
+   refus deviendrait une machine à relancer jusqu'au bon résultat. C'est une ligne de code et un
+   trou de sécurité béant si on l'oublie.
 
 ### 3.8 Versionnement des payloads et upcasters
 
@@ -1150,6 +1455,11 @@ content/
 │   ├── reach-a-milestone.json
 │   ├── fulfill-your-vow.json
 │   └── forsake-your-vow.json
+├── champions-index.json          # les ~170 champions de Runeterra : id, nom d'affichage,
+│                                 #   région canonique, ALIAS. C'est l'index de référence du
+│                                 #   verrouillage de distribution et de la forge (V2, V7).
+│                                 #   Indépendant des fiches : un champion y figure même sans
+│                                 #   fiche jouable.
 ├── champions/
 │   ├── braum.json                # 20 fiches écrites à la main en V1
 │   ├── ashe.json
@@ -1166,10 +1476,14 @@ content/
 │   ├── npc-names-freljord.json
 │   ├── npc-roles.json
 │   ├── npc-goals.json
-│   └── settlement-troubles.json
+│   ├── settlement-troubles.json
+│   ├── freljord-weather.json
+│   └── complication.json
 ├── tables/
 │   ├── pay-the-price.json        # d12
-│   └── portents.json             # présages (dés de défi identiques)
+│   └── presages.json             # présages (dés de défi identiques)
+├── fallbacks/
+│   └── narration.json            # gabarits de la narration de repli, par (move, outcome)
 ├── assets/
 │   ├── companion-poro.json
 │   └── …
@@ -1190,12 +1504,12 @@ Règles d'arborescence, vérifiées par le chargeur :
 
 ### 4.2 Schémas Zod — primitives partagées
 
-Tous les schémas vivent dans `packages/content/src/schemas/` et sont réexportés par
+Tous les schémas vivent dans `packages/contracts/src/content/` et sont réexportés par
 `packages/contracts`. Le front les utilise pour typer l'affichage, le serveur pour
 valider, la CI pour vérifier.
 
 ```ts
-// packages/content/src/schemas/common.ts
+// packages/contracts/src/content/common.ts
 import { z } from 'zod';
 
 export const SlugSchema = z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, {
@@ -1207,7 +1521,7 @@ export const FrTextSchema = z.string().trim().min(1, { message: 'texte français
 export const AttributeKeySchema = z.enum(['vif', 'coeur', 'fer', 'ombre', 'esprit']);
 export type AttributeKey = z.infer<typeof AttributeKeySchema>;
 
-export const GaugeKeySchema = z.enum(['vigor', 'soul', 'supplies']);
+export const GaugeKeySchema = z.enum(['vigueur', 'ame', 'vivres']);
 
 export const RankSchema = z.enum(['genant', 'dangereux', 'redoutable', 'extreme', 'epique']);
 export const RANK_TICKS: Record<z.infer<typeof RankSchema>, number> = {
@@ -1246,7 +1560,7 @@ Le contenu ne contient **jamais de logique**. Il déclare des effets que le mote
 exécuter. C'est ce qui garantit qu'un fichier JSON ne peut pas contourner l'invariant 1.
 
 ```ts
-// packages/content/src/schemas/effect.ts
+// packages/contracts/src/content/effect.ts
 export const EffectSchema: z.ZodType<EngineEffect> = z.lazy(() =>
   z.discriminatedUnion('op', [
     z.object({ op: z.literal('gauge'),    gauge: GaugeKeySchema,
@@ -1264,7 +1578,7 @@ export const EffectSchema: z.ZodType<EngineEffect> = z.lazy(() =>
                 trackKind: z.enum(['vow', 'combat', 'journey', 'scene_challenge']),
                 rankFrom: z.enum(['player', 'fixed']),
                 rank: RankSchema.optional() }),
-    z.object({ op: z.literal('clock_advance'), segments: z.number().int().min(1).max(4) }),
+    z.object({ op: z.literal('clock_advance'), segments: z.number().int().min(1).max(3) }),
     z.object({ op: z.literal('xp'), amount: z.number().int().min(-10).max(10) }),
     z.object({ op: z.literal('pay_price'),
                 mode: z.enum(['roll', 'gm_choice', 'player_choice']) }),
@@ -1287,7 +1601,7 @@ l'exécuteur du moteur — même mécanique d'exhaustivité TypeScript que pour 
 ### 4.4 Mouvement (`content/moves/*.json`)
 
 ```ts
-// packages/content/src/schemas/move.ts
+// packages/contracts/src/content/move.ts
 export const MoveOutcomeSchema = z.object({
   text: FrTextSchema,                              // ce que le joueur lit
   gmGuidance: FrTextSchema.optional(),             // consigne injectée au prompt MJ
@@ -1304,11 +1618,11 @@ export const MoveSchema = z.object({
   attributeOptions: z.array(AttributeKeySchema).max(5).default([]),
   allowsMomentumBurn: z.boolean().default(true),
   outcomes: z.object({
-    strong: MoveOutcomeSchema,
-    weak: MoveOutcomeSchema,
-    miss: MoveOutcomeSchema,
+    franche: MoveOutcomeSchema,
+    partielle: MoveOutcomeSchema,
+    echec: MoveOutcomeSchema,
   }),
-  portent: z.object({ text: FrTextSchema, tableId: RefSchema('table').optional() }).optional(),
+  presage: z.object({ text: FrTextSchema, tableId: RefSchema('table').optional() }).optional(),
   tags: TagsSchema,
   notes: FrTextSchema.optional(),
 }).superRefine((m, ctx) => {
@@ -1336,24 +1650,24 @@ Exemple (`content/moves/endure-cold.json`) :
   "attributeOptions": ["fer", "esprit"],
   "allowsMomentumBurn": true,
   "outcomes": {
-    "strong": {
+    "franche": {
       "text": "Tu tiens bon. Le froid ne te prend rien.",
       "gmGuidance": "Décris un signe que le Freljord respecte cette endurance.",
       "effects": [{ "op": "momentum", "delta": 1 }]
     },
-    "weak": {
+    "partielle": {
       "text": "Tu passes, mais le gel prélève sa part.",
-      "effects": [{ "op": "gauge", "gauge": "supplies", "delta": -1, "target": "self" }]
+      "effects": [{ "op": "gauge", "gauge": "vivres", "delta": -1, "target": "self" }]
     },
-    "miss": {
+    "echec": {
       "text": "Le froid entre en toi.",
       "effects": [
-        { "op": "gauge", "gauge": "vigor", "delta": -1, "target": "self" },
+        { "op": "gauge", "gauge": "vigueur", "delta": -1, "target": "self" },
         { "op": "pay_price", "mode": "roll" }
       ]
     }
   },
-  "portent": { "text": "Le blizzard se lève : l'issue change de nature.", "tableId": "portents" },
+  "presage": { "text": "Le blizzard se lève : l'issue change de nature.", "tableId": "presages" },
   "tags": ["froid", "voyage"]
 }
 ```
@@ -1365,12 +1679,17 @@ l'IA. C'est délibéré : la forge n'a aucun privilège, et un test doré compar
 forgée à une fiche manuscrite sur les mêmes invariants.
 
 ```ts
-// packages/content/src/schemas/champion.ts
+// packages/contracts/src/content/champion.ts
 export const ChampionSchema = z.object({
   schemaVersion: z.literal(1),
   id: SlugSchema,                                  // 'braum'
   name: FrTextSchema,                              // « Braum »
   title: FrTextSchema,                             // « Le Cœur du Freljord »
+  /** Surnoms, titres, épithètes — français ET anglais. NON FACULTATIF :
+   *  c'est la seule source du verrouillage de distribution (assertion
+   *  `no_reserved_champion`, post-filtre d'exécution, `check_name_allowed`).
+   *  Un alias manquant est un trou silencieux. Cf. `02-mj-ia.md` §2.2. */
+  aliases: z.array(FrTextSchema).min(1).max(12),
   origin: z.object({
     regionId: RefSchema('region'),
     homeText: FrTextSchema,
@@ -1381,10 +1700,10 @@ export const ChampionSchema = z.object({
   attributes: AttributeSpreadSchema,
 
   startingGauges: z.object({
-    vigor: z.number().int().min(0).max(5).default(5),
-    soul: z.number().int().min(0).max(5).default(5),
-    supplies: z.number().int().min(0).max(5).default(5),
-  }).default({ vigor: 5, soul: 5, supplies: 5 }),
+    vigueur: z.number().int().min(0).max(5).default(5),
+    ame: z.number().int().min(0).max(5).default(5),
+    vivres: z.number().int().min(0).max(5).default(5),
+  }).default({ vigueur: 5, ame: 5, vivres: 5 }),
   startingMomentum: z.number().int().min(-6).max(10).default(2),
 
   startingAssets: z.array(RefSchema('asset')).min(1).max(3),
@@ -1431,20 +1750,46 @@ export const ChampionSchema = z.object({
 });
 ```
 
-**La forge IA utilise ce schéma comme contrat de sortie.** Le serveur :
-1. appelle Opus 5 avec `ChampionSchema` converti en JSON Schema comme définition d'outil ;
-2. valide la sortie avec `ChampionSchema.safeParse` ;
-3. en cas d'échec, relance **une** fois avec les erreurs Zod en retour, puis abandonne ;
-4. force `source: 'forged'` et `id` côté serveur (jamais depuis le modèle) ;
-5. insère dans `champion_sheets` avec `status='pending_review'`.
+**`ChampionSchema` est le schéma UNIQUE d'une fiche de champion** — écrite à la main ou forgée.
+`02-mj-ia.md` §9.4 décrivait initialement un second schéma, en `snake_case`, avec des champs
+différents (`epithet`, `drive`, `burden`, `taboos`, `freljord_hook`). Arbitrage : il n'y a
+qu'un schéma, celui-ci, en `camelCase`. Ce que la forge produit est un **sous-ensemble**
+déclaré ici, jamais un schéma parallèle :
 
-Un modèle ne peut donc pas s'inventer un attribut à 5 ni un effet inconnu : la
-répartition 3/2/2/1/1 et l'union `EffectSchema` le rendent impossible.
+```ts
+// packages/contracts/src/ai/forge.ts — ce que le MODÈLE a le droit de remplir
+export const ForgeOutputSchema = ChampionSchema.omit({
+  schemaVersion: true,   // imposé par le serveur
+  id: true,              // imposé par le serveur (slug de la demande)
+  source: true,          // toujours 'forged', imposé par le serveur
+  portraitUrl: true,     // jamais inventé par un modèle
+  relations: true,       // une fiche forgée ne cite AUCUN autre champion (règle 8 du prompt)
+  aliases: true,         // imposés par content/champions-index.json — un modèle ne
+                         // choisit jamais les noms sous lesquels on le reconnaîtra
+});
+```
+
+Le serveur :
+1. appelle `structurer<ForgeOutput>({ purpose: 'forge', schema: ForgeOutputSchema, … })` sur le
+   port du conteur (`02-mj-ia.md` §0.1) — la valeur rendue est déjà validée ;
+2. valide avec `ForgeOutputSchema.safeParse`, puis applique les réparations V1→V12
+   (`02-mj-ia.md` §9.5) ;
+3. relance au maximum **2** fois, avec un bloc `<corrections>` ajouté en fin de message
+   utilisateur — jamais une réécriture du prompt système (cache) ;
+4. complète `schemaVersion`, `id`, `source: 'forged'`, `relations: []` et revalide le tout
+   avec `ChampionSchema` ;
+5. insère dans `champion_sheets` (`status: 'active'`, `campaign_id` renseigné).
+
+`startingAssets` référence des atouts du contenu : la liste des identifiants autorisés est
+**fournie dans le prompt**, et un identifiant hors liste est réparé par le jeu d'atouts de
+départ par défaut. Un modèle ne peut donc s'inventer ni un attribut à 5, ni un effet inconnu,
+ni un atout inexistant : la répartition 3/2/2/1/1, l'union `EffectSchema` et la résolution de
+références le rendent impossible.
 
 ### 4.6 Tables d'oracle, table des prix, présages
 
 ```ts
-// packages/content/src/schemas/oracle.ts
+// packages/contracts/src/content/oracle.ts
 export const DieSizeSchema = z.union([
   z.literal(4), z.literal(6), z.literal(8), z.literal(10), z.literal(12),
   z.literal(20), z.literal(100),
@@ -1518,16 +1863,24 @@ export const PriceTableSchema = z.object({
   die: z.literal(12),
   entries: z.array(OracleEntrySchema.extend({
     severity: z.enum(['legere', 'serieuse', 'grave']),
-    /** Suggestion NARRATIVE au MJ. Le moteur ne l'applique pas automatiquement :
-     *  elle devient une proposition validée, jamais une mutation directe. */
+    /** Effets de l'entrée. Le MOTEUR les applique : ce n'est pas une suggestion au modèle,
+     *  et ce n'est jamais une proposition. Plusieurs effets ⇒ le moteur tranche par un
+     *  second tirage sur le flux RNG `price` et écrit l'index dans
+     *  `roll.price_paid.effectIndex` (§3.4). Rien de tout cela ne transite par le modèle. */
     suggestedEffects: z.array(EffectSchema).max(3).default([]),
+    /** Mots-clés de l'entrée, en français, sans chiffre : ce sont eux que l'assertion DURE
+     *  `price_respected` (02-mj-ia.md §8.4) cherche dans la narration pour vérifier que le
+     *  conteur a bien mis en scène le prix imposé et ne l'a pas remplacé par autre chose.
+     *  Sans cette liste, l'assertion — qui est aussi un post-filtre de production — n'a
+     *  aucune donnée contre quoi noter. Relue en PR, comme le reste du contenu. */
+    keywords: z.array(FrTextSchema.max(40)).min(1).max(6),
   })).length(12),
   tags: TagsSchema,
 }).superRefine((t, ctx) => coversDie(t.entries, 12, ctx));
 
 /** Table des présages (dés de défi identiques). */
-export const PortentTableSchema = OracleTableSchema.extend({
-  id: z.literal('portents'),
+export const PresageTableSchema = OracleTableSchema.extend({
+  id: z.literal('presages'),
 });
 ```
 
@@ -1535,15 +1888,19 @@ Le point important est `coversDie` : c'est un oracle de test au sens propre. Une
 d12 avec une entrée manquante ne se voit pas à la relecture, mais produirait en partie
 un `undefined` qui remonterait jusque dans le prompt du MJ. Ici, le serveur ne démarre pas.
 
-`suggestedEffects` de la table des prix est **explicitement une suggestion** : le d12 est
-tiré par le moteur (fait acquis), mais la conséquence mécanique passe par le circuit de
-proposition (§2) parce qu'elle dépend de la fiction. C'est la seule entorse apparente à
-l'invariant 1, et elle est gérée par le circuit qui existe précisément pour ça.
+`suggestedEffects` de la table des prix est du **contenu versionné, relu en PR**, pas une
+sortie de modèle — et, malgré son nom hérité, il n'a rien d'une suggestion : le moteur applique
+l'effet retenu, il ne le propose à personne. Le d12 est tiré par le moteur (fait acquis) ; quand l'entrée propose
+plusieurs effets, c'est encore **le moteur** qui tranche, par un second tirage sur le flux RNG
+`price`, et il écrit l'index retenu dans `roll.price_paid.effectIndex` (§3.4). Le modèle ne
+désigne rien, ne reçoit aucune liste d'options et ne voit que l'entrée déjà appliquée, comme un
+fait imposé. Aucun `EngineEffect` ne transite jamais depuis le modèle, et aucun index non plus :
+il n'y a plus de brèche à surveiller, il n'y a plus de circuit.
 
 ### 4.7 Région, atout, condition, vérités, manifeste
 
 ```ts
-// packages/content/src/schemas/region.ts
+// packages/contracts/src/content/region.ts
 export const RegionSchema = z.object({
   schemaVersion: z.literal(1),
   id: SlugSchema,
@@ -1564,7 +1921,7 @@ export const RegionSchema = z.object({
   tags: TagsSchema,
 });
 
-// packages/content/src/schemas/asset.ts
+// packages/contracts/src/content/asset.ts
 export const AssetSchema = z.object({
   schemaVersion: z.literal(1),
   id: SlugSchema,
@@ -1580,7 +1937,7 @@ export const AssetSchema = z.object({
   tags: TagsSchema,
 });
 
-// packages/content/src/schemas/condition.ts
+// packages/contracts/src/content/condition.ts
 export const ConditionSchema = z.object({
   id: SlugSchema,
   name: FrTextSchema,                              // « Transi », « Endeuillé », « Traqué »
@@ -1595,7 +1952,7 @@ export const ConditionsFileSchema = z.object({
   conditions: z.array(ConditionSchema).min(1),
 });
 
-// packages/content/src/schemas/truth.ts
+// packages/contracts/src/content/truth.ts
 export const TruthSchema = z.object({
   id: SlugSchema,
   question: FrTextSchema,                          // « Que reste-t-il d'Avarosa ? »
@@ -1611,7 +1968,37 @@ export const TruthsFileSchema = z.object({
   schemaVersion: z.literal(1), truths: z.array(TruthSchema).min(1),
 });
 
-// packages/content/src/schemas/manifest.ts
+// packages/contracts/src/content/champion-index.ts
+/** `content/champions-index.json` — l'annuaire des ~170 champions de Runeterra.
+ *  Ce n'est PAS une fiche jouable : c'est la table de vérité des noms. Elle sert
+ *  au verrouillage de distribution (aucun champion réservé ne doit sortir de la
+ *  bouche du conteur, sous aucun surnom), à l'écran de choix de personnage, et à
+ *  la validation de forge V2 (région canonique) et V7 (aucun autre champion cité). */
+export const ChampionIndexEntrySchema = z.object({
+  id: SlugSchema,
+  displayName: FrTextSchema,
+  canonicalRegionId: RefSchema('region').nullable(),  // null si hors Runeterra connu
+  aliases: z.array(FrTextSchema).min(1).max(12),
+  playable: z.boolean().default(true),
+});
+export const ChampionIndexSchema = z.object({
+  schemaVersion: z.literal(1),
+  champions: z.array(ChampionIndexEntrySchema).min(1),
+}).superRefine((idx, ctx) => {
+  const seen = new Set<string>();
+  for (const c of idx.champions) {
+    for (const a of [c.displayName, ...c.aliases]) {
+      const k = a.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+      if (seen.has(k)) {
+        ctx.addIssue({ code: 'custom', path: ['champions'],
+          message: `alias ambigu « ${a} » : partagé par deux champions` });
+      }
+      seen.add(k);
+    }
+  }
+});
+
+// packages/contracts/src/content/manifest.ts
 export const ManifestSchema = z.object({
   schemaVersion: z.literal(1),
   version: z.string().regex(/^\d+\.\d+\.\d+$/),    // semver du bundle
@@ -1621,7 +2008,7 @@ export const ManifestSchema = z.object({
     moves: z.number().int().positive(),
     champions: z.number().int().positive(),
     regions: z.number().int().positive(),
-    oracles: z.number().int().positive(),
+    oracles: z.number().int().positive(),   -- 9 en V1 (dont yes-no)
     tables: z.number().int().positive(),
     assets: z.number().int().positive(),
   }),
@@ -1637,10 +2024,12 @@ compare ; l'écart fait échouer le démarrage.
 ```ts
 export const CampaignSettingsSchema = z.object({
   schemaVersion: z.literal(1),
+  // Surcharge par campagne du nom de modèle. Vide = on retombe sur NARRATOR_MODEL /
+  // NARRATOR_MODEL_STRUCTURED, puis sur le défaut de l'adaptateur (ARCHITECTURE.md §4.5).
+  // Aucun identifiant de modèle n'est écrit en dur ici : c'est une donnée d'adaptateur.
   models: z.object({
-    narration: z.string().default('claude-sonnet-5'),
-    forge: z.string().default('claude-opus-5'),
-    chronicle: z.string().default('claude-opus-5'),
+    narration: z.string().min(1).nullable().default(null),   // usage narrer()
+    structured: z.string().min(1).nullable().default(null),  // usage structurer()
   }).default({}),
   gmVerbosity: z.enum(['sobre', 'standard', 'ample']).default('standard'),
   oracleBias: z.enum(['clement', 'neutre', 'impitoyable']).default('neutre'),
@@ -1665,12 +2054,13 @@ export type ContentBundle = Readonly<{
   hash: string;                                    // sha256 du JSON canonique du bundle
   rulesVersion: number;
   moves: ReadonlyMap<string, Move>;
-  champions: ReadonlyMap<string, Champion>;
+  champions: ReadonlyMap<string, Champion>;          // fiches jouables
+  championIndex: ReadonlyMap<string, ChampionIndexEntry>;  // les ~170, pour le verrouillage
   regions: ReadonlyMap<string, Region>;
   oracles: ReadonlyMap<string, OracleTable>;
   yesNo: YesNoOracle;
   priceTable: PriceTable;
-  portents: PortentTable;
+  presages: PresageTable;
   assets: ReadonlyMap<string, Asset>;
   conditions: ReadonlyMap<string, Condition>;
   truths: readonly Truth[];
@@ -1688,12 +2078,16 @@ Quatre passes, dans cet ordre :
    la fois.
 3. **Résolution des références.** Chaque champ marqué `RefSchema(kind)` (repéré via
    `.describe('ref:kind')`) est vérifié contre l'index chargé. Une référence morte donne
-   `content/moves/strike.json → outcomes.miss.effects[1].conditionId : condition "blesse" introuvable (suggestion : "blesse-gravement")`.
+   `content/moves/strike.json → outcomes.echec.effects[1].conditionId : condition "blesse" introuvable (suggestion : "blesse-gravement")`.
    La suggestion vient d'une distance de Levenshtein sur les ids du même type — deux
    heures de travail qui font gagner des heures à chaque contributeur.
 4. **Invariants globaux.** Forêt des régions acyclique ; ids uniques inter-types ;
-   `expectedCounts` du manifeste ; 20 champions `source: 'handwritten'` minimum ;
-   les 11 mouvements V1 présents ; couverture de `pay-the-price` sur d12.
+   `expectedCounts` du manifeste (c'est lui qui porte le seuil de fiches de champion : **3**
+   en M0, 20 en V1 — le seuil n'est jamais écrit en dur dans le code) ; les 11 mouvements V1
+   présents ; couverture de `pay-the-price` sur d12 ; **chaque fiche de `champions/` a une
+   entrée dans `champions-index.json` avec le même `id`, le même jeu d'`aliases` et la même
+   région canonique** (sinon le verrouillage de distribution et l'écran de choix de personnage
+   divergeraient en silence).
 
 En cas d'échec :
 
@@ -1772,7 +2166,7 @@ export default {
    `ALTER COLUMN` : drizzle-kit génère alors le rituel « table temporaire + copie +
    rename », qui **perd les triggers** `events_no_update`, `events_no_delete` et
    `events_seq_dense`. Toute migration touchant `events` est écrite à la main et
-   recrée explicitement les triggers. Un test doré (`test/db/append-only.test.ts`)
+   recrée explicitement les triggers. Un test doré (`packages/db/tests/append-only.test.ts`)
    vérifie après migration qu'un `UPDATE events` lève bien.
 5. **Les seules opérations sûres** sur une table vivante : `ADD COLUMN` (avec `DEFAULT`
    non nul ou `NULL`), `CREATE INDEX`, `CREATE TRIGGER`, `DROP INDEX`. Tout le reste
@@ -1839,11 +2233,11 @@ impossible (triggers) et ce serait une falsification d'archive.
 | Schéma généré == schéma déclaré | `pnpm db:check-schema` | quelqu'un a modifié un `.ts` sans générer la migration |
 | Dump normalisé == `schema.expected.sql` | idem | une migration qui ne produit pas le DDL de ce document |
 | Migration depuis zéro | `pnpm db:migrate` sur base vide | SQL invalide |
-| Migration depuis la **release précédente** | applique les migrations sur `test/fixtures/db/prev-release.sqlite` (commité, ~200 Ko) | une migration qui casse sur des données réelles |
-| Append-only préservé | `test/db/append-only.test.ts` | triggers perdus par une reconstruction de table |
+| Migration depuis la **release précédente** | applique les migrations sur `packages/db/tests/fixtures/prev-release.sqlite` (commité, ~200 Ko) | une migration qui casse sur des données réelles |
+| Append-only préservé | `packages/db/tests/append-only.test.ts` | triggers perdus par une reconstruction de table |
 | Intégrité post-migration | `pnpm db:check` (§7.3) | FK orphelines, jauges hors bornes, trous de séquence |
 
-`test/fixtures/db/prev-release.sqlite` est régénéré à chaque release par le workflow de
+`packages/db/tests/fixtures/prev-release.sqlite` est régénéré à chaque release par le workflow de
 déploiement (dump de la base de démo après migration) et commité. C'est le test de
 migration le plus rentable du projet.
 
@@ -1867,7 +2261,7 @@ Section écrite pour quelqu'un qui administre le VPS, pas pour le développeur.
 ```
 
 `/srv/feeders/data` est monté en volume dans le conteneur `server` à `/app/data`.
-`DATABASE_URL=file:/app/data/app.db`.
+`DATABASE_PATH=/app/data/app.db`.
 
 ### 6.2 La règle numéro un
 
@@ -1947,7 +2341,12 @@ La clé privée `age` n'est **pas** sur le VPS. Elle est dans le gestionnaire de
 passe de l'équipe. Une sauvegarde chiffrée avec une clé qui ne survit pas à la
 compromission du serveur est la seule qui vaille quelque chose.
 
-### 6.4 Réplication continue (recommandé dès qu'il y a de vrais joueurs)
+### 6.4 Réplication continue — **pas en M0**
+
+**Décision.** Litestream n'est **pas** livré au jalon M0 : il n'y a pas encore de vrais
+joueurs, donc pas de minutes de partie à perdre, et le `docker-compose.yml` de M0 ne contient
+que `app` et `caddy`. Le bloc ci-dessous est écrit pour être décommenté le jour du premier
+joueur réel — c'est une ligne à activer, pas un chantier.
 
 Les sauvegardes toutes les 6 h acceptent une perte de 6 h de partie. Litestream réplique
 le WAL en continu vers un stockage objet et ramène la perte à quelques secondes, pour un
@@ -2057,7 +2456,21 @@ les triggers et certains index : réappliquer `pnpm db:migrate` derrière, puis
 ### 6.7 Surveillance
 
 Un contrôle de santé simple vaut mieux qu'un tableau de bord jamais regardé.
-`GET /healthz` renvoie 200 si et seulement si :
+
+**Trois sondes, trois rôles, à ne jamais confondre** (`01-architecture.md` §6,
+`ARCHITECTURE.md` §4.5) :
+
+| Route | Rôle | Contenu |
+|---|---|---|
+| `GET /healthz` | liveness | `{ status, version, uptimeMs }`, **sans toucher la base**. Toujours 200 tant que le process répond |
+| `GET /readyz` | readiness | ping SQLite + migrations à jour. 503 sinon |
+| `GET /api/admin/health` | diagnostic profond, **admin uniquement** | le bloc ci-dessous |
+
+`/healthz` et `/readyz` ne font **jamais** de contrôle profond : un WAL volumineux ou une
+sauvegarde vieillissante ne doivent pas sortir le conteneur de la rotation — sans quoi une
+sauvegarde en retard suffit à couper le service.
+
+`GET /api/admin/health` renvoie, et lui seul :
 
 ```
 PRAGMA quick_check = ok
@@ -2085,13 +2498,13 @@ Contenu de `pnpm db:seed` :
 | Campagne | « Le Pacte de la Griffe-de-Givre », slug `pacte-griffe-de-givre`, `status: 'active'`, 3 vérités choisies |
 | Personnages | Braum (fer 3), Ashe (vif 3), Sejuani (cœur 3) — trois fiches **écrites à la main** |
 | Verrous | 3 champions `reserved_pc`, 6 `allowed_npc` (Olaf, Lissandra, Volibear, Udyr, Trundle, Gragas), le reste implicite |
-| Séances | 2 : une close (`ordinal: 1`, 180 événements) et une en cours (`ordinal: 2`, 64 événements) |
-| Journal | **244 événements**, couvrant **au moins un exemplaire de chacun des 69 types** — c'est une assertion du seed, pas un vœu |
+| Séances | 2 : une close (`ordinal: 1`, 180 événements) et une en cours (`ordinal: 2`, 68 événements) — 180 + 68 = 248, le total du journal ci-dessous |
+| Journal | **248 événements**, couvrant **au moins un exemplaire de chacun des 71 types** — c'est une assertion du seed, pas un vœu. Les quatre événements ajoutés sont des `scene.facts_updated` : une entrée en scène, une sortie de personnage non joueur, un décès reflété, et un changement de lieu |
 | Jets | au moins un de chaque : réussite franche, partielle, échec, présage, souffle brûlé, souffle négatif annulé, plafonnement à 10 |
 | Serments | 1 accompli (*dangereux*), 1 en cours (*redoutable*, 17 crans), 1 abandonné |
 | Horloges | 1 à 3/6 visible, 1 à 5/8 cachée du MJ |
 | Entités | 11 (4 PNJ, 3 lieux, 2 factions, 2 fils) |
-| Chroniques | 6 en couche 0, 2 en couche 1, 1 en couche 2 — textes **écrits à la main**, aucun appel IA |
+| Chroniques | **3 versions d'un document unique** (`version` 1, 2, 3), écrites à la main, aucun appel IA. Le modèle à trois couches est abandonné (§1.5) |
 | Instantanés | 2 (`rolling` à seq 180, `session_end` à seq 180) |
 | Annulation | 1 `system.reverted` sur une cascade de 3 événements, pour que le chemin soit testé |
 
@@ -2108,7 +2521,7 @@ export const DEMO_SEED = {
 ```
 
 Conséquence : `pnpm db:seed` deux fois produit deux bases **identiques octet pour
-octet** après `VACUUM`. La CI le vérifie (`test/db/seed-deterministic.test.ts` compare
+octet** après `VACUUM`. La CI le vérifie (`packages/db/tests/seed-deterministic.test.ts` compare
 les sha256). Sans ça, le corpus de cas dorés dériverait sans qu'on le voie.
 
 Commandes :
@@ -2145,66 +2558,68 @@ renvoie zéro ligne en cas de succès ; toute ligne renvoyée fait échouer la c
 | 8 | Instantanés | pour chaque instantané : rejeu depuis zéro jusqu'à `seq`, comparaison de `state_hash` |
 | 9 | **Reconstruction idempotente** | dump des projections → `db:rebuild` → dump → comparaison octet à octet |
 | 10 | Payloads | chaque `events.payload_json` repasse `GameEventSchema` après `upcast` |
-| 11 | Chroniques | `covers_from_seq`/`covers_to_seq` contigus par couche, aucun trou, aucune ligne vivante chevauchante |
+| 11 | Chroniques | `version` dense de 1 à N par campagne (aucun trou), `source_event_seq` strictement croissant avec `version`, et `source_event_seq` ≤ `campaigns.seq` |
 | 12 | Contenu | `campaigns.content_pack_hash` présent dans `content_packs` |
 
 Le contrôle 9 est l'oracle central de l'invariant 4, et le contrôle 8 celui de la
 politique d'instantanés. Un agent qui casse le réducteur les voit rougir en moins d'une
 minute.
 
+**`scene_state` n'a pas besoin d'un treizième oracle** : c'est une projection de zone C, donc
+le contrôle 9 la reconstruit et la compare octet à octet comme les autres. Un bug de fusion qui
+laisserait quelqu'un à la fois présent et parti, ou qui muterait la table hors du réducteur, y
+rougit au même titre qu'une jauge divergente. Ajouter un contrôle dédié donnerait l'illusion
+d'une garantie supplémentaire là où la garantie existe déjà.
+
 ### 7.4 Fixtures pour le simulateur de table headless
 
-`packages/engine/test/fixtures/` :
+Le simulateur vit dans `packages/sim` et pilote **le vrai service applicatif**, pas le moteur
+nu : sa spécification fait autorité dans `01-architecture.md` §7.4. Ce document ne prescrit que
+les données dont il a besoin.
 
 ```
-fixtures/
-├── content/                      # bundle MINIMAL valide (2 champions, 3 mouvements,
-│                                 # 1 table de prix, 2 oracles) — tests rapides et lisibles
-├── scripts/                      # scénarios du simulateur, JSONL d'intentions
-│   ├── first-session.jsonl
-│   ├── all-outcomes.jsonl        # force chaque issue de jet
-│   ├── momentum-edge-cases.jsonl # souffle négatif annulé, brûlé, plafonné
-│   └── vow-fulfilled.jsonl
-├── dice/                         # séquences de dés scriptées, une par scénario
-│   └── all-outcomes.json         # { "action": [1,6,3,…], "challenge-a": […], … }
-└── golden/                       # état attendu + journal attendu, un fichier par scénario
-    ├── all-outcomes.state.json
-    └── all-outcomes.events.jsonl
+packages/sim/scenarios/*.scenario.json    # intentions + attentes + graine + nom du doré
+packages/sim/tests/golden/                # état final + trace RNG attendus, par scénario
+packages/testkit/src/fixtures/            # constructeurs d'état, RNG scriptés, campagnes
+content-fixtures/                         # bundle MINIMAL valide (2 champions, 3 mouvements,
+                                          #   1 table de prix, 2 oracles), tests rapides
 ```
 
-Le simulateur (`pnpm sim <scenario>`) tourne **sans navigateur et sans appel IA** : il
-instancie le moteur, injecte le `Rng` scripté et un MJ factice qui renvoie des narrations
-fixes, consomme le JSONL d'intentions et écrit l'état et le journal obtenus. Les fichiers
-`golden/` sont régénérés par `pnpm sim --update-golden`, et toute différence non
-intentionnelle apparaît en diff lisible dans la PR. C'est le dispositif qui répond
-directement à l'objectif de M0 : savoir en quelques secondes si on a cassé quelque chose.
+Un scénario porte sa graine de campagne — donc ses dés, puisque la dérivation du §3.6 est
+reproductible sans liste de dés à maintenir —, la suite d'intentions par joueur et le nom de
+son corpus doré. Le simulateur tourne **sans navigateur et sans appel IA**
+(`ScriptedNarrator`). Les corpus dorés sont régénérés par `pnpm sim record --scenario=<id>` ;
+toute différence non intentionnelle apparaît en diff lisible dans la PR. C'est le dispositif
+qui répond directement à l'objectif de M0 : savoir en quelques secondes si on a cassé quelque
+chose.
 
 ---
 
-## 8. Points laissés ouverts
+## 8. Ce qui reste ouvert (après arbitrage)
 
-Ils n'empêchent pas M0 d'avancer, mais il faut les trancher avant M2.
+Les points de nommage, de taille de seed et de portée du cache de forge ont été **tranchés**
+(§0.5, §7.1, §1.5). Ce qui suit reste ouvert, et aucun de ces points ne bloque M0.
 
-1. **Nommage `campaigns`/`tables` et `players`/`users` (§0.5).** Le seul point qui doit
-   être tranché **avant** `0000_initial.sql`. Après, c'est une migration de renommage sur
-   quinze tables. Recommandation ci-dessus ; il faut une décision, pas un consensus.
-2. **Taille du seed.** `01-architecture.md` annonce « ~40 événements », ce document en
-   prescrit 244 avec couverture des 69 types. Les deux servent : 40 pour démarrer l'appli
-   en local, 244 pour les tests. Proposition : un seul seed à 244, et un drapeau
-   `--minimal` qui s'arrête à la fin de la première scène.
-3. **Chiffrement au repos.** La base contient des identités Discord et des textes de
-   joueurs. SQLCipher fermerait le sujet mais ajoute une dépendance native et complique
-   les sauvegardes. Position retenue pour M0 : disque du VPS chiffré, sauvegardes
-   chiffrées par `age`, base en clair. À revoir si la table dépasse le cercle privé.
-4. **Recherche plein texte** dans le journal et les chroniques (« où a-t-on vu Olaf ? »).
-   FTS5 est disponible dans SQLite, mais c'est une table à maintenir en cohérence avec une
-   projection. Décidé hors M0 ; à traiter comme une projection de plus, reconstruite par
-   `db:rebuild`.
-5. **Plusieurs personnages par joueur** dans une même campagne (compagnon, remplaçant
-   après une mort). L'index `characters_active_player_uq` l'interdit aujourd'hui. Le
-   relâcher plus tard ne coûte qu'une migration d'index.
-6. **Portée du cache des fiches forgées** : global (`campaign_id IS NULL`) ou par
-   campagne. Le schéma supporte les deux ; la politique de revue (`requireForgeReview`)
-   n'est pas encore décidée pour le cas global.
-7. **Purge des `ai_calls`.** `request_json` est volumineux. Rétention proposée : payload
-   complet 30 jours, puis métriques seules. À confirmer avec les besoins du harnais d'éval.
+1. **Chiffrement au repos.** La base contient des identités Discord et des textes de joueurs.
+   SQLCipher fermerait le sujet mais ajoute une dépendance native et complique les sauvegardes.
+   Position retenue pour M0 : disque du VPS chiffré, sauvegardes chiffrées par `age`, base en
+   clair. À revoir dès que la table dépasse le cercle privé. *Décision à reprendre en M2.*
+2. **Recherche plein texte** dans le journal et les chroniques (« où a-t-on vu Olaf ? »).
+   FTS5 est disponible, mais c'est une table à maintenir en cohérence. Hors M0 ; à traiter
+   comme une projection de plus (zone C), reconstruite par `db:rebuild` — donc sans migration
+   lourde le jour où on la veut.
+3. **Plusieurs personnages actifs par joueur** dans une même campagne (compagnon, remplaçant
+   après une mort). L'index `characters_active_player_uq` l'interdit aujourd'hui ; le relâcher
+   ne coûte qu'une migration d'index. On attend d'avoir vu mourir un personnage.
+4. **Purge des `ai_calls`.** `request_json` est volumineux. Rétention retenue par défaut :
+   payload complet 30 jours, puis métriques seules — à confirmer quand le harnais d'éval aura
+   tourné un mois.
+5. **Volume du journal.** Les événements légers (`entity.mentioned`, `narration.player_message`)
+   peuvent porter une campagne longue à plus de 50 000 lignes. Les instantanés bornent le
+   rejeu, pas la taille du fichier ni des sauvegardes. À **mesurer sur la campagne de démo**
+   avant M2, avant toute décision d'archivage. En attendant : `entity.mentioned` est
+   dédupliqué par le serveur, au plus une fois par entité et par tour.
+6. **Gel des arcs anciens pour la reconstruction de chronique.** Le coût d'une reconstruction
+   intégrale croît linéairement avec le journal (`02-mj-ia.md` §5.4, D5). Au-delà de la V1, les
+   faits d'un arc résolu depuis longtemps devront devenir définitifs et sortir du périmètre.
+   Hors M0.
