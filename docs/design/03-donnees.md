@@ -94,6 +94,7 @@ sert de mémoire, pas de débat. Référence : `docs/ARCHITECTURE.md` §4.
 |---|---|---|
 | L'entité de jeu persistante | `campaigns` / `campaign_id` / `CampaignState` | « la table `tables` » est illisible en SQL, et `campagne` est le mot du cahier des charges |
 | Ce que voit un joueur | `TableState` (**DTO seulement**) | `TableState = project(CampaignState, viewerId)` : retire les lignes `visibility = 'gm'`. Déclaré dans `packages/contracts/src/dto/table-state.ts` |
+| Le détail mécanique d'un tour | `TurnProof` (**DTO seulement**) | `TurnProof = buildTurnProof(events du groupe correlation_id, viewerId)` : une **projection du journal**, calculée à la demande, jamais stockée et jamais dénormalisée. C'est ce que déplie la commande « Pourquoi ? » du client, et ce qu'affiche un tour annulé. Déclaré dans `packages/contracts/src/dto/turn-proof.ts` ; protocole en `01-architecture.md` §5.4 ; règles d'affichage en `02-mj-ia.md` §4.8.6 |
 | Identité Discord | `players` / `player_id` / `PlayerId` | `users` se confondrait avec l'administration |
 | Session web (cookie) | `auth_sessions` | `sessions` seul est ambigu avec la séance de jeu |
 | Séance de jeu (soirée) | `play_sessions` | |
@@ -1387,7 +1388,7 @@ structuré au moment du `move.declared`**, et si elle est prouvée le tour est a
 mécanisme : `system.reverted { targetSeqs, reason: 'gm_refusal:<cause>' }`, `actorKind:
 'system'`, sur le groupe `correlation_id` complet. La spécification du droit de refus, de sa
 preuve et de son garde-fou anti-abus est en `02-mj-ia.md` §4.8 ; ce qui relève de ce
-document-ci tient en quatre points :
+document-ci tient en cinq points :
 
 1. **Rien de neuf n'est inventé.** Le retour en arrière est celui décrit ci-dessus, avec les
    mêmes conséquences : suppression des instantanés `>= min(targetSeqs)`, reconstruction des
@@ -1408,6 +1409,15 @@ document-ci tient en quatre points :
    la même intention après annulation redonnerait exactement les mêmes dés, et le droit de
    refus deviendrait une machine à relancer jusqu'au bon résultat. C'est une ligne de code et un
    trou de sécurité béant si on l'oublie.
+5. **Le tour annulé reste affiché, marqué comme annulé.** Le `s2c.event` du `system.reverted`
+   est un **vecteur de marquage**, pas d'effacement : le client barre les lignes dont le `seq`
+   figure dans `targetSeqs`, affiche la cause portée par `reason`, et conserve sur le tour sa
+   commande « Pourquoi ? ». La preuve consultable est la projection `TurnProof` (§0.5) : les
+   mêmes événements, relus, avec `status: 'reverted'` et `revertedBy { seq, reason }`. Rien
+   n'est fabriqué pour l'affichage, rien n'est retiré de l'écran. C'est la contrepartie assumée
+   du refus *après* les dés (`02-mj-ia.md` §4.8.4 et §4.8.6) : un joueur voit brièvement le
+   résultat d'un tour qui sera annulé, et il doit pouvoir lire pourquoi plutôt que le voir
+   s'évaporer.
 
 ### 3.8 Versionnement des payloads et upcasters
 

@@ -17,10 +17,15 @@
 
 ## 0. Verdict
 
-> **Ce document porte DEUX passes.** La première (§0 à §10) a été menée avant les trois
-> arbitrages du tech lead. La seconde (**§11**) a relu les six documents après l'application de
-> ces arbitrages et l'entrée des trois enseignements du prototype, et c'est elle qui porte le
-> verdict courant. Quand les deux divergent sur un chiffre, **§11 fait foi**.
+> **Ce document porte TROIS passes de revue et UNE passe d'arbitrage.** La première (§0 à §10) a
+> été menée avant les trois arbitrages du tech lead. La seconde (**§11**) a relu les six
+> documents après l'application de ces arbitrages et l'entrée des trois enseignements du
+> prototype, et c'est elle qui porte le verdict de revue. **§12** consigne les **cinq
+> arbitrages** rendus ensuite par le lead, qui closent les quatre points laissés ouverts en
+> §11.7. **§13** est la recette de cette application : elle vérifie que les cinq arbitrages sont
+> appliqués partout et qu'aucun document ne porte plus la version contraire, et elle porte le
+> verdict courant. Quand deux sections divergent, **la plus récente fait foi** :
+> §13 > §12 > §11 > §0-§10.
 
 **Non, pas en l'état — mais il s'en faut de peu.**
 
@@ -139,13 +144,15 @@ d'outils, classes d'exception de SDK. C'était une dépendance, pas une divergen
 > `openai-compatible` (OpenRouter, Groq, Together) et `ollama` (local), plus un `stub` sans
 > réseau. Tout ce qui est propre à un fournisseur descend dans son adaptateur ; le reste de la
 > spec ne nomme plus aucun fournisseur, et un test le vérifie. Configuration par cinq variables
-> `NARRATOR_*`. Une matrice de dégradation explicite dit ce qui se passe quand un adaptateur ne
+> `NARRATOR_*` — **trois variables d'appoint les ont rejointes depuis** (§12 A3). Une matrice de dégradation explicite dit ce qui se passe quand un adaptateur ne
 > sait pas appeler d'outils ou quand le modèle rend du JSON malformé, sous une seule règle :
 > **on dégrade la prose, jamais l'équité**.
 
 **Ce que cela change pour la revue** : la nouvelle tâche **M0-31** mesure un fournisseur gratuit
 contre le corpus d'assertions, au début de la vague 8 et non à la fin du jalon. Sans cette
-mesure, « le conteur marche sans budget » resterait une croyance.
+mesure, « le conteur marche sans budget » resterait une croyance. *(Depuis, le lead a jugé la
+vague 8 trop tardive pour le **signal** : **M0-32**, sonde de fumée, le sort une vague plus tôt
+avec sept assertions écrites à la main — voir §12 A7.)*
 
 ---
 
@@ -229,13 +236,14 @@ par le workflow de déploiement à la première release, et le test s'active à 
 | T7 | **`roll_oracle` était un troisième circuit d'écriture depuis le modèle**, non couvert par le garde-fou. Classé « lecture », il écrit pourtant au journal ; `proposal-surface.test.ts` ne surveillait que les `propose_*` | `ReadOnlyTool.journalOnly`, vide partout sauf `roll_oracle`, et le test vérifie désormais **deux** listes closes. `ARCHITECTURE.md` §1 amendé |
 | T8 | **M0-16 et M0-21 n'avaient aucun fichier de test** dans leurs fichiers touchés, alors que cinq de leurs critères commençaient par « un test vérifie que… » | `packages/content/tests/game-content.test.ts` ajouté aux livrables de M0-16 |
 | T9 | **`propose_vow_hook` n'écrivait rien en base** (`03-donnees.md` §0.5) tout en étant soumis à la règle « toute proposition produit un `narration.proposal_accepted` ou `_rejected` — une proposition qui disparaît sans trace est un bug » | Ligne réécrite : aucun événement **d'état**, mais bien les deux événements de proposition |
-| T10 | **`.env.example` du dépôt décrivait un conteur agnostique** (`NARRATOR_PROVIDER`, OpenRouter, `DATABASE_URL`) en contradiction frontale avec la stack verrouillée. Un agent partant du dépôt plutôt que des specs aurait implémenté un client OpenAI-compatible | Réécrit sur `01-architecture.md` §9.4. `.nvmrc` remis à `24` |
+| T10 | ~~**`.env.example` du dépôt décrivait un conteur agnostique**~~ — **CE CONSTAT EST RENVERSÉ, voir §12.** À la date de la première passe, la stack verrouillée ne connaissait qu'un fournisseur ; le tech lead a depuis tranché l'inverse, et le conteur *est* un port agnostique. Ce que la première passe prenait pour une contradiction du dépôt était en réalité la bonne intuition | `.env.example` est agnostique et le reste, réécrit sur `01-architecture.md` §9.4 et `02-mj-ia.md` §0.6. Seul `.nvmrc` remis à `24` survit de cette ligne |
 
 Pas de trou sur le reste : les trois tests gardiens de l'invariant 1
 (`tool-surface`, `proposal-surface`, `ai-cannot-mutate`), celui de l'invariant 2
 (`context-budget`), celui de l'invariant 3 (`ws-protocol`) et ceux de l'invariant 4
-(`db:check` contrôle 9, `replay-equivalence`) sont tous attribués à une tâche nommée. Les quatre
-runbooks aussi.
+(`db:check` contrôle 9, `replay-equivalence`) sont tous attribués à une tâche nommée. Les
+runbooks aussi — ils étaient quatre à la date de cette passe, six depuis (`conteur-fumee.md`
+est venu avec M0-32, §12 A7) ; la liste à jour est dans `01-architecture.md` §2.1.
 
 ---
 
@@ -396,9 +404,9 @@ méritent d'être relus avant de démarrer, parce qu'ils vont mordre tôt :
 | | |
 |---|---|
 | **Corrigé directement dans les fichiers** | 10 trous, 11 critères mous, 2 collisions, 4 ordres irréalistes, 4 coupes de périmètre, 9 divergences inter-documents |
-| **Reste à arbitrer** | **Rien.** A1 et A2 ont été tranchés (§1), et un troisième arbitrage a transformé le conteur en port (§1bis). Les trois décisions sont appliquées dans les quatre specs, dans `.env.example` et dans les fiches de tâches |
-| **Tâches** | 30 (M0-21 absorbée par M0-16 ; M0-31 ajoutée pour valider tôt un fournisseur gratuit) |
-| **Verdict** | Exécutable. Le seul inconnu qui reste est **éditorial, pas architectural** : quel fournisseur gratuit produit une prose acceptable. C'est ce que M0-31 mesure, au début de la vague 8 |
+| **Reste à arbitrer** | **Rien sur l'architecture.** A1 et A2 ont été tranchés (§1), un troisième arbitrage a transformé le conteur en port (§1bis), et les quatre points laissés ouverts par la seconde passe (§11.7) ont été tranchés à leur tour, avec un cinquième que le lead a soulevé lui-même (**§12**). **Un point de découpage reste ouvert** : la sonde de fumée M0-32 est placée en vague 7, le lead la voulait en vague 4 ; le coût réel du redécoupage est chiffré en **§12 A7** et en **§13** (voir aussi le tableau de §13.4) |
+| **Tâches** | 31 (M0-21 absorbée par M0-16 ; M0-31 pour le corpus complet en vague 8 ; **M0-32** pour le signal précoce en vague 7) |
+| **Verdict** | Exécutable. Le seul inconnu qui reste est **éditorial, pas architectural** : quel fournisseur gratuit produit une prose acceptable. La **sonde de fumée M0-32** en donne le signal dès la vague 7, et **M0-31** la mesure complète au début de la vague 8 |
 
 ---
 
@@ -550,11 +558,19 @@ la fin du tour, ce que la validation d'intention n'a pas attrapé au début. Pou
 intention, et le tour devrait être refusé avant les dés, par un `s2c.rejected` — ce qui est plus
 honnête pour le joueur et ne coûte rien. Le droit de refus resterait alors ce pour quoi il a été
 conçu : les cas que le moteur **ne peut pas** connaître, typiquement l'objet de fiction qui
-n'existe pas. C'est une décision de règles, pas de technique : voir §11.7, point 3.
+n'existe pas. C'est une décision de règles, pas de technique : voir §11.7, point 3 — **tranché depuis, par la
+négative** (§12 A6). Le refus reste après le jet, et le coût visible pour le joueur est payé
+autrement : le tour annulé s'affiche **marqué annulé, avec sa preuve consultable**.
 
-## 11.7 Ce qui demande une décision du tech lead
+## 11.7 Ce qui demandait une décision du tech lead — **LES QUATRE SONT TRANCHÉS**
 
-Rien de ceci n'empêche de démarrer ; les quatre points se rattrapent en quelques lignes.
+> **Statut : clos.** Les quatre points ci-dessous ont été arbitrés le 2026-09-17, avec un
+> cinquième que le lead a soulevé de lui-même. Les décisions qui font foi sont en **§12** ;
+> l'analyse ci-dessous est conservée comme mémoire du raisonnement, **pas** comme une question
+> ouverte. Correspondance : point 1 → §12 A3 ; point 2 → §12 A4 ; point 3 → §12 A6 ;
+> point 4 → §12 A5.
+
+Rien de ceci n'empêchait de démarrer ; les quatre points se rattrapaient en quelques lignes.
 
 1. **Trois variables d'environnement au-delà des cinq nommées** — `NARRATOR_TOOLS`,
    `NARRATOR_TIMEOUT_MS`, `NARRATOR_CONTEXT_WINDOW`. Elles sont justifiées (le support des outils
@@ -579,5 +595,259 @@ Trois points de la passe précédente restent par ailleurs ouverts et sont écri
 `02-mj-ia.md` §11.2 : les **seuils posés sans données de jeu réel** (quota de refus, bornes du
 bloc de scène, longueur de phrase, marqueurs d'absence), le **caractère dur de
 `banned_style_lexicon`** — qui augmentera mécaniquement le taux de replis moteur au démarrage —,
-et **quel fournisseur gratuit tient la table**, que M0-31 mesure au début de la vague 8. Aucun
-n'est une question d'architecture.
+et **quel fournisseur gratuit tient la table**, dont le signal précoce vient désormais de M0-32
+(vague 7) et la mesure complète de M0-31 (vague 8). Aucun n'est une question d'architecture.
+
+---
+
+# 12. Les cinq arbitrages du tech lead — appliqués
+
+> **Date** : 2026-09-17, après la seconde passe. **Ce sont des décisions, pas des propositions.**
+> Elles closent §11.7 en entier. Un seul agent a écrit cette passe d'application, précisément
+> parce que la précédente avait souffert d'écritures concurrentes.
+
+## A3 · Les trois variables d'environnement d'appoint — **VALIDÉES**
+
+`NARRATOR_TOOLS` (`on` | `off` | `probe`), `NARRATOR_TIMEOUT_MS` et `NARRATOR_CONTEXT_WINDOW`
+rejoignent officiellement les cinq `NARRATOR_*` de base. **Motif retenu**, écrit dans les trois
+documents pour qu'on ne le redécouvre pas : *le support des outils dépend du modèle et non de la
+passerelle, et un modèle local qui charge à froid dépasse 60 s sans être en panne.*
+
+Elles restent facultatives et propres à un adaptateur, et elles sont désormais documentées **de
+la même façon aux trois endroits**, avec leur valeur par défaut **et** l'adaptateur concerné :
+`.env.example`, `02-mj-ia.md` §0.6 (tableau qui fait autorité), `01-architecture.md` §9.4.
+`ARCHITECTURE.md` §4.5 porte la ligne de renvoi. Un reste corrigé au passage : l'adaptateur
+`anthropic` codait `timeout: 60_000` en dur dans son constructeur au lieu de lire
+`config.timeoutMs` — une variable validée qui n'aurait rien piloté sur l'un des quatre
+adaptateurs.
+
+## A4 · La réécriture de `.env.example`, et le **renversement de P6**
+
+**Validée.** Et le point P6 de la revue de socle — « il n'y a qu'un fournisseur : Anthropic » —
+est **officiellement RENVERSÉ** : ce n'est plus une décision en vigueur, nulle part. Le produit
+doit pouvoir tourner sur un **fournisseur gratuit** ou sur un **modèle local**.
+
+Conséquence sur ce document : le trou **T10** de la première passe (§4) reposait sur la lecture
+renversée, et il est annoté comme tel. Ce que la première passe prenait pour une contradiction
+du dépôt était la bonne intuition. `M0-TASKS.md` porte la trace en P6 et en P20.
+
+## A5 · Le départage d'un prix à plusieurs `suggestedEffects` — **VALIDÉ tel que spécifié**
+
+Second tirage sur le flux RNG `price`, index journalisé dans `roll.price_paid.effectIndex`.
+**Le moteur décide, et c'est rejouable.** L'alternative « toujours le premier effet » est
+abandonnée.
+
+Vérification faite document par document : `03-donnees.md` §3.4, §4.6 et le commentaire de
+`PriceTableSchema`, `02-mj-ia.md` §3.4 et §4.5, M0-29 — tous cohérents, et **aucun** ne laisse
+entendre que le modèle ou le joueur choisit. Un manque comblé : `ARCHITECTURE.md` §4.4, qui est
+le document d'autorité, décrivait le tirage du d12 mais **pas** le départage à plusieurs effets ;
+la ligne y est désormais écrite.
+
+## A6 · Le refus reste **APRÈS** le jet — confirmé, avec une transparence nouvelle
+
+Un contrôle de faisabilité avant les dés remettrait le modèle dans le chemin de décision :
+**inacceptable**. La conséquence est assumée — un joueur voit brièvement le résultat d'un tour
+qui sera ensuite annulé. Le point 3 de §11.7 est donc tranché par la **négative** : on ne
+déplace pas la vérification de cible à l'étape 2 du chemin d'une intention.
+
+**Ce que l'arbitrage ajoute**, et qui change l'expérience sans toucher aux invariants :
+
+1. **Le détail mécanique d'une scène n'est pas affiché par défaut.** Mouvement, dés, calcul,
+   effets, prix, présage : tout cela est replié derrière une commande **« Pourquoi ? »**
+   attachée à chaque scène. La fiction reste propre ; la preuve reste consultable.
+2. **Un tour annulé est montré comme annulé**, avec sa preuve, jamais en disparaissant. Le
+   `s2c.event` du `system.reverted` devient un **vecteur de marquage**. Deux formulations
+   contraires traînaient dans les specs — `01-architecture.md` §5.4 et `02-mj-ia.md` §6.2
+   disaient toutes deux que ces événements « retirent les lignes du journal côté client » — et
+   elles sont corrigées.
+3. **La preuve est une projection du journal**, pas une donnée fabriquée pour l'affichage :
+   `TurnProofDto`, construite à la demande par `buildTurnProof(events, viewerId)`, fonction pure
+   qui ne tire aucun dé et n'appelle pas le moteur. Chaque entrée porte son `eventSeq`.
+   Transport : `c2s.why { correlationId }` → `s2c.turn_proof { correlationId, proof, truncated }`.
+   **Bornes** : 32 effets, 120 caractères par libellé, **8 Kio** de JSON sérialisé — trente fois
+   moins que la trame sortante de 256 Kio.
+
+Effet de bord vérifié : la preuve ne montre **rien** du modèle (ni raisonnement, ni appel
+d'outil, ni proposition refusée), donc elle ne contredit pas `02-mj-ia.md` §6.5 ; la phrase le
+dit maintenant explicitement. Et le point 14 des questions ouvertes de `02-mj-ia.md` §11.2
+(« faut-il montrer au joueur qu'un refus a eu lieu ? ») est clos par la même décision.
+
+Tâches touchées : M0-05 (le DTO), M0-08 (les deux messages et leur borne), M0-19 (l'affordance
+et le marquage côté client), M0-20 (`getTurnProof` dans l'interface), M0-24 (le constructeur
+pur), M0-25 (le routage), M0-29 (l'ordre de diffusion d'un refus), M0-30 (l'aller-retour dans
+le parcours de recette).
+
+## A7 · La validation d'un fournisseur gratuit est **SCINDÉE**
+
+En vague 8, c'est trop tard : si un modèle gratuit ne tient pas le prompt contraint, toute la
+couche se conçoit différemment. **M0-32** est créée — sonde de **fumée**, sept assertions écrites
+à la main (le lead en demandait six à huit), verdict lisible par un humain, aucune dépendance au
+corpus complet, **aucun blocage de la CI**. **M0-31** garde le corpus complet en vague 8, et sa
+fiche dit désormais explicitement que le signal précoce vient de la sonde de fumée.
+
+> **Une réserve, et elle appartient au lead.** La consigne était « vague 4 au plus tard ». Or la
+> sonde ne dépend que de deux livrables — le **prompt intégral** et le **port du narrateur** —
+> et **les deux sont livrés par M0-18, en vague 6**, elle-même bloquée par M0-12 et M0-14
+> (vague 5). **La vague 7 est donc le plus tôt atteignable** sans redécouper le reste ; c'est ce
+> qui a été appliqué, et cela fait gagner une vague entière sur l'état précédent.
+>
+> **Correction de la troisième passe — le chiffrage ci-dessous était faux, et il l'était dans le
+> sens optimiste.** Le redécoupage proposé (`narrator-port.ts` de M0-12 vers M0-05 en vague 3,
+> puis `src/narrator/**` + `src/prompts/conteur.system.ts` de M0-18 vers une nouvelle tâche de
+> vague 4) **n'atteint pas la vague 4** : une tâche n'est jamais dans la même vague que celle
+> dont elle dépend, donc si le port et le prompt sortent en vague 4, la sonde sort en **vague 5**.
+> Il oubliait en outre `SceneBlockSchema` (`packages/contracts/src/ai/scene.ts`, M0-12,
+> **vague 5**), dont l'assertion 7 de la sonde a besoin. Le coût réel de la vague 4 est
+> recalculé dans la fiche M0-32 : **deux fiches neuves** (une de vague 2 pour
+> `contracts/src/ai/{narrator-port,scene}.ts`, une de vague 3 pour `packages/ai/src/narrator/**`
+> et le prompt), **trois réécrites** (M0-05, M0-12, M0-18), **trois vagues touchées**, et un
+> `@for/ai` qui compilerait en vague 3 contre un `@for/contracts` rempli dans la même vague par
+> M0-05 — précisément le couplage intra-vague que la règle 2 du découpage interdit.
+>
+> C'est un arbitrage de découpage, pas une mise en cohérence : il n'a pas été pris
+> unilatéralement, ni par la passe d'application, ni par cette passe de recette. La fiche M0-32
+> porte la même réserve, au même niveau de détail.
+
+---
+
+# 13. Troisième passe — recette des cinq arbitrages
+
+> **Date** : 2026-09-17, après la passe d'application de §12. **Rôle** : test master, pas
+> auteur. Objet : vérifier que les cinq arbitrages sont appliqués **partout**, et surtout
+> qu'**aucun document ne porte encore la version contraire ailleurs** — c'est le mode d'échec
+> qui avait frappé la passe précédente, quand plusieurs agents écrivaient les mêmes fichiers.
+> Cette passe-ci a relu les huit fichiers modifiés en entier et croisé chaque décision par
+> `grep` sur les six documents plus `.env.example`.
+
+## 13.1 Les cinq arbitrages — état après recette
+
+| | Arbitrage | Appliqué | Reste contraire ailleurs ? |
+|---|---|---|---|
+| A3 | Trois variables d'appoint validées | oui — `.env.example`, `02-mj-ia.md` §0.6 (table d'autorité), `01-architecture.md` §9.4, `ARCHITECTURE.md` §4.5, ADR 0001, et vérifié par M0-20 | **non.** Les trois écritures portent les mêmes défauts et les mêmes adaptateurs. Aucune occurrence résiduelle de « cinq variables » seule. `timeout: 60_000` en dur ne subsiste dans aucun des quatre adaptateurs |
+| A4 | `.env.example` agnostique, P6 renversé | oui — dépôt, `ARCHITECTURE.md` §4.5, `01-architecture.md` §9.4, `02-mj-ia.md` §11.1, P6/P20, T10 annoté | **non.** Aucune occurrence de `ANTHROPIC_API_KEY`, `AI_MODEL_*`, `AI_ENABLED`, `DATABASE_URL` hors des lignes qui les déclarent disparus |
+| A5 | Départage de prix par second tirage `price` | oui — `ARCHITECTURE.md` §4.4, `02-mj-ia.md` §3.4 et §11.1, `03-donnees.md` §3.4, §4.6 et `PriceTableSchema`, M0-29 | **non.** Aucun document ne laisse le modèle ni le joueur choisir ; `optionId` n'apparaît que dans `campaign.truth_set`, et le critère de M0-29 le dit |
+| A6 | Refus après les dés + « Pourquoi ? » + tour annulé montré | oui — `ARCHITECTURE.md` §4.4, `01-architecture.md` §2.4/§2.8/§2.9/§5.2/§5.4/§5.6, `02-mj-ia.md` §4.8.3/§4.8.4/§4.8.6/§6.2/§6.5/§11.1/§11.2, `03-donnees.md` §0.5/§3.7, M0-05, M0-08, M0-19, M0-20, M0-24, M0-25, M0-29, M0-30 | **non.** Plus aucune formulation « retirent les lignes du journal côté client » : les deux occurrences connues sont corrigées, et il n'y en avait pas de troisième |
+| A7 | Sonde de fumée scindée | oui — M0-32 créée, M0-31 ajustée, `01-architecture.md` §2.1/§2.2, `02-mj-ia.md` §8.5/§10/§11.2, `ARCHITECTURE.md` §5/§7 | **une incohérence trouvée et corrigée** : `01-architecture.md` §2.2 annonçait « 6 à 8 assertions » là où quatre autres endroits disaient « sept ». Harmonisé : sept livrées, borne contractuelle 6–8. **Et le placement reste en vague 7** : voir §13.3 |
+
+## 13.2 La preuve « Pourquoi ? » est bien une projection, pas une donnée fabriquée
+
+C'était le risque principal pour l'invariant 4 : une preuve stockée serait une seconde source de
+vérité, et deux sources divergent toujours. Vérifié point par point.
+
+1. **Rien n'est persisté.** `TurnProof` est un DTO, jamais une table ni une colonne. Le DDL de
+   `03-donnees.md` §1 ne gagne rien, et §0.5 la nomme explicitement « calculée à la demande,
+   jamais stockée et jamais dénormalisée ».
+2. **Rien n'est recalculé.** `buildTurnProof(events, viewerId)` est pure, ne lit pas la base,
+   n'appelle ni `decide()` ni `rollChallenge()`. Trois critères de M0-24 le tranchent à la
+   commande, dont un `grep` sur le fichier lui-même.
+3. **Chaque entrée porte sa provenance.** L'`eventSeq` par entrée est le mécanisme qui
+   distingue une projection d'une donnée d'affichage : une entrée sans `eventSeq` est refusée
+   par `zTurnProof` (critère de M0-05) et par le test de M0-24.
+4. **Le `.strict()` ferme la fuite qui aurait compté.** La preuve expose `rngStream` et
+   `rngDrawIndex`, ce qui est sain — ce sont des faits de journal — **à condition** que la
+   graine de campagne ne sorte jamais. Le schéma étant clos et énuméré champ par champ,
+   `campaigns.rng_seed` ne peut pas y apparaître par accident. Rien à corriger.
+5. **Aucune duplication d'information.** Ce que la preuve montre est exactement ce que le
+   journal contient ; le client n'en recompose jamais rien (critère de rendu de M0-19), et
+   au-delà des bornes il est renvoyé vers `GET /api/campaigns/:id/log`, c'est-à-dire vers la
+   même source. L'invariant 4 n'est pas menacé.
+
+**Une ambiguïté levée au passage.** `01-architecture.md` §5.4 disait que le `correlationId`
+voyage « dans l'enveloppe » de `s2c.event`, sans dire laquelle — or le document insiste par
+ailleurs pour ne jamais confondre deux enveloppes. Il s'agit de l'enveloppe **d'événement**
+(`EventEnvelopeSchema`, `03-donnees.md` §3.1), héritée par chaque variante de `GameEvent` et
+transportée dans `p.event` ; l'enveloppe WebSocket de §5.1 reste `{ v, t, id, ts, seq?, p }` et
+**ne bouge pas**. La phrase le dit maintenant.
+
+## 13.3 La sonde de fumée — indépendante, oui ; en vague 4, non
+
+**Indépendance : vérifiée, et elle tient.** M0-32 ne dépend que de M0-18. Elle n'importe que
+`CONTEUR_SYSTEM_PROMPT` et le port depuis `@for/ai`, plus `SceneBlockSchema` depuis
+`@for/contracts` ; elle n'utilise ni le constructeur de contexte de M0-22 (même vague) ni le
+harnais N0 de M0-27 (vague suivante), et deux `grep` le tranchent. Ses trois cas et ses sept
+assertions vivent dans `smoke/` et ne sont importés par personne. C'est la seule duplication
+autorisée du corpus, et elle est bornée.
+
+**Placement : vague 7, et le lead doit trancher.** La consigne était « vague 4 au plus tard ».
+Le chiffrage de la passe d'application se voulait la preuve qu'on ne pouvait pas mieux faire ;
+il était faux, et faux dans le sens optimiste — il aboutissait à la vague 5, pas 4, et il
+oubliait `SceneBlockSchema`. Le calcul corrigé est en §12 A7 et dans la fiche M0-32 : atteindre
+réellement la vague 4 demande de faire démarrer la chaîne en **vague 2**, soit deux fiches
+neuves, trois réécrites, trois vagues touchées, et un `@for/ai` qui compilerait contre un
+`@for/contracts` rempli dans la même vague — le couplage intra-vague que la règle 2 interdit.
+
+**Ce que cette passe n'a pas fait, et pourquoi.** Elle n'a pas redécoupé. La règle 5 du
+découpage — « aucun agent ne modifie une spec, une divergence remonte au tech lead » — vaut
+d'autant plus pour une décision d'ordonnancement qui déplace six fichiers et rouvre trois
+fiches acceptées. Le rôle de cette passe était de donner au lead un chiffrage juste, pas de
+choisir à sa place. **Le point reste ouvert, et c'est le seul.**
+
+## 13.4 Corrections appliquées par cette passe
+
+| # | Où | Ce qui n'allait pas | Corrigé |
+|---|---|---|---|
+| 1 | `01-architecture.md` §2.2 | « 6 à 8 assertions » contre « sept » dans quatre autres endroits — exactement le reste de version qu'on traquait | oui : sept livrées, borne 6–8 |
+| 2 | `M0-TASKS.md` M0-01 | La boucle qui vérifie « toutes les commandes de §2.2 existent » n'avait pas été mise à jour avec `eval:smoke`. Le script aurait pu manquer du `package.json` racine sans qu'aucun critère ne le voie, et M0-32 comme M0-30 citent la commande (règle 8) | oui : `eval:smoke` ajouté à la boucle |
+| 3 | `M0-TASKS.md` M0-32 | Critère **faux par construction** : il chargeait `packages/ai-eval/smoke/dist/assertions.js`, c'est-à-dire une arborescence de `dist/` par sous-dossier que rien ne spécifie | oui : la sonde imprime `assertions: 7` et sort en 1 hors borne — tranchable sans hypothèse de build |
+| 4 | `M0-TASKS.md` M0-32 | « M0-27 **et M0-31** complètent `packages/ai-eval/package.json` en vague 8 » — or M0-31 ne le porte pas dans ses fichiers touchés, et deux écrivains dans la même vague violeraient la règle 2 | oui : M0-27 seule ; M0-31 n'y touche pas |
+| 5 | `ARCHITECTURE.md` §5 | La ligne `@for/ai-eval` ne listait pas `@for/contracts`, alors que M0-32 l'y déclare pour `SceneBlockSchema`. `check:workspace` et `depcruise` auraient eu deux vérités | oui : dépendance ajoutée |
+| 6 | `01-architecture.md` §5.4 | « son enveloppe » sans dire laquelle, dans un document qui interdit par ailleurs de confondre deux enveloppes | oui : enveloppe d'événement nommée, enveloppe WS explicitement inchangée |
+| 7 | `M0-REVUE.md` §10 | « Reste à arbitrer : **Rien** », alors que §12 A7 laissait une décision de découpage au lead | oui : « rien sur l'architecture », plus le renvoi |
+| 8 | `M0-TASKS.md` P23 · `M0-REVUE.md` §12 A7 · fiche M0-32 | Chiffrage du redécoupage faux dans le sens optimiste (vague 5 présentée comme vague 4 ; `SceneBlockSchema` oublié) | oui : recalculé aux trois endroits, avec le risque de couplage intra-vague nommé |
+
+## 13.5 Les quatre invariants contre la surface d'outils finale
+
+- **Invariant 1 — le moteur décide, l'IA raconte.** La surface d'outils **n'a pas bougé** : 12
+  outils gelés, `TOOLS_VERSION` inchangée, aucun outil de prix, pas de `time_shift`. Les deux
+  objets ajoutés par cette série d'arbitrages ne sont pas des outils : `c2s.why` est un message
+  **client**, et `s2c.turn_proof` une réponse de **lecture**. Le modèle ne les voit ni ne les
+  appelle. Le départage de prix (A5) va dans le sens de l'invariant : il retire au modèle **et**
+  au joueur un choix que la lecture naïve leur laissait. `proposal-surface.test.ts` garde
+  toujours ses trois listes closes, jamais fondues.
+- **Invariant 2 — la mémoire est dans la base.** La preuve est construite à partir du journal,
+  à la demande, et **hors** de toute fenêtre de contexte : elle n'entre dans aucun prompt et ne
+  consomme aucun budget de `min(14 000, fenêtre × 0,6)`. `NARRATOR_CONTEXT_WINDOW` (A3) rend au
+  contraire ce budget explicitement dépendant de l'adaptateur, ce qui le rend mesurable.
+- **Invariant 3 — le serveur est l'autorité.** `c2s.why` ne transporte qu'un `correlationId` ;
+  M0-08 le soumet au même test que tout autre `c2s.*`, et M0-25 exige qu'après cent appels
+  `events` n'ait pas grandi. Le client **ne recompose jamais** une preuve depuis son état local
+  (critère de rendu de M0-19) : il affiche la projection du serveur, ou rien. Un `correlationId`
+  d'une autre campagne est traité comme inconnu.
+- **Invariant 4 — tout est rejouable.** A5 journalise l'index du second tirage
+  (`roll.price_paid.effectIndex`), donc le départage se rejoue à l'identique. A6 ne persiste
+  rien de neuf et confirme que l'index de tirage RNG n'est **jamais** rendu après annulation.
+  La preuve est une projection, donc elle ne peut pas diverger de sa source — §13.2.
+
+## 13.6 Collisions et critères — nouveau croisement
+
+**Collisions de fichiers, vague par vague** : aucune. Les deux zones à risque de cette série
+sont la vague 7, où M0-32 arrive dans `packages/ai-eval/**` pendant que M0-22 est dans
+`packages/ai` et M0-23/24/25 dans `packages/server`, et la vague 8, où M0-27 et M0-31 se
+partagent `packages/ai-eval` — `src/`, `cases/`, `chronicle/`, `forge/` pour l'une, `probe/`
+pour l'autre, `smoke/` pour personne. Le seul fichier réellement partagé,
+`packages/ai-eval/package.json`, n'a qu'un écrivain par vague après la correction 4 de §13.4.
+Côté serveur, `getTurnProof` est déclarée dans l'**interface** de M0-20 (vague 6) et
+implémentée par M0-24 pendant que M0-25 la consomme : c'est le mécanisme qui existait déjà
+pour les quatre greffons, réemployé, et il tient.
+
+**Critères faux par construction** : un seul trouvé, corrigé (correction 3 de §13.4). Les
+autres critères ajoutés par cette série se tranchent tous à la commande, et les trois qui
+auraient pu être mous ont été écrits en anticipant le piège — le fichier d'assertions de la
+sonde contient forcément la chaîne `ASSERTIONS`, la vérité de campagne porte `optionId` depuis
+l'origine, et `select.ts` doit forcément nommer ses quatre adaptateurs. Ces trois exemptions
+sont nommées dans les critères eux-mêmes, ce qui est la bonne façon de faire.
+
+## 13.7 Verdict de la troisième passe
+
+**Le socle reste PRÊT, et la vague 1 est exécutable telle quelle.** Les cinq arbitrages sont
+appliqués, aucun document ne porte plus de version contraire, la preuve « Pourquoi ? » est une
+projection authentique du journal, et les quatre invariants tiennent contre la surface d'outils
+finale — qui n'a pas bougé. Huit corrections ont été appliquées ici, dont une seule aurait mordu
+un agent en cours de route (le critère faux par construction de M0-32) et une seule aurait laissé
+passer un défaut silencieux (`eval:smoke` absent de la boucle de M0-01).
+
+**Une réserve, une seule, et elle est datée** : la sonde de fumée est en vague 7, le lead la
+voulait en vague 4. Ce n'est pas une incohérence de spec — c'est une décision d'ordonnancement
+dont le coût est maintenant chiffré juste. Elle ne bloque ni M0-01, ni les six vagues qui
+suivent : elle se tranche à tout moment avant la fin de la vague 1, et elle ne coûte alors que
+la réécriture de fiches qui n'ont pas encore été prises.

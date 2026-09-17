@@ -3,8 +3,10 @@
 > **À quoi sert ce fichier.** Le jalon M0 construit les fondations du projet : aucune
 > fonctionnalité de jeu, mais tout l'outillage qui permettra ensuite à un agent développeur de
 > savoir **en quelques secondes s'il a cassé quelque chose**.
-> Ce document découpe ce jalon en **30 tâches** (M0-21 a été absorbée par M0-16 ; M0-31 a été
-> ajoutée par le tech lead pour valider tôt un fournisseur gratuit), réparties en 9 vagues.
+> Ce document découpe ce jalon en **31 tâches** (M0-21 a été absorbée par M0-16 ; M0-31 a été
+> ajoutée par le tech lead pour mesurer un fournisseur gratuit sur le corpus complet ; **M0-32**
+> a été ajoutée par le même arbitrage pour obtenir le **signal précoce** bien avant la vague 8),
+> réparties en 9 vagues.
 >
 > **Comment le lire.** Chaque vague est un groupe de tâches qui peuvent être menées **en même
 > temps** par des agents différents. Une vague ne démarre que lorsque la précédente est finie.
@@ -55,8 +57,8 @@
 | 4 | Les dés, le protocole réseau, les schémas de contenu, les fixtures, le schéma de base | M0-07 · M0-08 · M0-09 · M0-10 · M0-11 |
 | 5 | Les mouvements et le journal rejouable, le chargeur de contenu, l'accès base, les schémas IA | M0-12 · M0-13 · M0-14 · M0-15 |
 | 6 | Le contenu de jeu **et les fiches de champion**, la reconstruction de base, les prompts du conteur, la page table, le serveur | M0-16 · M0-17 · M0-18 · M0-19 · M0-20 |
-| 7 | Le contexte IA, l'authentification Discord, l'orchestration, le WebSocket | M0-22 · M0-23 · M0-24 · M0-25 |
-| 8 | La campagne de démonstration, le harnais d'éval, le simulateur, les travailleurs IA, **et la mesure d'un fournisseur gratuit** | **M0-31** (à démarrer en premier) · M0-26 · M0-27 · M0-28 · M0-29 |
+| 7 | Le contexte IA, l'authentification Discord, l'orchestration, le WebSocket, **et la sonde de fumée d'un fournisseur gratuit** | M0-22 · M0-23 · M0-24 · M0-25 · **M0-32** (à démarrer en premier) |
+| 8 | La campagne de démonstration, le harnais d'éval, le simulateur, les travailleurs IA, **et la mesure complète d'un fournisseur gratuit** | **M0-31** (à démarrer en premier) · M0-26 · M0-27 · M0-28 · M0-29 |
 | 9 | L'assemblage : le parcours de bout en bout qui prouve que le socle tient | M0-30 |
 
 **Repères de taille** : *petite* ≈ une demi-session, *moyenne* ≈ une session, *grosse* ≈ une
@@ -71,6 +73,11 @@ bloquer personne ; une décision contraire se rattrape en quelques lignes.
 et P8 à P14. Ces lignes restent ici comme mémoire ; il n'y a plus rien à trancher dessus, sauf
 là où c'est écrit noir sur blanc.
 
+**Seconde série d'arbitrages, même date** : les quatre points laissés ouverts par la seconde
+passe de revue (`M0-REVUE.md` §11.7) ont été tranchés, plus un cinquième que le lead a soulevé
+de lui-même. Ce sont **P19 à P23** ci-dessous. Ce sont des décisions, pas des propositions :
+`M0-REVUE.md` §12 en porte la trace, et **plus aucun point n'est en attente d'arbitrage**.
+
 | # | Point | Valeur retenue pour M0 | État |
 |---|---|---|---|
 | P1 | `03-donnees.md` §4.8 passe 4 exigeait « 20 champions `handwritten` minimum », alors que les 20 fiches relèvent de la V1 | Le seuil est lu dans `content/manifest.json` (`expectedCounts.champions`). M0 livre **3** fiches. Le seuil passera à 20 en M1 sans toucher au code | corrigé dans la spec |
@@ -78,7 +85,7 @@ là où c'est écrit noir sur blanc.
 | P3 | `03-donnees.md` §1.7 citait `chronicles.facts_json`, absent du DDL §1.5 qui porte `doc_json` | `doc_json` fait foi | corrigé dans la spec |
 | P4 | `db:check` contrôle 11 interrogeait `covers_from_seq` / `covers_to_seq`, colonnes inexistantes | Contrôle 11 : `version` dense de 1 à N, `source_event_seq` croissant et ≤ `campaigns.seq` | corrigé dans la spec |
 | P5 | `.nvmrc` valait `26`, les specs disent Node 24 partout | **24** | corrigé dans le dépôt |
-| P6 | `.env.example` décrivait un conteur agnostique (`NARRATOR_PROVIDER`, OpenRouter) et `DATABASE_URL` | **Renversé par le tech lead** : le conteur *est* agnostique. `.env.example` porte `NARRATOR_PROVIDER`, `NARRATOR_BASE_URL`, `NARRATOR_API_KEY`, `NARRATOR_MODEL`, `NARRATOR_MODEL_STRUCTURED` et `DATABASE_PATH`. `ANTHROPIC_API_KEY`, `AI_MODEL_*` et `AI_ENABLED` n'existent plus | **tranché** — appliqué dans le dépôt et dans les quatre specs |
+| P6 | `.env.example` décrivait un conteur agnostique (`NARRATOR_PROVIDER`, OpenRouter) et `DATABASE_URL` | **RENVERSÉ par le tech lead, et confirmé explicitement depuis** (voir P20) : la lecture « il n'y a qu'un fournisseur : Anthropic » **n'est plus une décision en vigueur**, nulle part. Le conteur *est* agnostique, parce que le produit doit pouvoir tourner sur un fournisseur gratuit ou un modèle local. `.env.example` porte `NARRATOR_PROVIDER`, `NARRATOR_BASE_URL`, `NARRATOR_API_KEY`, `NARRATOR_MODEL`, `NARRATOR_MODEL_STRUCTURED` et `DATABASE_PATH`. `ANTHROPIC_API_KEY`, `AI_MODEL_*` et `AI_ENABLED` n'existent plus | **tranché** — appliqué dans le dépôt et dans les quatre specs |
 | P7 | La spec ne disait pas si `pnpm verify` doit être vert avant la fin du jalon | Non. La porte est progressive, et M0-30 la ferme | tranché |
 | P8 | `ChampionSchema` n'avait **aucun champ `aliases`**, alors que tout le verrouillage de distribution en dépend (`02-mj-ia.md` §2.2, §8.4, M0-10, M0-21) | `aliases: z.array(FrTextSchema).min(1).max(12)`, obligatoire, ajouté au schéma unique | corrigé dans la spec |
 | P9 | `content/champions-index.json` (les ~170 champions et leurs alias) était cité par la forge (V2, V7) mais absent de l'arborescence de contenu et de toute tâche | Fichier et `ChampionIndexSchema` ajoutés à `03-donnees.md` §4.1/§4.7 ; livré par M0-16, limité en M0 aux champions cités par le contenu et le seed | corrigé dans la spec |
@@ -90,7 +97,12 @@ là où c'est écrit noir sur blanc.
 | P15 | **Prototype joué, enseignement 1** : le ton produit était « fade et trop flou, on a du mal à s'y plonger ». Un prompt qui demande un ton « âpre, sensoriel, concret » ne suffit pas — le modèle produit de la prose d'IA reconnaissable | `conteur/2.0.0` : ancrage de registre nommé (**la saga islandaise**), liste noire close, trois obligations, et surtout une **paire d'exemples bon/mauvais sur la même situation** avec l'explication de ce qui cloche. Le prompt passe de ≈ 1 250 à ≈ 2 200 tokens ; seuil de `prompt-size.test.ts` relevé à 1 900 ; huit assertions de registre ajoutées, dont cinq dures | corrigé dans la spec |
 | P16 | **Prototype joué, enseignement 2** : incohérence factuelle en **trois échanges** — un PNJ décrit en fuite réapparaît endormi dans son abri. Cause racine : le contexte envoyait les dernières entrées du journal **en prose**, et le modèle les réinterprétait | **État de scène structuré** : événement `scene.facts_updated` + projection `scene_state`, injecté comme donnée d'autorité (`<scene>`), et bloc `<scene_apres>` rendu par le modèle, validé, borné et fusionné par le serveur. Un bloc absent ou malformé ne casse rien. Les partis sont **monotones** dans une scène. `02-mj-ia.md` §2.3, §4.7 ; `03-donnees.md` §1.4, §3.4, §3.5 | corrigé dans la spec |
 | P17 | **Prototype joué, enseignement 3** : le modèle accepte tout et invente une justification, faute d'avoir un moyen légitime de refuser. Verdict du joueur : « on peut proposer un truc wtf, mais la conséquence doit trouver une logique face à l'action » | **Droit de refus borné à la possibilité matérielle**, jamais à l'issue. Quatre causes closes, preuve recalculée par le serveur sur l'état **à la déclaration**. Un refus prouvé annule le tour par `system.reverted` sur le groupe `correlation_id` ; l'index RNG n'est jamais libéré ; un jet annulé **laisse une trace**. Une proposition absurde mais possible n'est **jamais** refusée. Anti-abus : `refusal_is_outcome_blind` rejoue le corpus dés inversés. `02-mj-ia.md` §4.8 ; `03-donnees.md` §0.5, §3.7 | corrigé dans la spec |
-| P18 | `02-mj-ia.md` était écrit en supposant un fournisseur unique : identifiants de modèle, codes d'arrêt, seuils de cache, format d'appel d'outils et classes d'exception de SDK traversaient toute la spec. Impossible d'utiliser un fournisseur gratuit ou un modèle local sans réécrire la couche IA | **Le conteur devient un PORT**, pas un fournisseur : `NarratorPort`, deux opérations (`narrer()` en flux, `structurer()` qui rend du JSON validé), une énumération d'erreurs neutre, et **trois adaptateurs** — `anthropic`, `openai-compatible`, `ollama` — plus un `stub` sans réseau. Tout ce qui est propre à un fournisseur descend dans son adaptateur (`02-mj-ia.md` §0.3 à §0.5) ; le reste de la spec ne nomme plus aucun fournisseur, et un test le vérifie (§0.7). Configuration par les cinq `NARRATOR_*`. Matrice de dégradation explicite (§0.2), gouvernée par une seule règle : **on dégrade la prose, jamais l'équité** | **tranché par le tech lead** — appliqué dans les quatre specs, `.env.example`, et les tâches M0-12, M0-18, M0-20, M0-22, M0-27, M0-29 et la nouvelle M0-31 |
+| P18 | `02-mj-ia.md` était écrit en supposant un fournisseur unique : identifiants de modèle, codes d'arrêt, seuils de cache, format d'appel d'outils et classes d'exception de SDK traversaient toute la spec. Impossible d'utiliser un fournisseur gratuit ou un modèle local sans réécrire la couche IA | **Le conteur devient un PORT**, pas un fournisseur : `NarratorPort`, deux opérations (`narrer()` en flux, `structurer()` qui rend du JSON validé), une énumération d'erreurs neutre, et **trois adaptateurs** — `anthropic`, `openai-compatible`, `ollama` — plus un `stub` sans réseau. Tout ce qui est propre à un fournisseur descend dans son adaptateur (`02-mj-ia.md` §0.3 à §0.5) ; le reste de la spec ne nomme plus aucun fournisseur, et un test le vérifie (§0.7). Configuration par les cinq `NARRATOR_*` *(depuis P19 : cinq de base **et trois d'appoint**)*. Matrice de dégradation explicite (§0.2), gouvernée par une seule règle : **on dégrade la prose, jamais l'équité** | **tranché par le tech lead** — appliqué dans les quatre specs, `.env.example`, et les tâches M0-12, M0-18, M0-20, M0-22, M0-27, M0-29 et la nouvelle M0-31 |
+| P19 | Les trois variables d'environnement au-delà des cinq nommées (`NARRATOR_TOOLS`, `NARRATOR_TIMEOUT_MS`, `NARRATOR_CONTEXT_WINDOW`) n'avaient jamais été arbitrées (`M0-REVUE.md` §11.7, point 1) | **VALIDÉES.** Elles rejoignent officiellement les cinq `NARRATOR_*` de base. Motif retenu : *le support des outils dépend du modèle et non de la passerelle, et un modèle local qui charge à froid dépasse 60 s sans être en panne*. Toutes trois restent facultatives et propres à un adaptateur ; leur valeur par défaut et l'adaptateur concerné sont écrits **au même endroit et de la même façon** dans `.env.example`, `02-mj-ia.md` §0.6 et `01-architecture.md` §9.4 | **tranché par le tech lead** — appliqué dans `.env.example`, `02-mj-ia.md` §0.3 et §0.6, `01-architecture.md` §9.4, `ARCHITECTURE.md` §4.5, et vérifié par M0-20 |
+| P20 | La réécriture de `.env.example` en fichier agnostique du fournisseur n'avait pas été confirmée (`M0-REVUE.md` §11.7, point 2) | **VALIDÉE, et le point P6 est officiellement RENVERSÉ.** « Il n'y a qu'un fournisseur : Anthropic » n'est plus une décision en vigueur : le produit doit pouvoir tourner sur un fournisseur **gratuit** ou sur un **modèle local**. Toute occurrence contraire est un reste à corriger, pas une règle | **tranché par le tech lead** — appliqué dans `.env.example`, `ARCHITECTURE.md` §4.5, `01-architecture.md` §9.4, et tracé dans `M0-REVUE.md` §12 |
+| P21 | Le départage d'un prix portant plusieurs `suggestedEffects` était une **déduction** de « le moteur tire », pas la décision elle-même (`M0-REVUE.md` §11.7, point 4) | **VALIDÉ tel que spécifié** : second tirage sur le flux RNG `price`, index journalisé dans `roll.price_paid.effectIndex`. Le moteur décide, et c'est rejouable. L'alternative « toujours le premier effet » est **abandonnée**. Aucun document ne doit laisser entendre que le modèle ou le joueur choisit | **tranché par le tech lead** — vérifié dans `ARCHITECTURE.md` §4.4, `02-mj-ia.md` §3.4 et §4.5, `03-donnees.md` §3.4 et §4.6, et M0-29 |
+| P22 | Fallait-il vérifier la présence de la cible **avant** les dés, à l'étape 2 du chemin d'une intention (`M0-REVUE.md` §11.6 et §11.7, point 3) ? | **NON. Le refus reste APRÈS le jet.** Un contrôle de faisabilité avant les dés remettrait le modèle dans le chemin de décision : inacceptable. La conséquence est assumée — un joueur voit brièvement le résultat d'un tour qui sera ensuite annulé. **Ce qui est nouveau** : ce tour annulé n'est pas effacé de l'affichage, il est **montré comme annulé, avec sa preuve consultable**. Le détail mécanique d'une scène (mouvement, dés, calcul, effets, prix, présage) n'est **pas** affiché par défaut : il est replié derrière une commande **« Pourquoi ? »** attachée à chaque scène. Cette preuve est une **projection du journal** (`TurnProofDto`), calculée à la demande sur le groupe `correlation_id`, portée par `c2s.why` → `s2c.turn_proof`, bornée à 32 effets / 120 caractères par libellé / **8 Kio** sérialisés | **tranché par le tech lead, avec l'utilisateur** — appliqué dans `ARCHITECTURE.md` §4.4, `01-architecture.md` §2.4, §2.8, §2.9, §5.2, §5.4, §5.6, `02-mj-ia.md` §4.8.3, §4.8.4, §4.8.6, §6.2, §6.5, `03-donnees.md` §0.5 et §3.7, et les tâches M0-05, M0-08, M0-19, M0-20, M0-24, M0-25, M0-29, M0-30 |
+| P23 | Valider un fournisseur gratuit en **vague 8** (M0-31), c'est trop tard : si un modèle gratuit ne tient pas le prompt contraint, toute la couche se conçoit différemment | **SCINDER.** Une tâche de **fumée** (**M0-32**) sort le signal dès que le prompt intégral et le port existent : six à huit assertions écrites à la main — **sept sont livrées**, et la borne 6–8 est vérifiée par la sonde elle-même —, un verdict lisible par un humain (*tel fournisseur, tel modèle, tant d'assertions passées sur tant*), aucune dépendance au corpus complet d'assertions, et **aucun blocage de la CI** — elle informe une décision. M0-31 garde le corpus complet en vague 8. **Réserve appliquée, et son chiffrage corrigé à la troisième passe** : le lead demandait « vague 4 au plus tard » ; le prompt intégral et le port sont livrés par M0-18 en **vague 6**, donc **la vague 7 est le plus tôt atteignable sans redécouper**. Le redécoupage chiffré par la passe d'application ne suffisait pas — il aboutissait à la vague **5**, pas 4, et oubliait `SceneBlockSchema`. Le vrai coût de la vague 4 est en **§12 A7 de `M0-REVUE.md`** et dans la fiche M0-32 : trois vagues touchées, deux fiches neuves, trois réécrites, et un couplage de compilation intra-vague que le système de vagues existe précisément pour empêcher. **Décision de découpage, elle appartient au lead** | **tranché par le tech lead** — appliqué en M0-32 (nouvelle) et M0-31 (fiche ajustée) ; **placement en vague 7, réserve ouverte** |
 
 ---
 
@@ -147,8 +159,9 @@ remplis. Tant que ce n'est pas fini, personne d'autre ne peut commencer.
   `for c in dev build verify test lint typecheck format:check format depcruise check:workspace
   test:golden golden:update sim db:generate db:check-schema db:migrate db:studio db:seed
   db:reset db:rebuild db:check content:index content:check eval:offline eval:record eval:live
-  eval:judge eval:probe; do node -e "process.exit(require('./package.json').scripts['$c']?0:1)"
-  || echo "MANQUE $c"; done` n'affiche rien.
+  eval:judge eval:smoke eval:probe; do node -e "process.exit(require('./package.json').scripts['$c']?0:1)"
+  || echo "MANQUE $c"; done` n'affiche rien. *(`eval:smoke` est dans la liste depuis P23 : la
+  commande existe dès M0-01, même si M0-32 ne la remplit qu'en vague 7.)*
 - `pnpm test --coverage` sur `@for/engine` sort en code non nul si l'on abaisse artificiellement
   la couverture (preuve que les seuils sont appliqués par le runner, pas seulement documentés).
 - Un `import 'node:fs'` ajouté dans `packages/engine/src/index.ts` fait sortir `pnpm lint` en
@@ -318,6 +331,12 @@ test qui **casse la compilation** quand le moteur évolue sans son schéma.
 - `src/{primitives,version,errors,upcast,index}.ts`, `src/core/**` (dont `core/scene-state.ts`,
   miroir Zod de `SceneState` avec ses bornes : 8 présents, 8 partis, `name` ≤ 40, `state` ≤ 60),
   `src/events/**` (les 71 variantes), `src/intents/**`, `src/dto/table-state.ts`.
+- `src/dto/turn-proof.ts` : `zTurnProof` / `TurnProofDto` — la **preuve d'un tour** dépliée par
+  la commande « Pourquoi ? » (P22), écrite à la lettre de `01-architecture.md` §5.4. C'est une
+  **projection du journal**, pas un miroir du moteur : `.strict()`, `status`, `revertedBy`,
+  `move`, `roll`, `revision`, `effects` (**max 32**), `price`, `presage`, `narration`, et
+  **un `eventSeq` sur chaque entrée**. Elle vit ici parce que M0-05 est le propriétaire unique
+  de `src/dto/**` ; le message qui la transporte appartient à M0-08.
 - Les index de sous-dossier `src/{ws,http,content,ai}/index.ts` créés **vides mais exportés**
   par le barrel, pour que les tâches de la vague 4 les remplissent sans toucher `src/index.ts`.
 - `tests/engine-parity.test.ts`, `tests/exhaustive-union.test.ts`, `tests/event-catalog.test.ts`
@@ -339,10 +358,15 @@ test qui **casse la compilation** quand le moteur évolue sans son schéma.
   --coverage`).
 - `grep -rn "z.infer" packages/contracts/src/core/campaign-state.ts` ne renvoie aucune
   déclaration de `CampaignState` (le type canonique vient du moteur, pas du schéma).
+- Un test vérifie que `zTurnProof` refuse un `effects` de 33 entrées, refuse une entrée
+  d'`effects` **sans `eventSeq`** (une preuve sans provenance est une donnée fabriquée pour
+  l'affichage, exactement ce que P22 interdit), refuse une clé inconnue (`.strict()`), et
+  **accepte** une preuve `status: 'reverted'` portant `revertedBy { seq, reason }`.
 
 **Fichiers touchés** : `packages/contracts/src/{index,primitives,version,errors,upcast}.ts`,
 `packages/contracts/src/core/**`, `packages/contracts/src/events/**`,
-`packages/contracts/src/intents/**`, `packages/contracts/src/dto/**`,
+`packages/contracts/src/intents/**`, `packages/contracts/src/dto/**` (y compris
+`dto/turn-proof.ts`),
 `packages/contracts/src/{ws,http,content,ai}/index.ts`,
 `packages/contracts/tests/{engine-parity,exhaustive-union,event-catalog}.test.ts`,
 `packages/contracts/package.json`
@@ -437,8 +461,12 @@ client ne transporte un résultat**. Le test associé refuse à la compilation t
 `c2s.*` qui porterait une jauge, un dé ou un état.
 
 **Livrables**
-- `src/ws/{envelope,c2s,s2c,codes}.ts` : enveloppe `{ v, t, id, ts, seq?, p }`, les 7 messages
-  client et les 14 messages serveur de `01-architecture.md` §5, les codes de fermeture 4001-4011.
+- `src/ws/{envelope,c2s,s2c,codes}.ts` : enveloppe `{ v, t, id, ts, seq?, p }`, les **8** messages
+  client et les **15** messages serveur de `01-architecture.md` §5, les codes de fermeture 4001-4011.
+  Les deux derniers arrivés sont ceux de la preuve « Pourquoi ? » (P22) : `c2s.why
+  { correlationId }`, message de **lecture** qui ne transporte aucun résultat, et
+  `s2c.turn_proof { correlationId, proof: TurnProofDto, truncated: boolean }`, qui reprend le
+  `zTurnProof` de M0-05 sans le redéclarer.
 - `src/http/{auth,tables,characters,content,health}.ts` pour les routes de §6.
 - `tests/ws-protocol.test.ts` (invariant 3) et `tests/envelope-fuzz.test.ts`.
 
@@ -451,6 +479,15 @@ client ne transporte un résultat**. Le test associé refuse à la compilation t
   malformé, profondeur 50) dans `zC2SEnvelope.safeParse` sans qu'aucune ne lève.
 - Un test vérifie que `seq` n'est présent que sur `s2c.event` et que `chunk` n'apparaît que
   dans les charges utiles de narration.
+- Un test compte les membres des deux unions : `zC2SMessage` en porte **8**, `zS2CMessage`
+  **15**, et les deux listes sont sans doublon (`node -e` sur les `options` du
+  `discriminatedUnion`).
+- `c2s.why` ne porte **que** `correlationId` : le testeur y ajoute un champ `seq`, `outcome` ou
+  `event` — `tests/ws-protocol.test.ts` sort en code non nul, comme pour tout autre `c2s.*`.
+- Un test vérifie la **borne de taille** de `s2c.turn_proof` : une preuve construite au maximum
+  de ses bornes (32 effets, libellés de 120 caractères) sérialise à **moins de 8 Kio**, et le
+  schéma refuse au-delà. C'est la garantie qu'une preuve ne peut pas approcher la trame sortante
+  de 256 Kio (`01-architecture.md` §5).
 - `src/index.ts` n'a pas été modifié : `git diff --name-only` ne le mentionne pas.
 
 **Fichiers touchés** : `packages/contracts/src/ws/**`, `packages/contracts/src/http/**`,
@@ -936,6 +973,16 @@ reçus pour l'affichage, et se fait écraser par chaque instantané.
   `src/routes/{Login,CampaignList,TableRoom,CharacterPicker}.tsx`,
   `src/features/table/**` (journal, présence, coquilles vides), `src/components/ui/**`,
   `src/styles/**`.
+- `src/features/table/Proof/**` : la commande **« Pourquoi ? »** (P22). Elle est attachée à
+  **chaque scène** du journal, **repliée par défaut** — aucun dé, aucun calcul, aucun effet,
+  aucun prix, aucun présage n'est affiché tant que personne ne l'ouvre : la fiction reste
+  propre. Ouvrir envoie `c2s.why { correlationId }` (le `correlationId` vient de l'enveloppe des
+  `s2c.event` déjà reçus, `03-donnees.md` §3.1) et affiche le `s2c.turn_proof` reçu, tel quel.
+  Le client **ne recompose jamais** une preuve depuis son état local : il affiche la projection
+  du serveur, ou rien.
+- Le traitement de `system.reverted` dans `src/ws/store.ts` : les lignes dont le `seq` figure
+  dans `targetSeqs` sont **marquées annulées**, avec la cause portée par `reason`, et
+  **conservées à l'écran avec leur commande « Pourquoi ? »**. Elles ne sont jamais retirées.
 - Tests de composants purs et du store WS.
 
 **Critères d'acceptation**
@@ -946,6 +993,17 @@ reçus pour l'affichage, et se fait écraser par chaque instantané.
   demande une resynchronisation.
 - Un test vérifie qu'un `s2c.snapshot` écrase intégralement l'état local, et qu'un trou de
   `seq` déclenche un `c2s.resume`.
+- Un test du store applique un `system.reverted` portant `targetSeqs: [412, 413, 414]` : les
+  trois lignes sont toujours présentes dans le journal affiché, **marquées annulées**, avec la
+  cause lisible. Le testeur remplace le marquage par une suppression : le test sort en code non
+  nul. *(P22 : un tour annulé se montre, il ne disparaît pas.)*
+- Un test de rendu vérifie qu'une scène **non dépliée** n'affiche aucun chiffre de dé, aucun
+  total, aucun nom d'effet ni aucun libellé de prix, et qu'un clic sur « Pourquoi ? » émet
+  exactement un `c2s.why { correlationId }` — jamais un `c2s.intent`, jamais deux envois pour un
+  clic.
+- Un test vérifie que le panneau de preuve rend **uniquement** ce que porte `s2c.turn_proof` :
+  le testeur retire le `roll` de la charge utile reçue, la ligne « jet » disparaît de l'affichage
+  au lieu d'être reconstruite depuis l'état local.
 - `grep -rn "@for/db\|@for/ai\|@for/server" packages/client/src | wc -l` affiche `0`.
 
 **Fichiers touchés** : `packages/client/index.html`, `packages/client/vite.config.ts`,
@@ -967,8 +1025,11 @@ trois agents de travailler en parallèle sur le serveur sans se marcher dessus.
   modifié**), `src/env.ts` (`zEnv.parse`, crash explicite), `src/deps.ts` (`AppDeps`),
   `src/logger.ts` (pino + rédaction), `src/errors.ts` (`AppError`, `errorHandler`).
 - `src/http/health.ts` (`/healthz`, `/readyz`, `/api/admin/health`).
-- `src/game/types.ts` : **interfaces seules** — `CampaignService`, `NarratorPort` (ré-exporté de `@for/contracts`),
-  `SubmitIntentInput/Result` — que M0-24 implémentera et que M0-25 consommera.
+- `src/game/types.ts` : **interfaces seules** — `CampaignService` (dont `getTurnProof`,
+  `01-architecture.md` §2.8), `NarratorPort` (ré-exporté de `@for/contracts`),
+  `SubmitIntentInput/Result` — que M0-24 implémentera et que M0-25 consommera. `getTurnProof`
+  figure **ici**, dans l'interface, parce que M0-25 la consomme dans la même vague que M0-24
+  l'implémente (P22).
 - Les quatre modules-greffons vides `src/{auth,http,ws,game}/index.ts`.
 - `tests/http/health.test.ts`.
 
@@ -1171,6 +1232,12 @@ transaction — demander à l'IA d'habiller le fait déjà acquis.
   **propriétaire unique** : M0-29, qui écrit dans le reste de `src/ai/**`, le consomme sans le
   réécrire. Le fichier vit sous `ai/` et non `game/` pour être à côté des autres modules qui
   parlent au port (`02-mj-ia.md` §10, `01-architecture.md` §2.8).
+- `src/game/turn-proof.ts` : `buildTurnProof(events, viewerId): TurnProofDto` — la **preuve
+  « Pourquoi ? »** (P22). Fonction **pure** : elle projette les événements déjà persistés du
+  groupe `correlation_id`, applique la même règle de visibilité que `getSnapshot`
+  (`visibility: 'gm'` retiré), et **ne tire aucun dé** : elle n'appelle ni `decide()`, ni
+  `rollChallenge()`, ni le moteur d'aucune façon. `campaign-service.getTurnProof` n'est que la
+  lecture des événements du groupe, puis cet appel.
 - `src/game/snapshots.ts` (tous les 200 événements + jalons), `src/game/chronicle.ts`
   (déclenchement, sans le travailleur).
 - `tests/game/*.test.ts`.
@@ -1197,8 +1264,21 @@ transaction — demander à l'IA d'habiller le fait déjà acquis.
 - Un test vérifie la fenêtre de brûlure du souffle en deux temps : `roll.action_resolved
   { burnWindow: true }` → `momentum.burn` → `character.momentum_burned` + `roll.action_revised`,
   sans jamais réécrire le premier jet.
+- **La preuve est une projection du journal, pas une donnée fabriquée** (P22). Trois critères,
+  tous tranchables :
+  1. `grep -rnE "decide\(|rollChallenge\(|rollProgress\(|Math\.random" packages/server/src/game/turn-proof.ts | wc -l`
+     affiche `0`.
+  2. Un test donne à `buildTurnProof` les événements d'un tour, puis vérifie que **chaque**
+     entrée de la preuve porte un `eventSeq` appartenant au groupe fourni — le testeur ajoute un
+     libellé sans `eventSeq` : le test sort en code non nul.
+  3. Un test appelle `getTurnProof` sur un tour annulé : la preuve porte `status: 'reverted'` et
+     `revertedBy { seq, reason: 'gm_refusal:<cause>' }`, et **contient toujours** le jet, les
+     effets, le prix et le présage du tour annulé — annuler n'efface pas la preuve, c'est tout
+     l'intérêt.
+- Un test vérifie que `buildTurnProof` est **pur** : appelé deux fois sur la même entrée, il rend
+  le même octet (`stableStringify`), et il n'ouvre aucune connexion à la base.
 
-**Fichiers touchés** : `packages/server/src/game/{campaign-service,intent-pipeline,write-queue,snapshots,chronicle,revert,index}.ts`,
+**Fichiers touchés** : `packages/server/src/game/{campaign-service,intent-pipeline,write-queue,snapshots,chronicle,revert,turn-proof,index}.ts`,
 `packages/server/src/ai/narrator.ts`, `packages/server/tests/game/**`
 
 ---
@@ -1214,8 +1294,10 @@ dépend pas de son implémentation.
 **Livrables**
 - `src/ws/hub.ts` (`TableHub` : abonnements, diffusion, reprise par `seq`),
   `src/ws/connection.ts` (cycle de vie, heartbeat 25 s / 60 s, contre-pression, trames 64 Kio
-  entrantes / 256 Kio sortantes), `src/ws/handlers.ts` (routage des 7 messages `c2s.*`,
-  limitation de débit de §5.6).
+  entrantes / 256 Kio sortantes), `src/ws/handlers.ts` (routage des **8** messages `c2s.*`,
+  limitation de débit de §5.6, dont **10 `c2s.why` / 10 s**). Le handler de `c2s.why` appelle
+  `CampaignService.getTurnProof` et renvoie `s2c.turn_proof` : il ne lit pas la base lui-même,
+  ne construit aucune preuve, et **ne décide rien** (P22).
 - `tests/ws/*.test.ts`, avec des paires de sockets en mémoire et un faux `CampaignService`.
 
 **Critères d'acceptation**
@@ -1231,11 +1313,163 @@ dépend pas de son implémentation.
   dépassement, fermeture **4008**.
 - Une trame de 65 Kio ferme en **4009**.
 - Sans `c2s.pong` pendant 60 s (horloge simulée), la connexion est fermée.
-- `grep -rn "decide(\|reduce(" packages/server/src/ws | wc -l` affiche `0` (le hub ne décide
-  rien).
+- `c2s.why { correlationId }` reçoit un `s2c.turn_proof` portant le même `correlationId` ; un
+  `correlationId` inconnu de la campagne reçoit un `s2c.error` dont le `code` appartient à
+  l'union fermée `AppErrorCode`, et un `correlationId` appartenant à **une autre campagne** est
+  traité comme inconnu — jamais servi. Onze `c2s.why` en 10 s déclenchent
+  `s2c.error { code: 'rate_limited' }`.
+- Un test vérifie que `c2s.why` **ne mute rien** : après cent appels, `events` n'a pas grandi
+  d'une ligne et aucune narration n'a été relancée.
+- `grep -rn "decide(\|reduce(\|buildTurnProof(" packages/server/src/ws | wc -l` affiche `0`
+  (le hub ne décide rien, et ne construit pas davantage la preuve : il route).
 
 **Fichiers touchés** : `packages/server/src/ws/{hub,connection,handlers,index}.ts`,
 `packages/server/tests/ws/**`
+
+---
+
+### M0-32 · Sonde de FUMÉE : un fournisseur gratuit tient-il le prompt contraint ?
+**Taille** : petite · **Dépend de** : **M0-18, et rien d'autre** · **Parallélisable** : oui
+· **À démarrer en PREMIER dans la vague 7**
+
+> **La dépendance est la décision** (P23). M0-18 apporte les deux seuls livrables dont la sonde
+> a besoin : le **prompt intégral** et le **port du narrateur** avec ses adaptateurs — plus, par
+> transitivité, `SceneBlockSchema` de M0-12. Elle **ne dépend pas** de M0-22 (le corpus
+> d'assertions et le constructeur de contexte, même vague) ni de M0-27 (le harnais N0, vague
+> suivante) : si l'une des deux apparaissait dans ses `depend_de`, la sonde retomberait en vague
+> 8 et perdrait toute sa raison d'être.
+
+**À quoi ça sert.** Sortir le **signal précoce**. Si un modèle gratuit est incapable de tenir le
+prompt contraint — registre, deuxième personne, pas de décision d'issue, bloc de faits bien
+formé —, alors **toute la couche se conçoit différemment**, et l'apprendre en vague 8 coûte trop
+cher. Cette tâche ne mesure pas la qualité : elle répond à une seule question, le plus tôt
+possible, *est-ce que ça tient debout ?*
+
+> **Placement — ce qui a été appliqué, et la réserve (chiffrage corrigé à la troisième passe).**
+> Le tech lead demandait cette tâche en **vague 4 au plus tard**. Elle ne dépend que du
+> **prompt intégral** et du **port du narrateur** — mais ces deux livrables sont ceux de
+> **M0-18, en vague 6**, elle-même bloquée par M0-12 et M0-14 (vague 5). **La vague 7 est donc
+> le plus tôt atteignable sans redécouper**, et c'est ce qui est écrit ici.
+>
+> Le chiffrage donné par la passe d'application (« sortir `narrator-port.ts` de M0-12 vers
+> M0-05, et `narrator/**` + `conteur.system.ts` de M0-18 vers une tâche de vague 4 ») **ne
+> donne pas la vague 4**, et c'est la troisième passe qui l'a relevé : une tâche n'est jamais
+> dans la même vague que celle dont elle dépend, donc si le port et le prompt arrivent en
+> vague 4, la sonde arrive en **vague 5**. Ce chiffrage oubliait par ailleurs `SceneBlockSchema`
+> (`packages/contracts/src/ai/scene.ts`, M0-12, **vague 5**), dont l'assertion 7 a besoin.
+>
+> **Le vrai coût de la vague 4**, si le lead la veut :
+> 1. une tâche neuve de **vague 2** (dépendant de M0-01 seul) qui livre
+>    `packages/contracts/src/ai/{narrator-port,scene}.ts` — ces deux fichiers ne référencent
+>    aucun type du moteur, donc ils n'ont pas besoin de M0-02 ;
+> 2. une tâche neuve de **vague 3** qui livre `packages/ai/src/narrator/**`,
+>    `packages/ai/src/prompts/conteur.system.ts` et `packages/ai/package.json` ;
+> 3. la sonde en **vague 4** ;
+> 4. réécriture de **M0-05** (elle ne crée plus `src/ai/index.ts` vide, elle hérite d'un dossier
+>    déjà peuplé et doit l'exporter sans l'écraser), de **M0-12** (amputée du port et de
+>    `scene.ts`, ses deux critères de neutralité suivent) et de **M0-18** (amputée des
+>    adaptateurs et d'un prompt, donc de `narrator-port.contract`, `narrator-errors` et d'une
+>    partie de `prompt-size`).
+>
+> **Et un risque à porter explicitement** : un `@for/ai` bâti en vague 3 compile contre un
+> `@for/contracts` que M0-05 est en train de remplir **dans la même vague**, et
+> `packages/contracts/src/index.ts` aurait deux écrivains dans deux vagues successives. C'est
+> exactement le couplage intra-vague que la règle 2 du découpage existe pour empêcher. Deux
+> fiches neuves, trois réécrites, trois vagues touchées : **c'est une décision de découpage, pas
+> une mise en cohérence — elle appartient au lead**, et elle reste ouverte.
+
+**Ce qu'elle n'est pas.** Ce n'est pas M0-31. Elle ne note pas contre le corpus complet, ne
+compare pas les fournisseurs entre eux, ne recommande pas de défaut pour le dépôt, et **ne
+bloque pas la CI**. Elle informe une décision.
+
+**Livrables**
+- `packages/ai-eval/smoke/cases/*.case.json` : **3 cas**, écrits ici et sans dépendance au
+  corpus de M0-27 — une issue `franche`, un `echec`, et un tour portant un **prix imposé**.
+  Chaque cas porte son `<fait>`, son `<intention>`, son `turn.scene_in` et la liste de champions
+  verrouillés **en dur** (pas de `@for/content` : la fixture se suffit).
+- `packages/ai-eval/smoke/assertions.ts` : **sept** assertions, écrites à la main, **gelées** —
+  six au minimum, huit au maximum, et la borne est vérifiée par une commande. Elles portent sur
+  ce qui est vital **et** mesurable sans le corpus complet :
+  1. `length_in_range` — la narration tient dans les bornes du § 2.1 (3 à 5 phrases) ;
+  2. `second_person_singular` — elle s'adresse au joueur en **« tu »**, jamais en « vous » ni à
+     la troisième personne ;
+  3. `no_outcome_decision` — elle ne tranche **aucune** issue : aucun caractère numérique,
+     aucun vocabulaire de jet (« tu réussis », « tu échoues », « jet », « dé ») ;
+  4. `no_locked_champion` — aucun nom **ni alias** de la liste verrouillée du cas ;
+  5. `no_final_question` — elle ne se termine pas par une question posée au joueur ;
+  6. `scene_block_present` — un bloc `<scene_apres>` est présent, **unique** et fermé ;
+  7. `scene_block_wellformed` — ce bloc valide contre `SceneBlockSchema` de `@for/contracts`
+     (livré en vague 5, donc disponible).
+  *(Ces sept assertions sont **la seule duplication autorisée** du corpus de production, et elle
+  est bornée : elles vivent dans `smoke/`, ne grandissent pas, et personne ne les importe. M0-31
+  et M0-27, eux, notent avec les assertions de `@for/ai` et rien d'autre — leurs critères le
+  vérifient déjà sur `probe/` et `src/`, pas sur `smoke/`.)*
+- `packages/ai-eval/smoke/run-smoke.ts` : construit une `NarrateRequest` **minimale** —
+  `system[]` = le **prompt intégral** de production (`CONTEUR_SYSTEM_PROMPT`, **importé de
+  `@for/ai`, jamais recopié**) et un dernier message `user` assemblé ici à partir du cas —, puis
+  appelle le **port réel** pour le `--provider=<id>` demandé, `n = 2` échantillons par cas, et
+  note. Elle **n'utilise pas** le constructeur de contexte de M0-22, livré dans la même vague :
+  c'est exactement ce qui la rend précoce, et ce qui la distingue de M0-31, qui rejoue la requête
+  de production complète.
+- `packages/ai-eval/smoke/report.ts` : le **verdict lisible par un humain**, en moins de vingt
+  lignes — *tel fournisseur, tel modèle, tant d'assertions passées sur tant*, puis la liste des
+  assertions tombées avec un extrait de la sortie fautive.
+- `docs/runbook/conteur-fumee.md` : le verdict daté de la première exécution réelle, et la
+  phrase qui en découle (« on continue », ou « ce modèle ne tient pas le prompt, voici sur quoi
+  il tombe »).
+- Le script `pnpm eval:smoke` (déclaré dans le `package.json` racine par M0-01, comme toutes les
+  commandes : `01-architecture.md` §2.2).
+- `packages/ai-eval/package.json` : cette tâche est la **première** à livrer dans `@for/ai-eval`
+  (vague 7), elle y déclare donc les dépendances `@for/ai` et `@for/contracts` et le script
+  `eval:smoke` du paquet. **M0-27 seule** le complète en vague 8 ; **M0-31 n'y touche pas** (sa
+  liste de fichiers ne le porte pas, et son script `eval:probe` est déclaré à la racine par
+  M0-01). Un seul écrivain par vague, donc aucune simultanéité.
+
+**Critères d'acceptation**
+- `pnpm eval:smoke --provider=stub` sort en **0** sans réseau ni clé : le harnais est exerçable
+  en CI même si la mesure ne l'est pas. Deux exécutions donnent **le même verdict, au caractère
+  près** (le `stub` est déterministe ; son taux de réussite, lui, n'a aucune valeur d'information
+  — ce n'est pas un modèle).
+- Sans `NARRATOR_API_KEY` et sans `NARRATOR_BASE_URL`,
+  `pnpm eval:smoke --provider=openai-compatible` sort en **1** avec un message nommant la
+  variable manquante — jamais une trace de pile.
+- **Elle ne bloque pas la CI, et c'est vérifiable** : `grep -c "eval:smoke" .github/workflows/ci.yml`
+  affiche `0`, et une exécution dont une assertion échoue sort quand même en **0**. Le code de
+  sortie non nul est réservé aux **erreurs d'exécution** (variable manquante, fournisseur
+  injoignable), jamais à un verdict défavorable : un verdict est une information, pas une porte.
+- Le verdict tient sur **moins de vingt lignes** et porte, dans cet ordre : le fournisseur, le
+  nom de modèle exact, le nombre d'appels, `n / 7` assertions passées — `7` étant le total
+  réellement chargé, jamais une constante écrite dans le rapport —, puis les assertions tombées.
+  Le testeur lit la sortie et sait quoi faire sans ouvrir un JSON.
+- **Le compte d'assertions est borné, et la sonde le vérifie elle-même au démarrage.**
+  `pnpm eval:smoke --provider=stub` écrit en première ligne `assertions: 7`, et sort en **1**
+  avec un message nommant la borne si le compte quitte l'intervalle 6–8. Le testeur en ajoute
+  une neuvième : la commande sort en **1**. *(Un dépassement de borne est une erreur de
+  configuration du harnais, pas un verdict : le code non nul est donc cohérent avec la règle
+  ci-dessus. Et le critère se tranche sans supposer où le paquet émet son `dist/` — une
+  hypothèse d'arborescence de build serait un critère faux par construction.)*
+- **Aucune dépendance au corpus complet ni au constructeur de contexte** (c'est la raison
+  d'être de la scission), en deux commandes plutôt qu'en une — le fichier d'assertions de la
+  sonde contient forcément la chaîne `ASSERTIONS`, et un critère qui l'interdirait serait faux
+  par construction :
+  1. `grep -rnE "@for/ai-eval|packages/ai-eval/src|graders|@for/ai/(dist|src)/context" packages/ai-eval/smoke | wc -l`
+     affiche `0` ;
+  2. `grep -rn "ASSERTIONS" packages/ai-eval/smoke | grep -v "SMOKE_ASSERTIONS" | wc -l`
+     affiche `0`.
+  La tâche n'importe que `CONTEUR_SYSTEM_PROMPT` et le port depuis `@for/ai`, plus
+  `SceneBlockSchema` depuis `@for/contracts`.
+- Le prompt est **le vrai**, pas une copie : un test compare le `system[0]` de la requête
+  construite à `CONTEUR_SYSTEM_PROMPT` importé, **à l'octet près**, et vérifie que le rapport
+  porte `CONTEUR_PROMPT_VERSION`. Le testeur modifie un caractère du prompt système :
+  `pnpm eval:smoke --provider=stub` reflète le changement au lieu de l'ignorer.
+- Le fournisseur injoignable (port simulé rendant `unavailable`) produit un message d'une ligne
+  et le code **1**, sans trace de pile et sans laisser un rapport à moitié écrit.
+
+**Fichiers touchés** : `packages/ai-eval/smoke/**`, `packages/ai-eval/package.json`,
+`docs/runbook/conteur-fumee.md`
+*(Ne touche ni `packages/ai-eval/src/**`, qui appartient à M0-27, ni `packages/ai-eval/probe/**`,
+qui appartient à M0-31. Aucune collision dans la vague 7 : M0-22 livre dans `packages/ai`,
+M0-23, M0-24 et M0-25 dans `packages/server`.)*
 
 ---
 
@@ -1348,7 +1582,9 @@ sorties enregistrées.
 
 **Fichiers touchés** : `packages/ai-eval/cases/**`, `packages/ai-eval/chronicle/**`,
 `packages/ai-eval/forge/**`, `packages/ai-eval/src/**`, `packages/ai-eval/package.json`
-*(Ne touche pas `packages/ai-eval/probe/**`, qui appartient à M0-31.)*
+*(Ne touche pas `packages/ai-eval/probe/**`, qui appartient à M0-31, ni
+`packages/ai-eval/smoke/**`, qui appartient à M0-32. `package.json` a été créé par M0-32 en
+vague 7 : cette tâche le complète, elle ne le réécrit pas.)*
 
 ---
 
@@ -1438,6 +1674,14 @@ côté serveur : la liste des événements atteignables par une proposition du m
 - Un test vérifie le quota : au quatrième refus retenu à l'intérieur d'une fenêtre de vingt
   tours, `src/ai/refusal.ts` rejette (`refusal_quota`) et journalise en `warn` une ligne portant
   `event: 'gm_refusal_rate_high'` et `campaignId`.
+- **Un tour annulé est montré comme annulé, jamais effacé** (P22). Un test capture ce qui est
+  diffusé après un refus retenu et vérifie l'ordre exact : `s2c.narration_done`, puis
+  `s2c.narration_error { code: 'action_impossible' }`, puis le `s2c.event` du `system.reverted`
+  portant `targetSeqs` et `reason: 'gm_refusal:<cause>'`. **Aucun message de suppression n'est
+  émis** — il n'en existe pas : `grep -rn "delete\|remove_event\|purge" packages/server/src/ai/refusal.ts | wc -l`
+  affiche `0`. Un second test appelle `getTurnProof` sur le tour annulé **après** l'annulation :
+  la preuve existe toujours, porte `status: 'reverted'`, et contient le jet, les effets, le prix
+  et le présage qui ont été annulés.
 - Un test vérifie que `src/ai/scene-state.ts` n'émet `scene.facts_updated` **que** si la fusion
   change quelque chose : deux tours consécutifs sans mouvement de scène n'écrivent aucun
   événement.
@@ -1489,20 +1733,31 @@ côté serveur : la liste des événements atteignables par une proposition du m
 
 ---
 
-### M0-31 · Valider tôt qu'un fournisseur gratuit tient la table
+### M0-31 · Mesurer un fournisseur gratuit sur le corpus complet
 **Taille** : moyenne · **Dépend de** : M0-18, M0-22 · **Parallélisable** : oui
 · **À démarrer en PREMIER dans la vague 8**
 
 **À quoi ça sert.** Toute l'architecture du port (P18) repose sur une hypothèse : *un
 fournisseur gratuit, ou un modèle local, produit une prose assez bonne pour la table*. Tant
-qu'elle n'est pas mesurée, c'est une croyance. Cette tâche la mesure, et elle le fait **avant**
-que le reste de la vague 8 ne se soit installé sur un fournisseur payant par défaut.
+qu'elle n'est pas mesurée, c'est une croyance. Cette tâche la mesure **contre le corpus
+complet**, et elle le fait **avant** que le reste de la vague 8 ne se soit installé sur un
+fournisseur payant par défaut.
 
-**Pourquoi pas plus tôt.** Le corpus d'assertions est livré par M0-22, en vague 7 ; une sonde
-lancée avant lui n'aurait rien contre quoi noter. C'est la contrainte qui borne « tôt », et
-c'est pour ça que cette tâche ouvre la vague 8 au lieu de la fermer : son rapport oriente le
-`NARRATOR_PROVIDER` par défaut du dépôt et le choix de repli de M0-29, qui se termine après
-elle.
+> **Le signal précoce ne vient plus d'ici** (P23). Il vient de **M0-32**, la sonde de fumée de
+> la vague 7 : sept assertions écrites à la main, un verdict lisible, aucune dépendance au
+> corpus. Si un modèle gratuit ne tient même pas le prompt contraint, on le sait **une vague
+> avant** cette tâche-ci, c'est-à-dire avant que M0-26 à M0-29 ne soient écrites. M0-31 garde ce
+> que la fumée ne peut pas donner : les **16 assertions dures** de production, deux passerelles
+> et un modèle local comparés sur le même corpus, la matrice de capacités, et la recommandation
+> motivée d'un défaut et d'un repli. Les deux ne se remplacent pas — l'une dit *est-ce que ça
+> tient debout*, l'autre dit *lequel on prend*.
+
+**Pourquoi pas plus tôt.** Le corpus d'assertions est livré par M0-22, en vague 7 ; une mesure
+lancée avant lui n'aurait rien contre quoi noter — et c'est exactement pour cette raison que le
+signal précoce a été **scindé** dans M0-32, qui n'a besoin que du prompt et du port (P23). C'est
+la contrainte qui borne « tôt » pour cette tâche-ci, et c'est pour ça qu'elle ouvre la vague 8
+au lieu de la fermer : son rapport oriente le `NARRATOR_PROVIDER` par défaut du dépôt et le
+choix de repli de M0-29, qui se termine après elle.
 
 **Livrables**
 - `packages/ai-eval/probe/cases/*.case.json` : **6 cas au minimum**, repris de ceux de M0-27
@@ -1535,7 +1790,10 @@ il est mesuré sur le même corpus pour que les taux des autres aient un point d
   `(fournisseur, assertion, taux)`, et où figure la matrice de capacités de chaque adaptateur.
 - Le rapport `docs/runbook/conteur-fournisseurs.md` existe, cite les identifiants de modèle
   exacts testés et la date, et tranche : **un défaut recommandé, un repli recommandé, et la
-  liste des assertions qui échouent le plus souvent** chez chaque candidat.
+  liste des assertions qui échouent le plus souvent** chez chaque candidat. Il **cite le verdict
+  de fumée** de M0-32 (`docs/runbook/conteur-fumee.md`) et dit si la mesure complète le confirme
+  ou le contredit : deux verdicts qui divergent sur le même modèle sont une information, pas une
+  contradiction à masquer.
 - **La sonde note avec les assertions de production, jamais avec des copies** :
   `grep -rnE "^\s*(export )?(const|function) [A-Za-z_]*[Aa]ssert" packages/ai-eval/probe | wc -l`
   affiche `0`, et le rapport porte, pour chaque assertion, l'identifiant **importé** de
@@ -1545,7 +1803,8 @@ il est mesuré sur le même corpus pour que les taux des autres aient un point d
   n'est pas un échec, c'est une dégradation connue (`02-mj-ia.md` §0.2).
 
 **Fichiers touchés** : `packages/ai-eval/probe/**`, `docs/runbook/conteur-fournisseurs.md`
-*(Ne touche pas `packages/ai-eval/src/**`, qui appartient à M0-27.)*
+*(Ne touche ni `packages/ai-eval/src/**`, qui appartient à M0-27, ni `packages/ai-eval/smoke/**`
+ni `docs/runbook/conteur-fumee.md`, qui appartiennent à M0-32.)*
 
 ---
 
@@ -1567,7 +1826,8 @@ paquet — à condition que chaque correction soit signalée dans le rapport fin
 **Livrables**
 - `scripts/smoke-m0.sh` : depuis un dépôt propre, enchaîne installation, migrations, seed,
   démarrage, connexion WebSocket authentifiée, réception de `s2c.welcome` + `s2c.snapshot` +
-  `s2c.presence`, puis arrêt propre.
+  `s2c.presence`, **un aller-retour `c2s.why` → `s2c.turn_proof` sur un tour du seed**, puis
+  arrêt propre.
 - `scripts/canary-regle.sh` : applique la modification de `TICKS_PER_MILESTONE.dangereux`,
   lance les trois suites concernées, vérifie qu'elles rougissent toutes les trois en moins de
   30 secondes, puis restaure le fichier. **Sort en 0 quand le canari a bien détecté.**
@@ -1582,8 +1842,13 @@ paquet — à condition que chaque correction soit signalée dans le rapport fin
 - `bash scripts/smoke-m0.sh` sort en 0.
 - `pnpm sim run` : 7 scénarios verts en moins de 20 secondes.
 - `env -u NARRATOR_API_KEY pnpm eval:offline` sort en 0 et produit un rapport.
+- `pnpm eval:smoke --provider=stub` sort en 0, et `docs/runbook/conteur-fumee.md` existe et
+  porte un verdict daté (M0-32).
 - `pnpm eval:probe --provider=stub` sort en 0, et `docs/runbook/conteur-fournisseurs.md` existe
   et porte une recommandation datée (M0-31).
+- Le parcours de la preuve tient de bout en bout (P22) : dans `scripts/smoke-m0.sh`, après
+  réception du premier `s2c.event` d'un tour, un `c2s.why { correlationId }` renvoie un
+  `s2c.turn_proof` dont chaque entrée porte un `eventSeq` du tour, en moins de 8 Kio.
 - `pnpm build` et `docker build -f infra/Dockerfile -t for-m0:full .` sortent en 0 (image
   complète : c'est **ici** qu'elle est exigée, M0-04 ne construisait que l'étape `build`) ;
   `docker run --rm --entrypoint id for-m0:full -u` n'affiche pas `0` ;
@@ -1630,9 +1895,10 @@ paquet — à condition que chaque correction soit signalée dans le rapport fin
 | M0-23 | Serveur : Discord et surface HTTP | 7 | grosse | M0-15, M0-20 |
 | M0-24 | Serveur : le chemin d'une intention | 7 | grosse | M0-13, M0-15, M0-20 |
 | M0-25 | Serveur : hub WebSocket | 7 | grosse | M0-08, M0-20 |
+| M0-32 | Sonde de fumée d'un fournisseur gratuit | 7 | petite | M0-18 |
 | M0-26 | Base : campagne de démonstration | 8 | grosse | M0-17, M0-16 |
 | M0-27 | Harnais d'éval hors ligne (N0 seul) | 8 | grosse | M0-16, M0-22 |
 | M0-28 | Simulateur de table headless | 8 | grosse | M0-24, M0-25 |
 | M0-29 | Serveur : travailleurs IA et verrous | 8 | moyenne | M0-22, M0-24 |
-| M0-31 | Valider tôt un fournisseur gratuit | 8 | moyenne | M0-18, M0-22 |
+| M0-31 | Mesurer un fournisseur gratuit (corpus complet) | 8 | moyenne | M0-18, M0-22 |
 | M0-30 | Assemblage de bout en bout | 9 | grosse | tout |

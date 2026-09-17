@@ -113,6 +113,12 @@ fournisseur a l'autre. La regle qui la gouverne tient en une ligne : **on degrad
 jamais l'equite** — le moteur a deja tranche quand le conteur prend la parole, donc ce qui
 manque n'est jamais qu'un peu de texte.
 
+La configuration tient en **cinq variables `NARRATOR_*` de base et trois d'appoint**
+(`NARRATOR_TOOLS`, `NARRATOR_TIMEOUT_MS`, `NARRATOR_CONTEXT_WINDOW`), toutes lues au seul
+endroit prevu pour cela : `packages/server/src/env.ts`. Les trois dernieres sont facultatives et
+propres a un adaptateur, parce que le support des outils depend du **modele** et non de la
+passerelle, et qu'un modele local qui charge a froid depasse 60 s sans etre en panne.
+
 Le modele est **hors du chemin de decision**. Il recoit un fait deja acquis a habiller. Ses
 outils sont en lecture ou en proposition validee. Consequence testable : une panne du modele
 degrade le texte, jamais la partie.

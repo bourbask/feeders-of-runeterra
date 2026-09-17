@@ -137,6 +137,10 @@ feeders-of-runeterra/
     adr/0001-socle-technique.md
     runbook/deploy.md
     runbook/backup-restore.md
+    runbook/ci.md                     # M0-03
+    runbook/verification-m0.md        # M0-30
+    runbook/conteur-fumee.md          # verdict de la sonde de fumee (M0-32)
+    runbook/conteur-fournisseurs.md   # mesure complete et recommandation (M0-31)
   tooling/tsconfig/                   # @for/tsconfig
   tooling/eslint-config/              # @for/eslint-config
   tooling/prettier-config/            # @for/prettier-config
@@ -222,6 +226,8 @@ pnpm eval:offline   # N0 — zero appel API, tourne sur chaque PR
 pnpm eval:record    # rafraichit les sorties enregistrees de N0 (necessite un fournisseur configure)
 pnpm eval:live      # N1 — necessite un fournisseur configure ; --provider=<id> pour en cibler un autre
 pnpm eval:judge     # N2
+pnpm eval:smoke     # sonde de FUMEE : sept assertions ecrites a la main (borne contractuelle
+                    #   6 a 8), verdict lisible par un humain, ne bloque jamais la CI (M0-32)
 pnpm eval:probe     # sonde un fournisseur candidat contre le corpus d'assertions (M0-31)
 ```
 
@@ -403,6 +409,9 @@ packages/contracts/
     dto/
       table-state.ts        # zTableState : PROJECTION par spectateur de CampaignState
                             #   (retire les lignes visibility='gm'). N'est PAS un miroir.
+      turn-proof.ts         # zTurnProof : PROJECTION du journal sur un groupe correlation_id
+                            #   — la preuve « Pourquoi ? » (02-mj-ia.md §4.8.6). Bornee :
+                            #   32 effets, 120 car. par libelle, 8 Kio serialises.
     intents/
       index.ts              # zIntent = discriminatedUnion('type', [...])
       moves.ts  campaign.ts  speech.ts
@@ -629,6 +638,10 @@ packages/server/
       revert.ts           # revertTurn(campaignId, correlationId, reason) — LE seul chemin
                           #   d'annulation (03-donnees.md §3.7), partage par la correction
                           #   d'administration et par le droit de refus du conteur
+      turn-proof.ts       # buildTurnProof(events, viewerId): TurnProofDto — PURE. Projette
+                          #   le groupe correlation_id du tour. Ne lit pas la base, n'appelle
+                          #   ni decide() ni rollChallenge() : aucun de n'est retire pour
+                          #   afficher une preuve (02-mj-ia.md §4.8.6)
       snapshots.ts        # politique de snapshot (tous les 200 evenements)
       chronicle.ts        # declenchement de la compaction
     ai/                   # tout ce qui, dans la couche IA, touche persistance, verrous, diffusion
@@ -663,6 +676,10 @@ export interface CampaignService {
   /** Projection par spectateur : les lignes `visibility: 'gm'` sont retirees. */
   getSnapshot(campaignId: CampaignId, viewerId: PlayerId): Promise<{ state: TableStateDto; lastSeq: number }>;
   readEventsSince(campaignId: CampaignId, seq: number): Promise<readonly PersistedEvent[]>;
+  /** Preuve d'un tour (« Pourquoi ? ») : lit les evenements du groupe `correlationId` et
+   *  leur applique `buildTurnProof`. Lecture pure, aucune ecriture, aucun de retire.
+   *  Rend `null` si le groupe n'existe pas dans cette campagne. */
+  getTurnProof(campaignId: CampaignId, correlationId: string, viewerId: PlayerId): Promise<{ proof: TurnProofDto; truncated: boolean } | null>;
 }
 
 // src/ai/narrator.ts — le serveur ne connait que le port (02-mj-ia.md §0.1).
@@ -698,6 +715,8 @@ packages/client/
     ws/store.ts         # reduce local des s2c.event -> etat affiche (miroir, jamais autorite)
     routes/{Login,CampaignList,TableRoom,CharacterPicker}.tsx
     features/table/{Log,Sheet,Gauges,MoveBar,Clocks,Vows}/
+    features/table/Proof/   # « Pourquoi ? » : replie par defaut, rend un s2c.turn_proof,
+                            #   et marque un tour annule au lieu de le retirer (02 §4.8.6)
     components/ui/*     # primitives sans logique metier
     styles/
   tests/  e2e/          # Playwright (hors CI bloquante en M0)
@@ -970,6 +989,11 @@ serveur toutes les 25 s, fermeture si pas de `pong` en 60 s.
 | `c2s.resume` | `{ sinceSeq: number }` | Redemande les evenements manquants |
 | `c2s.pong` | `{}` | Reponse au heartbeat |
 | `c2s.resume_narration` | `{ narrationId: string, lastChunk: number }` | Redemande les fragments manquants du flux de narration en cours (apres reconnexion). Ne declenche **jamais** une seconde generation. |
+| `c2s.why` | `{ correlationId: string }` | Demande la **preuve** d'un tour : le detail mecanique replie derriere la commande « Pourquoi ? » (`02-mj-ia.md` §4.8.6). Message de **lecture** — comme `c2s.resume`, il ne transporte aucun resultat, ne mute rien et ne relance aucune generation. Reponse : `s2c.turn_proof` |
+
+Les huit messages ci-dessus sont les seuls. Trois d'entre eux — `c2s.resume`,
+`c2s.resume_narration`, `c2s.why` — sont des **demandes de lecture** : ils ne mutent rien, et
+c'est ce qui les rend compatibles avec l'invariant 3. `c2s.intent` reste le seul message mutant.
 
 Il n'existe **aucun** message client contenant une jauge, un resultat de de, un `GameEvent`, un
 `CampaignState` ou un identifiant de PNJ a faire apparaitre. `zC2SMessage` est verifie par test
@@ -1020,12 +1044,50 @@ autorise uniquement pour `speech.say`, marque `pending`).
 | `s2c.narration_delta` | `{ narrationId, chunk, text }` — fragments coalesces par fenetres de 50 ms |
 | `s2c.narration_snapshot` | `{ narrationId, chunk, text, status }` — buffer complet : arrivant en cours de generation, rattrapage apres coupure |
 | `s2c.narration_done` | `{ narrationId, eventSeq, text, model, source: 'ai' \| 'engine' }` |
-| `s2c.narration_error` | `{ narrationId, code: 'rate_limited' \| 'refused' \| 'engine_fallback' \| 'aborted' \| 'action_impossible' }` — `action_impossible` est le **droit de refus du conteur** (`02-mj-ia.md` §4.8) : il est emis **apres** `s2c.narration_done`, parce que la prose est valide et doit s'afficher ; ce sont les `s2c.event` du `system.reverted` qui suivent qui retirent les lignes du tour annule |
+| `s2c.narration_error` | `{ narrationId, code: 'rate_limited' \| 'refused' \| 'engine_fallback' \| 'aborted' \| 'action_impossible' }` — `action_impossible` est le **droit de refus du conteur** (`02-mj-ia.md` §4.8) : il est emis **apres** `s2c.narration_done`, parce que la prose est valide et doit s'afficher ; le `s2c.event` du `system.reverted` qui suit **marque** les lignes du tour comme annulees et **ne les retire pas** (`02-mj-ia.md` §4.8.6) |
+| `s2c.turn_proof` | `{ correlationId, proof: TurnProofDto, truncated: boolean }` — reponse a `c2s.why`. **Projection du journal** sur le groupe `correlation_id` du tour, construite a la demande par une fonction pure (§2.8), jamais une donnee fabriquee pour l'affichage. Projection par spectateur, comme `TableStateDto` : les lignes `visibility: 'gm'` en sont retirees. **Borne : 32 effets, 120 caracteres par libelle, 8 Kio de JSON serialise** ; au-dela, `truncated: true` et le client renvoie vers `GET /api/campaigns/:id/log` |
 | `s2c.rejected` | `{ intentId, code: RuleViolationCode \| AppErrorCode, message }` |
 | `s2c.error` | `{ code, message, requestId, intentId? }` |
 | `s2c.presence` | `{ members: Array<{ playerId, characterId \| null, online, typing }> }` |
 | `s2c.ping` | `{}` |
 | `s2c.resync_required` | `{ reason }` — le client doit refaire `c2s.hello` |
+
+**La preuve d'un tour (`TurnProofDto`).** Elle est **derivee**, jamais stockee : le serveur lit
+les evenements du groupe `correlationId` et les projette. Le client sait quoi demander sans rien
+inventer, parce que `correlationId` est un champ de l'**enveloppe d'evenement**
+(`EventEnvelopeSchema`, `03-donnees.md` §3.1) dont chaque variante de `GameEvent` herite — donc
+il voyage dans la charge utile `p.event` de `s2c.event`. Ce n'est **pas** un champ de l'enveloppe
+WebSocket de §5.1, qui reste `{ v, t, id, ts, seq?, p }` et ne bouge pas : les deux enveloppes
+sont a distinguer comme `seq` et `chunk`.
+
+```ts
+// packages/contracts/src/dto/turn-proof.ts — PROJECTION du journal, pas un miroir du moteur.
+export const zTurnProof = z.object({
+  correlationId: z.string().uuid(),
+  firstSeq: z.number().int().positive(),
+  lastSeq: z.number().int().positive(),
+  status: z.enum(['applied', 'reverted']),
+  revertedBy: z.object({ seq: z.number().int().positive(), reason: z.string().max(120) }).nullable(),
+  move: z.object({ eventSeq: z.number().int(), moveId: z.string(), attribute: z.string().nullable(),
+                   bonus: z.number().int().nullable(), label: z.string().max(120) }).nullable(),
+  roll: z.object({ eventSeq: z.number().int(), rngStream: z.string(), rngDrawIndex: z.number().int(),
+                   action: z.number().int(), challenge: z.tuple([z.number().int(), z.number().int()]),
+                   total: z.number().int(), outcome: z.string() }).nullable(),
+  revision: z.object({ eventSeq: z.number().int(), label: z.string().max(120) }).nullable(), // brulure du souffle
+  effects: z.array(z.object({ eventSeq: z.number().int(), type: z.string(), label: z.string().max(120) })).max(32),
+  price: z.object({ eventSeq: z.number().int(), entryId: z.string(), text: z.string().max(400),
+                    value: z.number().int(), effectIndex: z.number().int().nullable() }).nullable(),
+  presage: z.object({ eventSeq: z.number().int(), entryId: z.string(), text: z.string().max(400) }).nullable(),
+  narration: z.object({ eventSeq: z.number().int(), source: z.enum(['ai', 'engine']) }).nullable(),
+}).strict();
+export type TurnProofDto = z.output<typeof zTurnProof>;
+```
+
+**Chaque entree porte son `eventSeq`** : c'est ce qui rend la preuve verifiable — on peut
+remonter du libelle a la ligne de journal qui l'etablit. Une entree sans `eventSeq` serait une
+donnee fabriquee pour l'affichage, et c'est precisement ce qu'on interdit. La preuve ne contient
+**rien** du modele : ni raisonnement, ni appel d'outil, ni proposition refusee
+(`02-mj-ia.md` §6.5).
 
 **Vocabulaire des compteurs.** `seq` (enveloppe) est le **numero de journal**, present sur
 `s2c.event` uniquement. `chunk` (charge utile de narration) est le **numero de fragment** d'un
@@ -1045,6 +1107,8 @@ l'invariant 1 — la partie avance meme si le modele est indisponible.
 ### 5.6 Limitation de debit
 
 Par connexion : 5 `c2s.intent` / 10 s (rafale 10), 20 `c2s.speak` / 60 s, 2 `c2s.resume` / 10 s,
+**10 `c2s.why` / 10 s** (deplier « Pourquoi ? » sur plusieurs scenes d'affilee est un usage
+normal ; boucler dessus n'en est pas un),
 `c2s.typing` echantillonne a 1/s cote client et ignore au-dela cote serveur. Depassement :
 `s2c.error { code: 'rate_limited' }`, puis fermeture `4008` au troisieme depassement.
 
@@ -1332,11 +1396,34 @@ NARRATOR_BASE_URL=            # obligatoire pour openai-compatible et ollama
 NARRATOR_API_KEY=             # peut etre vide pour ollama et stub
 NARRATOR_MODEL=               # vide => defaut de l'adaptateur
 NARRATOR_MODEL_STRUCTURED=    # vide => defaut de l'adaptateur
+#NARRATOR_TOOLS=probe         # on | off | probe        — facultative, defaut `probe`
+#NARRATOR_TIMEOUT_MS=60000    # millisecondes           — facultative, defaut 60000
+#NARRATOR_CONTEXT_WINDOW=     # tokens                  — facultative, defaut de l'adaptateur
 LOG_LEVEL=info
 ```
 
-Variables d'appoint, toutes facultatives et toutes propres a un adaptateur : `NARRATOR_TOOLS`
-(`on` | `off` | `probe`, defaut `probe`), `NARRATOR_TIMEOUT_MS`, `NARRATOR_CONTEXT_WINDOW`.
+> L'exemple ci-dessus est un **deploiement**, pas le gabarit du depot : `.env.example` porte
+> `NARRATOR_PROVIDER=stub`, parce que la CI et le simulateur tournent sans reseau. Le defaut
+> recommande pour une vraie table sort de la mesure de M0-31
+> (`docs/runbook/conteur-fournisseurs.md`), et le produit doit rester jouable sur un
+> fournisseur gratuit ou un modele local : c'est une decision du tech lead, pas une commodite.
+
+**Les trois variables d'appoint sont validees** : elles font partie de la configuration
+officielle du port, au meme titre que les cinq de base. Motif retenu par le tech lead : le
+support des outils depend du **modele** et non de la passerelle, et un modele local qui charge a
+froid depasse 60 s sans etre en panne. Toutes trois sont facultatives et propres a un
+adaptateur ; `buildNarrator` (§2.8) les lit **sans condition**, donc `zEnv` leur donne une
+valeur par defaut plutot que `undefined`.
+
+| Variable | Defaut `zEnv` | Defaut par adaptateur | Ce qu'elle gouverne |
+|---|---|---|---|
+| `NARRATOR_TOOLS` (`on` \| `off` \| `probe`) | `'probe'` | `anthropic` ⇒ `on` (natif, aucune sonde) ; `openai-compatible` ⇒ `probe` (sonde unique au demarrage) ; `ollama` ⇒ `off` ; `stub` ⇒ ignoree | `capabilities.tools`, donc le mode sans outils (`02-mj-ia.md` §0.2) |
+| `NARRATOR_TIMEOUT_MS` | `60000` | le meme pour les quatre ; a monter pour `ollama` (chargement a froid) | le delai d'un appel avant `timeout` |
+| `NARRATOR_CONTEXT_WINDOW` | `null` | `anthropic` 1 000 000 ; `openai-compatible` 32 000 ; `ollama` 8 192 ; `stub` sans objet | `capabilities.contextWindowTokens`, donc le budget `min(14 000, fenetre × 0,6)` |
+
+Les **memes valeurs** sont ecrites dans `.env.example` et dans `02-mj-ia.md` §0.6 — qui fait
+autorite sur le port. Trois endroits, un seul contenu : si l'un des trois change, les deux
+autres changent dans la meme PR.
 
 `env.ts` parse au demarrage ; toute variable manquante ou invalide arrete le processus avec un
 message explicite. Aucune variable n'est lue ailleurs que dans `env.ts`.
