@@ -156,8 +156,15 @@ jobs:
             exit 1
           fi
       - name: Comparer aux corpus dorés
+        id: golden
         continue-on-error: true # TODO M0-30: retirer
         run: pnpm test:golden
+      # Une étape tolérée est rapportée « success » par GitHub : sans cette
+      # annotation, l'échec ne se voit qu'en dépliant le journal, et une tolérance
+      # invisible est une tolérance qu'on oublie de retirer.
+      - name: Annoncer la tolérance
+        if: steps.golden.outcome == 'failure'
+        run: echo "::warning title=Étape tolérée::« Comparer aux corpus dorés » a échoué. Cible livrée par M0-10 ; tolérance retirée en M0-30."
 
   # 8
   migrations:
@@ -171,6 +178,7 @@ jobs:
       - name: Installer les dépendances
         run: pnpm install --frozen-lockfile
       - name: Schéma, migration à blanc et amorçage sur base jetable
+        id: migrations
         continue-on-error: true # TODO M0-30: retirer
         env:
           DATABASE_PATH: ${{ runner.temp }}/ci-migrations.db
@@ -178,6 +186,9 @@ jobs:
           pnpm db:check-schema
           pnpm db:migrate
           pnpm db:seed
+      - name: Annoncer la tolérance
+        if: steps.migrations.outcome == 'failure'
+        run: echo "::warning title=Étape tolérée::« Schéma, migration à blanc et amorçage » a échoué. Cibles livrées par M0-11 et M0-26 ; tolérance retirée en M0-30."
 
   # 9
   content:
@@ -191,11 +202,15 @@ jobs:
       - name: Installer les dépendances
         run: pnpm install --frozen-lockfile
       - name: Chargeur en quatre passes, puis index régénéré à l'identique
+        id: content
         continue-on-error: true # TODO M0-30: retirer
         run: |
           pnpm content:check
           pnpm content:index
           git diff --exit-code
+      - name: Annoncer la tolérance
+        if: steps.content.outcome == 'failure'
+        run: echo "::warning title=Étape tolérée::« Chargeur de contenu et index » a échoué. Cible livrée par M0-14 ; tolérance retirée en M0-30."
 
   # 10 — Niveau N0 : zéro appel d'API, zéro clé (docs/design/02-mj-ia.md §8.5).
   ai-eval-offline:
@@ -209,8 +224,12 @@ jobs:
       - name: Installer les dépendances
         run: pnpm install --frozen-lockfile
       - name: Éval N0
+        id: eval-offline
         continue-on-error: true # TODO M0-30: retirer
         run: pnpm eval:offline
+      - name: Annoncer la tolérance
+        if: steps.eval-offline.outcome == 'failure'
+        run: echo "::warning title=Étape tolérée::« Éval N0 » a échoué. Cible livrée par M0-27 ; tolérance retirée en M0-30."
 
   # 11 — `pnpm sim fuzz` n'est pas dans la porte de PR en M0 (§8) : la trame
   # malformée est déjà couverte par les tests du travail 6.
@@ -225,5 +244,9 @@ jobs:
       - name: Installer les dépendances
         run: pnpm install --frozen-lockfile
       - name: Tous les scénarios
+        id: sim
         continue-on-error: true # TODO M0-30: retirer
         run: pnpm sim run --format=json
+      - name: Annoncer la tolérance
+        if: steps.sim.outcome == 'failure'
+        run: echo "::warning title=Étape tolérée::« Tous les scénarios » a échoué. Cible livrée par M0-28 ; tolérance retirée en M0-30."

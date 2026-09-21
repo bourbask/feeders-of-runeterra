@@ -96,8 +96,10 @@ Trois nuances, à connaître avant de conclure que « la CI ment » :
    travail 5. À replier dans `verify` en M0-30.
 3. **Cinq étapes tolèrent l'échec** aujourd'hui, parce que leur cible n'est pas
    livrée. Elles portent `continue-on-error: true # TODO M0-30: retirer`. Le travail
-   apparaît vert alors qu'une étape est rouge : lire le détail du travail, pas
-   seulement sa pastille.
+   apparaît vert alors qu'une étape est rouge — et GitHub rapporte même l'étape
+   tolérée comme « success ». Chacune est donc suivie d'une étape qui pose une
+   **annotation d'avertissement** nommant la tâche qui la livrera : c'est ce qui
+   reste visible sans déplier le journal.
 
 ## 5. Les tolérances, et quand elles tombent
 
@@ -116,6 +118,12 @@ M0-30 retire les cinq lignes. L'invariant qui l'empêche d'en oublier une :
 La tolérance est posée **sur l'étape**, pas sur le travail. Une tolérance au niveau du
 travail neutraliserait aussi les gardes qui, eux, sont bloquants dès aujourd'hui — le
 refus de `GOLDEN_UPDATE` dans le travail 7 en est un.
+
+Contrepartie mesurée sur la première série : GitHub rapporte une étape tolérée comme
+`success`, et l'échec ne se lit que dans le journal (`Process completed with exit
+code 1`). Chaque étape tolérée est donc suivie d'une étape conditionnée à
+`steps.<id>.outcome == 'failure'` qui émet une annotation `::warning::`. Retirer la
+tolérance en M0-30, c'est retirer les deux.
 
 ## 6. Secrets et variables
 
