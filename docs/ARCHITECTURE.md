@@ -222,7 +222,7 @@ les identifiants de mouvement (`face-danger`, `probe-a-soul`, `swear-a-vow`) —
 | Transition de scene proposee | **Un changement de LIEU, et rien d'autre.** `propose_scene_transition` ne porte plus de `time_shift` : le temps ecoule et son cout eventuel decoulent exclusivement du mouvement joue (par exemple `endure-cold`), calcules par le moteur a partir de sa table de mouvements. Aucune valeur de temps ne vient jamais du modele |
 | Appels d'outils par tour | 3 au maximum, 3 iterations de boucle, puis `tool_choice: none` |
 | Tables accessibles a `roll_oracle` | les oracles du contenu uniquement. « payer le prix » et « presages » sont **reserves au moteur** |
-| Consequence de « payer le prix » | **Le moteur tire un d12 sur la table `pay-the-price`, applique l'entree tiree, ecrit `roll.price_paid`, puis transmet cette entree au conteur comme un FAIT IMPOSE**, a integrer telle quelle dans la narration. Personne ne choisit : ni le modele, ni le joueur. Il n'existe **ni outil de prix, ni `optionId`, ni `kind: 'price_choice'`, ni `playerChoices`** — ces trois mecanismes sont supprimes de toutes les specs. La liste gelee de 12 outils (`02-mj-ia.md` §3.4) ne contient aucun outil de prix, et en ouvrir un exigerait un ADR plus une montee de `TOOLS_VERSION`. **Aucun `EngineEffect` ne transite jamais depuis le modele** |
+| Consequence de « payer le prix » | **Le moteur tire un d12 sur la table `pay-the-price`, applique l'entree tiree, ecrit `roll.price_paid`, puis transmet cette entree au conteur comme un FAIT IMPOSE**, a integrer telle quelle dans la narration. Personne ne choisit : ni le modele, ni le joueur. Il n'existe **ni outil de prix, ni `optionId`, ni `kind: 'price_choice'`, ni `playerChoices`** — ces trois mecanismes sont supprimes de toutes les specs. La liste gelee de 12 outils (`02-mj-ia.md` §3.4) ne contient aucun outil de prix, et en ouvrir un exigerait un ADR plus une montee de `TOOLS_VERSION`. **Aucun `EngineEffect` ne transite jamais depuis le modele**. Quand l'entree tiree porte **plusieurs `suggestedEffects`**, c'est encore le moteur qui departage : un **second tirage sur le flux RNG `price`** designe l'effet applique, et son index est journalise dans `roll.price_paid.effectIndex`. Le tirage est donc rejouable a l'identique (invariant 4), et ni le modele ni le joueur n'a rien choisi |
 | Portee du verrouillage de distribution | **Par campagne.** Un champion reserve est celui d'un autre joueur de la meme table. Aucune reservation inter-campagnes : cela fuiterait le roster des autres tables |
 | Creation de personnage | Passe par le **meme** journal que la partie : c'est `character.created` qui pose le verrou |
 | Deux compteurs a ne jamais confondre | `seq` = numero de journal (enveloppe, sur `s2c.event` seulement). `chunk` = numero de fragment d'un flux de narration (charge utile) |
@@ -230,6 +230,8 @@ les identifiants de mouvement (`face-danger`, `probe-a-soul`, `swear-a-vow`) —
 | Ce que le conteur rend apres sa prose | Un bloc balise `<scene_apres>` portant l'etat de scene et un eventuel refus. **Pas** un treizieme outil (`TOOLS_VERSION` ne bouge pas), **pas** une sortie structuree (elle casserait la diffusion en flux). Un bloc absent ou malforme ne casse rien : on conserve les faits precedents |
 | Droit de refus du conteur | **Sur la possibilite materielle seule.** Un refus prouve annule le tour par `system.reverted` sur le groupe `correlation_id` complet ; un refus non prouve est rejete sans effet. Une proposition absurde **mais possible** n'est jamais refusee : elle est jouee, et sa consequence decoule des faits (`02-mj-ia.md` §4.8) |
 | Trace d'un jet annule | **Toujours.** Le journal est append-only, les clients ont deja recu les `s2c.event` du jet, et sans trace l'abus du droit de refus serait invisible. L'index de tirage RNG n'est **jamais** libere : rejouer la meme intention ne redonne pas les memes des |
+| Ce que le joueur voit d'un tour annule | **Le tour reste affiche, marque comme ANNULE, avec sa preuve consultable** — il ne disparait jamais de l'ecran. Le vecteur de marquage est le `s2c.event` du `system.reverted` : le client barre les lignes visees par `targetSeqs` et affiche la cause (`gm_refusal:<cause>`). Effacer serait mentir sur ce qui s'est passe, et laisserait le joueur sans explication d'un aller-retour qu'il a vu (`02-mj-ia.md` §4.8.6) |
+| Detail mecanique d'une scene | **Replie derriere une commande « Pourquoi ? », jamais affiche par defaut.** Mouvement joue, des, calcul, effets appliques, prix tire, presage : la fiction reste propre, la preuve reste consultable a tout moment. Cette preuve est une **projection du journal** (`TurnProofDto`), calculee a la demande sur le groupe `correlation_id` du tour, jamais une donnee fabriquee pour l'affichage ; elle voyage par `c2s.why` → `s2c.turn_proof`, bornee a 8 Kio (`01-architecture.md` §5.2 et §5.4) |
 | Registre de la narration | Ancre nomme — la **saga islandaise** —, liste noire close, trois obligations, et une **paire d'exemples bon/mauvais** dans le prompt systeme. Un prompt qui demande « un ton apre et concret » ne suffit pas : c'est mesure par assertions, pas suppose (`02-mj-ia.md` §2.1, §8.4) |
 
 ### 4.5 Exploitation et outillage
@@ -246,7 +248,8 @@ les identifiants de mouvement (`face-danger`, `probe-a-soul`, `swear-a-vow`) —
 | `docker build` en CI | Non bloquant sur PR, bloquant en post-merge : la porte de PR vise moins de 8 minutes |
 | Sondes de sante | `/healthz` liveness sans base, `/readyz` readiness, `/api/admin/health` pour le diagnostic profond. Un WAL volumineux ne doit jamais sortir le conteneur de la rotation |
 | Nom du modele | Resolution unique : `campaigns.settings_json.models.<usage>` > `NARRATOR_MODEL` / `NARRATOR_MODEL_STRUCTURED` > le defaut de l'adaptateur selectionne. `<usage>` vaut `narration` ou `structured`. Il n'existe **aucune** table de modeles partagee : un identifiant de modele est une donnee d'adaptateur |
-| Fournisseur du conteur | `NARRATOR_PROVIDER` ∈ `stub` \| `anthropic` \| `openai-compatible` \| `ollama`. C'est le **seul** interrupteur de mode degrade : `AI_ENABLED` n'existe plus |
+| Fournisseur du conteur | `NARRATOR_PROVIDER` ∈ `stub` \| `anthropic` \| `openai-compatible` \| `ollama`. C'est le **seul** interrupteur de mode degrade : `AI_ENABLED` n'existe plus. **Le produit doit rester jouable sur un fournisseur gratuit ou un modele local** — c'est la raison d'etre du port, et c'est ce qui a fait renverser le point P6 de la revue de socle (`M0-REVUE.md` §12) |
+| Configuration du port | **Cinq variables de base** (`NARRATOR_PROVIDER`, `NARRATOR_BASE_URL`, `NARRATOR_API_KEY`, `NARRATOR_MODEL`, `NARRATOR_MODEL_STRUCTURED`) **et trois variables d'appoint validees** : `NARRATOR_TOOLS` (`on` \| `off` \| `probe`, defaut `probe`), `NARRATOR_TIMEOUT_MS` (defaut 60000), `NARRATOR_CONTEXT_WINDOW` (defaut de l'adaptateur). Les trois sont facultatives et propres a un adaptateur : le support des outils depend du **modele** et non de la passerelle, et un modele local qui charge a froid depasse 60 s sans etre en panne. Tableau complet, defaut par defaut : `02-mj-ia.md` §0.6, repris a l'identique dans `01-architecture.md` §9.4 et `.env.example` |
 | Capacite manquante chez un fournisseur | **On degrade la prose, jamais l'equite** (`02-mj-ia.md` §0.2). Pas d'outils ⇒ le conteur n'ajoute rien de durable ce tour-la ; pas de sortie structuree ⇒ prompt + extraction ; pas de cache ⇒ la facture monte. Aucun chemin de degradation ne rend une decision au modele |
 
 ---
@@ -265,7 +268,7 @@ Scope `@for/*`, tous prives, tous ESM. Six couches acycliques, verifiees par
 | 2 | `@for/db` | Drizzle, migrations, SQLite WAL, journal, projections | `drizzle-orm`, `better-sqlite3`, `@for/contracts` |
 | 3 | `@for/ai` | Port du conteur et ses adaptateurs, prompts, outils, contexte, assertions. **Sans persistance, sans jobs, sans lecture d'environnement** | `@anthropic-ai/sdk` (**optionnelle**, utilisee par le seul adaptateur `anthropic`), `@for/contracts`, `@for/content` |
 | 4 | `@for/server` | Fastify, OAuth, hub WS, `CampaignService`, workers IA | tout ce qui precede |
-| 4 | `@for/ai-eval` | Corpus, runners N0/N1/N2, graders | `@for/ai`, `@for/content`, `@for/testkit` |
+| 4 | `@for/ai-eval` | Corpus, runners N0/N1/N2, graders, la **sonde de fumee** (`smoke/`, M0-32) et la **sonde de fournisseur** (`probe/`, M0-31) | `@for/ai`, `@for/contracts`, `@for/content`, `@for/testkit` |
 | 5 | `@for/sim` | Simulateur de table headless, pilote le **vrai** service | `@for/server`, `@for/testkit`, `@for/db` |
 | 5 | `@for/client` | SPA Vite + React | `react`, `@for/contracts`, `@for/engine` (affichage seul) |
 
@@ -281,7 +284,11 @@ Deux dependances meritent d'etre justifiees a voix haute :
   est sa sensibilite aux refactors du serveur. A rearbitrer seulement si la maintenance devient
   penible.
 - `@for/ai-eval` → `@for/ai`, **jamais l'inverse**. C'est la raison pour laquelle les
-  assertions vivent dans `@for/ai`.
+  assertions vivent dans `@for/ai`. Une seule exception, bornee et nommee : les **sept
+  assertions ecrites a la main** de la sonde de fumee (`ai-eval/smoke/`, M0-32), qui doivent
+  exister **avant** le corpus de production pour donner le signal precoce. Elles ne grandissent
+  pas, personne ne les importe, et tout le reste de l'eval note avec les assertions de
+  `@for/ai`.
 
 ---
 
@@ -316,10 +323,13 @@ neuf :
 
 1. `pnpm install && pnpm verify` passe en moins de 3 minutes ;
 2. `pnpm db:reset && pnpm dev` ouvre une page « table » vide connectee au WebSocket, qui
-   affiche `s2c.welcome`, le snapshot du seed et la presence ;
+   affiche `s2c.welcome`, le snapshot du seed et la presence — et dont chaque scene porte une
+   commande « Pourquoi ? » **repliee**, qui rend la preuve du tour sur demande (§4.4) ;
 3. la connexion Discord fonctionne de bout en bout en local ;
 4. `pnpm sim run` execute les 7 scenarios, verts, en moins de 20 s ;
-5. `pnpm eval:offline` produit un rapport **sans cle d'API** ;
+5. `pnpm eval:offline` produit un rapport **sans cle d'API**, et `pnpm eval:smoke` rend un
+   verdict lisible sur un fournisseur candidat — sans bloquer la CI, parce qu'un verdict informe
+   une decision et ne ferme pas une porte ;
 6. `pnpm db:check` passe les 12 oracles d'integrite (le controle 9 couvre `scene_state`, qui est une projection comme les autres) ;
 7. la CI est verte sur une PR de demonstration et un `push` sur `main` deploie sur le VPS ;
 8. **le critere qui justifie tout le reste** : modifier une constante de regle (par exemple le

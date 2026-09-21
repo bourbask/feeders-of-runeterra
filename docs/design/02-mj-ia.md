@@ -297,7 +297,7 @@ import Anthropic from "@anthropic-ai/sdk";
 const client = new Anthropic({
   apiKey: config.apiKey,
   baseURL: config.baseUrl ?? undefined,   // absent ⇒ défaut du SDK
-  timeout: 60_000,                        // millisecondes en TypeScript
+  timeout: config.timeoutMs,              // NARRATOR_TIMEOUT_MS, défaut 60_000 (§0.6)
   maxRetries: 0,
 });
 ```
@@ -536,8 +536,9 @@ vrai (le champ `format` accepte un JSON Schema) mais **non garanti** par le mod�
 
 ## 0.6 Configuration et sélection
 
-Cinq variables, lues **uniquement** dans `packages/server/src/env.ts`, validées par `zEnv` au
-démarrage. Une variable manquante ou invalide **arrête le processus** en nommant la variable.
+**Cinq variables de base et trois variables d'appoint**, lues **uniquement** dans
+`packages/server/src/env.ts`, validées par `zEnv` au démarrage. Une variable manquante ou
+invalide **arrête le processus** en nommant la variable.
 
 | Variable | Rôle | Obligatoire ? |
 |---|---|---|
@@ -547,8 +548,23 @@ démarrage. Une variable manquante ou invalide **arrête le processus** en nomma
 | `NARRATOR_MODEL` | modèle de `narrer()` | facultative : à défaut, le défaut de l'adaptateur |
 | `NARRATOR_MODEL_STRUCTURED` | modèle de `structurer()` (forge, chronique, juge) | facultative : à défaut, le défaut de l'adaptateur |
 
-Variables d'appoint, propres à un adaptateur et toutes facultatives : `NARRATOR_TOOLS`
-(`on` \| `off` \| `probe`), `NARRATOR_TIMEOUT_MS`, `NARRATOR_CONTEXT_WINDOW`.
+**Les trois variables d'appoint** — validées par le tech lead, elles font partie de la
+configuration officielle du port. Le motif retenu est écrit ici pour qu'on ne le redécouvre
+pas : *le support des outils dépend du modèle et non de la passerelle, et un modèle local qui
+charge à froid dépasse 60 s sans être en panne.* Toutes trois sont **facultatives** et
+**propres à un adaptateur** : absentes, elles prennent la valeur par défaut ci-dessous, et
+`buildNarrator` (`01-architecture.md` §2.8) les lit **sans condition** — un `undefined` y
+serait un bug de configuration silencieux, ce que M0-20 vérifie.
+
+| Variable | Défaut du schéma | Par adaptateur | Ce qu'elle gouverne |
+|---|---|---|---|
+| `NARRATOR_TOOLS` (`on` \| `off` \| `probe`) | `probe` | `anthropic` ⇒ `on` (support natif, aucune sonde) ; `openai-compatible` ⇒ `probe` (une sonde unique au démarrage, §0.4) ; `ollama` ⇒ `off` (§0.5) ; `stub` ⇒ ignorée, toutes capacités fausses sauf `streaming` | `capabilities.tools`, donc le mode sans outils de la matrice de dégradation (§0.2) |
+| `NARRATOR_TIMEOUT_MS` | `60000` | même défaut pour les quatre ; **à monter pour `ollama`**, dont le premier appel après un démarrage à froid dépasse 60 s sans qu'il y ait panne (§0.5) | le délai d'un appel, avant `timeout` (`retryable: true`) |
+| `NARRATOR_CONTEXT_WINDOW` (tokens) | vide ⇒ défaut de l'adaptateur | `anthropic` 1 000 000 (§0.3) ; `openai-compatible` 32 000 (§0.4) ; `ollama` 8 192 (§0.5) ; `stub` sans objet | `capabilities.contextWindowTokens`, donc le budget de contexte `min(14 000, fenêtre × 0,6)` (§4.3) et le point de départ de l'échelle de troncature (§4.4) |
+
+Ces trois variables sont documentées à l'identique dans `.env.example` et dans
+`01-architecture.md` §9.4 ; les trois écritures disent la même chose, avec le même défaut et le
+même adaptateur concerné.
 
 **Résolution du nom de modèle, ordre unique et sans exception** :
 
@@ -1667,8 +1683,11 @@ Un refus retenu **annule le tour**. Il n'y a pas de nouveau mécanisme : c'est c
    à la main, et c'est l'intérêt entier de l'invariant 4.
 4. La prose du modèle est persistée normalement en `narration.gm_message`, **hors** du groupe
    annulé. C'est elle qui explique au joueur, en fiction, pourquoi rien n'a eu lieu.
-5. `s2c.narration_error { code: 'action_impossible' }` est diffusé, et les `s2c.event` du
-   `system.reverted` retirent les lignes du journal côté client.
+5. `s2c.narration_error { code: 'action_impossible' }` est diffusé, puis le `s2c.event` du
+   `system.reverted`. Ce dernier est le **vecteur de marquage** : le client **ne retire aucune
+   ligne**, il marque comme **annulées** les lignes dont le `seq` figure dans `targetSeqs` et
+   affiche la cause portée par `reason` (`gm_refusal:<cause>`). Le tour annulé reste à l'écran,
+   barré et explicable (§ 4.8.6).
 6. Le personnage **rejoue**. Son intention lui revient, modifiable.
 
 > **« Un jet annulé doit-il laisser une trace ? » — Oui. Tranché, et non négociable.**
@@ -1685,14 +1704,24 @@ rejouer la même intention après annulation redonnerait exactement les mêmes d
 refus deviendrait une machine à relancer jusqu'au bon résultat. C'est un point d'implémentation
 d'une ligne et un trou de sécurité béant si on l'oublie.
 
-#### 4.8.4 Pourquoi a posteriori, et pas avant les dés
+#### 4.8.4 Pourquoi a posteriori, et pas avant les dés — **confirmé par le tech lead**
+
+> **DÉCISION : le refus reste APRÈS le jet.** Un contrôle de faisabilité avant les dés
+> remettrait le modèle dans le chemin de décision : **inacceptable** (invariant 1). La
+> conséquence est assumée : un joueur voit brièvement le résultat d'un tour qui sera ensuite
+> annulé.
 
 Un contrôle de faisabilité avant le jet serait plus élégant. Il est **refusé** : il mettrait le
 modèle dans le chemin de décision, ce que l'invariant 1 interdit, et il coûterait un appel de
 modèle supplémentaire par tour, sur le chemin critique, pour un cas qui survient quelques fois
 par session. Le coût réel de l'annulation a posteriori est un aller-retour visible pour le
 joueur, quelques fois par session, sur une action qui n'aurait de toute façon pas dû aboutir.
-C'est assumé.
+
+**Ce que l'arbitrage ajoute** : cet aller-retour ne se paie plus en confusion. Un tour annulé
+n'est pas effacé de l'affichage, il est **montré comme annulé, avec sa preuve consultable**.
+C'est l'objet du § 4.8.6, et c'est ce qui rend la conséquence réellement assumable : le joueur
+ne voit pas un résultat s'évaporer, il voit un résultat marqué annulé et il peut demander
+pourquoi.
 
 #### 4.8.5 Garde-fou contre l'abus
 
@@ -1717,6 +1746,47 @@ annule les résultats de dés qui lui déplaisent.** Quatre verrous, en plus de 
    de `roll_oracle`, vérifiée par `packages/server/tests/proposal-surface.test.ts`
    (`03-donnees.md` §0.5). Elle est tenue séparément plutôt que fondue dans la première,
    précisément pour que personne ne puisse élargir l'une en croyant toucher l'autre.
+
+#### 4.8.6 La transparence : « Pourquoi ? » et le tour annulé
+
+Trois règles, arbitrées avec l'utilisateur, et qui valent pour **toutes** les scènes — pas
+seulement pour les tours annulés.
+
+**(a) Le détail mécanique n'est pas affiché par défaut.** Mouvement joué, dés, calcul, effets
+appliqués, prix tiré, présage : rien de tout cela n'apparaît dans le fil de la fiction. Chaque
+scène porte une commande **« Pourquoi ? »** qui déplie ce détail à la demande, et le replie.
+La fiction reste propre ; la preuve reste consultable à tout moment. C'est la seule façon de
+tenir les deux exigences ensemble — un récit qu'on lit sans parasites, et un moteur dont on peut
+vérifier chaque décision.
+
+**(b) Un tour annulé s'affiche annulé, jamais en disparaissant.** Le client marque les lignes
+dont le `seq` figure dans `system.reverted.targetSeqs`, affiche la cause (`gm_refusal:<cause>`)
+et **conserve** la commande « Pourquoi ? » sur le tour annulé : on peut donc lire après coup ce
+qui avait été tiré, ce qui avait été appliqué, et pourquoi le tour est tombé. Rien ne s'efface.
+C'est la contrepartie de la décision du § 4.8.4, et c'est aussi ce qui rend l'abus visible : on
+ne mesure pas ce qu'on efface.
+
+**(c) D'où vient la preuve : c'est une projection du journal, pas une donnée d'affichage.**
+Elle est calculée à la demande, par une fonction **pure**, à partir des événements persistés du
+groupe `correlation_id` du tour — les mêmes que ceux déjà diffusés en `s2c.event`. Elle n'est ni
+stockée, ni dénormalisée, ni recalculée par le moteur : **aucun dé n'est retiré pour l'afficher**.
+Chaque entrée porte le `eventSeq` dont elle est issue ; une entrée sans `eventSeq` est un bug,
+et c'est ce que le test vérifie.
+
+| Question | Réponse |
+|---|---|
+| Qui la demande | Le client, par `c2s.why { correlationId }` — un message de **lecture**, comme `c2s.resume` : il ne mute rien et ne relance aucune génération |
+| Qui la porte | `s2c.turn_proof { correlationId, proof: TurnProofDto, truncated: boolean }` (`01-architecture.md` §5.4) |
+| Où vit le DTO | `packages/contracts/src/dto/turn-proof.ts` — une **projection par spectateur**, comme `TableState` : les lignes `visibility: 'gm'` en sont retirées |
+| Qui la construit | `packages/server/src/game/turn-proof.ts`, `buildTurnProof(events, viewerId)`, pure, sans base et sans `decide()` |
+| Ce qu'elle contient | `status: 'applied' \| 'reverted'`, le mouvement joué, le jet (flux RNG, index de tirage, dés, total, issue), la brûlure de souffle éventuelle, les effets appliqués, le prix tiré (`entryId`, `text`, `effectIndex`), le présage, la source de la narration (`ai` \| `engine`), et, si le tour est annulé, `revertedBy { seq, reason }` |
+| Ce qu'elle ne contient **jamais** | Le raisonnement du modèle, ses appels d'outils, leurs résultats, les propositions refusées, les messages d'erreur du fournisseur (§ 6.5). La preuve montre ce que **le moteur** a fait, pas ce que le modèle a tenté |
+| Borne de taille | `effects` ≤ **32** entrées, chaque libellé ≤ **120** caractères, **8 Kio** de JSON sérialisé pour le message entier. Au-delà, `truncated: true` et le client renvoie vers le journal complet (`GET /api/campaigns/:id/log`). La borne est trente fois inférieure à la trame sortante de 256 Kio : une preuve ne peut pas saturer une socket |
+
+**Pourquoi à la demande plutôt que poussée avec chaque tour.** Une preuve poussée à chaque
+scène multiplierait le trafic par le nombre de spectateurs pour une information que personne ne
+lit la plupart du temps, et elle finirait par être affichée « parce qu'elle est là ». À la
+demande, le coût est nul tant que personne ne demande, et l'affichage reste un choix du joueur.
 
 ---
 
@@ -1950,11 +2020,13 @@ pour la narration.
 | `s2c.narration_snapshot` | `{ narrationId, chunk, text, status }` | à l'abonnement d'un client, et en rattrapage |
 | `s2c.narration_done` | `{ narrationId, eventSeq, text, model, source: 'ai' \| 'engine' }` | après post-filtres et persistance |
 | `s2c.narration_error` | `{ narrationId, code }` | `rate_limited`, `refused`, `engine_fallback`, `aborted`, `action_impossible` |
-| `s2c.event` | un `GameEvent` du journal | émis par le moteur, **indépendamment** de la narration |
+| `s2c.event` | un `GameEvent` du journal | émis par le moteur, **indépendamment** de la narration. Le `system.reverted` d'un tour annulé passe par ce canal : c'est lui qui **marque** les lignes annulées, il n'en retire aucune (§ 4.8.6) |
+| `s2c.turn_proof` | `{ correlationId, proof, truncated }` | en réponse à `c2s.why`. Projection du journal, bornée à 8 Kio (§ 4.8.6) |
 
 | Message client | Charge `p` | Quand |
 |---|---|---|
 | `c2s.resume_narration` | `{ narrationId, lastChunk }` | après reconnexion. Ne déclenche **jamais** une seconde génération. |
+| `c2s.why` | `{ correlationId }` | quand un joueur déplie « Pourquoi ? » sur une scène. Message de **lecture** : il ne mute rien, ne relance aucune génération, et la réponse est `s2c.turn_proof` (§ 4.8.6) |
 
 **Coalescence** : on n'émet pas un message WS par token. Un timer de 50 ms accumule les deltas ; c'est 20 messages/s par socket au pire, et cela évite de saturer le DOM côté React.
 
@@ -1966,9 +2038,11 @@ jamais persisté dans `narration.gm_message.text`. Sans cette retenue, les joueu
 JSON apparaître à la fin de chaque scène, et le texte persisté le contiendrait pour toujours.
 
 `s2c.narration_error { code: 'action_impossible' }` est émis **après** `s2c.narration_done` :
-la prose est valide et doit s'afficher, c'est le tour qui est annulé (§ 4.8.3). Les `s2c.event`
-du `system.reverted` suivent et font disparaître les lignes de journal correspondantes côté
-client.
+la prose est valide et doit s'afficher, c'est le tour qui est annulé (§ 4.8.3). Le `s2c.event`
+du `system.reverted` suit et **marque** les lignes visées par `targetSeqs` comme annulées côté
+client. **Il ne les fait pas disparaître** : un tour annulé reste affiché, barré, avec sa cause
+et sa preuve consultable par « Pourquoi ? » (§ 4.8.6). Effacer laisserait le joueur devant un
+résultat évaporé sans explication, et rendrait l'abus du droit de refus invisible.
 
 **Numérotation — deux compteurs, à ne jamais confondre.** `seq` (enveloppe, sur `s2c.event`
 seulement) est le **numéro de journal**, autorité du jeu. `chunk` (charge utile de narration)
@@ -1998,6 +2072,11 @@ ce qui rend la génération idempotente par construction.
 ### 6.5 Ce que les joueurs ne voient jamais
 
 Le raisonnement interne du modèle — que le port n'expose jamais, sous aucun fournisseur —, les appels d'outils, les résultats d'outils, les propositions refusées, les messages d'erreur du fournisseur, les identifiants internes. L'interface peut afficher un indicateur discret « le conteur consulte les archives » pendant un appel d'outil de lecture, mais aucun contenu.
+
+**La preuve « Pourquoi ? » n'est pas une exception à cette liste** (§ 4.8.6). Elle projette les
+**événements du journal** — ce que le moteur a tiré, calculé et appliqué —, jamais ce que le
+modèle a pensé, demandé ou tenté. Un joueur voit donc tout du moteur et rien du modèle, ce qui
+est exactement la frontière de l'invariant 1 rendue visible à l'écran.
 
 ---
 
@@ -2316,8 +2395,17 @@ pnpm eval:offline     # N0 — 0 appel réseau, < 5 s, tourne sur chaque PR
 pnpm eval:live        # N1 — 34 cas × 2 échantillons contre le fournisseur configuré
 pnpm eval:judge       # N2 — 8 scènes dorées notées par structurer()
 pnpm eval:record      # rafraîchit les sorties enregistrées de N0
+pnpm eval:smoke       # FUMÉE — 3 cas, 7 assertions écrites à la main, verdict lisible (M0-32)
 pnpm eval:probe       # sonde un fournisseur candidat contre le corpus d'assertions (M0-31)
 ```
+
+**`eval:smoke` n'est pas un niveau d'éval**, c'est une **question posée tôt**. Elle ne dépend
+que du prompt intégral et du port, tourne avant que le corpus n'existe, et répond à *est-ce que
+ce modèle tient le prompt contraint ?* — longueur, deuxième personne du singulier, aucune
+décision d'issue, aucun champion verrouillé, aucune question finale au joueur, bloc de faits
+présent et bien formé. Son verdict est lisible par un humain (*tel fournisseur, tel modèle, tant
+d'assertions passées sur tant*), **ne bloque aucune porte**, et un verdict défavorable sort en
+code 0 : c'est une information, pas une porte. Seule une erreur d'exécution sort en 1.
 
 **N0 en détail.** Deux choses y sont vérifiées, et ce sont les deux qui cassent le plus souvent :
 
@@ -2558,6 +2646,8 @@ diffusion vit dans `@for/server`. Tous les schémas partagés vivent dans `@for/
 
 ```
 packages/contracts/
+  src/dto/turn-proof.ts              # la preuve « Pourquoi ? » (§4.8.6) : PROJECTION du journal,
+                                     #   bornée (32 effets, 120 car., 8 Kio), un eventSeq par entrée
   src/ai/narrator-port.ts            # LE PORT (§0.1) : types d'E/S, capacités, NarratorErrorCode
   src/ai/chronicle.ts                # ChronicleDoc (schéma + plafonds durs)
   src/ai/forge.ts                    # ForgeOutputSchema (dérivé de ChampionSchema)
@@ -2607,6 +2697,13 @@ packages/ai-eval/
   chronicle/…  forge/…
   src/graders/refusal-blindness.ts   # corpus rejoué dés inversés : mêmes refus retenus (§ 8.4)
   src/run-offline.ts  src/run-live.ts  src/run-judge.ts  src/record.ts
+  smoke/assertions.ts                # SONDE DE FUMÉE (M0-32) : 7 assertions écrites à la main,
+                                     #   gelées, seule duplication autorisée du corpus. Elles
+                                     #   n'ont besoin QUE du prompt intégral et du port.
+  smoke/cases/*.case.json  smoke/run-smoke.ts  smoke/report.ts
+  probe/cases/*.case.json  probe/run-probe.ts  probe/report.ts   # corpus complet (M0-31)
+
+packages/server/src/game/turn-proof.ts        # buildTurnProof(events, viewerId) — PURE (§4.8.6)
 
 packages/server/src/ai/
   narrator.ts                        # construit NarratorConfig depuis env.ts, appelle selectNarrator
@@ -2627,6 +2724,8 @@ docs/design/02-mj-ia.md                      # ce document
 
 **Ce qui doit exister à la fin de M0** (aucune feature de jeu, mais toute la charpente) : les prompts intégraux, `TOOL_DEFINITIONS` avec ses schémas et l'instantané associé, le constructeur de contexte avec son test d'instantané, **le parseur et la fusion d'état de scène (§ 2.3, § 4.7) et la preuve de refus (§ 4.8), toutes deux pures et testées sans réseau**, le schéma de chronique et sa validation, `ForgeOutputSchema` et sa validation, le paquet `ai-eval` avec au moins 10 cas et le chemin N0 complet, et `narration-fallback.ts` avec ses gabarits de contenu. Les appels réseau réels restent derrière `NARRATOR_PROVIDER` : avec `stub`, aucun paquet ne sort. **N0 doit tourner sans clé et sans réseau**, et c'est un job bloquant de la CI.
 
+S'y ajoutent deux objets qui ne sont **pas** des portes : la **sonde de fumée** (`ai-eval/smoke/`, M0-32), qui donne le signal précoce dès que le prompt intégral et le port existent, et la **sonde de fournisseur** (`ai-eval/probe/`, M0-31), qui mesure le corpus complet. Ni l'une ni l'autre ne bloque la CI : un verdict informe une décision, il ne ferme pas une porte.
+
 ---
 
 ## 11. Ce qui a été tranché, et ce qui reste ouvert
@@ -2639,8 +2738,10 @@ docs/design/02-mj-ia.md                      # ce document
 | Où vit ce qui est propre à un fournisseur | **Dans son adaptateur, et nulle part ailleurs** : identifiants de modèle, mise en cache, codes d'arrêt, format d'appel d'outils. Un test de neutralité garde la spec (§ 0.7) |
 | Où vit la boucle d'outils | **Au-dessus du port**, dans `run.ts`. `narrer()` est mono-coup (§ 0.1, contrat 5) |
 | Que faire d'un fournisseur pauvre | **Dégrader la prose, jamais l'équité** (§ 0.2). Aucun chemin de dégradation ne rend une décision au modèle |
-| Comment le fournisseur est configuré | Cinq variables `NARRATOR_*`, lues uniquement dans `packages/server/src/env.ts` (§ 0.6). `AI_ENABLED` n'existe plus : `NARRATOR_PROVIDER=stub` est le seul interrupteur |
+| Comment le fournisseur est configuré | **Cinq variables `NARRATOR_*` de base et trois d'appoint** — `NARRATOR_TOOLS`, `NARRATOR_TIMEOUT_MS`, `NARRATOR_CONTEXT_WINDOW`, validées par le tech lead —, lues uniquement dans `packages/server/src/env.ts` (§ 0.6). `AI_ENABLED` n'existe plus : `NARRATOR_PROVIDER=stub` est le seul interrupteur |
+| Sur quel fournisseur le produit doit tourner | **Il doit rester jouable sans budget** : un fournisseur gratuit ou un modèle local. La lecture « il n'y a qu'un fournisseur » est **renversée** et n'est plus une décision en vigueur (`M0-REVUE.md` §12) |
 | Conséquence de « payer le prix » | **Le moteur tire un d12 et impose l'entrée tirée** au conteur, comme un fait (§ 3.4). Ni outil de prix, ni `optionId`, ni choix du modèle, ni choix du joueur |
+| Entrée de prix portant plusieurs `suggestedEffects` | **Second tirage sur le flux RNG `price`**, index journalisé dans `roll.price_paid.effectIndex` (§ 3.4, `03-donnees.md` §4.6). Le moteur décide, et c'est rejouable. L'alternative « toujours le premier effet » est abandonnée |
 | Temps écoulé sur une transition de scène | **Il n'y en a pas dans la proposition.** `propose_scene_transition` ne porte qu'un lieu (§ 3.3) |
 | Registre de la narration | **Ancrage nommé : la saga islandaise**, plus une liste noire close, trois obligations et une paire d'exemples bon/mauvais dans le prompt (§ 2.1). Demander « un ton âpre et concret » ne suffit pas : c'est mesuré, pas supposé |
 | Nature de l'état de scène | **Événement `scene.facts_updated` + projection `scene_state`** (§ 4.7.1). Ni projection seule (non rejouable), ni duplication dans la chronique (deux mémoires divergent) |
@@ -2649,6 +2750,9 @@ docs/design/02-mj-ia.md                      # ce document
 | Droit de refus du conteur | **Oui, sur la possibilité matérielle seule**, jamais sur l'issue (§ 4.8). Quatre causes closes, preuve recalculée par le serveur sur l'état **à la déclaration** |
 | Un jet annulé laisse-t-il une trace | **Oui.** `system.reverted` sur le groupe `correlation_id` complet ; le journal reste append-only, les clients ont déjà reçu les événements, et sans trace l'abus serait invisible (§ 4.8.3) |
 | RNG après annulation | **L'index de tirage n'est jamais libéré.** Rejouer la même intention ne redonne pas les mêmes dés (§ 4.8.3) |
+| Refus avant ou après les dés | **Après. Confirmé** (§ 4.8.4). Un contrôle de faisabilité avant le jet remettrait le modèle dans le chemin de décision : inacceptable. La conséquence — un résultat brièvement visible puis annulé — est assumée |
+| Ce que voit le joueur d'un tour annulé | **Le tour reste affiché, marqué annulé, avec sa preuve consultable** (§ 4.8.6). Le `s2c.event` du `system.reverted` **marque**, il n'efface pas |
+| Le détail mécanique d'une scène | **Replié derrière « Pourquoi ? », jamais affiché par défaut** (§ 4.8.6). La preuve est une **projection du journal** (`TurnProofDto`), portée par `c2s.why` → `s2c.turn_proof`, bornée à 8 Kio. Elle ne montre **rien** du modèle : ni raisonnement, ni appel d'outil, ni proposition refusée |
 | Absurde mais possible | **Joué, jamais refusé.** Écrit dans le prompt avec trois exemples, et vérifié par le cas d'eval `no_refusal` (§ 2.1, § 8.3) |
 | Vocabulaire des issues | `franche` / `partielle` / `echec`, `presage` — jamais `strong_hit`, `weak_hit`, `miss`, `omen`, `portent` |
 | Schéma de fiche de champion | **un seul**, `ChampionSchema` (`03-donnees.md` §4.5) ; la forge remplit `ForgeOutputSchema`, qui en est dérivé (§ 9.4) |
@@ -2665,7 +2769,7 @@ docs/design/02-mj-ia.md                      # ce document
 
 ### 11.2 Reste ouvert
 
-1. **Quel fournisseur gratuit tient la table.** C'est l'objet de la tâche M0-31 : rejouer le corpus d'assertions contre deux ou trois candidats `openai-compatible` et un modèle local, et publier les taux de réussite par assertion. Sans cette mesure, « le conteur marche avec un modèle gratuit » est une croyance, pas un fait.
+1. **Quel fournisseur gratuit tient la table.** C'est l'objet de la tâche M0-31 : rejouer le corpus d'assertions contre deux ou trois candidats `openai-compatible` et un modèle local, et publier les taux de réussite par assertion. Sans cette mesure, « le conteur marche avec un modèle gratuit » est une croyance, pas un fait. **Le signal précoce, lui, ne s'attend plus jusque-là** : la sonde de fumée M0-32 (sept assertions écrites à la main, verdict lisible, aucune dépendance au corpus) répond dès que le prompt intégral et le port existent à la seule question qui commande la conception — *est-ce qu'un modèle gratuit tient le prompt contraint ?*
 2. **Ordre d'essai quand la prose déçoit**, à `effort` constant : monter `effort` d'un cran (`low` → `medium`) avant de changer de modèle, parce que c'est le seul levier qui ne touche ni au prompt ni au cache. Changer de modèle vient après, et change de fournisseur en dernier.
 3. **Détecteur de français** : l'heuristique par mots-outils suffit-elle, ou faut-il une petite dépendance (`franc`) ? Décision à prendre au premier faux positif.
 4. **Segmentation de phrases** : la règle « 3 à 5 phrases » se heurte aux points de suspension et aux dialogues. La liste d'abréviations et le traitement des `…` sont à figer dans un test dédié d'une vingtaine d'exemples. C'est la source la plus probable de replis moteur injustifiés ; à traiter tôt.
@@ -2678,4 +2782,4 @@ docs/design/02-mj-ia.md                      # ce document
 11. **Seuils du quota de refus** (§ 4.8.5) : « trois refus retenus sur vingt tours consécutifs » est une valeur choisie sur une seule session de prototype. À réviser après les premières parties réelles, en lisant la distribution de `reasonCode` de `narration.proposal_rejected`.
 12. **Marqueurs d'absence de `no_absent_reappearance`** (§ 8.4) : la liste close autorise de parler d'un absent par sa trace. Elle est probablement trop courte. À compléter à chaque faux échec, jamais à raccourcir — la raccourcir rouvrirait le bug observé.
 13. **Bornes du bloc de scène** (§ 2.3) : huit présents et huit partis tiennent pour une table de quatre joueurs et un ou deux PNJ. Une scène de mêlée à huit PNJ nommés les ferait sauter, et S7 tronquerait. À mesurer avant d'élargir : élargir coûte du budget de contexte à chaque tour.
-14. **Faut-il montrer au joueur qu'un refus a eu lieu ?** Le code `action_impossible` existe (§ 6.2), donc l'interface *peut* distinguer « le conteur a refusé » de « le tour n'a pas eu lieu ». Dire lequel des deux est plus honnête envers le joueur est un choix de produit, pas d'architecture.
+14. ~~**Faut-il montrer au joueur qu'un refus a eu lieu ?**~~ — **TRANCHÉ** (§ 4.8.6) : oui, et pas seulement le refus. Le tour annulé **reste affiché, marqué annulé**, avec sa cause et sa preuve consultable ; et le détail mécanique de **toute** scène est replié derrière « Pourquoi ? » plutôt que caché. Il ne reste plus, sur ce point, qu'un choix de formulation d'interface.
