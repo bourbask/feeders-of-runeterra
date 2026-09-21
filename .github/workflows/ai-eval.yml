@@ -1,0 +1,69 @@
+name: Éval IA en ligne
+
+# Les niveaux N1 (appels réels au fournisseur) et N2 (juge) de
+# docs/design/02-mj-ia.md §8.5. Coûteux et non déterministes : cette chaîne ne
+# bloque aucune fusion. Elle n'est pas dans la liste des vérifications exigées
+# par la protection de branche — voir docs/runbook/ci.md.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [labeled, synchronize, reopened]
+
+  # NOCTURNE DÉSACTIVÉ JUSQU'EN M1, VOLONTAIREMENT.
+  # M0-27 ne livre que le niveau N0 : `eval:live` et `eval:judge` sortent en 1 avec
+  # « niveau N1/N2 : jalon M1 ». Un nocturne rouge toutes les nuits est un nocturne
+  # que plus personne ne regarde, et la première vraie régression passe inaperçue.
+  # À décommenter dans la tâche qui livre N1.
+  # schedule:
+  #   - cron: '17 3 * * *'
+
+concurrency:
+  group: ai-eval-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ai-eval-live:
+    name: Niveaux N1 puis N2
+    # Sur une pull request, seulement si elle porte l'étiquette. Sans ce garde,
+    # chaque poussée sur chaque branche consommerait la clé du dépôt.
+    if: >-
+      github.event_name != 'pull_request' ||
+      contains(github.event.pull_request.labels.*.name, 'run-ai-eval')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-node-pnpm
+      - name: Installer les dépendances
+        run: pnpm install --frozen-lockfile
+
+      - name: Niveau N1 — appels réels au fournisseur
+        env:
+          NARRATOR_PROVIDER: ${{ vars.NARRATOR_PROVIDER }}
+          NARRATOR_BASE_URL: ${{ vars.NARRATOR_BASE_URL }}
+          NARRATOR_MODEL: ${{ vars.NARRATOR_MODEL }}
+          NARRATOR_API_KEY: ${{ secrets.NARRATOR_API_KEY }}
+        run: pnpm eval:live
+
+      - name: Niveau N2 — juge
+        env:
+          NARRATOR_PROVIDER: ${{ vars.NARRATOR_PROVIDER }}
+          NARRATOR_BASE_URL: ${{ vars.NARRATOR_BASE_URL }}
+          NARRATOR_MODEL: ${{ vars.NARRATOR_MODEL }}
+          NARRATOR_API_KEY: ${{ secrets.NARRATOR_API_KEY }}
+        run: pnpm eval:judge
+
+      # Le format du rapport est fixé par M0-27. Tant qu'il n'existe pas, on
+      # n'échoue pas sur son absence : l'artefact est vide et c'est tout.
+      - name: Publier le rapport en artefact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapport-eval-ia
+          path: reports/ai-eval/
+          if-no-files-found: ignore
+          retention-days: 30

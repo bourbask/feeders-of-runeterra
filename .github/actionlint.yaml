@@ -1,0 +1,18 @@
+# Configuration d'actionlint.
+#
+# Deux réglages, et chacun refuse quelque chose — une configuration qui n'interdit
+# rien ne se voit pas quand elle meurt.
+
+# Aucun runner auto-hébergé : tout tourne sur les images GitHub. Un `runs-on`
+# portant une étiquette inconnue est donc une faute de frappe, pas une intention.
+self-hosted-runner:
+  labels: []
+
+# Liste exhaustive des variables de dépôt autorisées. Toute autre `vars.X` est
+# rejetée : c'est ce qui attrape la variable jamais définie côté dépôt, qui
+# s'évalue en chaîne vide et fait échouer le travail dix minutes plus tard.
+# Les secrets ne sont pas listés ici — actionlint ne les vérifie pas.
+config-variables:
+  - NARRATOR_PROVIDER
+  - NARRATOR_BASE_URL
+  - NARRATOR_MODEL

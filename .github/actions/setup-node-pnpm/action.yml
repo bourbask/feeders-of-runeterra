@@ -1,0 +1,33 @@
+name: Installer Node et pnpm
+description: >-
+  Prépare un runner neuf : pnpm à la version épinglée par `packageManager`, Node à la
+  version du `.nvmrc`, cache du magasin pnpm et cache Turborepo. N'installe volontairement
+  pas les dépendances : chaque travail écrit son `pnpm install --frozen-lockfile` en clair,
+  pour que `scripts/check-ci-jobs.sh` voie toutes les commandes de la chaîne.
+
+runs:
+  using: composite
+  steps:
+    # La version de pnpm vient de `packageManager` dans le package.json racine.
+    # On ne la redit pas ici : deux sources de vérité qui divergent, c'est une
+    # installation qui passe sur une machine et échoue sur l'autre.
+    - name: Installer pnpm
+      uses: pnpm/action-setup@v4
+
+    - name: Installer Node
+      uses: actions/setup-node@v4
+      with:
+        node-version-file: .nvmrc
+        cache: pnpm
+
+    # Le cache Turborepo porte sur le SHA du commit : le travail `build` le remplit,
+    # les travaux qui en dépendent retrouvent les `dist/` sans les reconstruire. Le
+    # repli par préfixe sert aux travaux lancés en parallèle de `build` — ils n'ont
+    # rien à y gagner, mais rien à y perdre non plus.
+    - name: Cache Turborepo
+      uses: actions/cache@v4
+      with:
+        path: .turbo/cache
+        key: turbo-${{ runner.os }}-${{ github.sha }}
+        restore-keys: |
+          turbo-${{ runner.os }}-
