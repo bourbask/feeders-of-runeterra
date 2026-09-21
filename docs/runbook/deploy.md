@@ -204,7 +204,13 @@ Environnement GitHub `production` :
 `PUBLIC_URL` est une **variable** et non un secret : elle apparaît dans l'URL d'environnement
 affichée par GitHub, et `.github/actionlint.yaml` la déclare dans `config-variables` pour qu'une
 coquille (`vars.PUBLIC_URLL`) soit une erreur de lint plutôt qu'une chaîne vide découverte dix
-minutes plus tard dans un `curl`.
+minutes plus tard dans un `curl`. C'est mesuré dans les deux sens : avec le fichier, actionlint
+sort en 1 sur `vars.PUBLIC_URLL` ; sans lui, en 0.
+
+`config-variables` y porte l'**union** des variables des deux tâches qui touchent des workflows :
+`PUBLIC_URL` (M0-04) et les trois `NARRATOR_*` (M0-03). Ce n'est pas un doublon à départager à la
+fusion : la liste est exhaustive par construction, donc ne garder que la moitié ferait sortir
+actionlint en 1 sur les workflows de l'autre tâche.
 
 Pas de `StrictHostKeyChecking=no` dans le workflow : accepter n'importe quel hôte revient à
 déployer sur le premier serveur qui répond à ce nom.
@@ -223,9 +229,38 @@ sudo /srv/feeders/bin/deploy.sh deploy sha-a1b2c3d   # bascule + /readyz + retou
 sudo /srv/feeders/bin/deploy.sh rollback             # revient à l'étiquette précédente connue
 ```
 
-L'étiquette déployée est écrite dans `/srv/feeders/.deploy-state` **avant** la bascule, et la
-précédente conservée. Un retour arrière ne dépend donc ni de la mémoire de celui qui déploie, ni
-d'un onglet GitHub encore ouvert.
+### `.deploy-state`, écrit en deux temps
+
+`/srv/feeders/.deploy-state` n'est pas écrit d'un coup. Il l'est en deux temps, et c'est ce qui
+permet de survivre à une interruption :
+
+1. **avant la bascule**, une ligne `pending=<nouvelle étiquette>` s'ajoute à l'état scellé.
+   `current` et `previous` ne bougent pas : ils désignent toujours le dernier déploiement
+   réellement vérifié ;
+2. **après un `/readyz` vert**, l'état est refermé : `current=<nouvelle>`, `previous=<ancienne>`,
+   plus de `pending`.
+
+Si le processus meurt entre les deux — session SSH coupée, terminal fermé, VPS redémarré —, le
+fichier garde son `pending`. `deploy.sh current` le signale alors en toutes lettres, et
+`deploy.sh rollback` revient sur la dernière étiquette **scellée**, c'est-à-dire celle que la
+bascule interrompue était en train de remplacer. Sans ce `pending`, `rollback` repointerait sur
+`previous` et **sauterait la version réellement remplacée**.
+
+```
+$ sudo /srv/feeders/bin/deploy.sh current
+current=sha-a1b2c3d
+previous=sha-9f8e7d6
+pending=sha-4c5d6e7
+deploy : ATTENTION — une bascule vers « sha-4c5d6e7 » a été entamée et jamais scellée.
+```
+
+Un retour arrière ne dépend donc ni de la mémoire de celui qui déploie, ni d'un onglet GitHub
+encore ouvert.
+
+`FEEDERS_TAG` dans `/srv/feeders/.env` suit la même discipline : si le `docker compose pull`
+échoue, le script **remet la valeur précédente**. Sans cela, un `docker compose up -d` lancé à
+la main derrière — le geste naturel du tableau §6 — tenterait de démarrer une image qui n'a
+jamais pu être tirée.
 
 ### Ce que le retour arrière ne fait pas
 
@@ -234,6 +269,13 @@ délibéré : restaurer « par précaution » effacerait les parties jouées dep
 sauvegarde. Si une migration a été appliquée et qu'il faut revenir en arrière sur le schéma,
 c'est `restore.sh`, à la main, avec `docs/runbook/backup-restore.md` sous les yeux et quelqu'un
 qui l'a lu.
+
+**C'est un écart assumé avec `docs/design/01-architecture.md` §9.3 point 5**, qui demande une
+restauration « seulement si une migration a été appliquée ». Rien, aujourd'hui, ne permet de
+savoir qu'une migration a été appliquée : les migrations arrivent en M0-11 et M0-14. L'écart est
+tracé dans `docs/adr/0004-retour-arriere-et-donnees.md`, à trancher avant M0-14. Tant que
+l'ADR n'est pas tranché, c'est la spécification qui a raison et ce comportement qui est
+provisoire.
 
 ---
 

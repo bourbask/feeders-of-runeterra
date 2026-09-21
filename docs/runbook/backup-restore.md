@@ -58,7 +58,7 @@ Ce que le script fait, dans l'ordre, et pourquoi chaque étape est là :
 | Étape                 | Ce qu'elle attrape                                                            |
 | --------------------- | ----------------------------------------------------------------------------- |
 | `VACUUM INTO`         | base source illisible, disque plein                                             |
-| `PRAGMA integrity_check` sur **la copie** | page corrompue recopiée à l'identique                       |
+| `PRAGMA integrity_check` sur **la copie** | rien qu'on sache provoquer — défense en profondeur (voir ci-dessous) |
 | `PRAGMA foreign_key_check` sur la copie   | incohérence relationnelle invisible à `integrity_check`     |
 | `count(*) FROM events` | un `VACUUM INTO` sur le mauvais fichier : schéma en place, journal vide        |
 | `zstd -19 --rm`       | —                                                                               |
@@ -67,6 +67,21 @@ Ce que le script fait, dans l'ordre, et pourquoi chaque étape est là :
 **Une sauvegarde non vérifiée n'est pas une sauvegarde.** Les deux `PRAGMA` portent sur la
 copie, jamais sur l'original : c'est la copie qu'on restaurera, et une base source saine ne
 garantit rien sur ce qui a été écrit à côté.
+
+### Ce que `integrity_check` sur la copie ne peut pas attraper
+
+Il faut être honnête sur celui-là, parce qu'une version antérieure de ce tableau lui attribuait
+« page corrompue recopiée à l'identique » : **c'est faux**. `VACUUM INTO` ne recopie pas des
+pages, il reconstruit une base neuve en relisant les données par le moteur SQLite. Une page
+abîmée de la source fait échouer le `VACUUM INTO` lui-même (ligne du dessus), elle ne ressort
+jamais à l'identique dans la copie. Le contrôle est donc **infalsifiable depuis l'extérieur** :
+aucune base d'entrée ne le fait échouer.
+
+Il reste, et la spécification l'exige (`03-donnees.md` §6). C'est de la défense en profondeur
+contre ce qu'on ne prévoit pas — un bogue de SQLite, un disque qui ment, un `VACUUM INTO`
+interrompu — et il coûte une seconde. Mais **il ne compte pas comme un filet prouvé**, puisqu'on
+ne sait pas écrire l'entrée qui le déclenche. Les filets prouvés de `backup.sh` sont les trois
+autres.
 
 En cas d'échec, le fichier partiel est **détruit** (`trap … EXIT`). Une sauvegarde tronquée qui
 traîne dans le dossier est une sauvegarde que quelqu'un restaurera un jour de panique.
@@ -122,7 +137,8 @@ cd /srv/feeders
 # 1. Arrêter les écrivains. On ne restaure JAMAIS sous un service actif.
 docker compose stop app
 
-# 2. Restaurer (le script met l'état actuel de côté tout seul).
+# 2. Restaurer (le script met l'état actuel de côté tout seul). Il décrit ce
+#    qu'il va remplacer et attend que vous tapiez « oui ».
 sudo ./bin/restore.sh --archive backups/app-20260921T060000Z.db.zst
 
 # 3. Rouvrir.
@@ -132,19 +148,48 @@ docker compose up -d
 docker compose exec app pnpm db:check
 ```
 
-`restore.sh` refuse deux choses, et ce sont les deux erreurs qu'on commet sous stress :
+`restore.sh` refuse quatre choses, et ce sont les erreurs qu'on commet sous stress :
 
 1. **restaurer pendant que `app` tourne** — on écraserait un WAL vivant et on obtiendrait une
    base incohérente, silencieusement. Le script interroge `docker compose ps` et s'arrête ;
 2. **écraser l'état actuel sans le mettre de côté** — l'état corrompu est la seule pièce à
    conviction pour comprendre l'incident, et parfois la seule copie des dernières minutes de
-   jeu. Il part dans `/srv/feeders/incident-<horodatage>/`, avec le WAL et le SHM.
+   jeu. Il part dans `<--incident-dir>/incident-<horodatage>/`, avec le WAL et le SHM ;
+3. **toucher à l'état existant avant d'avoir un remplaçant vérifié** — l'archive est dépliée
+   dans un fichier temporaire *à côté* de la cible, et c'est **ce temporaire** qui passe
+   `integrity_check` et `foreign_key_check`. L'ancienne base ne bouge qu'ensuite, et la bascule
+   finale est un `mv` sur le même système de fichiers, donc atomique. Une archive illisible, de
+   mauvaise extension, ou compressée avec un outil absent, laisse donc `data/app.db` **intact** ;
+4. **agir sans confirmation** — sans `--yes`, le script décrit ce qu'il va détruire et attend
+   qu'on tape `oui`. Sans terminal et sans `--yes`, il refuse plutôt que d'attendre pour rien.
 
-Il vérifie ensuite `integrity_check` et `foreign_key_check` **avant** de rendre la main, et pose
-`chown 10001:10001` + `chmod 600` — 10001 est l'UID de l'utilisateur `app` de l'image, et l'hôte
-ne connaît pas les noms d'utilisateur du conteneur.
+### L'ordre des étapes, et pourquoi il compte
+
+```
+valider l'archive (extension, zstd/age, clé)   ← aucun effet de bord
+  → vérifier qu'aucun service n'écrit
+  → déplier dans <cible>.restore-<pid>
+  → integrity_check + foreign_key_check sur CE fichier
+  → demander confirmation
+  → déplacer l'état existant dans incident-<horodatage>/
+  → mv <cible>.restore-<pid> → <cible>
+```
+
+Tout ce qui peut échouer sans dépendre de l'état échoue **avant** la première modification du
+disque. C'est le contraire d'une préférence de style : la version précédente de ce script
+déplaçait la base vivante en deuxième étape, et une archive au mauvais nom suffisait à vider
+`data/` sans rien restaurer.
+
+`chown 10001:10001` + `chmod 600` sont posés à la fin — 10001 est l'UID de l'utilisateur `app`
+de l'image, et l'hôte ne connaît pas les noms d'utilisateur du conteneur.
 
 Formats acceptés : `.db`, `.db.zst`, et `.db.zst.age` (chemin post-M0, voir §5).
+
+### Où part l'état mis de côté
+
+`--incident-dir` (défaut : `$FEEDERS_COMPOSE_DIR`, donc `/srv/feeders`). L'emplacement est
+**explicite** et ne se déduit pas de `--db` : le déduire donnerait, pour un
+`--db /tmp/restored.db`, un `/incident-<horodatage>` à la racine du système de fichiers.
 
 ### Récupérer une seule campagne
 
@@ -152,10 +197,15 @@ Erreur limitée à une partie : on ne veut pas tout revenir en arrière.
 
 ```bash
 sudo ./bin/restore.sh --archive backups/app-20260921T060000Z.db.zst \
-  --db /tmp/restored.db --no-service-check
+  --db /tmp/restored.db --incident-dir /tmp --no-service-check --yes
 pnpm db:export-campaign --db /tmp/restored.db --campaign 01J... --out /tmp/camp.jsonl
 pnpm db:import-campaign --db /srv/feeders/data/app.db --in /tmp/camp.jsonl --as-new
 ```
+
+`--incident-dir /tmp` parce qu'on restaure **hors** de `/srv/feeders` : sans lui, un
+`/tmp/restored.db` laissé d'un passage précédent partirait dans `/srv/feeders/incident-*`, à
+côté des vraies pièces à conviction. Cette recette se relance autant de fois qu'on veut : c'est
+le deuxième passage qui compte, celui où `/tmp/restored.db` existe déjà.
 
 L'export est un JSONL du journal (`events` dans l'ordre de `seq`) plus les lignes de zone A
 nécessaires. Puisque tout est rejouable (invariant 4), importer un journal **suffit** à
@@ -190,7 +240,18 @@ sqlite3 "$tmp/app.db" "CREATE TABLE events (id INTEGER PRIMARY KEY, seq INTEGER 
                        INSERT INTO events (seq) VALUES (1), (2), (3);"
 FEEDERS_DB="$tmp/app.db" FEEDERS_BACKUP_DIR="$tmp/backups" infra/scripts/backup.sh
 infra/scripts/restore.sh --archive "$tmp"/backups/app-*.db.zst \
-  --db "$tmp/restored.db" --no-service-check --yes
+  --db "$tmp/restored.db" --incident-dir "$tmp" --no-service-check --yes
+```
+
+Et la contre-épreuve, qui est la partie qu'on saute toujours — une archive qui n'en est pas une
+ne doit **rien** casser :
+
+```bash
+: > "$tmp/pas-une-archive.tar.gz"
+infra/scripts/restore.sh --archive "$tmp/pas-une-archive.tar.gz" \
+  --db "$tmp/app.db" --incident-dir "$tmp" --no-service-check --yes
+# sortie 1, et "$tmp/app.db" est toujours là, avec ses trois événements :
+sqlite3 "$tmp/app.db" 'SELECT count(*) FROM events;'   # 3
 ```
 
 ---
