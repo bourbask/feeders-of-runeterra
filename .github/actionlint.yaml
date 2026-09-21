@@ -1,0 +1,21 @@
+# Configuration d'actionlint.
+#
+# PROPRIÉTÉ : ce fichier appartient à M0-03 (chaîne d'intégration continue).
+# M0-04 le crée uniquement parce que M0-03 n'était pas encore fusionné dans
+# `develop` au moment de la bascule — c'est ce que prévoit la fiche M0-04. Si
+# les deux versions se rencontrent à la fusion, GARDER la liste
+# `config-variables` ci-dessous : c'est elle qui porte le garde-fou.
+
+# Aucun exécuteur auto-hébergé : tout tourne sur les images GitHub. Déclarer la
+# liste vide n'est pas décoratif — sans elle, actionlint accepterait n'importe
+# quelle étiquette inconnue en la prenant pour un exécuteur maison, et une
+# coquille du genre `ubuntu-lates` passerait sans bruit.
+self-hosted-runner:
+  labels: []
+
+# Les variables de dépôt/environnement autorisées. Toute autre `vars.X`
+# devient une erreur : une variable mal orthographiée se résout en chaîne vide
+# à l'exécution, et un `curl ""/readyz` échoue dix minutes plus tard sans
+# jamais dire pourquoi.
+config-variables:
+  - PUBLIC_URL

@@ -1,0 +1,64 @@
+# Terminaison TLS et façade HTTP (01-architecture.md §9.2).
+#
+# Le domaine et l'adresse ACME viennent de l'environnement du conteneur Caddy,
+# alimenté par `.env` sur le VPS. Ni l'un ni l'autre n'est écrit en dur : ce
+# fichier est versionné, le domaine du déploiement ne l'est pas.
+#
+# `caddy fmt` possède ce fichier : indentation par tabulations, et pas de ligne
+# vide entre ce bloc de commentaires et l'accolade globale.
+{
+	email {$FEEDERS_ACME_EMAIL}
+
+	# Décommenter pour éprouver l'émission de certificats sans consommer le
+	# quota de Let's Encrypt. Un déploiement qui essuie un « rate limited »
+	# le jour J n'a pas de solution rapide.
+	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+{$FEEDERS_DOMAIN} {
+	encode zstd gzip
+
+	header {
+		# HSTS : un an, sous-domaines inclus. `preload` est volontairement
+		# absent — l'inscription à la liste de préchargement des navigateurs
+		# est difficile à défaire, et on ne s'y engage pas avant d'avoir un
+		# domaine définitif.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# Caddy annonce sa présence par défaut ; inutile de la donner.
+		-Server
+	}
+
+	# ── WebSocket ────────────────────────────────────────────────────────────
+	# La table est temps réel : le serveur pousse `s2c.*` dès qu'un événement
+	# est journalisé. Avec le tampon par défaut, les trames s'accumulent côté
+	# proxy et la narration arrive par paquets — le jeu devient saccadé sans
+	# qu'aucune erreur n'apparaisse nulle part. `flush_interval -1` désactive
+	# ce tampon.
+	@ws {
+		header Connection *Upgrade*
+		header Upgrade websocket
+	}
+	reverse_proxy @ws app:8787 {
+		flush_interval -1
+	}
+
+	# ── Sondes ───────────────────────────────────────────────────────────────
+	# `/healthz` et `/readyz` passent par le même amont, sans réécriture : la
+	# vérification post-déploiement interroge l'extérieur exactement comme
+	# Docker interroge l'intérieur (03-donnees.md §6.7).
+
+	# ── Tout le reste ────────────────────────────────────────────────────────
+	# Une seule image sert l'API et les fichiers statiques du client : Caddy
+	# n'a donc rien à router, il passe tout à `app`.
+	reverse_proxy app:8787 {
+		header_up X-Real-IP {remote_host}
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}
