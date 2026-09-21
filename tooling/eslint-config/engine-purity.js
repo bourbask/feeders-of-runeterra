@@ -7,21 +7,27 @@ const MOTIF =
 
 export default [
   {
-    files: ['packages/engine/**/*.ts'],
+    // Le code du moteur seulement : ses tests et ses fichiers de configuration
+    // ont le droit d'importer vitest.
+    files: ['packages/engine/src/**/*.ts'],
+    ignores: ['**/*.test.ts'],
     rules: {
-      'no-restricted-imports': [
+      // Le moteur déclare zéro dépendance : tout import de paquet y est donc
+      // étranger par construction. C'est plus sûr qu'une liste de modules
+      // interdits, qui laisserait entrer le prochain paquet qu'on oubliera d'y
+      // inscrire — et ça ne gêne pas les imports relatifs, que la règle ignore.
+      'import-x/no-extraneous-dependencies': [
         'error',
         {
-          patterns: [
-            { group: ['node:*'], message: MOTIF },
-            {
-              group: ['fs', 'path', 'crypto', 'os', 'http', 'https', 'child_process'],
-              message: MOTIF,
-            },
-            { group: ['@for/db', '@for/server', '@for/ai', '@for/content'], message: MOTIF },
-          ],
+          devDependencies: false,
+          optionalDependencies: false,
+          peerDependencies: false,
+          includeInternal: true,
+          includeTypes: true,
         },
       ],
+      // Les modules natifs, eux, ne sont pas des dépendances : il faut les nommer.
+      'no-restricted-imports': ['error', { patterns: [{ group: ['node:*'], message: MOTIF }] }],
       'no-restricted-globals': [
         'error',
         { name: 'process', message: MOTIF },

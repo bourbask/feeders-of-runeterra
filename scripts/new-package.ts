@@ -25,8 +25,9 @@ const tsconfigDe = { react: 'react.json', pur: 'library.json', node: 'node.json'
 
 mkdirSync(join(base, 'src'), { recursive: true });
 
-const ecrire = (chemin: string, contenu: string): void =>
+const ecrire = (chemin: string, contenu: string): void => {
   writeFileSync(join(base, chemin), contenu);
+};
 
 ecrire(
   'package.json',
@@ -53,14 +54,47 @@ ecrire(
   )}\n`,
 );
 
+const compilerOptions =
+  genre === 'react' ? { types: ['vite/client'] } : { outDir: 'dist', rootDir: 'src' };
+
 ecrire(
   'tsconfig.json',
-  `${JSON.stringify({ extends: `@for/tsconfig/${tsconfigDe}`, compilerOptions: { outDir: 'dist', rootDir: 'src' }, include: ['src/**/*'], exclude: ['**/*.test.ts'] }, null, 2)}\n`,
+  `${JSON.stringify(
+    {
+      extends: `@for/tsconfig/${tsconfigDe}`,
+      compilerOptions,
+      include: ['src/**/*'],
+      exclude: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'dist'],
+    },
+    null,
+    2,
+  )}\n`,
 );
 ecrire(
   'tsconfig.test.json',
   `${JSON.stringify({ extends: '@for/tsconfig/test.json', include: ['src/**/*'] }, null, 2)}\n`,
 );
+// Sans ce fichier, `vitest.workspace.ts` ne voit pas le paquet : ses tests
+// disparaissent silencieusement de la passe racine.
+ecrire(
+  'vitest.config.ts',
+  `import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  test: {
+    name: '@for/${nom}',
+    globals: true,
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.ts'],
+      exclude: ['src/**/*.test.ts', 'src/index.ts'],
+      thresholds: { lines: 70, branches: 70, functions: 70, statements: 70 },
+    },
+  },
+});
+`,
+);
+
 ecrire('src/index.ts', `export const NOM = '@for/${nom}' as const;\n`);
 ecrire(
   'src/index.test.ts',

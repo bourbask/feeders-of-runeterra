@@ -40,6 +40,31 @@ module.exports = {
       to: { path: '^packages/ai-eval/src/assertions' },
     },
     {
+      name: 'content-ne-connait-pas-la-plateforme',
+      severity: 'error',
+      comment: "@for/content sert des données de jeu. Il ignore la base, l'IA et le serveur.",
+      from: { path: '^packages/content/src' },
+      to: { path: '^packages/(db|ai|server)/' },
+    },
+    {
+      name: 'ai-ne-touche-jamais-la-base',
+      severity: 'error',
+      comment:
+        "C'est cette arête qui rend l'eval IA exécutable hors base. @for/ai assemble du " +
+        "contexte et parse des sorties ; il ne persiste rien et n'ordonnance rien.",
+      from: { path: '^packages/ai/src' },
+      to: { path: '^packages/(db|server)/' },
+    },
+    {
+      name: 'client-ne-voit-que-les-contrats-et-le-moteur',
+      severity: 'error',
+      comment:
+        "Le client affiche et envoie des intentions (invariant 3). La base, l'IA, le " +
+        'serveur et le contenu ne franchissent pas le navigateur.',
+      from: { path: '^packages/client/src' },
+      to: { path: '^packages/(db|ai|ai-eval|server|content)/' },
+    },
+    {
       name: 'pas-de-dependance-orpheline',
       severity: 'error',
       from: {},
@@ -48,7 +73,10 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: 'node_modules' },
-    exclude: { path: '(dist|coverage|\\.test\\.ts$)' },
+    // Ne PAS exclure `dist` ici : les paquets de l'espace de travail se résolvent
+    // à travers leur `dist/`, et les exclure faisait disparaître toutes les arêtes
+    // entre paquets — les règles de frontière devenaient silencieusement inertes.
+    exclude: { path: '(coverage|\\.test\\.ts$)' },
     tsPreCompilationDeps: true,
     tsConfig: { fileName: 'tsconfig.json' },
     enhancedResolveOptions: {

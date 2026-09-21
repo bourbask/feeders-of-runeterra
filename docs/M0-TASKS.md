@@ -49,19 +49,19 @@
 
 ## 2. Vue d'ensemble des vagues
 
-| Vague | Ce qu'on construit                                                                                                                      | Tâches                                                            |
-| ----- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| 1     | Le squelette du dépôt : espaces de travail, TypeScript strict, lint, orchestrateur                                                      | M0-01                                                             |
-| 2     | Le moteur de règles nu (types, hasard reproductible), la chaîne d'intégration, l'image Docker                                           | M0-02 · M0-03 · M0-04                                             |
-| 3     | Les contrats de données partagés, et la boîte à outils de test déterministe                                                             | M0-05 · M0-06                                                     |
-| 4     | Les dés, le protocole réseau, les schémas de contenu, les fixtures, le schéma de base                                                   | M0-07 · M0-08 · M0-09 · M0-10 · M0-11                             |
-| 5     | Les mouvements et le journal rejouable, le chargeur de contenu, l'accès base, les schémas IA                                            | M0-12 · M0-13 · M0-14 · M0-15                                     |
-| 6     | Le contenu de jeu **et les fiches de champion**, la reconstruction de base, les prompts du conteur, la page table, le serveur           | M0-16 · M0-17 · M0-18 · M0-19 · M0-20                             |
-| 7     | Le contexte IA, l'authentification Discord, l'orchestration, le WebSocket, **et la sonde de fumée d'un fournisseur gratuit**            | M0-22 · M0-23 · M0-24 · M0-25 · **M0-32** (à démarrer en premier) |
-| 8     | La campagne de démonstration, le harnais d'éval, le simulateur, les travailleurs IA, **et la mesure complète d'un fournisseur gratuit** | **M0-31** (à démarrer en premier) · M0-26 · M0-27 · M0-28 · M0-29 |
-| 9     | L'assemblage : le parcours de bout en bout qui prouve que le socle tient                                                                | M0-30                                                             |
+| Vague | Ce qu'on construit | Tâches |
+|---|---|---|
+| 1 | Le squelette du dépôt : espaces de travail, TypeScript strict, lint, orchestrateur | M0-01 |
+| 2 | Le moteur de règles nu (types, hasard reproductible), la chaîne d'intégration, l'image Docker | M0-02 · M0-03 · M0-04 |
+| 3 | Les contrats de données partagés, et la boîte à outils de test déterministe | M0-05 · M0-06 |
+| 4 | Les dés, le protocole réseau, les schémas de contenu, les fixtures, le schéma de base | M0-07 · M0-08 · M0-09 · M0-10 · M0-11 |
+| 5 | Les mouvements et le journal rejouable, le chargeur de contenu, l'accès base, les schémas IA | M0-12 · M0-13 · M0-14 · M0-15 |
+| 6 | Le contenu de jeu **et les fiches de champion**, la reconstruction de base, les prompts du conteur, la page table, le serveur | M0-16 · M0-17 · M0-18 · M0-19 · M0-20 |
+| 7 | Le contexte IA, l'authentification Discord, l'orchestration, le WebSocket, **et la sonde de fumée d'un fournisseur gratuit** | M0-22 · M0-23 · M0-24 · M0-25 · **M0-32** (à démarrer en premier) |
+| 8 | La campagne de démonstration, le harnais d'éval, le simulateur, les travailleurs IA, **et la mesure complète d'un fournisseur gratuit** | **M0-31** (à démarrer en premier) · M0-26 · M0-27 · M0-28 · M0-29 |
+| 9 | L'assemblage : le parcours de bout en bout qui prouve que le socle tient | M0-30 |
 
-**Repères de taille** : _petite_ ≈ une demi-session, _moyenne_ ≈ une session, _grosse_ ≈ une
+**Repères de taille** : *petite* ≈ une demi-session, *moyenne* ≈ une session, *grosse* ≈ une
 session dense. Aucune tâche ne dépasse une session.
 
 ## 3. Points à trancher par le tech lead (n'arrêtent aucune tâche)
@@ -78,31 +78,31 @@ passe de revue (`M0-REVUE.md` §11.7) ont été tranchés, plus un cinquième qu
 de lui-même. Ce sont **P19 à P23** ci-dessous. Ce sont des décisions, pas des propositions :
 `M0-REVUE.md` §12 en porte la trace, et **plus aucun point n'est en attente d'arbitrage**.
 
-| #   | Point                                                                                                                                                                                                                                                                                               | Valeur retenue pour M0                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | État                                                                                                                                                                                                                                                                                                   |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| P1  | `03-donnees.md` §4.8 passe 4 exigeait « 20 champions `handwritten` minimum », alors que les 20 fiches relèvent de la V1                                                                                                                                                                             | Le seuil est lu dans `content/manifest.json` (`expectedCounts.champions`). M0 livre **3** fiches. Le seuil passera à 20 en M1 sans toucher au code                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | corrigé dans la spec                                                                                                                                                                                                                                                                                   |
-| P2  | `03-donnees.md` §7.1 décrivait le seed avec « 6 chroniques en couche 0, 2 en couche 1, 1 en couche 2 » — modèle à trois couches abandonné                                                                                                                                                           | Le seed écrit **3 versions d'un document unique**, écrites à la main, sans appel IA                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | corrigé dans la spec                                                                                                                                                                                                                                                                                   |
-| P3  | `03-donnees.md` §1.7 citait `chronicles.facts_json`, absent du DDL §1.5 qui porte `doc_json`                                                                                                                                                                                                        | `doc_json` fait foi                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | corrigé dans la spec                                                                                                                                                                                                                                                                                   |
-| P4  | `db:check` contrôle 11 interrogeait `covers_from_seq` / `covers_to_seq`, colonnes inexistantes                                                                                                                                                                                                      | Contrôle 11 : `version` dense de 1 à N, `source_event_seq` croissant et ≤ `campaigns.seq`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | corrigé dans la spec                                                                                                                                                                                                                                                                                   |
-| P5  | `.nvmrc` valait `26`, les specs disent Node 24 partout                                                                                                                                                                                                                                              | **24**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | corrigé dans le dépôt                                                                                                                                                                                                                                                                                  |
-| P6  | `.env.example` décrivait un conteur agnostique (`NARRATOR_PROVIDER`, OpenRouter) et `DATABASE_URL`                                                                                                                                                                                                  | **RENVERSÉ par le tech lead, et confirmé explicitement depuis** (voir P20) : la lecture « il n'y a qu'un fournisseur : Anthropic » **n'est plus une décision en vigueur**, nulle part. Le conteur _est_ agnostique, parce que le produit doit pouvoir tourner sur un fournisseur gratuit ou un modèle local. `.env.example` porte `NARRATOR_PROVIDER`, `NARRATOR_BASE_URL`, `NARRATOR_API_KEY`, `NARRATOR_MODEL`, `NARRATOR_MODEL_STRUCTURED` et `DATABASE_PATH`. `ANTHROPIC_API_KEY`, `AI_MODEL_*` et `AI_ENABLED` n'existent plus                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | **tranché** — appliqué dans le dépôt et dans les quatre specs                                                                                                                                                                                                                                          |
-| P7  | La spec ne disait pas si `pnpm verify` doit être vert avant la fin du jalon                                                                                                                                                                                                                         | Non. La porte est progressive, et M0-30 la ferme                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | tranché                                                                                                                                                                                                                                                                                                |
-| P8  | `ChampionSchema` n'avait **aucun champ `aliases`**, alors que tout le verrouillage de distribution en dépend (`02-mj-ia.md` §2.2, §8.4, M0-10, M0-21)                                                                                                                                               | `aliases: z.array(FrTextSchema).min(1).max(12)`, obligatoire, ajouté au schéma unique                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | corrigé dans la spec                                                                                                                                                                                                                                                                                   |
-| P9  | `content/champions-index.json` (les ~170 champions et leurs alias) était cité par la forge (V2, V7) mais absent de l'arborescence de contenu et de toute tâche                                                                                                                                      | Fichier et `ChampionIndexSchema` ajoutés à `03-donnees.md` §4.1/§4.7 ; livré par M0-16, limité en M0 aux champions cités par le contenu et le seed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | corrigé dans la spec                                                                                                                                                                                                                                                                                   |
-| P10 | Trois documents décrivaient trois états du choix de conséquence de prix : un outil `propose-price.ts` (01 §2.7), un `optionId` transmis par le modèle (ARCHITECTURE §4.4), et une liste gelée de 12 outils qui n'en contient aucun (02 §3.4)                                                        | **Le moteur tire, point final.** Le moteur lance le d12 sur `pay-the-price`, applique l'entrée tirée, écrit `roll.price_paid`, puis transmet cette entrée au conteur comme un **fait imposé** à intégrer tel quel. **Personne ne choisit** : ni le modèle, ni le joueur. `propose-price.ts`, `kind: 'price_choice'`, `optionId` et `playerChoices` sont **supprimés partout**. Quand l'entrée porte plusieurs `suggestedEffects`, un second tirage sur le flux RNG `price` tranche, et l'index va dans `roll.price_paid.effectIndex`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | **tranché par le tech lead** — appliqué dans ARCHITECTURE §4.4, 01 §2.7, 02 §3.4, 03 §3.4 et §4.6, et M0-29                                                                                                                                                                                            |
-| P11 | `propose_scene_transition` laisse le modèle choisir un `time_shift` dont le moteur tire une perte de vivres : le modèle décide donc indirectement d'une mutation de jauge, et l'événement `character.gauge_changed` devient atteignable par un circuit de proposition, hors de la liste close       | **`time_shift` est retiré de l'outil.** `propose_scene_transition` ne propose plus qu'un **changement de lieu** : plus de champ dans le schéma d'entrée, plus de mention dans la description, plus rien dans la chaîne de traitement. Le temps écoulé et son coût éventuel découlent **exclusivement du mouvement joué** (par exemple `endure-cold`), calculés par le moteur à partir de sa table de mouvements                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | **tranché par le tech lead** — appliqué dans `02-mj-ia.md` §3.3 et ARCHITECTURE §4.4                                                                                                                                                                                                                   |
-| P12 | `roll_oracle` est classé « lecture » mais écrit au journal : c'était un troisième circuit d'écriture depuis le modèle, non couvert par `proposal-surface.test.ts`                                                                                                                                   | `ReadOnlyTool.journalOnly`, vide partout sauf `roll_oracle` = `['roll.oracle_resolved','roll.yes_no_resolved']`, et le test vérifie **deux** listes closes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | corrigé dans la spec                                                                                                                                                                                                                                                                                   |
-| P13 | `prompt-size.test.ts` devait mesurer par `countTokens` — un appel réseau — alors que toute la CI de M0 tourne sans clé                                                                                                                                                                              | Estimateur local + référence commitée en PR ; rapprochement avec `countTokens` au nocturne                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | corrigé dans la spec                                                                                                                                                                                                                                                                                   |
-| P14 | `ai_calls` n'avait pas de colonne `trim_level`, que `02-mj-ia.md` §4.4 écrit à chaque tour                                                                                                                                                                                                          | Colonnes `trim_level` et `context_hash` ajoutées au DDL                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | corrigé dans la spec                                                                                                                                                                                                                                                                                   |
-| P15 | **Prototype joué, enseignement 1** : le ton produit était « fade et trop flou, on a du mal à s'y plonger ». Un prompt qui demande un ton « âpre, sensoriel, concret » ne suffit pas — le modèle produit de la prose d'IA reconnaissable                                                             | `conteur/2.0.0` : ancrage de registre nommé (**la saga islandaise**), liste noire close, trois obligations, et surtout une **paire d'exemples bon/mauvais sur la même situation** avec l'explication de ce qui cloche. Le prompt passe de ≈ 1 250 à ≈ 2 200 tokens ; seuil de `prompt-size.test.ts` relevé à 1 900 ; huit assertions de registre ajoutées, dont cinq dures                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | corrigé dans la spec                                                                                                                                                                                                                                                                                   |
-| P16 | **Prototype joué, enseignement 2** : incohérence factuelle en **trois échanges** — un PNJ décrit en fuite réapparaît endormi dans son abri. Cause racine : le contexte envoyait les dernières entrées du journal **en prose**, et le modèle les réinterprétait                                      | **État de scène structuré** : événement `scene.facts_updated` + projection `scene_state`, injecté comme donnée d'autorité (`<scene>`), et bloc `<scene_apres>` rendu par le modèle, validé, borné et fusionné par le serveur. Un bloc absent ou malformé ne casse rien. Les partis sont **monotones** dans une scène. `02-mj-ia.md` §2.3, §4.7 ; `03-donnees.md` §1.4, §3.4, §3.5                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | corrigé dans la spec                                                                                                                                                                                                                                                                                   |
-| P17 | **Prototype joué, enseignement 3** : le modèle accepte tout et invente une justification, faute d'avoir un moyen légitime de refuser. Verdict du joueur : « on peut proposer un truc wtf, mais la conséquence doit trouver une logique face à l'action »                                            | **Droit de refus borné à la possibilité matérielle**, jamais à l'issue. Quatre causes closes, preuve recalculée par le serveur sur l'état **à la déclaration**. Un refus prouvé annule le tour par `system.reverted` sur le groupe `correlation_id` ; l'index RNG n'est jamais libéré ; un jet annulé **laisse une trace**. Une proposition absurde mais possible n'est **jamais** refusée. Anti-abus : `refusal_is_outcome_blind` rejoue le corpus dés inversés. `02-mj-ia.md` §4.8 ; `03-donnees.md` §0.5, §3.7                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | corrigé dans la spec                                                                                                                                                                                                                                                                                   |
-| P18 | `02-mj-ia.md` était écrit en supposant un fournisseur unique : identifiants de modèle, codes d'arrêt, seuils de cache, format d'appel d'outils et classes d'exception de SDK traversaient toute la spec. Impossible d'utiliser un fournisseur gratuit ou un modèle local sans réécrire la couche IA | **Le conteur devient un PORT**, pas un fournisseur : `NarratorPort`, deux opérations (`narrer()` en flux, `structurer()` qui rend du JSON validé), une énumération d'erreurs neutre, et **trois adaptateurs** — `anthropic`, `openai-compatible`, `ollama` — plus un `stub` sans réseau. Tout ce qui est propre à un fournisseur descend dans son adaptateur (`02-mj-ia.md` §0.3 à §0.5) ; le reste de la spec ne nomme plus aucun fournisseur, et un test le vérifie (§0.7). Configuration par les cinq `NARRATOR_*` _(depuis P19 : cinq de base **et trois d'appoint**)_. Matrice de dégradation explicite (§0.2), gouvernée par une seule règle : **on dégrade la prose, jamais l'équité**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | **tranché par le tech lead** — appliqué dans les quatre specs, `.env.example`, et les tâches M0-12, M0-18, M0-20, M0-22, M0-27, M0-29 et la nouvelle M0-31                                                                                                                                             |
-| P19 | Les trois variables d'environnement au-delà des cinq nommées (`NARRATOR_TOOLS`, `NARRATOR_TIMEOUT_MS`, `NARRATOR_CONTEXT_WINDOW`) n'avaient jamais été arbitrées (`M0-REVUE.md` §11.7, point 1)                                                                                                     | **VALIDÉES.** Elles rejoignent officiellement les cinq `NARRATOR_*` de base. Motif retenu : _le support des outils dépend du modèle et non de la passerelle, et un modèle local qui charge à froid dépasse 60 s sans être en panne_. Toutes trois restent facultatives et propres à un adaptateur ; leur valeur par défaut et l'adaptateur concerné sont écrits **au même endroit et de la même façon** dans `.env.example`, `02-mj-ia.md` §0.6 et `01-architecture.md` §9.4                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | **tranché par le tech lead** — appliqué dans `.env.example`, `02-mj-ia.md` §0.3 et §0.6, `01-architecture.md` §9.4, `ARCHITECTURE.md` §4.5, et vérifié par M0-20                                                                                                                                       |
-| P20 | La réécriture de `.env.example` en fichier agnostique du fournisseur n'avait pas été confirmée (`M0-REVUE.md` §11.7, point 2)                                                                                                                                                                       | **VALIDÉE, et le point P6 est officiellement RENVERSÉ.** « Il n'y a qu'un fournisseur : Anthropic » n'est plus une décision en vigueur : le produit doit pouvoir tourner sur un fournisseur **gratuit** ou sur un **modèle local**. Toute occurrence contraire est un reste à corriger, pas une règle                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | **tranché par le tech lead** — appliqué dans `.env.example`, `ARCHITECTURE.md` §4.5, `01-architecture.md` §9.4, et tracé dans `M0-REVUE.md` §12                                                                                                                                                        |
-| P21 | Le départage d'un prix portant plusieurs `suggestedEffects` était une **déduction** de « le moteur tire », pas la décision elle-même (`M0-REVUE.md` §11.7, point 4)                                                                                                                                 | **VALIDÉ tel que spécifié** : second tirage sur le flux RNG `price`, index journalisé dans `roll.price_paid.effectIndex`. Le moteur décide, et c'est rejouable. L'alternative « toujours le premier effet » est **abandonnée**. Aucun document ne doit laisser entendre que le modèle ou le joueur choisit                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | **tranché par le tech lead** — vérifié dans `ARCHITECTURE.md` §4.4, `02-mj-ia.md` §3.4 et §4.5, `03-donnees.md` §3.4 et §4.6, et M0-29                                                                                                                                                                 |
-| P22 | Fallait-il vérifier la présence de la cible **avant** les dés, à l'étape 2 du chemin d'une intention (`M0-REVUE.md` §11.6 et §11.7, point 3) ?                                                                                                                                                      | **NON. Le refus reste APRÈS le jet.** Un contrôle de faisabilité avant les dés remettrait le modèle dans le chemin de décision : inacceptable. La conséquence est assumée — un joueur voit brièvement le résultat d'un tour qui sera ensuite annulé. **Ce qui est nouveau** : ce tour annulé n'est pas effacé de l'affichage, il est **montré comme annulé, avec sa preuve consultable**. Le détail mécanique d'une scène (mouvement, dés, calcul, effets, prix, présage) n'est **pas** affiché par défaut : il est replié derrière une commande **« Pourquoi ? »** attachée à chaque scène. Cette preuve est une **projection du journal** (`TurnProofDto`), calculée à la demande sur le groupe `correlation_id`, portée par `c2s.why` → `s2c.turn_proof`, bornée à 32 effets / 120 caractères par libellé / **8 Kio** sérialisés                                                                                                                                                                                                                                                                                                                                                                                   | **tranché par le tech lead, avec l'utilisateur** — appliqué dans `ARCHITECTURE.md` §4.4, `01-architecture.md` §2.4, §2.8, §2.9, §5.2, §5.4, §5.6, `02-mj-ia.md` §4.8.3, §4.8.4, §4.8.6, §6.2, §6.5, `03-donnees.md` §0.5 et §3.7, et les tâches M0-05, M0-08, M0-19, M0-20, M0-24, M0-25, M0-29, M0-30 |
-| P23 | Valider un fournisseur gratuit en **vague 8** (M0-31), c'est trop tard : si un modèle gratuit ne tient pas le prompt contraint, toute la couche se conçoit différemment                                                                                                                             | **SCINDER.** Une tâche de **fumée** (**M0-32**) sort le signal dès que le prompt intégral et le port existent : six à huit assertions écrites à la main — **sept sont livrées**, et la borne 6–8 est vérifiée par la sonde elle-même —, un verdict lisible par un humain (_tel fournisseur, tel modèle, tant d'assertions passées sur tant_), aucune dépendance au corpus complet d'assertions, et **aucun blocage de la CI** — elle informe une décision. M0-31 garde le corpus complet en vague 8. **Réserve appliquée, et son chiffrage corrigé à la troisième passe** : le lead demandait « vague 4 au plus tard » ; le prompt intégral et le port sont livrés par M0-18 en **vague 6**, donc **la vague 7 est le plus tôt atteignable sans redécouper**. Le redécoupage chiffré par la passe d'application ne suffisait pas — il aboutissait à la vague **5**, pas 4, et oubliait `SceneBlockSchema`. Le vrai coût de la vague 4 est en **§12 A7 de `M0-REVUE.md`** et dans la fiche M0-32 : trois vagues touchées, deux fiches neuves, trois réécrites, et un couplage de compilation intra-vague que le système de vagues existe précisément pour empêcher. **Décision de découpage, elle appartient au lead** | **tranché par le tech lead** — appliqué en M0-32 (nouvelle) et M0-31 (fiche ajustée) ; **placement en vague 7, réserve ouverte**                                                                                                                                                                       |
+| # | Point | Valeur retenue pour M0 | État |
+|---|---|---|---|
+| P1 | `03-donnees.md` §4.8 passe 4 exigeait « 20 champions `handwritten` minimum », alors que les 20 fiches relèvent de la V1 | Le seuil est lu dans `content/manifest.json` (`expectedCounts.champions`). M0 livre **3** fiches. Le seuil passera à 20 en M1 sans toucher au code | corrigé dans la spec |
+| P2 | `03-donnees.md` §7.1 décrivait le seed avec « 6 chroniques en couche 0, 2 en couche 1, 1 en couche 2 » — modèle à trois couches abandonné | Le seed écrit **3 versions d'un document unique**, écrites à la main, sans appel IA | corrigé dans la spec |
+| P3 | `03-donnees.md` §1.7 citait `chronicles.facts_json`, absent du DDL §1.5 qui porte `doc_json` | `doc_json` fait foi | corrigé dans la spec |
+| P4 | `db:check` contrôle 11 interrogeait `covers_from_seq` / `covers_to_seq`, colonnes inexistantes | Contrôle 11 : `version` dense de 1 à N, `source_event_seq` croissant et ≤ `campaigns.seq` | corrigé dans la spec |
+| P5 | `.nvmrc` valait `26`, les specs disent Node 24 partout | **24** | corrigé dans le dépôt |
+| P6 | `.env.example` décrivait un conteur agnostique (`NARRATOR_PROVIDER`, OpenRouter) et `DATABASE_URL` | **RENVERSÉ par le tech lead, et confirmé explicitement depuis** (voir P20) : la lecture « il n'y a qu'un fournisseur : Anthropic » **n'est plus une décision en vigueur**, nulle part. Le conteur *est* agnostique, parce que le produit doit pouvoir tourner sur un fournisseur gratuit ou un modèle local. `.env.example` porte `NARRATOR_PROVIDER`, `NARRATOR_BASE_URL`, `NARRATOR_API_KEY`, `NARRATOR_MODEL`, `NARRATOR_MODEL_STRUCTURED` et `DATABASE_PATH`. `ANTHROPIC_API_KEY`, `AI_MODEL_*` et `AI_ENABLED` n'existent plus | **tranché** — appliqué dans le dépôt et dans les quatre specs |
+| P7 | La spec ne disait pas si `pnpm verify` doit être vert avant la fin du jalon | Non. La porte est progressive, et M0-30 la ferme | tranché |
+| P8 | `ChampionSchema` n'avait **aucun champ `aliases`**, alors que tout le verrouillage de distribution en dépend (`02-mj-ia.md` §2.2, §8.4, M0-10, M0-21) | `aliases: z.array(FrTextSchema).min(1).max(12)`, obligatoire, ajouté au schéma unique | corrigé dans la spec |
+| P9 | `content/champions-index.json` (les ~170 champions et leurs alias) était cité par la forge (V2, V7) mais absent de l'arborescence de contenu et de toute tâche | Fichier et `ChampionIndexSchema` ajoutés à `03-donnees.md` §4.1/§4.7 ; livré par M0-16, limité en M0 aux champions cités par le contenu et le seed | corrigé dans la spec |
+| P10 | Trois documents décrivaient trois états du choix de conséquence de prix : un outil `propose-price.ts` (01 §2.7), un `optionId` transmis par le modèle (ARCHITECTURE §4.4), et une liste gelée de 12 outils qui n'en contient aucun (02 §3.4) | **Le moteur tire, point final.** Le moteur lance le d12 sur `pay-the-price`, applique l'entrée tirée, écrit `roll.price_paid`, puis transmet cette entrée au conteur comme un **fait imposé** à intégrer tel quel. **Personne ne choisit** : ni le modèle, ni le joueur. `propose-price.ts`, `kind: 'price_choice'`, `optionId` et `playerChoices` sont **supprimés partout**. Quand l'entrée porte plusieurs `suggestedEffects`, un second tirage sur le flux RNG `price` tranche, et l'index va dans `roll.price_paid.effectIndex` | **tranché par le tech lead** — appliqué dans ARCHITECTURE §4.4, 01 §2.7, 02 §3.4, 03 §3.4 et §4.6, et M0-29 |
+| P11 | `propose_scene_transition` laisse le modèle choisir un `time_shift` dont le moteur tire une perte de vivres : le modèle décide donc indirectement d'une mutation de jauge, et l'événement `character.gauge_changed` devient atteignable par un circuit de proposition, hors de la liste close | **`time_shift` est retiré de l'outil.** `propose_scene_transition` ne propose plus qu'un **changement de lieu** : plus de champ dans le schéma d'entrée, plus de mention dans la description, plus rien dans la chaîne de traitement. Le temps écoulé et son coût éventuel découlent **exclusivement du mouvement joué** (par exemple `endure-cold`), calculés par le moteur à partir de sa table de mouvements | **tranché par le tech lead** — appliqué dans `02-mj-ia.md` §3.3 et ARCHITECTURE §4.4 |
+| P12 | `roll_oracle` est classé « lecture » mais écrit au journal : c'était un troisième circuit d'écriture depuis le modèle, non couvert par `proposal-surface.test.ts` | `ReadOnlyTool.journalOnly`, vide partout sauf `roll_oracle` = `['roll.oracle_resolved','roll.yes_no_resolved']`, et le test vérifie **deux** listes closes | corrigé dans la spec |
+| P13 | `prompt-size.test.ts` devait mesurer par `countTokens` — un appel réseau — alors que toute la CI de M0 tourne sans clé | Estimateur local + référence commitée en PR ; rapprochement avec `countTokens` au nocturne | corrigé dans la spec |
+| P14 | `ai_calls` n'avait pas de colonne `trim_level`, que `02-mj-ia.md` §4.4 écrit à chaque tour | Colonnes `trim_level` et `context_hash` ajoutées au DDL | corrigé dans la spec |
+| P15 | **Prototype joué, enseignement 1** : le ton produit était « fade et trop flou, on a du mal à s'y plonger ». Un prompt qui demande un ton « âpre, sensoriel, concret » ne suffit pas — le modèle produit de la prose d'IA reconnaissable | `conteur/2.0.0` : ancrage de registre nommé (**la saga islandaise**), liste noire close, trois obligations, et surtout une **paire d'exemples bon/mauvais sur la même situation** avec l'explication de ce qui cloche. Le prompt passe de ≈ 1 250 à ≈ 2 200 tokens ; seuil de `prompt-size.test.ts` relevé à 1 900 ; huit assertions de registre ajoutées, dont cinq dures | corrigé dans la spec |
+| P16 | **Prototype joué, enseignement 2** : incohérence factuelle en **trois échanges** — un PNJ décrit en fuite réapparaît endormi dans son abri. Cause racine : le contexte envoyait les dernières entrées du journal **en prose**, et le modèle les réinterprétait | **État de scène structuré** : événement `scene.facts_updated` + projection `scene_state`, injecté comme donnée d'autorité (`<scene>`), et bloc `<scene_apres>` rendu par le modèle, validé, borné et fusionné par le serveur. Un bloc absent ou malformé ne casse rien. Les partis sont **monotones** dans une scène. `02-mj-ia.md` §2.3, §4.7 ; `03-donnees.md` §1.4, §3.4, §3.5 | corrigé dans la spec |
+| P17 | **Prototype joué, enseignement 3** : le modèle accepte tout et invente une justification, faute d'avoir un moyen légitime de refuser. Verdict du joueur : « on peut proposer un truc wtf, mais la conséquence doit trouver une logique face à l'action » | **Droit de refus borné à la possibilité matérielle**, jamais à l'issue. Quatre causes closes, preuve recalculée par le serveur sur l'état **à la déclaration**. Un refus prouvé annule le tour par `system.reverted` sur le groupe `correlation_id` ; l'index RNG n'est jamais libéré ; un jet annulé **laisse une trace**. Une proposition absurde mais possible n'est **jamais** refusée. Anti-abus : `refusal_is_outcome_blind` rejoue le corpus dés inversés. `02-mj-ia.md` §4.8 ; `03-donnees.md` §0.5, §3.7 | corrigé dans la spec |
+| P18 | `02-mj-ia.md` était écrit en supposant un fournisseur unique : identifiants de modèle, codes d'arrêt, seuils de cache, format d'appel d'outils et classes d'exception de SDK traversaient toute la spec. Impossible d'utiliser un fournisseur gratuit ou un modèle local sans réécrire la couche IA | **Le conteur devient un PORT**, pas un fournisseur : `NarratorPort`, deux opérations (`narrer()` en flux, `structurer()` qui rend du JSON validé), une énumération d'erreurs neutre, et **trois adaptateurs** — `anthropic`, `openai-compatible`, `ollama` — plus un `stub` sans réseau. Tout ce qui est propre à un fournisseur descend dans son adaptateur (`02-mj-ia.md` §0.3 à §0.5) ; le reste de la spec ne nomme plus aucun fournisseur, et un test le vérifie (§0.7). Configuration par les cinq `NARRATOR_*` *(depuis P19 : cinq de base **et trois d'appoint**)*. Matrice de dégradation explicite (§0.2), gouvernée par une seule règle : **on dégrade la prose, jamais l'équité** | **tranché par le tech lead** — appliqué dans les quatre specs, `.env.example`, et les tâches M0-12, M0-18, M0-20, M0-22, M0-27, M0-29 et la nouvelle M0-31 |
+| P19 | Les trois variables d'environnement au-delà des cinq nommées (`NARRATOR_TOOLS`, `NARRATOR_TIMEOUT_MS`, `NARRATOR_CONTEXT_WINDOW`) n'avaient jamais été arbitrées (`M0-REVUE.md` §11.7, point 1) | **VALIDÉES.** Elles rejoignent officiellement les cinq `NARRATOR_*` de base. Motif retenu : *le support des outils dépend du modèle et non de la passerelle, et un modèle local qui charge à froid dépasse 60 s sans être en panne*. Toutes trois restent facultatives et propres à un adaptateur ; leur valeur par défaut et l'adaptateur concerné sont écrits **au même endroit et de la même façon** dans `.env.example`, `02-mj-ia.md` §0.6 et `01-architecture.md` §9.4 | **tranché par le tech lead** — appliqué dans `.env.example`, `02-mj-ia.md` §0.3 et §0.6, `01-architecture.md` §9.4, `ARCHITECTURE.md` §4.5, et vérifié par M0-20 |
+| P20 | La réécriture de `.env.example` en fichier agnostique du fournisseur n'avait pas été confirmée (`M0-REVUE.md` §11.7, point 2) | **VALIDÉE, et le point P6 est officiellement RENVERSÉ.** « Il n'y a qu'un fournisseur : Anthropic » n'est plus une décision en vigueur : le produit doit pouvoir tourner sur un fournisseur **gratuit** ou sur un **modèle local**. Toute occurrence contraire est un reste à corriger, pas une règle | **tranché par le tech lead** — appliqué dans `.env.example`, `ARCHITECTURE.md` §4.5, `01-architecture.md` §9.4, et tracé dans `M0-REVUE.md` §12 |
+| P21 | Le départage d'un prix portant plusieurs `suggestedEffects` était une **déduction** de « le moteur tire », pas la décision elle-même (`M0-REVUE.md` §11.7, point 4) | **VALIDÉ tel que spécifié** : second tirage sur le flux RNG `price`, index journalisé dans `roll.price_paid.effectIndex`. Le moteur décide, et c'est rejouable. L'alternative « toujours le premier effet » est **abandonnée**. Aucun document ne doit laisser entendre que le modèle ou le joueur choisit | **tranché par le tech lead** — vérifié dans `ARCHITECTURE.md` §4.4, `02-mj-ia.md` §3.4 et §4.5, `03-donnees.md` §3.4 et §4.6, et M0-29 |
+| P22 | Fallait-il vérifier la présence de la cible **avant** les dés, à l'étape 2 du chemin d'une intention (`M0-REVUE.md` §11.6 et §11.7, point 3) ? | **NON. Le refus reste APRÈS le jet.** Un contrôle de faisabilité avant les dés remettrait le modèle dans le chemin de décision : inacceptable. La conséquence est assumée — un joueur voit brièvement le résultat d'un tour qui sera ensuite annulé. **Ce qui est nouveau** : ce tour annulé n'est pas effacé de l'affichage, il est **montré comme annulé, avec sa preuve consultable**. Le détail mécanique d'une scène (mouvement, dés, calcul, effets, prix, présage) n'est **pas** affiché par défaut : il est replié derrière une commande **« Pourquoi ? »** attachée à chaque scène. Cette preuve est une **projection du journal** (`TurnProofDto`), calculée à la demande sur le groupe `correlation_id`, portée par `c2s.why` → `s2c.turn_proof`, bornée à 32 effets / 120 caractères par libellé / **8 Kio** sérialisés | **tranché par le tech lead, avec l'utilisateur** — appliqué dans `ARCHITECTURE.md` §4.4, `01-architecture.md` §2.4, §2.8, §2.9, §5.2, §5.4, §5.6, `02-mj-ia.md` §4.8.3, §4.8.4, §4.8.6, §6.2, §6.5, `03-donnees.md` §0.5 et §3.7, et les tâches M0-05, M0-08, M0-19, M0-20, M0-24, M0-25, M0-29, M0-30 |
+| P23 | Valider un fournisseur gratuit en **vague 8** (M0-31), c'est trop tard : si un modèle gratuit ne tient pas le prompt contraint, toute la couche se conçoit différemment | **SCINDER.** Une tâche de **fumée** (**M0-32**) sort le signal dès que le prompt intégral et le port existent : six à huit assertions écrites à la main — **sept sont livrées**, et la borne 6–8 est vérifiée par la sonde elle-même —, un verdict lisible par un humain (*tel fournisseur, tel modèle, tant d'assertions passées sur tant*), aucune dépendance au corpus complet d'assertions, et **aucun blocage de la CI** — elle informe une décision. M0-31 garde le corpus complet en vague 8. **Réserve appliquée, et son chiffrage corrigé à la troisième passe** : le lead demandait « vague 4 au plus tard » ; le prompt intégral et le port sont livrés par M0-18 en **vague 6**, donc **la vague 7 est le plus tôt atteignable sans redécouper**. Le redécoupage chiffré par la passe d'application ne suffisait pas — il aboutissait à la vague **5**, pas 4, et oubliait `SceneBlockSchema`. Le vrai coût de la vague 4 est en **§12 A7 de `M0-REVUE.md`** et dans la fiche M0-32 : trois vagues touchées, deux fiches neuves, trois réécrites, et un couplage de compilation intra-vague que le système de vagues existe précisément pour empêcher. **Décision de découpage, elle appartient au lead** | **tranché par le tech lead** — appliqué en M0-32 (nouvelle) et M0-31 (fiche ajustée) ; **placement en vague 7, réserve ouverte** |
 
 ---
 
@@ -116,7 +116,6 @@ comment on vérifie qu'elle est finie, et quels fichiers elle a le droit de touc
 ## Vague 1 — Le squelette
 
 ### M0-01 · Socle du monorepo et outillage
-
 **Taille** : grosse · **Dépend de** : rien · **Parallélisable** : non (vague seule)
 
 **À quoi ça sert.** C'est la fondation que toutes les autres tâches importent : les espaces de
@@ -125,7 +124,6 @@ invariants mécaniques, l'orchestrateur de tâches, et les dix paquets vides pr�
 remplis. Tant que ce n'est pas fini, personne d'autre ne peut commencer.
 
 **Livrables**
-
 - `pnpm-workspace.yaml` (`packages/*`, `tooling/*`), `package.json` racine avec **tous** les
   scripts de `01-architecture.md` §2.2 — y compris ceux dont la cible n'existe pas encore.
 - `turbo.json`, `tsconfig.json` racine (solution-style, références vers chaque paquet),
@@ -146,7 +144,6 @@ remplis. Tant que ce n'est pas fini, personne d'autre ne peut commencer.
   tableau de documentation n'est pas un seuil : plus loin, quatre tâches s'appuient dessus.
 
 **Critères d'acceptation**
-
 - `pnpm install --frozen-lockfile` sort en 0 (le lockfile est commité et à jour).
 - `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build`, `pnpm test` sortent en 0.
 - `pnpm depcruise` sort en 0 et `pnpm check:workspace` sort en 0.
@@ -160,11 +157,11 @@ remplis. Tant que ce n'est pas fini, personne d'autre ne peut commencer.
   (les noms de l'ancienne configuration mono-fournisseur ont disparu, cf. P6 et P18).
 - **Toutes** les commandes de la liste contractuelle de `01-architecture.md` §2.2 existent :
   `for c in dev build verify test lint typecheck format:check format depcruise check:workspace
-test:golden golden:update sim db:generate db:check-schema db:migrate db:studio db:seed
-db:reset db:rebuild db:check content:index content:check eval:offline eval:record eval:live
-eval:judge eval:smoke eval:probe; do node -e "process.exit(require('./package.json').scripts['$c']?0:1)"
-|| echo "MANQUE $c"; done` n'affiche rien. _(`eval:smoke` est dans la liste depuis P23 : la
-  commande existe dès M0-01, même si M0-32 ne la remplit qu'en vague 7.)_
+  test:golden golden:update sim db:generate db:check-schema db:migrate db:studio db:seed
+  db:reset db:rebuild db:check content:index content:check eval:offline eval:record eval:live
+  eval:judge eval:smoke eval:probe; do node -e "process.exit(require('./package.json').scripts['$c']?0:1)"
+  || echo "MANQUE $c"; done` n'affiche rien. *(`eval:smoke` est dans la liste depuis P23 : la
+  commande existe dès M0-01, même si M0-32 ne la remplit qu'en vague 7.)*
 - `pnpm test --coverage` sur `@for/engine` sort en code non nul si l'on abaisse artificiellement
   la couverture (preuve que les seuils sont appliqués par le runner, pas seulement documentés).
 - Un `import 'node:fs'` ajouté dans `packages/engine/src/index.ts` fait sortir `pnpm lint` en
@@ -182,7 +179,6 @@ eval:judge eval:smoke eval:probe; do node -e "process.exit(require('./package.js
 ## Vague 2 — Moteur nu, intégration continue, image
 
 ### M0-02 · Moteur : types de domaine, hasard reproductible, pureté
-
 **Taille** : grosse · **Dépend de** : M0-01 · **Parallélisable** : oui
 
 **À quoi ça sert.** `@for/engine` est le cœur des règles et la seule couche autorisée à
@@ -192,7 +188,6 @@ en dérive : les contrats Zod en sont le miroir, la base en stocke les payloads,
 les rejoue.
 
 **Livrables**
-
 - `src/result.ts` (`Result<T,E>`, `ok`, `err`, `isOk`), `src/ids.ts` (identifiants marqués,
   `IdFactory`), `src/rng.ts` (`Rng`, `TracingRng`, `createSeededRng`, `createCampaignRng` —
   cyrb128 + sfc32, rejet du biais modulo, sans aucune dépendance).
@@ -203,7 +198,6 @@ les rejoue.
 - `src/index.ts` (seule surface publique), `tsup.config.ts`, `tests/purity.test.ts`.
 
 **Critères d'acceptation**
-
 - `pnpm --filter @for/engine build typecheck lint test` sort en 0.
 - `tests/purity.test.ts` échoue si l'on ajoute `import 'node:crypto'`, `Math.random()`,
   `new Date()` ou `process.env` dans `src/` (le testeur applique les quatre patchs, un par un).
@@ -213,7 +207,7 @@ les rejoue.
   valoir `never`). Une union TypeScript ne se compte pas à l'exécution : sans cette constante,
   le critère ci-dessous est intestable.
 - `node -e "const{GAME_EVENT_TYPES:t}=require('./packages/engine/dist/index.js');
-process.exit(t.length===71 && new Set(t).size===71 ? 0 : 1)"` sort en 0.
+  process.exit(t.length===71 && new Set(t).size===71 ? 0 : 1)"` sort en 0.
 - Le testeur retire un type de `GAME_EVENT_TYPES` : `pnpm --filter @for/engine typecheck` sort
   en code non nul (le garde d'exhaustivité, pas un test).
 - Un test vérifie que `createSeededRng('freljord')` produit deux fois la même série de 100
@@ -230,7 +224,6 @@ process.exit(t.length===71 && new Set(t).size===71 ? 0 : 1)"` sort en 0.
 ---
 
 ### M0-03 · Chaîne d'intégration continue
-
 **Taille** : moyenne · **Dépend de** : M0-01 · **Parallélisable** : oui
 
 **À quoi ça sert.** C'est le filet qui attrape les régressions avant la fusion. Les douze
@@ -239,7 +232,6 @@ commandes ; ceux dont la cible n'existe pas encore sont explicitement marqués c
 à l'échec, et M0-30 retire ces marqueurs.
 
 **Livrables**
-
 - `.github/workflows/ci.yml` : les 12 travaux du tableau §8, dans l'ordre de dépendance
   indiqué, cache pnpm + cache Turborepo, `concurrency: ci-${{ github.ref }}` avec annulation.
   Chaque travail non encore livrable porte `continue-on-error: true` suivi du commentaire
@@ -255,7 +247,6 @@ commandes ; ceux dont la cible n'existe pas encore sont explicitement marqués c
   définition de « rouge ».
 
 **Critères d'acceptation**
-
 - `actionlint` sort en 0 sur les trois workflows.
 - `bash scripts/check-ci-jobs.sh` (livré par cette tâche) sort en 0 : il vérifie la présence
   des 12 identifiants de travail (`install`, `format`, `lint`, `typecheck`, `deps`, `test-unit`,
@@ -274,7 +265,6 @@ commandes ; ceux dont la cible n'existe pas encore sont explicitement marqués c
 ---
 
 ### M0-04 · Image Docker, composition, déploiement, sauvegardes
-
 **Taille** : moyenne · **Dépend de** : M0-01 · **Parallélisable** : oui
 
 **À quoi ça sert.** Mettre en place dès maintenant l'emballage et la mise en ligne : une image
@@ -283,7 +273,6 @@ CI verte, et surtout des sauvegardes vérifiées. Faire ça tôt évite la déco
 module natif SQLite ne compile pas dans l'image.
 
 **Livrables**
-
 - `infra/Dockerfile` multi-étapes (`base`/`deps`/`build`/`runtime`), utilisateur non root,
   `HEALTHCHECK` sur `/healthz`, `ENTRYPOINT ["node","dist/main.js"]`, outils de compilation
   natifs retirés de l'image finale. Repli documenté vers `node:24-bookworm-slim`.
@@ -302,7 +291,6 @@ module natif SQLite ne compile pas dans l'image.
 > **Ordre.** En vague 2, `packages/server` n'a pas de `dist/main.js` et `packages/client` ne
 > produit pas de `dist/` : l'étape `runtime` du `Dockerfile`, qui copie ces deux répertoires,
 > **ne peut pas** réussir. Deux conséquences, à respecter à la lettre :
->
 > 1. cette tâche livre un `index.html` et un `vite.config.ts` minimaux **seulement si** le
 >    squelette de M0-01 n'en a pas — sinon elle ne touche pas `packages/client` ;
 > 2. le critère de construction d'image ci-dessous s'arrête à l'étape `build`
@@ -310,7 +298,6 @@ module natif SQLite ne compile pas dans l'image.
 >    de celui-ci. Un critère qu'on sait faux à l'avance est pire qu'un critère absent.
 
 **Critères d'acceptation**
-
 - `docker build -f infra/Dockerfile --target build -t for-m0:build .` sort en 0 (les modules
   natifs, dont `better-sqlite3`, compilent — c'est **la** question qu'on veut trancher tôt).
 - `hadolint infra/Dockerfile` sort en 0 et l'étape `runtime` déclare un utilisateur non root :
@@ -333,7 +320,6 @@ module natif SQLite ne compile pas dans l'image.
 ## Vague 3 — Contrats et boîte à outils de test
 
 ### M0-05 · Contrats : état, événements, intentions, erreurs
-
 **Taille** : grosse · **Dépend de** : M0-02 · **Parallélisable** : oui
 
 **À quoi ça sert.** `@for/contracts` est le miroir Zod des types du moteur : c'est lui qui
@@ -342,7 +328,6 @@ les 71 événements, les intentions, la projection vue par un joueur, les erreur
 test qui **casse la compilation** quand le moteur évolue sans son schéma.
 
 **Livrables**
-
 - `src/{primitives,version,errors,upcast,index}.ts`, `src/core/**` (dont `core/scene-state.ts`,
   miroir Zod de `SceneState` avec ses bornes : 8 présents, 8 partis, `name` ≤ 40, `state` ≤ 60),
   `src/events/**` (les 71 variantes), `src/intents/**`, `src/dto/table-state.ts`.
@@ -358,9 +343,8 @@ test qui **casse la compilation** quand le moteur évolue sans son schéma.
   (lit `docs/design/03-donnees.md` §3.4 et compare la liste des types au markdown).
 
 **Critères d'acceptation**
-
-- `pnpm --filter @for/contracts build typecheck lint test` sort en 0. _(Seule tâche à livrer
-  dans `@for/contracts` à cette vague : la suite entière est un critère légitime ici.)_
+- `pnpm --filter @for/contracts build typecheck lint test` sort en 0. *(Seule tâche à livrer
+  dans `@for/contracts` à cette vague : la suite entière est un critère légitime ici.)*
 - `tests/event-catalog.test.ts` échoue si l'on retire une ligne du tableau de la spec ou une
   variante du schéma (le testeur applique les deux patchs).
 - Un test vérifie qu'un `scene.facts_updated` portant neuf entrées dans `present` est refusé, et
@@ -371,7 +355,7 @@ test qui **casse la compilation** quand le moteur évolue sans son schéma.
   `satisfies z.ZodType<CampaignState>` de `packages/contracts/src/core/campaign-state.ts`.
   Il restaure ensuite le fichier.
 - La couverture de `packages/contracts` est ≥ 90 % lignes (`pnpm --filter @for/contracts test
---coverage`).
+  --coverage`).
 - `grep -rn "z.infer" packages/contracts/src/core/campaign-state.ts` ne renvoie aucune
   déclaration de `CampaignState` (le type canonique vient du moteur, pas du schéma).
 - Un test vérifie que `zTurnProof` refuse un `effects` de 33 entrées, refuse une entrée
@@ -390,7 +374,6 @@ test qui **casse la compilation** quand le moteur évolue sans son schéma.
 ---
 
 ### M0-06 · Boîte à outils de test : hasard scripté, horloge figée, corpus dorés
-
 **Taille** : moyenne · **Dépend de** : M0-02 · **Parallélisable** : oui
 
 **À quoi ça sert.** Un test ne doit jamais dépendre du hasard ni de l'heure. Cette tâche livre
@@ -398,7 +381,6 @@ les substituts déterministes et le comparateur de corpus dorés, c'est-à-dire 
 une modification de règle **visible en diff** au lieu de silencieuse.
 
 **Livrables**
-
 - `src/rng/scripted.ts` (`scriptedRng([...])`, erreur explicite `ScriptedRngExhausted`),
   `src/rng/seeded.ts` (ré-export + graines nommées `SEEDS`).
 - `src/clock/fixed.ts` (`fixedClock(ISO)`), `src/ids/counter.ts` (`counterIds('ev')`).
@@ -407,7 +389,6 @@ une modification de règle **visible en diff** au lieu de silencieuse.
 - `src/index.ts` exportant le tout, plus un `src/fixtures/index.ts` vide que M0-10 remplira.
 
 **Critères d'acceptation**
-
 - `pnpm --filter @for/testkit build typecheck lint test` sort en 0.
 - Un test vérifie qu'un `scriptedRng` épuisé lève `ScriptedRngExhausted` avec le nombre de
   tirages consommés dans le message.
@@ -416,7 +397,7 @@ une modification de règle **visible en diff** au lieu de silencieuse.
 - Un test en dossier temporaire vérifie qu'`expectGolden` échoue sur dérive, et réécrit le
   fichier quand `GOLDEN_UPDATE=1`.
 - Aucun test n'écrit hors de `os.tmpdir()` : `grep -rn "writeFileSync(" packages/testkit/src |
-grep -v tmpdir` ne renvoie que le runner doré.
+  grep -v tmpdir` ne renvoie que le runner doré.
 
 **Fichiers touchés** : `packages/testkit/src/{index}.ts`, `packages/testkit/src/rng/**`,
 `packages/testkit/src/clock/**`, `packages/testkit/src/ids/**`,
@@ -428,7 +409,6 @@ grep -v tmpdir` ne renvoie que le runner doré.
 ## Vague 4 — Dés, protocole, contenu, fixtures, base
 
 ### M0-07 · Moteur : dés, jauges, souffle, progression
-
 **Taille** : grosse · **Dépend de** : M0-02, M0-06 · **Parallélisable** : oui
 
 **À quoi ça sert.** C'est le calcul des règles prototypées : le jet de défi (1d6 + attribut
@@ -437,7 +417,6 @@ corpus doré associé est l'oracle de référence du projet : si quelqu'un modif
 règle, la diff doit rester lisible.
 
 **Livrables**
-
 - `src/dice/{challenge,progress,oracle,price,presage}.ts` aux signatures exactes de
   `01-architecture.md` §2.3.
 - `src/momentum.ts` (brûlure, annulation par souffle négatif, bornes −6/+10, retour à +2),
@@ -450,7 +429,6 @@ règle, la diff doit rester lisible.
   égaux, les trois issues autour de chaque seuil.
 
 **Critères d'acceptation**
-
 - `pnpm --filter @for/engine test --coverage` sort en 0 avec ≥ 95 % lignes et ≥ 90 % branches
   sur les fichiers livrés.
 - `pnpm test:golden` sort en 0.
@@ -458,10 +436,10 @@ règle, la diff doit rester lisible.
   `pnpm --filter @for/engine exec vitest run --reporter=json --outputFile=/tmp/canari.json` :
   la commande sort en code non nul **en moins de 30 secondes**, et
   `jq -r '[.testResults[] | select(.status=="failed") | .name] | map(select(test("/tests/golden/")))
-| length > 0' /tmp/canari.json` **et** la même expression avec `test("/src/.*\\.test\\.ts$")`
+  | length > 0' /tmp/canari.json` **et** la même expression avec `test("/src/.*\\.test\\.ts$")`
   renvoient toutes deux `true` : au moins un test unitaire **et** au moins un corpus doré sont
-  rouges. Il restaure ensuite le fichier. _(« au moins un des deux est rouge » ne se tranche pas
-  à l'œil sur une sortie de 300 lignes.)_
+  rouges. Il restaure ensuite le fichier. *(« au moins un des deux est rouge » ne se tranche pas
+  à l'œil sur une sortie de 300 lignes.)*
 - `GOLDEN_UPDATE=1 pnpm test:golden` régénère les trois fichiers et `git diff --exit-code`
   sort ensuite en 0 (les dorés commités sont à jour).
 - Un test vérifie que deux dés de défi identiques produisent `presage: true` quelle que soit
@@ -476,7 +454,6 @@ règle, la diff doit rester lisible.
 ---
 
 ### M0-08 · Contrats : protocole WebSocket et surface HTTP
-
 **Taille** : moyenne · **Dépend de** : M0-05 · **Parallélisable** : oui
 
 **À quoi ça sert.** C'est ici qu'on rend l'invariant 3 mécanique : **aucun message venant du
@@ -484,20 +461,18 @@ client ne transporte un résultat**. Le test associé refuse à la compilation t
 `c2s.*` qui porterait une jauge, un dé ou un état.
 
 **Livrables**
-
 - `src/ws/{envelope,c2s,s2c,codes}.ts` : enveloppe `{ v, t, id, ts, seq?, p }`, les **8** messages
   client et les **15** messages serveur de `01-architecture.md` §5, les codes de fermeture 4001-4011.
   Les deux derniers arrivés sont ceux de la preuve « Pourquoi ? » (P22) : `c2s.why
-{ correlationId }`, message de **lecture** qui ne transporte aucun résultat, et
+  { correlationId }`, message de **lecture** qui ne transporte aucun résultat, et
   `s2c.turn_proof { correlationId, proof: TurnProofDto, truncated: boolean }`, qui reprend le
   `zTurnProof` de M0-05 sans le redéclarer.
 - `src/http/{auth,tables,characters,content,health}.ts` pour les routes de §6.
 - `tests/ws-protocol.test.ts` (invariant 3) et `tests/envelope-fuzz.test.ts`.
 
 **Critères d'acceptation**
-
 - `pnpm --filter @for/contracts exec vitest run tests/ws-protocol.test.ts tests/envelope-fuzz.test.ts`
-  sort en 0. _(Pas la suite entière du paquet : M0-09 et M0-12 y livrent en parallèle.)_
+  sort en 0. *(Pas la suite entière du paquet : M0-09 et M0-12 y livrent en parallèle.)*
 - `tests/ws-protocol.test.ts` sort en code non nul si l'on ajoute un champ `gauge` ou un
   `zGameEvent` à n'importe quel schéma `c2s.*` (le testeur applique le patch).
 - `tests/envelope-fuzz.test.ts` passe 10 000 entrées aléatoires (chaînes, binaire, JSON
@@ -522,7 +497,6 @@ client ne transporte un résultat**. Le test associé refuse à la compilation t
 ---
 
 ### M0-09 · Contrats : schémas du contenu de jeu
-
 **Taille** : moyenne · **Dépend de** : M0-05 · **Parallélisable** : oui
 
 **À quoi ça sert.** Le contenu de jeu est du JSON relu en PR ; ces schémas sont ce qui empêche
@@ -531,16 +505,14 @@ la répartition d'attributs 3/2/2/1/1 et la **couverture complète d'un dé** pa
 d'oracle.
 
 **Livrables**
-
 - `src/content/{common,effect,move,champion,champion-index,oracle,price-table,presage-table,region,asset,condition,truth,manifest,settings}.ts`,
   repris à la lettre de `03-donnees.md` §4.2 à §4.7, y compris `coversDie`, `AttributeSpreadSchema`,
   `ChampionSchema.aliases`, `ChampionIndexSchema` et `CampaignSettingsSchema` en `.strict()`.
 - Tests unitaires par schéma.
 
 **Critères d'acceptation**
-
-- `pnpm --filter @for/contracts exec vitest run tests/content` sort en 0. _(Pas la suite entière
-  du paquet : M0-08 et M0-12 y livrent en parallèle.)_
+- `pnpm --filter @for/contracts exec vitest run tests/content` sort en 0. *(Pas la suite entière
+  du paquet : M0-08 et M0-12 y livrent en parallèle.)*
 - Un test vérifie que `ChampionSchema` refuse une fiche **sans `aliases`** et qu'il en accepte
   une avec au moins un alias (champ obligatoire, `03-donnees.md` §4.5 — c'est la seule source
   du verrouillage de distribution), et que `ChampionIndexSchema` refuse deux champions qui
@@ -562,7 +534,6 @@ d'oracle.
 ---
 
 ### M0-10 · Fixtures et assertions de domaine
-
 **Taille** : moyenne · **Dépend de** : M0-05, M0-06 · **Parallélisable** : oui
 
 **À quoi ça sert.** Règle transverse : **aucun test n'écrit un état de table à la main**. Sans
@@ -571,13 +542,11 @@ Cette tâche livre aussi la campagne longue (≈ 2 000 événements) qui sert de
 l'invariant 2.
 
 **Livrables**
-
 - `src/fixtures/{characters,table,events,campaigns}.ts` : `aCharacter()`, `aTableState()`,
   `anEvent()`, `LONG_CAMPAIGN`.
 - `src/assertions.ts` : `expectValidState`, `expectNoReservedChampion`, `expectSeqContiguous`.
 
 **Critères d'acceptation**
-
 - `pnpm --filter @for/testkit test` sort en 0.
 - Un test vérifie que l'état produit par `aTableState()` passe `zCampaignState.parse` sans
   aucune option, et que chaque constructeur a des valeurs par défaut complètes.
@@ -595,7 +564,6 @@ l'invariant 2.
 ---
 
 ### M0-11 · Base : schéma Drizzle, migrations, ouverture SQLite
-
 **Taille** : grosse · **Dépend de** : M0-05 · **Parallélisable** : oui
 
 **À quoi ça sert.** C'est le DDL complet de `03-donnees.md` §1, y compris les trois triggers qui
@@ -603,7 +571,6 @@ rendent le journal **réellement** append-only. Ces triggers ne sont pas de la d
 sont des contraintes, et un test doré vérifie qu'une migration ne les a pas perdus.
 
 **Livrables**
-
 - `drizzle.config.ts`, `src/client.ts` (les sept PRAGMA de §0.2, `foreign_keys` repassé à
   chaque connexion), `src/schema/**` (les 19 tables, dont `scene_state` — `03-donnees.md` §1.4),
   `src/migrate.ts`.
@@ -613,7 +580,6 @@ sont des contraintes, et un test doré vérifie qu'une migration ne les a pas pe
   `:memory:`, à cause du WAL).
 
 **Critères d'acceptation**
-
 - `pnpm --filter @for/db test` sort en 0.
 - `pnpm db:migrate` sur une base vide temporaire sort en 0, puis le dump normalisé est **égal
   octet à octet** à `schema.expected.sql` (assertion du test).
@@ -625,8 +591,8 @@ sont des contraintes, et un test doré vérifie qu'une migration ne les a pas pe
 - Une insertion violant une clé étrangère lève (preuve que `foreign_keys` est bien actif sur la
   connexion, pas seulement dans le fichier).
 - `pnpm db:check-schema` sort en 0 : aucune migration en attente **et** le dump normalisé est
-  égal à `schema.expected.sql`. _(`drizzle-kit generate` n'a pas de drapeau `--check` ; la
-  commande citée précédemment n'existait pas.)_
+  égal à `schema.expected.sql`. *(`drizzle-kit generate` n'a pas de drapeau `--check` ; la
+  commande citée précédemment n'existait pas.)*
 - Le testeur ajoute une colonne dans un fichier de `src/schema/` sans générer la migration :
   `pnpm db:check-schema` sort en 1.
 
@@ -639,7 +605,6 @@ sont des contraintes, et un test doré vérifie qu'une migration ne les a pas pe
 ## Vague 5 — Mouvements, chargeur, dépôts, schémas IA
 
 ### M0-12 · Contrats : schémas d'entrée-sortie de l'IA
-
 **Taille** : moyenne · **Dépend de** : M0-09 · **Parallélisable** : oui
 
 **À quoi ça sert.** Tout ce que le modèle produit entre dans le système par une seule porte :
@@ -647,7 +612,6 @@ ces schémas. En particulier, la forge de fiches n'a **aucun privilège** — ce
 un sous-ensemble dérivé du schéma unique de champion.
 
 **Livrables**
-
 - `src/ai/narrator-port.ts` : **le port du conteur** (`02-mj-ia.md` §0.1) — `NarratorTextBlock`,
   `NarratorMessage`, `NarratorToolSpec`, `NarrateRequest`, `NarrateEvent`, `NarrateResult`,
   `StructureRequest<T>`, `StructureResult<T>`, `NarratorCapabilities`, `NarratorPort`,
@@ -665,9 +629,8 @@ un sous-ensemble dérivé du schéma unique de champion.
 - Tests unitaires associés.
 
 **Critères d'acceptation**
-
-- `pnpm --filter @for/contracts exec vitest run tests/ai` sort en 0. _(Pas la suite entière du
-  paquet.)_
+- `pnpm --filter @for/contracts exec vitest run tests/ai` sort en 0. *(Pas la suite entière du
+  paquet.)*
 - Un test vérifie que `ForgeOutputSchema` omet exactement `schemaVersion`, `id`, `source`,
   `portraitUrl`, `relations`, `aliases`, et conserve **tous** les autres champs de
   `ChampionSchema` (comparaison de jeux de clés, pas de liste écrite à la main). `aliases` est
@@ -688,9 +651,9 @@ un sous-ensemble dérivé du schéma unique de champion.
   affiche `0`. La seconde borne les **noms de fournisseur** à l'unique endroit qui a le droit de
   les écrire — l'union `NarratorProviderId` :
   `grep -rlniE "anthropic|openai|ollama" packages/contracts/src` n'affiche que
-  `packages/contracts/src/ai/narrator-port.ts`. _(Un critère qui interdirait ces trois mots
+  `packages/contracts/src/ai/narrator-port.ts`. *(Un critère qui interdirait ces trois mots
   partout serait faux par construction : le port doit bien nommer ses propres adaptateurs
-  quelque part, et c'est là.)_
+  quelque part, et c'est là.)*
 - Un test vérifie que `NarratorProviderId` vaut exactement
   `['stub','anthropic','openai-compatible','ollama']` et que le `CHECK` de `ai_calls.provider`
   (`03-donnees.md` §1.1) porte les mêmes quatre valeurs, dans le même ordre — les deux listes
@@ -701,7 +664,6 @@ un sous-ensemble dérivé du schéma unique de champion.
 ---
 
 ### M0-13 · Moteur : mouvements, décision, réducteur, repli narratif
-
 **Taille** : grosse · **Dépend de** : M0-07, M0-10 · **Parallélisable** : oui
 
 **À quoi ça sert.** C'est le cœur de l'invariant 1 et de l'invariant 4 : `decide()` tire les dés
@@ -709,7 +671,6 @@ et tranche, `reduce()` ne tire jamais rien et rejoue le journal à l'identique. 
 vérifiée par le type : ajouter un événement sans le traiter dans le réducteur **ne compile pas**.
 
 **Livrables**
-
 - `src/moves/` : les 11 mouvements + `MOVE_REGISTRY`.
 - `src/decide.ts` (retourne un `Result`, ne lève jamais), `src/reduce.ts` (`reduce`,
   `reduceAll`, `createInitialCampaignState`, `REDUCER_VERSION`), `src/invariants.ts`.
@@ -723,7 +684,6 @@ vérifiée par le type : ajouter un événement sans le traiter dans le réducte
   `tests/ai-cannot-mutate.test.ts`.
 
 **Critères d'acceptation**
-
 - `pnpm --filter @for/engine test --coverage` sort en 0 avec ≥ 95 % lignes / 90 % branches sur
   tout le paquet.
 - Le testeur supprime une branche du `switch` de `reduce` : `pnpm typecheck` sort en code non
@@ -750,7 +710,6 @@ vérifiée par le type : ajouter un événement sans le traiter dans le réducte
 ---
 
 ### M0-14 · Chargeur de contenu, registre, index généré
-
 **Taille** : grosse · **Dépend de** : M0-09 · **Parallélisable** : oui
 
 **À quoi ça sert.** Le contenu n'est jamais lu depuis le disque à l'exécution : il est importé
@@ -758,7 +717,6 @@ statiquement par un fichier généré. Le chargeur fait quatre passes et **écho
 démarrage plutôt que de laisser un `undefined` remonter jusque dans le prompt du conteur.
 
 **Livrables**
-
 - `src/{load,registry,validate,manifest,index,ui}.ts`, `src/generated/index.ts` (généré),
   `data/labels/{attributes,gauges,outcomes,ui}.json`.
 - `scripts/generate-content-index.ts` et la **cible** de `pnpm content:index` /
@@ -771,7 +729,6 @@ démarrage plutôt que de laisser un `undefined` remonter jusque dans le prompt 
 - `tests/{content-validity,generated-index}.test.ts`.
 
 **Critères d'acceptation**
-
 - `pnpm content:check --root content-fixtures` sort en 0.
 - `pnpm content:check --root content-fixtures-broken` sort en **1**, et sa sortie contient
   **exactement trois** lignes commençant par `→` (`grep -c '^\s*→'` vaut 3 — les trois erreurs
@@ -790,7 +747,6 @@ démarrage plutôt que de laisser un `undefined` remonter jusque dans le prompt 
 ---
 
 ### M0-15 · Base : dépôts, journal, allocation de séquence
-
 **Taille** : moyenne · **Dépend de** : M0-11 · **Parallélisable** : oui
 
 **À quoi ça sert.** C'est le seul chemin d'écriture de l'état de partie. L'allocation de `seq`
@@ -799,14 +755,12 @@ l'idempotence par identifiant d'intention est la seule protection sérieuse cont
 double-jet sur réseau instable.
 
 **Livrables**
-
 - `src/repositories/{events,campaigns,characters,players,chronicles,aiCalls}.ts` :
   `appendEvents` (transaction `BEGIN IMMEDIATE`), `readSince(seq)`, `lastSeq`, insertion
   idempotente d'intention.
 - `src/index.ts` complété ; `tests/events-repo.test.ts`.
 
 **Critères d'acceptation**
-
 - `pnpm --filter @for/db test` sort en 0.
 - Un test insère 100 lots d'événements et vérifie que les `seq` sont denses de 1 à N et que
   `campaigns.seq` est égal au maximum.
@@ -825,7 +779,6 @@ double-jet sur réseau instable.
 ## Vague 6 — Contenu, reconstruction, prompts, page table, serveur
 
 ### M0-16 · Contenu de jeu versionné (règles, monde et fiches de champion)
-
 **Taille** : grosse · **Dépend de** : M0-13, M0-14 · **Parallélisable** : oui
 
 **À quoi ça sert.** C'est la matière du jeu : les onze mouvements, les oracles, la table
@@ -842,7 +795,6 @@ jouables du seed. Tout est en français, tout est relu en PR, rien n'est en base
 > absorbée ici.
 
 **Livrables**
-
 - `content/moves/*.json` (les 11), `content/oracles/*.json` (les 9, dont `yes-no`),
   `content/tables/{pay-the-price,presages}.json`, `content/conditions.json`,
   `content/truths/freljord-truths.json`, `content/regions/*.json` (≥ 5, en forêt),
@@ -856,10 +808,9 @@ jouables du seed. Tout est en français, tout est relu en PR, rien n'est en base
   référence auxquelles la forge IA sera comparée : elles passent exactement le même schéma,
   sans privilège.
 - `packages/content/tests/game-content.test.ts` : le fichier de test que les critères ci-dessous
-  exigent. _(Sans lui, « un test vérifie que… » n'est pas un critère d'acceptation.)_
+  exigent. *(Sans lui, « un test vérifie que… » n'est pas un critère d'acceptation.)*
 
 **Critères d'acceptation**
-
 - `pnpm content:check` sort en 0.
 - `pnpm content:index && git diff --exit-code` sort en 0.
 - `pnpm --filter @for/content exec vitest run tests/game-content.test.ts` sort en 0, et ce test
@@ -889,7 +840,6 @@ jouables du seed. Tout est en français, tout est relu en PR, rien n'est en base
 ---
 
 ### M0-17 · Base : reconstruction et les douze oracles d'intégrité
-
 **Taille** : moyenne · **Dépend de** : M0-13, M0-15 · **Parallélisable** : oui
 
 **À quoi ça sert.** C'est la preuve de l'invariant 4 : les projections sont jetables. Le
@@ -898,14 +848,12 @@ projection mutée hors du réducteur — un bug silencieux qui, sinon, se décou
 tard.
 
 **Livrables**
-
 - `src/rebuild.ts` (tronque les projections, rejoue le journal, une transaction par campagne),
   `src/check.ts` (les 12 oracles de `03-donnees.md` §7.3, avec la reformulation du contrôle 11
   décidée au point P4), scripts `db:rebuild` et `db:check` du paquet.
 - `tests/{rebuild,check}.test.ts`.
 
 **Critères d'acceptation**
-
 - `pnpm --filter @for/db test` sort en 0.
 - Sur une base construite en test : `pnpm db:check` sort en 0 et n'affiche aucune ligne.
 - Le testeur modifie directement une jauge dans la table `characters` : `pnpm db:check` sort en
@@ -922,7 +870,6 @@ tard.
 ---
 
 ### M0-18 · IA : le port du conteur, ses adaptateurs, les prompts et la surface d'outils gelée
-
 **Taille** : grosse · **Dépend de** : M0-12, M0-14 · **Parallélisable** : oui
 
 **À quoi ça sert.** Deux choses, et elles tiennent ensemble. D'abord le garde-fou de
@@ -933,7 +880,6 @@ Ensuite l'**indépendance de fournisseur** : le serveur parle à un port, pas à
 ce qui rend le projet jouable avec un fournisseur gratuit ou un modèle local (P18).
 
 **Livrables**
-
 - `src/narrator/port.ts` (ré-export des types de `@for/contracts` + `NarratorError`) et
   `src/narrator/select.ts` (`selectNarrator(config): NarratorPort`).
 - **Les quatre implémentations du port** (`02-mj-ia.md` §0.2 à §0.6) :
@@ -960,7 +906,6 @@ ce qui rend le projet jouable avec un fournisseur gratuit ou un modèle local (P
   ne le livrait.
 
 **Critères d'acceptation**
-
 - `pnpm --filter @for/ai test` sort en 0 **sans aucune variable `NARRATOR_*`** dans
   l'environnement (`env -u NARRATOR_PROVIDER -u NARRATOR_API_KEY`).
 - `tests/narrator-port.contract.test.ts` rejoue **le même** contrat contre les **quatre**
@@ -977,7 +922,7 @@ ce qui rend le projet jouable avec un fournisseur gratuit ou un modèle local (P
   testeur ajoute un `process.env.NARRATOR_MODEL` dans un adaptateur : le test sort en code non
   nul. (C'est la frontière qui rend l'éval exécutable hors serveur.)
 - `grep -rniE "anthropic|openai|ollama|claude-|gpt-|stop_reason|cache_control" packages/ai/src
---exclude-dir=narrator | wc -l` affiche `0` : **hors du dossier `narrator/`**, rien ne nomme un
+  --exclude-dir=narrator | wc -l` affiche `0` : **hors du dossier `narrator/`**, rien ne nomme un
   fournisseur. L'exclusion porte sur `narrator/` entier et pas seulement sur `narrator/adapters/`,
   parce que `select.ts` doit forcément nommer les quatre adaptateurs pour les choisir ; c'est le
   seul autre fichier du paquet qui en a le droit.
@@ -1014,7 +959,6 @@ ce qui rend le projet jouable avec un fournisseur gratuit ou un modèle local (P
 ---
 
 ### M0-19 · Client : SPA et page « table » branchée sur le WebSocket
-
 **Taille** : grosse · **Dépend de** : M0-08, M0-14 · **Parallélisable** : oui
 
 **À quoi ça sert.** L'écran minimal exigé par la définition de fini : une page table **vide**
@@ -1023,7 +967,6 @@ l'ergonomie, c'est que le client ne détienne **aucune** autorité : il applique
 reçus pour l'affichage, et se fait écraser par chaque instantané.
 
 **Livrables**
-
 - `index.html`, `vite.config.ts`, `src/{main.tsx,App.tsx,env.ts}`,
   `src/api/{http,queries,error-messages}.ts`, `src/ws/{socket,store}.ts` (reconnexion
   exponentielle, reprise par `lastSeq`, `safeParse` sur chaque trame),
@@ -1043,7 +986,6 @@ reçus pour l'affichage, et se fait écraser par chaque instantané.
 - Tests de composants purs et du store WS.
 
 **Critères d'acceptation**
-
 - `pnpm --filter @for/client build` et `pnpm --filter @for/client test` sortent en 0.
 - Le testeur ajoute `import { decide } from '@for/engine'` dans un fichier du client :
   `pnpm lint` sort en code non nul.
@@ -1054,7 +996,7 @@ reçus pour l'affichage, et se fait écraser par chaque instantané.
 - Un test du store applique un `system.reverted` portant `targetSeqs: [412, 413, 414]` : les
   trois lignes sont toujours présentes dans le journal affiché, **marquées annulées**, avec la
   cause lisible. Le testeur remplace le marquage par une suppression : le test sort en code non
-  nul. _(P22 : un tour annulé se montre, il ne disparaît pas.)_
+  nul. *(P22 : un tour annulé se montre, il ne disparaît pas.)*
 - Un test de rendu vérifie qu'une scène **non dépliée** n'affiche aucun chiffre de dé, aucun
   total, aucun nom d'effet ni aucun libellé de prix, et qu'un clic sur « Pourquoi ? » émet
   exactement un `c2s.why { correlationId }` — jamais un `c2s.intent`, jamais deux envois pour un
@@ -1070,7 +1012,6 @@ reçus pour l'affichage, et se fait écraser par chaque instantané.
 ---
 
 ### M0-20 · Serveur : socle applicatif, environnement, santé
-
 **Taille** : moyenne · **Dépend de** : M0-08, M0-11, M0-14 · **Parallélisable** : oui
 
 **À quoi ça sert.** Le processus, sa configuration validée au démarrage, ses journaux avec
@@ -1079,7 +1020,6 @@ enregistre quatre greffons (auth, HTTP, WebSocket, jeu) livrés en vague 7. C'es
 trois agents de travailler en parallèle sur le serveur sans se marcher dessus.
 
 **Livrables**
-
 - `src/main.ts` (charge l'environnement, ouvre la base, migre sous verrou, écoute),
   `src/app.ts` (`buildApp(deps)`, n'écoute pas, enregistre les quatre greffons **et ne sera plus
   modifié**), `src/env.ts` (`zEnv.parse`, crash explicite), `src/deps.ts` (`AppDeps`),
@@ -1094,7 +1034,6 @@ trois agents de travailler en parallèle sur le serveur sans se marcher dessus.
 - `tests/http/health.test.ts`.
 
 **Critères d'acceptation**
-
 - `pnpm --filter @for/server test` sort en 0.
 - `app.inject({ method:'GET', url:'/healthz' })` renvoie 200 **sans** base ouverte.
 - `/readyz` renvoie 503 tant que les migrations ne sont pas appliquées, 200 après.
@@ -1138,7 +1077,6 @@ désormais de **M0-16**. La vague 7 passe de cinq à quatre tâches.
 ---
 
 ### M0-22 · IA : contexte, budget, assertions, forge et chronique (parties pures)
-
 **Taille** : grosse · **Dépend de** : M0-18 · **Parallélisable** : oui
 
 **À quoi ça sert.** C'est la réponse à l'invariant 2 : le contexte est **reconstruit** à chaque
@@ -1146,7 +1084,6 @@ appel, borné, et il pèse la même chose au sixième mois qu'à la deuxième se
 livrées ici servent deux fois — comme notation dans l'éval, et comme post-filtre en production.
 
 **Livrables**
-
 - `src/context/builder.ts` (l'ordre exact des blocs de `02-mj-ia.md` §4.1, échappement du texte
   joueur), `src/context/scene-render.ts` (rendu **déterministe** du bloc `<scene>` depuis
   `SceneState` : listes triées par `ref.id`, et ligne « aucun » explicite quand `absent` est
@@ -1159,11 +1096,11 @@ livrées ici servent deux fois — comme notation dans l'éval, et comme post-fi
   validation serveur des propositions devient inatteignable.
 - `src/assertions/*.ts` : les **28** assertions de §8.4, fonctions pures, chacune marquée
   `hard: true | false` — le post-filtre de production ne consomme que les dures.
-  _(Le §8.4 énumère 29 identifiants : 16 au tableau principal, 8 de registre, 2 de cohérence de
+  *(Le §8.4 énumère 29 identifiants : 16 au tableau principal, 8 de registre, 2 de cohérence de
   scène, 3 de refus. `refusal_is_outcome_blind` n'en fait pas partie — c'est un grader de
   **corpus**, livré par M0-27 dans `packages/ai-eval/src/graders/`, pas une fonction
   `(output, ctx)`. 29 − 1 = 28, et le compte se tranche à la commande :
-  `node -e "process.exit(Object.keys(require('./packages/ai/dist/assertions/index.js').ASSERTIONS).length===28?0:1)"`.)_
+  `node -e "process.exit(Object.keys(require('./packages/ai/dist/assertions/index.js').ASSERTIONS).length===28?0:1)"`.)*
   `price_respected` (P10) et `no_time_skip` (P11) sont dures. Les douze ajoutées par P15 à P17
   se répartissent ainsi : dures — `banned_style_lexicon`, `no_named_emotion`,
   `sentence_length_cap`, `max_one_dialogue_line`, `no_atmosphere_ending`,
@@ -1173,7 +1110,7 @@ livrées ici servent deux fois — comme notation dans l'éval, et comme post-fi
   leur heuristique sur la morphologie du français est bonne sans être parfaite, et les rendre
   bloquantes augmenterait le taux de replis moteur visibles par les joueurs.
 - `packages/ai/src/index.ts` complété : sans ça, rien de ce qui est livré ici n'est importable
-  par M0-27 ni par M0-29. _(Le fichier appartenait à M0-18, vague précédente : pas de collision.)_
+  par M0-27 ni par M0-29. *(Le fichier appartenait à M0-18, vague précédente : pas de collision.)*
 - `src/outputs/{narration,forge,chronicle}.ts`, `src/chronicle/{build,validate}.ts` (C1→**C9**),
   `src/forge/{build,validate}.ts` (V1→V12).
 - `src/outputs/scene.ts` : extraction du bloc `<scene_apres>` (F1→F8) puis `mergeSceneBlock`
@@ -1184,7 +1121,6 @@ livrées ici servent deux fois — comme notation dans l'éval, et comme post-fi
 - `tests/{context-budget,outputs,assertions,scene-merge,refusal-proof}.test.ts`.
 
 **Critères d'acceptation**
-
 - `env -u NARRATOR_PROVIDER -u NARRATOR_API_KEY pnpm --filter @for/ai test` sort en 0 (aucun
   appel réseau ; `@for/ai` n'a qu'une tâche livrante dans cette vague, la suite entière est donc
   un critère légitime ici).
@@ -1241,7 +1177,6 @@ livrées ici servent deux fois — comme notation dans l'éval, et comme post-fi
 ---
 
 ### M0-23 · Serveur : connexion Discord et surface HTTP
-
 **Taille** : grosse · **Dépend de** : M0-15, M0-20 · **Parallélisable** : oui
 
 **À quoi ça sert.** Le squelette d'authentification exigé par M0 : OAuth 2 avec PKCE, un cookie
@@ -1249,7 +1184,6 @@ de session dont la base ne stocke que l'empreinte, et les routes de lecture dont
 besoin. Une fuite de la base ne doit donner **aucune** session utilisable.
 
 **Livrables**
-
 - `src/auth/{discord,session,guards}.ts` : démarrage du flux (état + PKCE en cookie),
   rappel, création du joueur, cookie `fr_session` (`HttpOnly`, `Secure`, `SameSite=Lax`,
   30 jours, rotation), purge des `oauth_states` expirés.
@@ -1258,9 +1192,8 @@ besoin. Une fuite de la base ne doit donner **aucune** session utilisable.
 - `tests/http/*.test.ts`, avec le client HTTP Discord **injecté** (aucun appel réseau réel).
 
 **Critères d'acceptation**
-
 - `pnpm --filter @for/server exec vitest run tests/http` sort en 0, sans accès réseau.
-  _(Pas la suite entière : M0-24 et M0-25 livrent dans `@for/server` en parallèle.)_
+  *(Pas la suite entière : M0-24 et M0-25 livrent dans `@for/server` en parallèle.)*
 - `GET /api/auth/discord/start` renvoie 302 vers `discord.com` avec `state`, `code_challenge`
   et `code_challenge_method=S256`, et pose les cookies correspondants.
 - Le rappel avec un `state` inconnu ou expiré renvoie 400 et ne crée aucun joueur.
@@ -1277,7 +1210,6 @@ besoin. Une fuite de la base ne doit donner **aucune** session utilisable.
 ---
 
 ### M0-24 · Serveur : le chemin d'une intention
-
 **Taille** : grosse · **Dépend de** : M0-13, M0-15, M0-20 · **Parallélisable** : oui
 
 **À quoi ça sert.** C'est **le seul** chemin d'écriture de l'état de partie, et l'endroit où les
@@ -1286,7 +1218,6 @@ persister dans une transaction courte **sans le moindre appel réseau**, diffuse
 transaction — demander à l'IA d'habiller le fait déjà acquis.
 
 **Livrables**
-
 - `src/game/campaign-service.ts` (implémente l'interface livrée en M0-20),
   `src/game/intent-pipeline.ts`, `src/game/write-queue.ts` (une file par campagne ; le code de
   refus est `move_in_progress`, jamais `not_your_turn`).
@@ -1312,9 +1243,8 @@ transaction — demander à l'IA d'habiller le fait déjà acquis.
 - `tests/game/*.test.ts`.
 
 **Critères d'acceptation**
-
-- `pnpm --filter @for/server exec vitest run tests/game` sort en 0. _(Pas la suite entière :
-  M0-23 et M0-25 livrent dans `@for/server` en parallèle.)_
+- `pnpm --filter @for/server exec vitest run tests/game` sort en 0. *(Pas la suite entière :
+  M0-23 et M0-25 livrent dans `@for/server` en parallèle.)*
 - Un test de bout en bout avec RNG seedé et l'adaptateur `stub` vérifie la chaîne complète :
   événements persistés, projections à jour, `brief` produit.
 - Rejouer la même intention (même identifiant client) ne relance **pas** les dés : les
@@ -1332,7 +1262,7 @@ transaction — demander à l'IA d'habiller le fait déjà acquis.
 - Un test vérifie qu'annuler un `roll.action_resolved` **sans** son `character.gauge_changed`
   est impossible : `revertTurn` ne prend pas de liste de `seq`, seulement un `correlation_id`.
 - Un test vérifie la fenêtre de brûlure du souffle en deux temps : `roll.action_resolved
-{ burnWindow: true }` → `momentum.burn` → `character.momentum_burned` + `roll.action_revised`,
+  { burnWindow: true }` → `momentum.burn` → `character.momentum_burned` + `roll.action_revised`,
   sans jamais réécrire le premier jet.
 - **La preuve est une projection du journal, pas une donnée fabriquée** (P22). Trois critères,
   tous tranchables :
@@ -1354,7 +1284,6 @@ transaction — demander à l'IA d'habiller le fait déjà acquis.
 ---
 
 ### M0-25 · Serveur : hub WebSocket
-
 **Taille** : grosse · **Dépend de** : M0-08, M0-20 · **Parallélisable** : oui
 
 **À quoi ça sert.** C'est la table live : une connexion suit une campagne, reçoit les événements
@@ -1363,7 +1292,6 @@ qui dépasse. Cette tâche consomme l'**interface** `CampaignService` livrée en
 dépend pas de son implémentation.
 
 **Livrables**
-
 - `src/ws/hub.ts` (`TableHub` : abonnements, diffusion, reprise par `seq`),
   `src/ws/connection.ts` (cycle de vie, heartbeat 25 s / 60 s, contre-pression, trames 64 Kio
   entrantes / 256 Kio sortantes), `src/ws/handlers.ts` (routage des **8** messages `c2s.*`,
@@ -1373,9 +1301,8 @@ dépend pas de son implémentation.
 - `tests/ws/*.test.ts`, avec des paires de sockets en mémoire et un faux `CampaignService`.
 
 **Critères d'acceptation**
-
-- `pnpm --filter @for/server exec vitest run tests/ws` sort en 0. _(Pas la suite entière :
-  M0-23 et M0-24 livrent dans `@for/server` en parallèle.)_
+- `pnpm --filter @for/server exec vitest run tests/ws` sort en 0. *(Pas la suite entière :
+  M0-23 et M0-24 livrent dans `@for/server` en parallèle.)*
 - Une connexion sans session valide est fermée avec le code **4002** ; un `v` différent ferme
   en **4001** ; une campagne interdite ferme en **4003**.
 - Après `c2s.hello`, le client reçoit `s2c.welcome`, puis un rattrapage ou un `s2c.snapshot`,
@@ -1402,7 +1329,6 @@ dépend pas de son implémentation.
 ---
 
 ### M0-32 · Sonde de FUMÉE : un fournisseur gratuit tient-il le prompt contraint ?
-
 **Taille** : petite · **Dépend de** : **M0-18, et rien d'autre** · **Parallélisable** : oui
 · **À démarrer en PREMIER dans la vague 7**
 
@@ -1417,7 +1343,7 @@ dépend pas de son implémentation.
 prompt contraint — registre, deuxième personne, pas de décision d'issue, bloc de faits bien
 formé —, alors **toute la couche se conçoit différemment**, et l'apprendre en vague 8 coûte trop
 cher. Cette tâche ne mesure pas la qualité : elle répond à une seule question, le plus tôt
-possible, _est-ce que ça tient debout ?_
+possible, *est-ce que ça tient debout ?*
 
 > **Placement — ce qui a été appliqué, et la réserve (chiffrage corrigé à la troisième passe).**
 > Le tech lead demandait cette tâche en **vague 4 au plus tard**. Elle ne dépend que du
@@ -1433,7 +1359,6 @@ possible, _est-ce que ça tient debout ?_
 > (`packages/contracts/src/ai/scene.ts`, M0-12, **vague 5**), dont l'assertion 7 a besoin.
 >
 > **Le vrai coût de la vague 4**, si le lead la veut :
->
 > 1. une tâche neuve de **vague 2** (dépendant de M0-01 seul) qui livre
 >    `packages/contracts/src/ai/{narrator-port,scene}.ts` — ces deux fichiers ne référencent
 >    aucun type du moteur, donc ils n'ont pas besoin de M0-02 ;
@@ -1458,7 +1383,6 @@ compare pas les fournisseurs entre eux, ne recommande pas de défaut pour le dé
 bloque pas la CI**. Elle informe une décision.
 
 **Livrables**
-
 - `packages/ai-eval/smoke/cases/*.case.json` : **3 cas**, écrits ici et sans dépendance au
   corpus de M0-27 — une issue `franche`, un `echec`, et un tour portant un **prix imposé**.
   Chaque cas porte son `<fait>`, son `<intention>`, son `turn.scene_in` et la liste de champions
@@ -1476,10 +1400,10 @@ bloque pas la CI**. Elle informe une décision.
   6. `scene_block_present` — un bloc `<scene_apres>` est présent, **unique** et fermé ;
   7. `scene_block_wellformed` — ce bloc valide contre `SceneBlockSchema` de `@for/contracts`
      (livré en vague 5, donc disponible).
-     _(Ces sept assertions sont **la seule duplication autorisée** du corpus de production, et elle
-     est bornée : elles vivent dans `smoke/`, ne grandissent pas, et personne ne les importe. M0-31
-     et M0-27, eux, notent avec les assertions de `@for/ai` et rien d'autre — leurs critères le
-     vérifient déjà sur `probe/` et `src/`, pas sur `smoke/`.)_
+  *(Ces sept assertions sont **la seule duplication autorisée** du corpus de production, et elle
+  est bornée : elles vivent dans `smoke/`, ne grandissent pas, et personne ne les importe. M0-31
+  et M0-27, eux, notent avec les assertions de `@for/ai` et rien d'autre — leurs critères le
+  vérifient déjà sur `probe/` et `src/`, pas sur `smoke/`.)*
 - `packages/ai-eval/smoke/run-smoke.ts` : construit une `NarrateRequest` **minimale** —
   `system[]` = le **prompt intégral** de production (`CONTEUR_SYSTEM_PROMPT`, **importé de
   `@for/ai`, jamais recopié**) et un dernier message `user` assemblé ici à partir du cas —, puis
@@ -1488,7 +1412,7 @@ bloque pas la CI**. Elle informe une décision.
   c'est exactement ce qui la rend précoce, et ce qui la distingue de M0-31, qui rejoue la requête
   de production complète.
 - `packages/ai-eval/smoke/report.ts` : le **verdict lisible par un humain**, en moins de vingt
-  lignes — _tel fournisseur, tel modèle, tant d'assertions passées sur tant_, puis la liste des
+  lignes — *tel fournisseur, tel modèle, tant d'assertions passées sur tant*, puis la liste des
   assertions tombées avec un extrait de la sortie fautive.
 - `docs/runbook/conteur-fumee.md` : le verdict daté de la première exécution réelle, et la
   phrase qui en découle (« on continue », ou « ce modèle ne tient pas le prompt, voici sur quoi
@@ -1502,7 +1426,6 @@ bloque pas la CI**. Elle informe une décision.
   M0-01). Un seul écrivain par vague, donc aucune simultanéité.
 
 **Critères d'acceptation**
-
 - `pnpm eval:smoke --provider=stub` sort en **0** sans réseau ni clé : le harnais est exerçable
   en CI même si la mesure ne l'est pas. Deux exécutions donnent **le même verdict, au caractère
   près** (le `stub` est déterministe ; son taux de réussite, lui, n'a aucune valeur d'information
@@ -1521,10 +1444,10 @@ bloque pas la CI**. Elle informe une décision.
 - **Le compte d'assertions est borné, et la sonde le vérifie elle-même au démarrage.**
   `pnpm eval:smoke --provider=stub` écrit en première ligne `assertions: 7`, et sort en **1**
   avec un message nommant la borne si le compte quitte l'intervalle 6–8. Le testeur en ajoute
-  une neuvième : la commande sort en **1**. _(Un dépassement de borne est une erreur de
+  une neuvième : la commande sort en **1**. *(Un dépassement de borne est une erreur de
   configuration du harnais, pas un verdict : le code non nul est donc cohérent avec la règle
   ci-dessus. Et le critère se tranche sans supposer où le paquet émet son `dist/` — une
-  hypothèse d'arborescence de build serait un critère faux par construction.)_
+  hypothèse d'arborescence de build serait un critère faux par construction.)*
 - **Aucune dépendance au corpus complet ni au constructeur de contexte** (c'est la raison
   d'être de la scission), en deux commandes plutôt qu'en une — le fichier d'assertions de la
   sonde contient forcément la chaîne `ASSERTIONS`, et un critère qui l'interdirait serait faux
@@ -1533,8 +1456,8 @@ bloque pas la CI**. Elle informe une décision.
      affiche `0` ;
   2. `grep -rn "ASSERTIONS" packages/ai-eval/smoke | grep -v "SMOKE_ASSERTIONS" | wc -l`
      affiche `0`.
-     La tâche n'importe que `CONTEUR_SYSTEM_PROMPT` et le port depuis `@for/ai`, plus
-     `SceneBlockSchema` depuis `@for/contracts`.
+  La tâche n'importe que `CONTEUR_SYSTEM_PROMPT` et le port depuis `@for/ai`, plus
+  `SceneBlockSchema` depuis `@for/contracts`.
 - Le prompt est **le vrai**, pas une copie : un test compare le `system[0]` de la requête
   construite à `CONTEUR_SYSTEM_PROMPT` importé, **à l'octet près**, et vérifie que le rapport
   porte `CONTEUR_PROMPT_VERSION`. Le testeur modifie un caractère du prompt système :
@@ -1544,16 +1467,15 @@ bloque pas la CI**. Elle informe une décision.
 
 **Fichiers touchés** : `packages/ai-eval/smoke/**`, `packages/ai-eval/package.json`,
 `docs/runbook/conteur-fumee.md`
-_(Ne touche ni `packages/ai-eval/src/**`, qui appartient à M0-27, ni `packages/ai-eval/probe/**`,
+*(Ne touche ni `packages/ai-eval/src/**`, qui appartient à M0-27, ni `packages/ai-eval/probe/**`,
 qui appartient à M0-31. Aucune collision dans la vague 7 : M0-22 livre dans `packages/ai`,
-M0-23, M0-24 et M0-25 dans `packages/server`.)_
+M0-23, M0-24 et M0-25 dans `packages/server`.)*
 
 ---
 
 ## Vague 8 — Démonstration, éval, simulateur, travailleurs
 
 ### M0-26 · Base : la campagne de démonstration
-
 **Taille** : grosse · **Dépend de** : M0-17, M0-16 · **Parallélisable** : oui
 
 **À quoi ça sert.** Un seul seed, qui sert quatre usages : lancer l'application en local en une
@@ -1562,7 +1484,6 @@ harnais d'éval un état de jeu réaliste. Son déterminisme absolu est ce qui e
 dorés de dériver sans qu'on le voie.
 
 **Livrables**
-
 - `src/seed/demo.ts` : 4 joueurs, 1 campagne, 3 personnages, 2 séances, **248 événements
   couvrant au moins une fois chacun des 71 types**, les jets remarquables (franche, partielle,
   échec, présage, souffle brûlé, souffle négatif annulé, plafonnement à 10), 3 serments,
@@ -1588,7 +1509,6 @@ dorés de dériver sans qu'on le voie.
 > maintenant et une fausse confiance ensuite.
 
 **Critères d'acceptation**
-
 - `pnpm db:reset` puis `pnpm db:check` sortent en 0.
 - Deux exécutions de `pnpm db:seed --force` produisent, après `VACUUM`, deux fichiers de
   **sha256 identique**.
@@ -1597,8 +1517,8 @@ dorés de dériver sans qu'on le voie.
 - `NODE_ENV=production pnpm db:reset` sort en **1** sans rien supprimer.
 - `pnpm db:seed --minimal` produit un nombre d'événements **exactement égal à la constante
   exportée `DEMO_MINIMAL_EVENT_COUNT`** (assertion du test : `SELECT count(*) FROM events` ==
-  cette constante), la première scène est close, et `pnpm db:check` sort en 0. _(« ≈ 40 » ne se
-  tranche pas ; une constante, si.)_
+  cette constante), la première scène est close, et `pnpm db:check` sort en 0. *(« ≈ 40 » ne se
+  tranche pas ; une constante, si.)*
 
 **Fichiers touchés** : `packages/db/src/seed/**`,
 `packages/db/tests/seed-deterministic.test.ts`, `packages/db/package.json`
@@ -1606,7 +1526,6 @@ dorés de dériver sans qu'on le voie.
 ---
 
 ### M0-27 · Harnais d'éval des sorties IA (niveau hors ligne)
-
 **Taille** : grosse · **Dépend de** : M0-16, M0-22 · **Parallélisable** : oui
 
 **À quoi ça sert.** Savoir en quelques secondes si l'on a cassé le conteur, **sans dépenser un
@@ -1615,7 +1534,6 @@ centime et sans clé d'API**. Deux choses sont vérifiées : l'instantané de la
 sorties enregistrées.
 
 **Livrables**
-
 - `cases/*.case.json` (**≥ 10 cas** couvrant : les trois issues, un présage, une pression sur
   les champions réservés, une tentative d'injection de prompt, **un absent que l'intention
   cherche à interpeller, un bloc `<scene_apres>` volontairement malformé, un refus attendu
@@ -1634,7 +1552,6 @@ sorties enregistrées.
 > conteur en M0, c'est N0, et c'est le seul qui soit bloquant.
 
 **Critères d'acceptation**
-
 - `env -u NARRATOR_API_KEY pnpm eval:offline` sort en 0, en **moins de 5 secondes**, et écrit
   un rapport lisible plus un `eval-report.json`.
 - L'instantané de requête comparé est la **`NarrateRequest` du port**, sans rien qui dépende
@@ -1665,14 +1582,13 @@ sorties enregistrées.
 
 **Fichiers touchés** : `packages/ai-eval/cases/**`, `packages/ai-eval/chronicle/**`,
 `packages/ai-eval/forge/**`, `packages/ai-eval/src/**`, `packages/ai-eval/package.json`
-_(Ne touche pas `packages/ai-eval/probe/**`, qui appartient à M0-31, ni
+*(Ne touche pas `packages/ai-eval/probe/**`, qui appartient à M0-31, ni
 `packages/ai-eval/smoke/**`, qui appartient à M0-32. `package.json` a été créé par M0-32 en
-vague 7 : cette tâche le complète, elle ne le réécrit pas.)_
+vague 7 : cette tâche le complète, elle ne le réécrit pas.)*
 
 ---
 
 ### M0-28 · Simulateur de table headless
-
 **Taille** : grosse · **Dépend de** : M0-24, M0-25 · **Parallélisable** : oui
 
 **À quoi ça sert.** C'est la réponse directe à l'objectif du jalon : jouer des parties
@@ -1680,7 +1596,6 @@ complètes, sans navigateur et sans appel IA, contre le **vrai** service applica
 répondre en quelques secondes à « est-ce que ma modification a cassé une partie ? ».
 
 **Livrables**
-
 - `src/{cli,harness,scripted-narrator,scenario,report}.ts`,
   `src/checks/{invariants,replay-equivalence,lockout,determinism}.ts`.
 - Les 7 scénarios de `01-architecture.md` §7.4, leurs corpus dorés
@@ -1688,7 +1603,6 @@ répondre en quelques secondes à « est-ce que ma modification a cassé une par
 - Les modes `run`, `list`, `record`, `replay`, `fuzz`.
 
 **Critères d'acceptation**
-
 - `pnpm sim run --format=json` exécute les 7 scénarios, sort en 0, en **moins de 20 secondes**.
 - `pnpm sim fuzz --iterations=200 --seed=m0` sort en 0 ; un rejet propre (`s2c.rejected`) est un
   succès, un `500` ou un état invalide est un échec, et la graine d'un échec est imprimée.
@@ -1710,7 +1624,6 @@ répondre en quelques secondes à « est-ce que ma modification a cassé une par
 ---
 
 ### M0-29 · Serveur : travailleurs IA, diffusion, verrouillage de distribution
-
 **Taille** : moyenne · **Dépend de** : M0-22, M0-24 · **Parallélisable** : oui
 
 **À quoi ça sert.** Tout ce qui, dans la couche IA, touche à la persistance, aux verrous et à la
@@ -1718,7 +1631,6 @@ diffusion — donc tout ce qui n'a pas sa place dans `@for/ai`. C'est ici qu'on 
 côté serveur : la liste des événements atteignables par une proposition du modèle est **close**.
 
 **Livrables**
-
 - `src/ai/broadcast.ts` (diffusion en fragments, buffer, rattrapage en cours de génération),
   `src/ai/lockout.ts` (revalidation des champions réservés, défense en profondeur),
   `src/ai/chronicle-worker.ts` (verrou à bail de 10 minutes, anti-rebond, reconstruction
@@ -1729,14 +1641,13 @@ côté serveur : la liste des événements atteignables par une proposition du m
 - `src/ai/refusal.ts` : applique un refus **prouvé** par `proveRefusal` en appelant
   `revertTurn()` de M0-24 — jamais un second mécanisme d'annulation —, tient le quota de §4.8.5
   et journalise les refus rejetés en `narration.proposal_rejected` (`02-mj-ia.md` §4.8).
-  _(Ces deux fichiers étaient testés par les critères ci-dessous sans figurer dans les
-  livrables.)_
+  *(Ces deux fichiers étaient testés par les critères ci-dessous sans figurer dans les
+  livrables.)*
 - `src/ai/narrator.ts` est **livré par M0-24** et seulement **consommé** ici : le serveur ne
   connaît que `NarratorPort` et n'importe aucun SDK de fournisseur.
 - `tests/proposal-surface.test.ts` et `tests/ai/*.test.ts`.
 
 **Critères d'acceptation**
-
 - `env -u NARRATOR_API_KEY pnpm --filter @for/server test` sort en 0 (port simulé).
 - `grep -rn "@anthropic-ai/sdk" packages/server/src | wc -l` affiche `0` : le serveur ne
   connaît aucun SDK de fournisseur, seulement le port.
@@ -1748,10 +1659,10 @@ côté serveur : la liste des événements atteignables par une proposition du m
   2. atteignable par `roll_oracle`, seul outil de **lecture** qui écrive au journal :
      `roll.oracle_resolved`, `roll.yes_no_resolved`, et rien d'autre ;
   3. atteignable par le **droit de refus** du conteur : `system.reverted`, et rien d'autre.
-     Sans la deuxième, `roll_oracle` serait un circuit d'écriture depuis le modèle que le garde-fou
-     de l'invariant 1 ne regarde pas. Sans la troisième, l'annulation de tour en serait un autre.
-     **Les trois listes restent séparées**, jamais fondues : fondues, on élargirait l'une en
-     croyant toucher l'autre.
+  Sans la deuxième, `roll_oracle` serait un circuit d'écriture depuis le modèle que le garde-fou
+  de l'invariant 1 ne regarde pas. Sans la troisième, l'annulation de tour en serait un autre.
+  **Les trois listes restent séparées**, jamais fondues : fondues, on élargirait l'une en
+  croyant toucher l'autre.
 - Le testeur fait rendre à `proveRefusal` un verdict `upheld` sur une cause que l'état ne
   prouve pas : `src/ai/refusal.ts` n'émet **aucun** `system.reverted` et écrit un
   `narration.proposal_rejected` portant `reasonCode: 'refusal_unproven'`.
@@ -1779,7 +1690,7 @@ côté serveur : la liste des événements atteignables par une proposition du m
   `<scene_apres>`, et `narration.gm_message.text` persisté s'arrête avant la balise.
 - Une narration citant un champion réservé (nom **ou** alias) est refusée, relancée une fois,
   puis remplacée par le repli moteur, avec `narration.gm_failed
-{ errorKind: 'rejected_by_postfilter' }` au journal. Le test **capture le logger** et exige
+  { errorKind: 'rejected_by_postfilter' }` au journal. Le test **capture le logger** et exige
   une ligne de niveau `warn` portant `event: 'reserved_champion_leak'`, `campaignId` et
   `assertion: 'no_reserved_champion'` — « une alerte journalisée » n'est pas vérifiable, un
   champ de log l'est.
@@ -1797,13 +1708,13 @@ côté serveur : la liste des événements atteignables par une proposition du m
   `retryAfterMs`, un `bad_request` n'est jamais relancé.
 - **Le moteur tire, point final** (P10). Trois vérifications, toutes tranchables à la commande :
   1. `grep -rnE "price_choice|playerChoices|propose_price" packages/server/src packages/ai/src
-packages/contracts/src | wc -l` affiche `0` : ces trois mécanismes n'existent nulle part, ni
+     packages/contracts/src | wc -l` affiche `0` : ces trois mécanismes n'existent nulle part, ni
      côté modèle ni côté joueur. Pour `optionId`, la commande est
      `grep -rn "optionId" packages/server/src packages/ai/src packages/contracts/src`, et elle
      ne doit afficher **que** des lignes du payload `campaign.truth_set` (le choix d'une vérité
-     de campagne par un **joueur**, à la création — sans rapport avec le prix). _(Mettre
+     de campagne par un **joueur**, à la création — sans rapport avec le prix). *(Mettre
      `optionId` dans le premier `grep` rendrait ce critère faux par construction : la vérité de
-     campagne porte ce nom depuis l'origine.)_
+     campagne porte ce nom depuis l'origine.)*
   2. Un test rejoue un mouvement dont l'issue déclenche « payer le prix » avec un RNG scripté :
      le journal porte un `roll.price_paid` **écrit avant** tout appel au port, et le
      `NarrationBrief` transmis contient le `text` de l'entrée tirée, à l'octet près.
@@ -1818,17 +1729,16 @@ packages/contracts/src | wc -l` affiche `0` : ces trois mécanismes n'existent n
 
 **Fichiers touchés** : `packages/server/src/ai/**`,
 `packages/server/tests/proposal-surface.test.ts`, `packages/server/tests/ai/**`
-_(Ne touche pas `packages/server/src/ai/narrator.ts`, qui appartient à M0-24.)_
+*(Ne touche pas `packages/server/src/ai/narrator.ts`, qui appartient à M0-24.)*
 
 ---
 
 ### M0-31 · Mesurer un fournisseur gratuit sur le corpus complet
-
 **Taille** : moyenne · **Dépend de** : M0-18, M0-22 · **Parallélisable** : oui
 · **À démarrer en PREMIER dans la vague 8**
 
-**À quoi ça sert.** Toute l'architecture du port (P18) repose sur une hypothèse : _un
-fournisseur gratuit, ou un modèle local, produit une prose assez bonne pour la table_. Tant
+**À quoi ça sert.** Toute l'architecture du port (P18) repose sur une hypothèse : *un
+fournisseur gratuit, ou un modèle local, produit une prose assez bonne pour la table*. Tant
 qu'elle n'est pas mesurée, c'est une croyance. Cette tâche la mesure **contre le corpus
 complet**, et elle le fait **avant** que le reste de la vague 8 ne se soit installé sur un
 fournisseur payant par défaut.
@@ -1839,8 +1749,8 @@ fournisseur payant par défaut.
 > avant** cette tâche-ci, c'est-à-dire avant que M0-26 à M0-29 ne soient écrites. M0-31 garde ce
 > que la fumée ne peut pas donner : les **16 assertions dures** de production, deux passerelles
 > et un modèle local comparés sur le même corpus, la matrice de capacités, et la recommandation
-> motivée d'un défaut et d'un repli. Les deux ne se remplacent pas — l'une dit _est-ce que ça
-> tient debout_, l'autre dit _lequel on prend_.
+> motivée d'un défaut et d'un repli. Les deux ne se remplacent pas — l'une dit *est-ce que ça
+> tient debout*, l'autre dit *lequel on prend*.
 
 **Pourquoi pas plus tôt.** Le corpus d'assertions est livré par M0-22, en vague 7 ; une mesure
 lancée avant lui n'aurait rien contre quoi noter — et c'est exactement pour cette raison que le
@@ -1850,7 +1760,6 @@ au lieu de la fermer : son rapport oriente le `NARRATOR_PROVIDER` par défaut du
 choix de repli de M0-29, qui se termine après elle.
 
 **Livrables**
-
 - `packages/ai-eval/probe/cases/*.case.json` : **6 cas au minimum**, repris de ceux de M0-27
   (les trois issues, un présage, une pression sur les champions réservés, un tour portant un
   prix imposé).
@@ -1873,7 +1782,6 @@ modèle `ollama` local. L'adaptateur `anthropic` sert de **référence haute**, 
 il est mesuré sur le même corpus pour que les taux des autres aient un point de comparaison.
 
 **Critères d'acceptation**
-
 - `pnpm eval:probe --provider=stub` sort en **0** sans réseau ni clé : le harnais lui-même est
   testable en CI, même si la mesure réelle ne l'est pas.
 - Sans `NARRATOR_API_KEY` et sans `NARRATOR_BASE_URL`, `pnpm eval:probe --provider=openai-compatible`
@@ -1895,15 +1803,14 @@ il est mesuré sur le même corpus pour que les taux des autres aient un point d
   n'est pas un échec, c'est une dégradation connue (`02-mj-ia.md` §0.2).
 
 **Fichiers touchés** : `packages/ai-eval/probe/**`, `docs/runbook/conteur-fournisseurs.md`
-_(Ne touche ni `packages/ai-eval/src/**`, qui appartient à M0-27, ni `packages/ai-eval/smoke/**`
-ni `docs/runbook/conteur-fumee.md`, qui appartiennent à M0-32.)_
+*(Ne touche ni `packages/ai-eval/src/**`, qui appartient à M0-27, ni `packages/ai-eval/smoke/**`
+ni `docs/runbook/conteur-fumee.md`, qui appartiennent à M0-32.)*
 
 ---
 
 ## Vague 9 — Assemblage
 
 ### M0-30 · Parcours de bout en bout : la preuve que le socle tient
-
 **Taille** : grosse · **Dépend de** : M0-26, M0-27, M0-28, M0-29 (et donc de tout le reste)
 · **Parallélisable** : non (vague seule)
 
@@ -1917,7 +1824,6 @@ C'est la seule tâche autorisée à faire de petites corrections de câblage dan
 paquet — à condition que chaque correction soit signalée dans le rapport final.
 
 **Livrables**
-
 - `scripts/smoke-m0.sh` : depuis un dépôt propre, enchaîne installation, migrations, seed,
   démarrage, connexion WebSocket authentifiée, réception de `s2c.welcome` + `s2c.snapshot` +
   `s2c.presence`, **un aller-retour `c2s.why` → `s2c.turn_proof` sur un tour du seed**, puis
@@ -1931,7 +1837,6 @@ paquet — à condition que chaque correction soit signalée dans le rapport fin
   commandes du quotidien.
 
 **Critères d'acceptation**
-
 - Sur un clone neuf : `pnpm install && pnpm verify` sort en 0 en **moins de 3 minutes**.
 - `pnpm db:reset && pnpm db:check` sortent en 0 (les 12 oracles).
 - `bash scripts/smoke-m0.sh` sort en 0.
@@ -1963,37 +1868,37 @@ paquet — à condition que chaque correction soit signalée dans le rapport fin
 
 ## 4. Tableau récapitulatif
 
-| Tâche     | Titre                                                       | Vague | Taille  | Dépend de           |
-| --------- | ----------------------------------------------------------- | ----- | ------- | ------------------- |
-| M0-01     | Socle du monorepo et outillage                              | 1     | grosse  | —                   |
-| M0-02     | Moteur : types, hasard, pureté                              | 2     | grosse  | M0-01               |
-| M0-03     | Chaîne d'intégration continue                               | 2     | moyenne | M0-01               |
-| M0-04     | Image Docker, déploiement, sauvegardes                      | 2     | moyenne | M0-01               |
-| M0-05     | Contrats : état, événements, intentions                     | 3     | grosse  | M0-02               |
-| M0-06     | Boîte à outils de test déterministe                         | 3     | moyenne | M0-02               |
-| M0-07     | Moteur : dés, jauges, souffle, progression                  | 4     | grosse  | M0-02, M0-06        |
-| M0-08     | Contrats : WebSocket et HTTP                                | 4     | moyenne | M0-05               |
-| M0-09     | Contrats : schémas du contenu                               | 4     | moyenne | M0-05               |
-| M0-10     | Fixtures et assertions de domaine                           | 4     | moyenne | M0-05, M0-06        |
-| M0-11     | Base : schéma, migrations, PRAGMA                           | 4     | grosse  | M0-05               |
-| M0-12     | Contrats : schémas d'E/S de l'IA                            | 5     | moyenne | M0-09               |
-| M0-13     | Moteur : mouvements, décision, réducteur                    | 5     | grosse  | M0-07, M0-10        |
-| M0-14     | Chargeur de contenu et index généré                         | 5     | grosse  | M0-09               |
-| M0-15     | Base : dépôts et journal                                    | 5     | moyenne | M0-11               |
-| M0-16     | Contenu de jeu, annuaire et 3 fiches de champion            | 6     | grosse  | M0-13, M0-14        |
-| M0-17     | Base : reconstruction et `db:check`                         | 6     | moyenne | M0-13, M0-15        |
-| M0-18     | IA : le port du conteur, ses adaptateurs, prompts et outils | 6     | grosse  | M0-12, M0-14        |
-| M0-19     | Client : SPA et page « table »                              | 6     | grosse  | M0-08, M0-14        |
-| M0-20     | Serveur : socle, environnement, santé                       | 6     | moyenne | M0-08, M0-11, M0-14 |
-| ~~M0-21~~ | _absorbée par M0-16_                                        | —     | —       | —                   |
-| M0-22     | IA : contexte, budget, assertions                           | 7     | grosse  | M0-18               |
-| M0-23     | Serveur : Discord et surface HTTP                           | 7     | grosse  | M0-15, M0-20        |
-| M0-24     | Serveur : le chemin d'une intention                         | 7     | grosse  | M0-13, M0-15, M0-20 |
-| M0-25     | Serveur : hub WebSocket                                     | 7     | grosse  | M0-08, M0-20        |
-| M0-32     | Sonde de fumée d'un fournisseur gratuit                     | 7     | petite  | M0-18               |
-| M0-26     | Base : campagne de démonstration                            | 8     | grosse  | M0-17, M0-16        |
-| M0-27     | Harnais d'éval hors ligne (N0 seul)                         | 8     | grosse  | M0-16, M0-22        |
-| M0-28     | Simulateur de table headless                                | 8     | grosse  | M0-24, M0-25        |
-| M0-29     | Serveur : travailleurs IA et verrous                        | 8     | moyenne | M0-22, M0-24        |
-| M0-31     | Mesurer un fournisseur gratuit (corpus complet)             | 8     | moyenne | M0-18, M0-22        |
-| M0-30     | Assemblage de bout en bout                                  | 9     | grosse  | tout                |
+| Tâche | Titre | Vague | Taille | Dépend de |
+|---|---|---|---|---|
+| M0-01 | Socle du monorepo et outillage | 1 | grosse | — |
+| M0-02 | Moteur : types, hasard, pureté | 2 | grosse | M0-01 |
+| M0-03 | Chaîne d'intégration continue | 2 | moyenne | M0-01 |
+| M0-04 | Image Docker, déploiement, sauvegardes | 2 | moyenne | M0-01 |
+| M0-05 | Contrats : état, événements, intentions | 3 | grosse | M0-02 |
+| M0-06 | Boîte à outils de test déterministe | 3 | moyenne | M0-02 |
+| M0-07 | Moteur : dés, jauges, souffle, progression | 4 | grosse | M0-02, M0-06 |
+| M0-08 | Contrats : WebSocket et HTTP | 4 | moyenne | M0-05 |
+| M0-09 | Contrats : schémas du contenu | 4 | moyenne | M0-05 |
+| M0-10 | Fixtures et assertions de domaine | 4 | moyenne | M0-05, M0-06 |
+| M0-11 | Base : schéma, migrations, PRAGMA | 4 | grosse | M0-05 |
+| M0-12 | Contrats : schémas d'E/S de l'IA | 5 | moyenne | M0-09 |
+| M0-13 | Moteur : mouvements, décision, réducteur | 5 | grosse | M0-07, M0-10 |
+| M0-14 | Chargeur de contenu et index généré | 5 | grosse | M0-09 |
+| M0-15 | Base : dépôts et journal | 5 | moyenne | M0-11 |
+| M0-16 | Contenu de jeu, annuaire et 3 fiches de champion | 6 | grosse | M0-13, M0-14 |
+| M0-17 | Base : reconstruction et `db:check` | 6 | moyenne | M0-13, M0-15 |
+| M0-18 | IA : le port du conteur, ses adaptateurs, prompts et outils | 6 | grosse | M0-12, M0-14 |
+| M0-19 | Client : SPA et page « table » | 6 | grosse | M0-08, M0-14 |
+| M0-20 | Serveur : socle, environnement, santé | 6 | moyenne | M0-08, M0-11, M0-14 |
+| ~~M0-21~~ | *absorbée par M0-16* | — | — | — |
+| M0-22 | IA : contexte, budget, assertions | 7 | grosse | M0-18 |
+| M0-23 | Serveur : Discord et surface HTTP | 7 | grosse | M0-15, M0-20 |
+| M0-24 | Serveur : le chemin d'une intention | 7 | grosse | M0-13, M0-15, M0-20 |
+| M0-25 | Serveur : hub WebSocket | 7 | grosse | M0-08, M0-20 |
+| M0-32 | Sonde de fumée d'un fournisseur gratuit | 7 | petite | M0-18 |
+| M0-26 | Base : campagne de démonstration | 8 | grosse | M0-17, M0-16 |
+| M0-27 | Harnais d'éval hors ligne (N0 seul) | 8 | grosse | M0-16, M0-22 |
+| M0-28 | Simulateur de table headless | 8 | grosse | M0-24, M0-25 |
+| M0-29 | Serveur : travailleurs IA et verrous | 8 | moyenne | M0-22, M0-24 |
+| M0-31 | Mesurer un fournisseur gratuit (corpus complet) | 8 | moyenne | M0-18, M0-22 |
+| M0-30 | Assemblage de bout en bout | 9 | grosse | tout |

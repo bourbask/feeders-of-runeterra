@@ -27,6 +27,9 @@
     },
     {
       "path": "packages/sim"
+    },
+    {
+      "path": "packages/client"
     }
   ]
 }

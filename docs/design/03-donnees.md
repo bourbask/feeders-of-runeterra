@@ -16,12 +16,12 @@ jalon suivant et doit savoir en quelques secondes s'il a cassé quelque chose.
 
 Rappel des quatre invariants, traduits en contraintes de données :
 
-| Invariant                            | Conséquence sur les données                                                                                                                                                                                                                                                   |
-| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1. Le moteur décide, l'IA raconte    | Tout résultat de dé est un **fait persisté** (`roll.*`) écrit **avant** l'appel au modèle. Une sortie IA n'entre jamais en base autrement que comme `narration.*` (texte) ou `*.proposal` (proposition rejetable).                                                            |
-| 2. La mémoire est dans la base       | L'état structuré vit dans les projections, la mémoire narrative dans `chronicles` (**un document unique versionné**, §1.5 — la compaction hiérarchique est abandonnée, cf. `ARCHITECTURE.md` §4.3). La fenêtre de contexte est reconstruite à chaque appel, jamais accumulée. |
-| 3. Le serveur est l'autorité         | Le client écrit dans `intents` (intentions), jamais dans `events`. Aucune table d'état n'est exposée en écriture.                                                                                                                                                             |
-| 4. Tout état de partie est rejouable | `events` est append-only (triggers `RAISE(ABORT)`), les projections et `snapshots` sont des **caches reconstructibles**.                                                                                                                                                      |
+| Invariant | Conséquence sur les données |
+|---|---|
+| 1. Le moteur décide, l'IA raconte | Tout résultat de dé est un **fait persisté** (`roll.*`) écrit **avant** l'appel au modèle. Une sortie IA n'entre jamais en base autrement que comme `narration.*` (texte) ou `*.proposal` (proposition rejetable). |
+| 2. La mémoire est dans la base | L'état structuré vit dans les projections, la mémoire narrative dans `chronicles` (**un document unique versionné**, §1.5 — la compaction hiérarchique est abandonnée, cf. `ARCHITECTURE.md` §4.3). La fenêtre de contexte est reconstruite à chaque appel, jamais accumulée. |
+| 3. Le serveur est l'autorité | Le client écrit dans `intents` (intentions), jamais dans `events`. Aucune table d'état n'est exposée en écriture. |
+| 4. Tout état de partie est rejouable | `events` est append-only (triggers `RAISE(ABORT)`), les projections et `snapshots` sont des **caches reconstructibles**. |
 
 ### 0.1 Conventions transverses
 
@@ -69,12 +69,12 @@ l'intérieur d'une transaction — c'est une règle de revue.
 
 ### 0.4 Zones du schéma
 
-| Zone               | Tables                                                                                                               | Source de vérité                     | Reconstructible ?                            |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------ | -------------------------------------------- |
-| **A — Plateforme** | `players`, `auth_sessions`, `campaigns`, `campaign_members`, `play_sessions`, `content_packs`, `intents`, `ai_calls` | Les lignes elles-mêmes               | Non — à sauvegarder                          |
-| **B — Journal**    | `events`                                                                                                             | Append-only                          | Non — **c'est** la sauvegarde                |
-| **C — Caches**     | `snapshots`, `characters`, `progress_tracks`, `clocks`, `entities`, `scene_state`, `campaign_champion_locks`         | `events`                             | **Oui**, `pnpm db:rebuild`                   |
-| **D — Mémoire IA** | `chronicles`, `champion_sheets`                                                                                      | Produites par l'IA, validées serveur | Non (coût d'un ré-appel), mais non critiques |
+| Zone | Tables | Source de vérité | Reconstructible ? |
+|---|---|---|---|
+| **A — Plateforme** | `players`, `auth_sessions`, `campaigns`, `campaign_members`, `play_sessions`, `content_packs`, `intents`, `ai_calls` | Les lignes elles-mêmes | Non — à sauvegarder |
+| **B — Journal** | `events` | Append-only | Non — **c'est** la sauvegarde |
+| **C — Caches** | `snapshots`, `characters`, `progress_tracks`, `clocks`, `entities`, `scene_state`, `campaign_champion_locks` | `events` | **Oui**, `pnpm db:rebuild` |
+| **D — Mémoire IA** | `chronicles`, `champion_sheets` | Produites par l'IA, validées serveur | Non (coût d'un ré-appel), mais non critiques |
 
 La zone C est jetable : c'est le test le plus fort de l'invariant 4. La CI exécute
 `pnpm db:rebuild --verify` sur la campagne de démo et compare octet à octet les
@@ -90,40 +90,40 @@ Les trois documents ont été écrits en parallèle et divergeaient sur quelques
 lead a tranché ; les décisions sont **déjà appliquées** dans les trois fichiers. Ce tableau
 sert de mémoire, pas de débat. Référence : `docs/ARCHITECTURE.md` §4.
 
-| Concept                          | Nom retenu                                    | Note                                                                                                                                                                                                                                                                                                                                                                                                            |
-| -------------------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| L'entité de jeu persistante      | `campaigns` / `campaign_id` / `CampaignState` | « la table `tables` » est illisible en SQL, et `campagne` est le mot du cahier des charges                                                                                                                                                                                                                                                                                                                      |
-| Ce que voit un joueur            | `TableState` (**DTO seulement**)              | `TableState = project(CampaignState, viewerId)` : retire les lignes `visibility = 'gm'`. Déclaré dans `packages/contracts/src/dto/table-state.ts`                                                                                                                                                                                                                                                               |
-| Le détail mécanique d'un tour    | `TurnProof` (**DTO seulement**)               | `TurnProof = buildTurnProof(events du groupe correlation_id, viewerId)` : une **projection du journal**, calculée à la demande, jamais stockée et jamais dénormalisée. C'est ce que déplie la commande « Pourquoi ? » du client, et ce qu'affiche un tour annulé. Déclaré dans `packages/contracts/src/dto/turn-proof.ts` ; protocole en `01-architecture.md` §5.4 ; règles d'affichage en `02-mj-ia.md` §4.8.6 |
-| Identité Discord                 | `players` / `player_id` / `PlayerId`          | `users` se confondrait avec l'administration                                                                                                                                                                                                                                                                                                                                                                    |
-| Session web (cookie)             | `auth_sessions`                               | `sessions` seul est ambigu avec la séance de jeu                                                                                                                                                                                                                                                                                                                                                                |
-| Séance de jeu (soirée)           | `play_sessions`                               |                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| Participations                   | `campaign_members`                            | c'est l'ACL                                                                                                                                                                                                                                                                                                                                                                                                     |
-| Verrouillage de distribution     | `campaign_champion_locks`                     | alimente `check_name_allowed`                                                                                                                                                                                                                                                                                                                                                                                   |
-| Compaction de mémoire            | table `chronicles`, clé de modèle `chronicle` | modèle de document : §1.5, aligné sur `02-mj-ia.md` §5                                                                                                                                                                                                                                                                                                                                                          |
-| Cadence d'instantané             | **200** événements + jalons                   |                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| Présage (dés de défi identiques) | `presage`, table de contenu `presages`        | ni `omen` ni `portent`                                                                                                                                                                                                                                                                                                                                                                                          |
-| Issue d'un jet                   | `franche` / `partielle` / `echec`             | valeurs de domaine en français (§0.1)                                                                                                                                                                                                                                                                                                                                                                           |
-| Jauges                           | `vigueur` / `ame` / `vivres`                  | idem                                                                                                                                                                                                                                                                                                                                                                                                            |
-| Ordre du tour                    | **il n'y en a pas**                           | la table est libre ; les écritures sont sérialisées par campagne. Le code de refus est `move_in_progress`, jamais `not_your_turn`                                                                                                                                                                                                                                                                               |
+| Concept | Nom retenu | Note |
+|---|---|---|
+| L'entité de jeu persistante | `campaigns` / `campaign_id` / `CampaignState` | « la table `tables` » est illisible en SQL, et `campagne` est le mot du cahier des charges |
+| Ce que voit un joueur | `TableState` (**DTO seulement**) | `TableState = project(CampaignState, viewerId)` : retire les lignes `visibility = 'gm'`. Déclaré dans `packages/contracts/src/dto/table-state.ts` |
+| Le détail mécanique d'un tour | `TurnProof` (**DTO seulement**) | `TurnProof = buildTurnProof(events du groupe correlation_id, viewerId)` : une **projection du journal**, calculée à la demande, jamais stockée et jamais dénormalisée. C'est ce que déplie la commande « Pourquoi ? » du client, et ce qu'affiche un tour annulé. Déclaré dans `packages/contracts/src/dto/turn-proof.ts` ; protocole en `01-architecture.md` §5.4 ; règles d'affichage en `02-mj-ia.md` §4.8.6 |
+| Identité Discord | `players` / `player_id` / `PlayerId` | `users` se confondrait avec l'administration |
+| Session web (cookie) | `auth_sessions` | `sessions` seul est ambigu avec la séance de jeu |
+| Séance de jeu (soirée) | `play_sessions` | |
+| Participations | `campaign_members` | c'est l'ACL |
+| Verrouillage de distribution | `campaign_champion_locks` | alimente `check_name_allowed` |
+| Compaction de mémoire | table `chronicles`, clé de modèle `chronicle` | modèle de document : §1.5, aligné sur `02-mj-ia.md` §5 |
+| Cadence d'instantané | **200** événements + jalons | |
+| Présage (dés de défi identiques) | `presage`, table de contenu `presages` | ni `omen` ni `portent` |
+| Issue d'un jet | `franche` / `partielle` / `echec` | valeurs de domaine en français (§0.1) |
+| Jauges | `vigueur` / `ame` / `vivres` | idem |
+| Ordre du tour | **il n'y en a pas** | la table est libre ; les écritures sont sérialisées par campagne. Le code de refus est `move_in_progress`, jamais `not_your_turn` |
 
 Rattachements à `02-mj-ia.md` (couche IA), sans ambiguïté :
 
-| Outil du modèle                                  | Ce qu'il lit en base                                                                                   | Écrit-il ?                                                                                                                                                                                                                                                                    |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `get_state`                                      | `CampaignState` chargé (§3.5), projeté et filtré par visibilité                                        | non                                                                                                                                                                                                                                                                           |
-| `get_lore`                                       | `ContentBundle` (fichiers JSON, §4) + `entities`                                                       | non                                                                                                                                                                                                                                                                           |
-| `get_chronicle`                                  | la ligne `chronicles` de `version` maximale pour la campagne ; la « section » est un champ du document | non                                                                                                                                                                                                                                                                           |
-| `check_name_allowed`                             | `campaign_champion_locks`                                                                              | non                                                                                                                                                                                                                                                                           |
-| `roll_oracle`                                    | tire via le moteur, écrit **un** `roll.oracle_resolved` / `roll.yes_no_resolved`                       | oui, journal seul                                                                                                                                                                                                                                                             |
-| `propose_npc_introduce`                          | —                                                                                                      | via validation serveur → `entity.introduced`                                                                                                                                                                                                                                  |
-| `propose_clock_create` / `propose_clock_advance` | `clocks`                                                                                               | via validation serveur → `clock.created` / `clock.advanced`                                                                                                                                                                                                                   |
-| `propose_thread_open`                            | —                                                                                                      | via validation serveur → `entity.introduced` (`kind: 'thread'`)                                                                                                                                                                                                               |
-| `propose_lore_fact`                              | —                                                                                                      | via validation serveur → `entity.updated`                                                                                                                                                                                                                                     |
-| `propose_scene_transition`                       | `entities` (lieux)                                                                                     | via validation serveur → `scene.started` / `scene.ended`                                                                                                                                                                                                                      |
-| bloc `<scene_apres>` _(pas un outil)_            | `scene_state`, `entities`, `characters`                                                                | via validation et fusion serveur → `scene.facts_updated`, seulement si la fusion produit un changement (`02-mj-ia.md` §4.7)                                                                                                                                                   |
-| `refus` du bloc `<scene_apres>` _(pas un outil)_ | `scene_state`, `entities`, inventaire                                                                  | via **preuve** serveur → `system.reverted` sur le groupe `correlation_id` du tour, ou rien du tout (`02-mj-ia.md` §4.8)                                                                                                                                                       |
-| `propose_vow_hook`                               | —                                                                                                      | **aucun événement d'état** : l'offre est éphémère et seul le joueur peut jurer (`move.swear_a_vow`). Comme toute proposition, elle produit malgré tout son `narration.gm_proposal` puis son `narration.proposal_accepted`/`_rejected` — une proposition sans trace est un bug |
+| Outil du modèle | Ce qu'il lit en base | Écrit-il ? |
+|---|---|---|
+| `get_state` | `CampaignState` chargé (§3.5), projeté et filtré par visibilité | non |
+| `get_lore` | `ContentBundle` (fichiers JSON, §4) + `entities` | non |
+| `get_chronicle` | la ligne `chronicles` de `version` maximale pour la campagne ; la « section » est un champ du document | non |
+| `check_name_allowed` | `campaign_champion_locks` | non |
+| `roll_oracle` | tire via le moteur, écrit **un** `roll.oracle_resolved` / `roll.yes_no_resolved` | oui, journal seul |
+| `propose_npc_introduce` | — | via validation serveur → `entity.introduced` |
+| `propose_clock_create` / `propose_clock_advance` | `clocks` | via validation serveur → `clock.created` / `clock.advanced` |
+| `propose_thread_open` | — | via validation serveur → `entity.introduced` (`kind: 'thread'`) |
+| `propose_lore_fact` | — | via validation serveur → `entity.updated` |
+| `propose_scene_transition` | `entities` (lieux) | via validation serveur → `scene.started` / `scene.ended` |
+| bloc `<scene_apres>` *(pas un outil)* | `scene_state`, `entities`, `characters` | via validation et fusion serveur → `scene.facts_updated`, seulement si la fusion produit un changement (`02-mj-ia.md` §4.7) |
+| `refus` du bloc `<scene_apres>` *(pas un outil)* | `scene_state`, `entities`, inventaire | via **preuve** serveur → `system.reverted` sur le groupe `correlation_id` du tour, ou rien du tout (`02-mj-ia.md` §4.8) |
+| `propose_vow_hook` | — | **aucun événement d'état** : l'offre est éphémère et seul le joueur peut jurer (`move.swear_a_vow`). Comme toute proposition, elle produit malgré tout son `narration.gm_proposal` puis son `narration.proposal_accepted`/`_rejected` — une proposition sans trace est un bug |
 
 **Règle de fermeture de l'invariant 1, vérifiée en CI** : aucune proposition du modèle ne peut
 produire un événement `character.*` ni `roll.*`. Il existe **trois** circuits par lesquels le
@@ -139,11 +139,11 @@ modèle a dit et de ce que le serveur en a fait. Ils ne portent aucune valeur de
 close : ce qui compte est ce que le **serveur** écrit ensuite, et c'est exactement ce que les
 trois listes énumèrent.
 
-| #   | Circuit                                                                                                                                                                        | Types atteignables, et rien d'autre                                                                                                                      |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | une **proposition** du modèle validée par le serveur — un outil `propose_*` **ou** le bloc `<scene_apres>`, qui n'est pas un outil mais emprunte le même circuit de validation | `entity.introduced`, `entity.updated`, `entity.status_changed`, `clock.created`, `clock.advanced`, `scene.started`, `scene.ended`, `scene.facts_updated` |
-| 2   | `roll_oracle`, seul outil de **lecture** qui écrive                                                                                                                            | `roll.oracle_resolved`, `roll.yes_no_resolved`                                                                                                           |
-| 3   | le **droit de refus** du conteur (`02-mj-ia.md` §4.8)                                                                                                                          | `system.reverted`                                                                                                                                        |
+| # | Circuit | Types atteignables, et rien d'autre |
+|---|---|---|
+| 1 | une **proposition** du modèle validée par le serveur — un outil `propose_*` **ou** le bloc `<scene_apres>`, qui n'est pas un outil mais emprunte le même circuit de validation | `entity.introduced`, `entity.updated`, `entity.status_changed`, `clock.created`, `clock.advanced`, `scene.started`, `scene.ended`, `scene.facts_updated` |
+| 2 | `roll_oracle`, seul outil de **lecture** qui écrive | `roll.oracle_resolved`, `roll.yes_no_resolved` |
+| 3 | le **droit de refus** du conteur (`02-mj-ia.md` §4.8) | `system.reverted` |
 
 **Pourquoi trois listes et pas une.** Fondre les trois donnerait une liste unique de onze types
 où plus personne ne saurait quel garde-fou protège quoi ; élargir l'une en croyant toucher
@@ -841,22 +841,22 @@ CREATE INDEX content_packs_version_idx ON content_packs (version, first_seen_at 
 
 ### 1.7 Récapitulatif des colonnes JSON
 
-| Table.colonne                                                              | Contenu                                            | Pourquoi JSON                                                     |
-| -------------------------------------------------------------------------- | -------------------------------------------------- | ----------------------------------------------------------------- |
-| `campaigns.settings_json`                                                  | `CampaignSettings`                                 | Blob de config, lu en entier, forme instable                      |
-| `campaigns.truths_json`                                                    | `CampaignTruth[]`                                  | Liste courte, jamais filtrée en SQL                               |
-| `events.payload_json`                                                      | union discriminée de 71 formes                     | Une table par type serait ingérable                               |
-| `snapshots.state_json`                                                     | `CampaignState`                                    | Sérialisation opaque d'un objet moteur                            |
-| `characters.sheet_snapshot_json`                                           | `Champion` gelé                                    | Copie figée, lue en entier                                        |
-| `characters.conditions_json` / `assets_json` / `bonds_json` / `notes_json` | listes variables                                   | Taille et forme variables, jamais requêtées                       |
-| `progress_tracks.tags_json`, `clocks`…                                     | listes de chaînes                                  | Trivial                                                           |
-| `entities.details_json`                                                    | fiche libre de PNJ/lieu                            | Forme ouverte par nature                                          |
-| `scene_state.present_json` / `absent_json`                                 | `ScenePresence[]` / `SceneAbsence[]`, 8 au maximum | Listes courtes et bornées, lues en entier, jamais filtrées en SQL |
-| `chronicles.doc_json`                                                      | `ChronicleDoc` (dont les faits sourcés)            | Sortie IA structurée, forme évolutive                             |
-| `champion_sheets.sheet_json`                                               | `Champion` forgé                                   | Même schéma que le contenu fichier                                |
-| `ai_calls.request_json` / `tool_calls_json`                                | trace d'appel                                      | Audit, jamais requêté en SQL                                      |
-| `intents.payload_json`                                                     | intention client                                   | Union discriminée                                                 |
-| `content_packs.manifest_json`                                              | manifeste                                          | Lu en entier                                                      |
+| Table.colonne | Contenu | Pourquoi JSON |
+|---|---|---|
+| `campaigns.settings_json` | `CampaignSettings` | Blob de config, lu en entier, forme instable |
+| `campaigns.truths_json` | `CampaignTruth[]` | Liste courte, jamais filtrée en SQL |
+| `events.payload_json` | union discriminée de 71 formes | Une table par type serait ingérable |
+| `snapshots.state_json` | `CampaignState` | Sérialisation opaque d'un objet moteur |
+| `characters.sheet_snapshot_json` | `Champion` gelé | Copie figée, lue en entier |
+| `characters.conditions_json` / `assets_json` / `bonds_json` / `notes_json` | listes variables | Taille et forme variables, jamais requêtées |
+| `progress_tracks.tags_json`, `clocks`… | listes de chaînes | Trivial |
+| `entities.details_json` | fiche libre de PNJ/lieu | Forme ouverte par nature |
+| `scene_state.present_json` / `absent_json` | `ScenePresence[]` / `SceneAbsence[]`, 8 au maximum | Listes courtes et bornées, lues en entier, jamais filtrées en SQL |
+| `chronicles.doc_json` | `ChronicleDoc` (dont les faits sourcés) | Sortie IA structurée, forme évolutive |
+| `champion_sheets.sheet_json` | `Champion` forgé | Même schéma que le contenu fichier |
+| `ai_calls.request_json` / `tool_calls_json` | trace d'appel | Audit, jamais requêté en SQL |
+| `intents.payload_json` | intention client | Union discriminée |
+| `content_packs.manifest_json` | manifeste | Lu en entier |
 
 **Ce qui n'est jamais du JSON** : attributs, jauges, souffle, crans de jauge de
 progression, statuts, identifiants de liaison, horodatages. Tout ce qui est borné,
@@ -929,10 +929,10 @@ export const EventEnvelopeSchema = z.object({
   createdAt: z.number().int(),
 });
 
-import type { GameEvent } from '@for/engine'; // type CANONIQUE : il vient du moteur
+import type { GameEvent } from '@for/engine';   // type CANONIQUE : il vient du moteur
 
 export const GameEventSchema = z.discriminatedUnion('type', [
-  CampaignCreatedSchema /* ... toutes les variantes de §3.4 ... */,
+  CampaignCreatedSchema, /* ... toutes les variantes de §3.4 ... */
 ]) satisfies z.ZodType<GameEvent>;
 export type GameEventDto = z.output<typeof GameEventSchema>;
 ```
@@ -996,45 +996,45 @@ le journal lisible et débogable.
 
 #### `campaign.*` — cycle de vie
 
-| Type                            | Acteur | Payload                                                                                            |
-| ------------------------------- | ------ | -------------------------------------------------------------------------------------------------- |
-| `campaign.created`              | system | `{ name, slug, pitch, ownerPlayerId, contentPackVersion, contentPackHash, rulesVersion, rngSeed }` |
-| `campaign.truth_set`            | player | `{ truthId, optionId, customText? }`                                                               |
-| `campaign.settings_updated`     | player | `{ patch: Partial<CampaignSettings>, before: Partial<CampaignSettings> }`                          |
-| `campaign.status_changed`       | player | `{ from, to, reason? }`                                                                            |
-| `campaign.content_pack_changed` | system | `{ fromVersion, fromHash, toVersion, toHash, note }`                                               |
+| Type | Acteur | Payload |
+|---|---|---|
+| `campaign.created` | system | `{ name, slug, pitch, ownerPlayerId, contentPackVersion, contentPackHash, rulesVersion, rngSeed }` |
+| `campaign.truth_set` | player | `{ truthId, optionId, customText? }` |
+| `campaign.settings_updated` | player | `{ patch: Partial<CampaignSettings>, before: Partial<CampaignSettings> }` |
+| `campaign.status_changed` | player | `{ from, to, reason? }` |
+| `campaign.content_pack_changed` | system | `{ fromVersion, fromHash, toVersion, toHash, note }` |
 
 #### `party.*` — la table
 
-| Type                        | Acteur | Payload                                              |
-| --------------------------- | ------ | ---------------------------------------------------- |
-| `party.member_joined`       | system | `{ playerId, role, displayName }`                    |
-| `party.member_left`         | system | `{ playerId, reason: 'left'\|'kicked'\|'inactive' }` |
-| `party.member_role_changed` | player | `{ playerId, from, to }`                             |
-| `party.champion_locked`     | system | `{ championId, lockKind, reason }`                   |
-| `party.champion_unlocked`   | system | `{ championId, reason }`                             |
+| Type | Acteur | Payload |
+|---|---|---|
+| `party.member_joined` | system | `{ playerId, role, displayName }` |
+| `party.member_left` | system | `{ playerId, reason: 'left'\|'kicked'\|'inactive' }` |
+| `party.member_role_changed` | player | `{ playerId, from, to }` |
+| `party.champion_locked` | system | `{ championId, lockKind, reason }` |
+| `party.champion_unlocked` | system | `{ championId, reason }` |
 
 #### `character.*` — fiches et jauges
 
-| Type                             | Acteur | Payload                                                                                                                                                                                |
-| -------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `character.created`              | player | `{ characterId, playerId, championId, displayName, sheetSource, sheetRef, sheetSnapshot: Champion, attributes: {vif,coeur,fer,ombre,esprit}, gauges: {vigueur,ame,vivres}, momentum }` |
-| `character.renamed`              | player | `{ characterId, from, to }`                                                                                                                                                            |
-| `character.gauge_changed`        | engine | `{ characterId, gauge: 'vigueur'\|'ame'\|'vivres', delta, from, to, clamped: boolean, cause }`                                                                                         |
-| `character.momentum_changed`     | engine | `{ characterId, delta, from, to, clamped, cause }`                                                                                                                                     |
-| `character.momentum_burned`      | engine | `{ characterId, spent, resetTo, appliedToRollSeq }`                                                                                                                                    |
-| `character.momentum_negated`     | engine | `{ characterId, actionDie, momentumValue, rollSeq }`                                                                                                                                   |
-| `character.condition_added`      | engine | `{ characterId, conditionId, label, source }`                                                                                                                                          |
-| `character.condition_removed`    | engine | `{ characterId, conditionId, cause }`                                                                                                                                                  |
-| `character.asset_added`          | player | `{ characterId, assetId, options? }`                                                                                                                                                   |
-| `character.asset_upgraded`       | player | `{ characterId, assetId, abilityIndex, xpCost }`                                                                                                                                       |
-| `character.asset_removed`        | engine | `{ characterId, assetId, cause }`                                                                                                                                                      |
-| `character.xp_earned`            | engine | `{ characterId, amount, reason, trackId? }`                                                                                                                                            |
-| `character.xp_spent`             | player | `{ characterId, amount, target }`                                                                                                                                                      |
-| `character.attributes_corrected` | system | `{ characterId, from, to, reason }` _(admin uniquement)_                                                                                                                               |
-| `character.died`                 | engine | `{ characterId, cause, finalSceneId? }`                                                                                                                                                |
-| `character.retired`              | player | `{ characterId, reason }`                                                                                                                                                              |
-| `character.sheet_rebound`        | system | `{ characterId, fromSheetRef, toSheetRef, reason }`                                                                                                                                    |
+| Type | Acteur | Payload |
+|---|---|---|
+| `character.created` | player | `{ characterId, playerId, championId, displayName, sheetSource, sheetRef, sheetSnapshot: Champion, attributes: {vif,coeur,fer,ombre,esprit}, gauges: {vigueur,ame,vivres}, momentum }` |
+| `character.renamed` | player | `{ characterId, from, to }` |
+| `character.gauge_changed` | engine | `{ characterId, gauge: 'vigueur'\|'ame'\|'vivres', delta, from, to, clamped: boolean, cause }` |
+| `character.momentum_changed` | engine | `{ characterId, delta, from, to, clamped, cause }` |
+| `character.momentum_burned` | engine | `{ characterId, spent, resetTo, appliedToRollSeq }` |
+| `character.momentum_negated` | engine | `{ characterId, actionDie, momentumValue, rollSeq }` |
+| `character.condition_added` | engine | `{ characterId, conditionId, label, source }` |
+| `character.condition_removed` | engine | `{ characterId, conditionId, cause }` |
+| `character.asset_added` | player | `{ characterId, assetId, options? }` |
+| `character.asset_upgraded` | player | `{ characterId, assetId, abilityIndex, xpCost }` |
+| `character.asset_removed` | engine | `{ characterId, assetId, cause }` |
+| `character.xp_earned` | engine | `{ characterId, amount, reason, trackId? }` |
+| `character.xp_spent` | player | `{ characterId, amount, target }` |
+| `character.attributes_corrected` | system | `{ characterId, from, to, reason }` *(admin uniquement)* |
+| `character.died` | engine | `{ characterId, cause, finalSceneId? }` |
+| `character.retired` | player | `{ characterId, reason }` |
+| `character.sheet_rebound` | system | `{ characterId, fromSheetRef, toSheetRef, reason }` |
 
 **Aucun de ces événements n'est émissible par le modèle.** `actorKind` vaut `engine`,
 `player` ou `system` ; le validateur d'entrée rejette tout événement de jauge portant
@@ -1044,16 +1044,16 @@ le journal lisible et débogable.
 
 C'est le cœur de l'invariant 1. Ces événements sont écrits **avant** tout appel IA.
 
-| Type                     | Payload                                                                                                                                                                                                                                                                                                                                 |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `roll.action_resolved`   | `{ rollId, characterId, moveId, attribute, attributeValue, actionDie, adds: {source,value}[], rawTotal, total, cappedAtTen: boolean, challengeDice: [number, number], outcome: 'franche'\|'partielle'\|'echec', isPresage: boolean, momentumBefore, momentumNegated: boolean, burnWindow: boolean, rngStream: 'action', rngDrawIndex }` |
-| `roll.action_revised`    | `{ rollId, revisedFromSeq, total, outcome, isPresage }` — **seule** conséquence d'une brûlure de souffle sur un jet déjà écrit                                                                                                                                                                                                          |
-| `roll.progress_resolved` | `{ rollId, trackId, ticks, filledBoxes, challengeDice: [number,number], outcome, isPresage }`                                                                                                                                                                                                                                           |
-| `roll.oracle_resolved`   | `{ rollId, tableId, tableVersion, dieSize, value, entryId, text, tags: string[], question?: string }`                                                                                                                                                                                                                                   |
-| `roll.yes_no_resolved`   | `{ rollId, question, likelihood: 'quasi-certain'\|'probable'\|'incertain'\|'peu-probable'\|'improbable', threshold, value, answer: 'oui'\|'non', isExtreme: boolean }`                                                                                                                                                                  |
-| `roll.price_paid`        | `{ rollId, value, entryId, text, severity, effectIndex, targetCharacterId? }` — `value` est le d12 tiré par le moteur, `effectIndex` l'effet retenu quand l'entrée en propose plusieurs (second tirage sur le flux `price`). **Aucun champ de choix** : ni modèle, ni joueur                                                            |
-| `roll.presage_drawn`     | `{ rollId, tableId, value, entryId, text, triggeredByRollSeq }`                                                                                                                                                                                                                                                                         |
-| `roll.raw`               | `{ rollId, label, dice: {sides, value}[], reason }`                                                                                                                                                                                                                                                                                     |
+| Type | Payload |
+|---|---|
+| `roll.action_resolved` | `{ rollId, characterId, moveId, attribute, attributeValue, actionDie, adds: {source,value}[], rawTotal, total, cappedAtTen: boolean, challengeDice: [number, number], outcome: 'franche'\|'partielle'\|'echec', isPresage: boolean, momentumBefore, momentumNegated: boolean, burnWindow: boolean, rngStream: 'action', rngDrawIndex }` |
+| `roll.action_revised` | `{ rollId, revisedFromSeq, total, outcome, isPresage }` — **seule** conséquence d'une brûlure de souffle sur un jet déjà écrit |
+| `roll.progress_resolved` | `{ rollId, trackId, ticks, filledBoxes, challengeDice: [number,number], outcome, isPresage }` |
+| `roll.oracle_resolved` | `{ rollId, tableId, tableVersion, dieSize, value, entryId, text, tags: string[], question?: string }` |
+| `roll.yes_no_resolved` | `{ rollId, question, likelihood: 'quasi-certain'\|'probable'\|'incertain'\|'peu-probable'\|'improbable', threshold, value, answer: 'oui'\|'non', isExtreme: boolean }` |
+| `roll.price_paid` | `{ rollId, value, entryId, text, severity, effectIndex, targetCharacterId? }` — `value` est le d12 tiré par le moteur, `effectIndex` l'effet retenu quand l'entrée en propose plusieurs (second tirage sur le flux `price`). **Aucun champ de choix** : ni modèle, ni joueur |
+| `roll.presage_drawn` | `{ rollId, tableId, value, entryId, text, triggeredByRollSeq }` |
+| `roll.raw` | `{ rollId, label, dice: {sides, value}[], reason }` |
 
 **La brûlure du souffle est en deux temps**, parce que la règle veut qu'on voie les dés avant
 de décider. `roll.action_resolved` porte `burnWindow: true` quand la brûlure est légale ;
@@ -1069,11 +1069,11 @@ recalculer vaut cher au débogage.
 
 #### `move.*` — les mouvements
 
-| Type            | Payload                                                                                                                                                                                 |
-| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `move.declared` | `{ moveId, characterId, narrativeInput, chosenAttribute?, declaredAdds? }`                                                                                                              |
+| Type | Payload |
+|---|---|
+| `move.declared` | `{ moveId, characterId, narrativeInput, chosenAttribute?, declaredAdds? }` |
 | `move.resolved` | `{ moveId, characterId, rollSeq, outcome, effectsApplied: EngineEffect[] }` — **plus de `playerChoices`** : aucune conséquence de prix n'est choisie, ni par le modèle ni par le joueur |
-| `move.aborted`  | `{ moveId, characterId, reason }`                                                                                                                                                       |
+| `move.aborted` | `{ moveId, characterId, reason }` |
 
 `effectsApplied` est la liste **déjà exécutée** d'effets moteur (cf. `EffectSchema`, §4.3),
 chaque effet ayant par ailleurs produit son propre `character.*` ou `track.*`. Ce champ
@@ -1085,38 +1085,38 @@ mouvements de résolution `fulfill-your-vow`, `reach-a-milestone`, `forsake-your
 
 #### `track.*` et `clock.*` — jauges de progression et horloges
 
-| Type                 | Payload                                                                                    |
-| -------------------- | ------------------------------------------------------------------------------------------ |
-| `track.created`      | `{ trackId, kind, rank, title, description, ownerCharacterId?, visibility, initialTicks }` |
-| `track.ticked`       | `{ trackId, ticks, from, to, cause, milestones: number }`                                  |
-| `track.rank_changed` | `{ trackId, from, to, reason }`                                                            |
-| `track.resolved`     | `{ trackId, outcome: 'fulfilled'\|'failed', rollSeq, xpAwarded }`                          |
-| `track.forsaken`     | `{ trackId, reason, xpLost }`                                                              |
-| `track.abandoned`    | `{ trackId, reason }` _(hors-jeu : nettoyage)_                                             |
-| `clock.created`      | `{ clockId, title, description, segments, visibility, consequence }`                       |
-| `clock.advanced`     | `{ clockId, delta, from, to, cause }`                                                      |
-| `clock.filled`       | `{ clockId, consequence }`                                                                 |
-| `clock.resolved`     | `{ clockId, resolution }`                                                                  |
-| `clock.cancelled`    | `{ clockId, reason }`                                                                      |
+| Type | Payload |
+|---|---|
+| `track.created` | `{ trackId, kind, rank, title, description, ownerCharacterId?, visibility, initialTicks }` |
+| `track.ticked` | `{ trackId, ticks, from, to, cause, milestones: number }` |
+| `track.rank_changed` | `{ trackId, from, to, reason }` |
+| `track.resolved` | `{ trackId, outcome: 'fulfilled'\|'failed', rollSeq, xpAwarded }` |
+| `track.forsaken` | `{ trackId, reason, xpLost }` |
+| `track.abandoned` | `{ trackId, reason }` *(hors-jeu : nettoyage)* |
+| `clock.created` | `{ clockId, title, description, segments, visibility, consequence }` |
+| `clock.advanced` | `{ clockId, delta, from, to, cause }` |
+| `clock.filled` | `{ clockId, consequence }` |
+| `clock.resolved` | `{ clockId, resolution }` |
+| `clock.cancelled` | `{ clockId, reason }` |
 
-Rappel de règle encodée côté moteur : un jalon vaut 12 crans en _gênant_, 8 en
-_dangereux_, 4 en _redoutable_, 2 en _extrême_, 1 en _épique_ ; `ticks` est plafonné à 40
+Rappel de règle encodée côté moteur : un jalon vaut 12 crans en *gênant*, 8 en
+*dangereux*, 4 en *redoutable*, 2 en *extrême*, 1 en *épique* ; `ticks` est plafonné à 40
 (10 cases pleines).
 
 #### `scene.*` et `narration.*`
 
-| Type                          | Acteur              | Payload                                                                                                                                                                                                                  |
-| ----------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `scene.started`               | gm_ai/player        | `{ sceneId, title, regionId?, entityIds: string[], presentCharacterIds: string[] }`                                                                                                                                      |
-| `scene.ended`                 | system              | `{ sceneId, outcome? }`                                                                                                                                                                                                  |
-| `scene.facts_updated`         | gm_ai/engine/player | `{ sceneId, placeId?, placeName?, timeOfDay?, present: ScenePresence[], absent: SceneAbsence[], source: 'gm_ai'\|'engine'\|'player', aiCallId? }` — **instantané complet et borné** de la scène (8 + 8), jamais un delta |
-| `narration.player_message`    | player              | `{ text, kind: 'ic'\|'ooc', characterId? }`                                                                                                                                                                              |
-| `narration.gm_message`        | gm_ai               | `{ text, aiCallId, model, promptVersion, source: 'ai'\|'engine', respondsToSeq?, citedEventSeqs: number[] }`                                                                                                             |
-| `narration.gm_failed`         | system              | `{ aiCallId?, errorKind: 'api_error'\|'refused'\|'invalid_output'\|'rejected_by_postfilter'\|'aborted', fallbackText }`                                                                                                  |
-| `narration.gm_proposal`       | gm_ai               | `{ proposalId, kind: 'entity'\|'clock'\|'thread'\|'lore_fact'\|'scene'\|'scene_facts'\|'refusal', payload: unknown }` — **il n'existe pas de `price_choice`**                                                            |
-| `narration.proposal_accepted` | system              | `{ proposalId, resultingEventSeqs: number[] }`                                                                                                                                                                           |
-| `narration.proposal_rejected` | system              | `{ proposalId, reasonCode, validationErrors: string[] }`                                                                                                                                                                 |
-| `narration.safety_flag`       | player              | `{ kind: 'pause'\|'rewind'\|'veil', note? }`                                                                                                                                                                             |
+| Type | Acteur | Payload |
+|---|---|---|
+| `scene.started` | gm_ai/player | `{ sceneId, title, regionId?, entityIds: string[], presentCharacterIds: string[] }` |
+| `scene.ended` | system | `{ sceneId, outcome? }` |
+| `scene.facts_updated` | gm_ai/engine/player | `{ sceneId, placeId?, placeName?, timeOfDay?, present: ScenePresence[], absent: SceneAbsence[], source: 'gm_ai'\|'engine'\|'player', aiCallId? }` — **instantané complet et borné** de la scène (8 + 8), jamais un delta |
+| `narration.player_message` | player | `{ text, kind: 'ic'\|'ooc', characterId? }` |
+| `narration.gm_message` | gm_ai | `{ text, aiCallId, model, promptVersion, source: 'ai'\|'engine', respondsToSeq?, citedEventSeqs: number[] }` |
+| `narration.gm_failed` | system | `{ aiCallId?, errorKind: 'api_error'\|'refused'\|'invalid_output'\|'rejected_by_postfilter'\|'aborted', fallbackText }` |
+| `narration.gm_proposal` | gm_ai | `{ proposalId, kind: 'entity'\|'clock'\|'thread'\|'lore_fact'\|'scene'\|'scene_facts'\|'refusal', payload: unknown }` — **il n'existe pas de `price_choice`** |
+| `narration.proposal_accepted` | system | `{ proposalId, resultingEventSeqs: number[] }` |
+| `narration.proposal_rejected` | system | `{ proposalId, reasonCode, validationErrors: string[] }` |
+| `narration.safety_flag` | player | `{ kind: 'pause'\|'rewind'\|'veil', note? }` |
 
 `narration.proposal_rejected` est un événement de premier rang, pas un log : le taux de
 rejet par `reasonCode` est une métrique de qualité du MJ IA suivie par le harnais d'éval.
@@ -1172,30 +1172,30 @@ jeu et n'ont rien à faire dans un rejeu. Ils vivent dans `ai_calls` (`trim_leve
 
 #### `entity.*` — la mémoire structurée
 
-| Type                    | Payload                                                                                  |
-| ----------------------- | ---------------------------------------------------------------------------------------- |
-| `entity.introduced`     | `{ entityId, kind, slug, name, summary, regionId?, championId?, disposition?, details }` |
-| `entity.updated`        | `{ entityId, patch, before }`                                                            |
-| `entity.status_changed` | `{ entityId, from, to, cause }`                                                          |
-| `entity.mentioned`      | `{ entityId }` _(met à jour `last_seen_seq`, léger)_                                     |
+| Type | Payload |
+|---|---|
+| `entity.introduced` | `{ entityId, kind, slug, name, summary, regionId?, championId?, disposition?, details }` |
+| `entity.updated` | `{ entityId, patch, before }` |
+| `entity.status_changed` | `{ entityId, from, to, cause }` |
+| `entity.mentioned` | `{ entityId }` *(met à jour `last_seen_seq`, léger)* |
 
 #### `session.*` et `chronicle.*`
 
-| Type                  | Payload                                                                                          |
-| --------------------- | ------------------------------------------------------------------------------------------------ |
-| `session.opened`      | `{ playSessionId, ordinal, title?, presentPlayerIds }`                                           |
-| `session.closed`      | `{ playSessionId, firstSeq, lastSeq, recapChronicleId? }`                                        |
+| Type | Payload |
+|---|---|
+| `session.opened` | `{ playSessionId, ordinal, title?, presentPlayerIds }` |
+| `session.closed` | `{ playSessionId, firstSeq, lastSeq, recapChronicleId? }` |
 | `chronicle.compacted` | `{ chronicleId, version, kind: 'incremental'\|'rebuild', sourceEventSeq, aiCallId, tokenCount }` |
 
 #### `system.*` — administration et rejouabilité
 
-| Type                            | Payload                                                                                                                                                                                                                                                             |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `system.reverted`               | `{ targetSeqs: number[], reason, byPlayerId: string \| null }` — **annulation** (§3.7). `byPlayerId` est `null` quand l'émetteur n'est pas un humain : c'est le cas du droit de refus du conteur, qui porte `actorKind: 'system'` et `reason: 'gm_refusal:<cause>'` |
-| `system.correction`             | `{ targetSeq, field, from, to, reason }` — correction manuelle tracée                                                                                                                                                                                               |
-| `system.rules_version_migrated` | `{ from, to, note }`                                                                                                                                                                                                                                                |
-| `system.payload_upcast`         | `{ fromVersion, toVersion, affectedTypes }`                                                                                                                                                                                                                         |
-| `system.note`                   | `{ text, byPlayerId }` — marque-page libre dans le journal                                                                                                                                                                                                          |
+| Type | Payload |
+|---|---|
+| `system.reverted` | `{ targetSeqs: number[], reason, byPlayerId: string \| null }` — **annulation** (§3.7). `byPlayerId` est `null` quand l'émetteur n'est pas un humain : c'est le cas du droit de refus du conteur, qui porte `actorKind: 'system'` et `reason: 'gm_refusal:<cause>'` |
+| `system.correction` | `{ targetSeq, field, from, to, reason }` — correction manuelle tracée |
+| `system.rules_version_migrated` | `{ from, to, note }` |
+| `system.payload_upcast` | `{ fromVersion, toVersion, affectedTypes }` |
+| `system.note` | `{ text, byPlayerId }` — marque-page libre dans le journal |
 
 Total : **71 types** (`scene.facts_updated` ajouté avec l'état de scène structuré,
 `02-mj-ia.md` §4.7). Ajouter un type impose : la variante Zod, la branche du réducteur,
@@ -1210,7 +1210,7 @@ L'état moteur est un objet TypeScript unique :
 ```ts
 export type CampaignState = {
   campaignId: string;
-  seq: number; // dernier événement appliqué
+  seq: number;                       // dernier événement appliqué
   reducerVersion: number;
   contentPackHash: string;
   settings: CampaignSettings;
@@ -1220,9 +1220,9 @@ export type CampaignState = {
   clocks: Record<string, ClockState>;
   entities: Record<string, EntityState>;
   championLocks: Record<string, ChampionLock>;
-  scene: SceneState | null; // voir juste après : les faits de présence
+  scene: SceneState | null;                      // voir juste après : les faits de présence
   party: { memberPlayerIds: string[]; ownerPlayerId: string };
-  rng: { seed: string; draws: Record<string, number> }; // index par flux
+  rng: { seed: string; draws: Record<string, number> };  // index par flux
 };
 ```
 
@@ -1232,26 +1232,26 @@ décrite en `02-mj-ia.md` §4.7.
 
 ```ts
 export type ScenePresence = {
-  ref: { kind: 'character' | 'entity'; id: string };
-  name: string; // ≤ 40 car. Toujours celui de la projection, jamais celui du modèle
-  state: string; // ≤ 60 car. Sans chiffre, sans lexique de règle
+  ref:      { kind: 'character' | 'entity'; id: string };
+  name:     string;      // ≤ 40 car. Toujours celui de la projection, jamais celui du modèle
+  state:    string;      // ≤ 60 car. Sans chiffre, sans lexique de règle
   sinceSeq: number;
 };
 
 export type SceneAbsence = {
-  ref: { kind: 'character' | 'entity'; id: string };
-  name: string;
-  cause: 'parti' | 'mort' | 'hors_de_portee';
+  ref:      { kind: 'character' | 'entity'; id: string };
+  name:     string;
+  cause:    'parti' | 'mort' | 'hors_de_portee';
   sinceSeq: number;
 };
 
 export type SceneState = {
-  sceneId: string;
-  placeId: string;
-  placeName: string;
-  timeOfDay: string; // ≤ 40 car.
-  present: ScenePresence[]; // ≤ 8, trié par ref.id
-  absent: SceneAbsence[]; // ≤ 8, trié par ref.id
+  sceneId:    string;
+  placeId:    string;
+  placeName:  string;
+  timeOfDay:  string;          // ≤ 40 car.
+  present:    ScenePresence[]; // ≤ 8, trié par ref.id
+  absent:     SceneAbsence[];  // ≤ 8, trié par ref.id
   updatedSeq: number;
 };
 ```
@@ -1275,19 +1275,13 @@ async function loadState(db, campaignId, atSeq = 'head'): Promise<CampaignState>
   const head = atSeq === 'head' ? await getCampaignSeq(db, campaignId) : atSeq;
 
   // 1. Meilleur instantané compatible.
-  const snap = await db.get(
-    `
+  const snap = await db.get(`
     SELECT seq, state_json FROM snapshots
      WHERE campaign_id = ? AND reducer_version = ? AND seq <= ?
-     ORDER BY seq DESC LIMIT 1`,
-    campaignId,
-    REDUCER_VERSION,
-    head,
-  );
+     ORDER BY seq DESC LIMIT 1`, campaignId, REDUCER_VERSION, head);
 
-  let state = snap
-    ? CampaignStateSchema.parse(JSON.parse(snap.state_json))
-    : initialState(campaignId);
+  let state = snap ? CampaignStateSchema.parse(JSON.parse(snap.state_json))
+                   : initialState(campaignId);
   let from = snap ? snap.seq + 1 : 1;
 
   // 2. Pré-passe : événements annulés dans la queue à rejouer.
@@ -1295,7 +1289,7 @@ async function loadState(db, campaignId, atSeq = 'head'): Promise<CampaignState>
 
   // 3. Rejeu de la queue, par lots de 500 (curseur, pas de tout-en-mémoire).
   for await (const ev of streamEvents(db, campaignId, from, head)) {
-    if (ev.seq !== from++) throw new JournalGapError(campaignId, ev.seq); // densité
+    if (ev.seq !== from++) throw new JournalGapError(campaignId, ev.seq);  // densité
     if (reverted.has(ev.seq)) continue;
     state = reduce(state, GameEventSchema.parse(upcast(ev)));
   }
@@ -1305,12 +1299,12 @@ async function loadState(db, campaignId, atSeq = 'head'): Promise<CampaignState>
 
 **Politique d'instantanés.** Le but : ne jamais rejouer plus de ~500 événements.
 
-| Déclencheur                                          | `kind`        | Rétention          |
-| ---------------------------------------------------- | ------------- | ------------------ |
-| Tous les 200 événements                              | `rolling`     | les 3 plus récents |
-| `session.closed`                                     | `session_end` | permanent          |
-| `track.resolved` d'un serment de rang ≥ _redoutable_ | `milestone`   | permanent          |
-| Manuel (`pnpm db:snapshot <campaign>`)               | `milestone`   | permanent          |
+| Déclencheur | `kind` | Rétention |
+|---|---|---|
+| Tous les 200 événements | `rolling` | les 3 plus récents |
+| `session.closed` | `session_end` | permanent |
+| `track.resolved` d'un serment de rang ≥ *redoutable* | `milestone` | permanent |
+| Manuel (`pnpm db:snapshot <campaign>`) | `milestone` | permanent |
 
 Un instantané pèse de 50 à 300 Ko en JSON. Une campagne de 10 000 événements sur six
 mois occupe de l'ordre de 40 × 200 Ko ≈ 8 Mo d'instantanés : négligeable devant le
@@ -1343,9 +1337,7 @@ est l'implémentation derrière ce port, jamais une API que les mouvements appel
 
 ```ts
 // packages/engine/src/rng.ts
-export interface Rng {
-  roll(sides: number): number;
-}
+export interface Rng { roll(sides: number): number }
 
 /** Dérivation sans état : (graine de campagne, seq, flux) -> tirages reproductibles.
  *  Implémentée sans aucune dépendance et sans accès à node:crypto. */
@@ -1423,7 +1415,7 @@ document-ci tient en cinq points :
    commande « Pourquoi ? ». La preuve consultable est la projection `TurnProof` (§0.5) : les
    mêmes événements, relus, avec `status: 'reverted'` et `revertedBy { seq, reason }`. Rien
    n'est fabriqué pour l'affichage, rien n'est retiré de l'écran. C'est la contrepartie assumée
-   du refus _après_ les dés (`02-mj-ia.md` §4.8.4 et §4.8.6) : un joueur voit brièvement le
+   du refus *après* les dés (`02-mj-ia.md` §4.8.4 et §4.8.6) : un joueur voit brièvement le
    résultat d'un tour qui sera annulé, et il doit pouvoir lire pourquoi plutôt que le voir
    s'évaporer.
 
@@ -1440,9 +1432,7 @@ const UPCASTERS: Record<string, Record<number, Upcaster>> = {
     1: (p: any) => ({ ...p, cappedAtTen: p.total >= 10, rawTotal: p.rawTotal ?? p.total }),
   },
 };
-export function upcast(row: EventRow): GameEvent {
-  /* applique en chaîne jusqu'à la version courante */
-}
+export function upcast(row: EventRow): GameEvent { /* applique en chaîne jusqu'à la version courante */ }
 ```
 
 Règles : un upcaster est **pur**, **testé** par un cas doré contenant le payload à
@@ -1545,11 +1535,7 @@ export const GaugeKeySchema = z.enum(['vigueur', 'ame', 'vivres']);
 
 export const RankSchema = z.enum(['genant', 'dangereux', 'redoutable', 'extreme', 'epique']);
 export const RANK_TICKS: Record<z.infer<typeof RankSchema>, number> = {
-  genant: 12,
-  dangereux: 8,
-  redoutable: 4,
-  extreme: 2,
-  epique: 1,
+  genant: 12, dangereux: 8, redoutable: 4, extreme: 2, epique: 1,
 };
 
 export const TagsSchema = z.array(SlugSchema).max(12).default([]);
@@ -1564,9 +1550,7 @@ export const AttributeSpreadSchema = z
     esprit: z.number().int().min(1).max(3),
   })
   .superRefine((v, ctx) => {
-    const sorted = Object.values(v)
-      .sort((a, b) => b - a)
-      .join(',');
+    const sorted = Object.values(v).sort((a, b) => b - a).join(',');
     if (sorted !== '3,2,2,1,1') {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -1576,7 +1560,8 @@ export const AttributeSpreadSchema = z
   });
 
 /** Référence vers une autre entité de contenu. Résolue après chargement (§4.8). */
-export const RefSchema = (kind: string) => SlugSchema.describe(`ref:${kind}`);
+export const RefSchema = (kind: string) =>
+  SlugSchema.describe(`ref:${kind}`);
 ```
 
 ### 4.3 Effets moteur (`EngineEffect`) — le contrat cœur
@@ -1588,48 +1573,34 @@ exécuter. C'est ce qui garantit qu'un fichier JSON ne peut pas contourner l'inv
 // packages/contracts/src/content/effect.ts
 export const EffectSchema: z.ZodType<EngineEffect> = z.lazy(() =>
   z.discriminatedUnion('op', [
-    z.object({
-      op: z.literal('gauge'),
-      gauge: GaugeKeySchema,
-      delta: z.number().int().min(-5).max(5),
-      target: z.enum(['self', 'chosen-ally', 'all-allies']).default('self'),
-    }),
+    z.object({ op: z.literal('gauge'),    gauge: GaugeKeySchema,
+                delta: z.number().int().min(-5).max(5),
+                target: z.enum(['self', 'chosen-ally', 'all-allies']).default('self') }),
     z.object({ op: z.literal('momentum'), delta: z.number().int().min(-6).max(6) }),
     z.object({ op: z.literal('momentum_reset') }),
-    z.object({ op: z.literal('condition_add'), conditionId: RefSchema('condition') }),
+    z.object({ op: z.literal('condition_add'),    conditionId: RefSchema('condition') }),
     z.object({ op: z.literal('condition_remove'), conditionId: RefSchema('condition') }),
-    z.object({
-      op: z.literal('track_tick'),
-      trackKind: z.enum(['vow', 'combat', 'journey', 'scene_challenge', 'bond']),
-      ticks: z.number().int().min(-40).max(40),
-      useRank: z.boolean().default(false),
-    }), // true => ticks = RANK_TICKS[rank]
-    z.object({
-      op: z.literal('track_create'),
-      trackKind: z.enum(['vow', 'combat', 'journey', 'scene_challenge']),
-      rankFrom: z.enum(['player', 'fixed']),
-      rank: RankSchema.optional(),
-    }),
+    z.object({ op: z.literal('track_tick'),
+                trackKind: z.enum(['vow', 'combat', 'journey', 'scene_challenge', 'bond']),
+                ticks: z.number().int().min(-40).max(40),
+                useRank: z.boolean().default(false) }),   // true => ticks = RANK_TICKS[rank]
+    z.object({ op: z.literal('track_create'),
+                trackKind: z.enum(['vow', 'combat', 'journey', 'scene_challenge']),
+                rankFrom: z.enum(['player', 'fixed']),
+                rank: RankSchema.optional() }),
     z.object({ op: z.literal('clock_advance'), segments: z.number().int().min(1).max(3) }),
     z.object({ op: z.literal('xp'), amount: z.number().int().min(-10).max(10) }),
-    z.object({ op: z.literal('pay_price'), mode: z.enum(['roll', 'gm_choice', 'player_choice']) }),
+    z.object({ op: z.literal('pay_price'),
+                mode: z.enum(['roll', 'gm_choice', 'player_choice']) }),
     z.object({ op: z.literal('oracle'), tableId: RefSchema('oracle') }),
-    z.object({ op: z.literal('narrative'), prompt: FrTextSchema }), // consigne au MJ, zéro mécanique
-    z.object({
-      op: z.literal('choice'),
-      label: FrTextSchema,
-      pick: z.number().int().min(1).max(3).default(1),
-      options: z
-        .array(
-          z.object({
-            id: SlugSchema,
-            label: FrTextSchema,
-            effects: z.array(EffectSchema).max(6),
-          }),
-        )
-        .min(2)
-        .max(6),
-    }),
+    z.object({ op: z.literal('narrative'), prompt: FrTextSchema }),  // consigne au MJ, zéro mécanique
+    z.object({ op: z.literal('choice'),
+                label: FrTextSchema,
+                pick: z.number().int().min(1).max(3).default(1),
+                options: z.array(z.object({
+                  id: SlugSchema, label: FrTextSchema,
+                  effects: z.array(EffectSchema).max(6),
+                })).min(2).max(6) }),
   ]),
 );
 ```
@@ -1642,46 +1613,38 @@ l'exécuteur du moteur — même mécanique d'exhaustivité TypeScript que pour 
 ```ts
 // packages/contracts/src/content/move.ts
 export const MoveOutcomeSchema = z.object({
-  text: FrTextSchema, // ce que le joueur lit
-  gmGuidance: FrTextSchema.optional(), // consigne injectée au prompt MJ
+  text: FrTextSchema,                              // ce que le joueur lit
+  gmGuidance: FrTextSchema.optional(),             // consigne injectée au prompt MJ
   effects: z.array(EffectSchema).max(8).default([]),
 });
 
-export const MoveSchema = z
-  .object({
-    schemaVersion: z.literal(1),
-    id: SlugSchema,
-    name: FrTextSchema, // « Affronter le danger »
-    category: z.enum(['aventure', 'combat', 'relation', 'serment', 'survie', 'meta']),
-    trigger: FrTextSchema, // « Quand tu agis malgré un péril… »
-    rollKind: z.enum(['action', 'progress', 'none']),
-    attributeOptions: z.array(AttributeKeySchema).max(5).default([]),
-    allowsMomentumBurn: z.boolean().default(true),
-    outcomes: z.object({
-      franche: MoveOutcomeSchema,
-      partielle: MoveOutcomeSchema,
-      echec: MoveOutcomeSchema,
-    }),
-    presage: z.object({ text: FrTextSchema, tableId: RefSchema('table').optional() }).optional(),
-    tags: TagsSchema,
-    notes: FrTextSchema.optional(),
-  })
-  .superRefine((m, ctx) => {
-    if (m.rollKind === 'action' && m.attributeOptions.length === 0) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['attributeOptions'],
-        message: "un mouvement à jet d'action doit proposer au moins un attribut",
-      });
-    }
-    if (m.rollKind !== 'action' && m.attributeOptions.length > 0) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['attributeOptions'],
-        message: "attributs interdits hors jet d'action",
-      });
-    }
-  });
+export const MoveSchema = z.object({
+  schemaVersion: z.literal(1),
+  id: SlugSchema,
+  name: FrTextSchema,                              // « Affronter le danger »
+  category: z.enum(['aventure', 'combat', 'relation', 'serment', 'survie', 'meta']),
+  trigger: FrTextSchema,                           // « Quand tu agis malgré un péril… »
+  rollKind: z.enum(['action', 'progress', 'none']),
+  attributeOptions: z.array(AttributeKeySchema).max(5).default([]),
+  allowsMomentumBurn: z.boolean().default(true),
+  outcomes: z.object({
+    franche: MoveOutcomeSchema,
+    partielle: MoveOutcomeSchema,
+    echec: MoveOutcomeSchema,
+  }),
+  presage: z.object({ text: FrTextSchema, tableId: RefSchema('table').optional() }).optional(),
+  tags: TagsSchema,
+  notes: FrTextSchema.optional(),
+}).superRefine((m, ctx) => {
+  if (m.rollKind === 'action' && m.attributeOptions.length === 0) {
+    ctx.addIssue({ code: 'custom', path: ['attributeOptions'],
+      message: 'un mouvement à jet d\'action doit proposer au moins un attribut' });
+  }
+  if (m.rollKind !== 'action' && m.attributeOptions.length > 0) {
+    ctx.addIssue({ code: 'custom', path: ['attributeOptions'],
+      message: 'attributs interdits hors jet d\'action' });
+  }
+});
 ```
 
 Exemple (`content/moves/endure-cold.json`) :
@@ -1727,91 +1690,74 @@ forgée à une fiche manuscrite sur les mêmes invariants.
 
 ```ts
 // packages/contracts/src/content/champion.ts
-export const ChampionSchema = z
-  .object({
-    schemaVersion: z.literal(1),
-    id: SlugSchema, // 'braum'
-    name: FrTextSchema, // « Braum »
-    title: FrTextSchema, // « Le Cœur du Freljord »
-    /** Surnoms, titres, épithètes — français ET anglais. NON FACULTATIF :
-     *  c'est la seule source du verrouillage de distribution (assertion
-     *  `no_reserved_champion`, post-filtre d'exécution, `check_name_allowed`).
-     *  Un alias manquant est un trou silencieux. Cf. `02-mj-ia.md` §2.2. */
-    aliases: z.array(FrTextSchema).min(1).max(12),
-    origin: z.object({
-      regionId: RefSchema('region'),
-      homeText: FrTextSchema,
-    }),
-    pitch: FrTextSchema.max(280), // une phrase, affichée au choix de perso
-    description: FrTextSchema.max(2000),
+export const ChampionSchema = z.object({
+  schemaVersion: z.literal(1),
+  id: SlugSchema,                                  // 'braum'
+  name: FrTextSchema,                              // « Braum »
+  title: FrTextSchema,                             // « Le Cœur du Freljord »
+  /** Surnoms, titres, épithètes — français ET anglais. NON FACULTATIF :
+   *  c'est la seule source du verrouillage de distribution (assertion
+   *  `no_reserved_champion`, post-filtre d'exécution, `check_name_allowed`).
+   *  Un alias manquant est un trou silencieux. Cf. `02-mj-ia.md` §2.2. */
+  aliases: z.array(FrTextSchema).min(1).max(12),
+  origin: z.object({
+    regionId: RefSchema('region'),
+    homeText: FrTextSchema,
+  }),
+  pitch: FrTextSchema.max(280),                    // une phrase, affichée au choix de perso
+  description: FrTextSchema.max(2000),
 
-    attributes: AttributeSpreadSchema,
+  attributes: AttributeSpreadSchema,
 
-    startingGauges: z
-      .object({
-        vigueur: z.number().int().min(0).max(5).default(5),
-        ame: z.number().int().min(0).max(5).default(5),
-        vivres: z.number().int().min(0).max(5).default(5),
-      })
-      .default({ vigueur: 5, ame: 5, vivres: 5 }),
-    startingMomentum: z.number().int().min(-6).max(10).default(2),
+  startingGauges: z.object({
+    vigueur: z.number().int().min(0).max(5).default(5),
+    ame: z.number().int().min(0).max(5).default(5),
+    vivres: z.number().int().min(0).max(5).default(5),
+  }).default({ vigueur: 5, ame: 5, vivres: 5 }),
+  startingMomentum: z.number().int().min(-6).max(10).default(2),
 
-    startingAssets: z.array(RefSchema('asset')).min(1).max(3),
-    signatureAsset: z.object({
-      id: SlugSchema,
-      name: FrTextSchema,
-      text: FrTextSchema,
-      effects: z.array(EffectSchema).max(4).default([]),
-    }),
-    startingVow: z.object({
-      title: FrTextSchema,
-      rank: RankSchema,
-      description: FrTextSchema,
-    }),
-    startingBonds: z
-      .array(
-        z.object({
-          with: FrTextSchema,
-          text: FrTextSchema,
-        }),
-      )
-      .max(3)
-      .default([]),
+  startingAssets: z.array(RefSchema('asset')).min(1).max(3),
+  signatureAsset: z.object({
+    id: SlugSchema,
+    name: FrTextSchema,
+    text: FrTextSchema,
+    effects: z.array(EffectSchema).max(4).default([]),
+  }),
+  startingVow: z.object({
+    title: FrTextSchema,
+    rank: RankSchema,
+    description: FrTextSchema,
+  }),
+  startingBonds: z.array(z.object({
+    with: FrTextSchema,
+    text: FrTextSchema,
+  })).max(3).default([]),
 
-    /** Consignes de voix pour le MJ IA. Non mécanique, purement narratif. */
-    voice: z.object({
-      register: FrTextSchema, // « chaleureux, bourru, protecteur »
-      speechTics: z.array(FrTextSchema).max(6).default([]),
-      forbidden: z.array(FrTextSchema).max(6).default([]), // ce que ce champion NE dit jamais
-      sampleLines: z.array(FrTextSchema).min(1).max(5),
-    }),
+  /** Consignes de voix pour le MJ IA. Non mécanique, purement narratif. */
+  voice: z.object({
+    register: FrTextSchema,                        // « chaleureux, bourru, protecteur »
+    speechTics: z.array(FrTextSchema).max(6).default([]),
+    forbidden: z.array(FrTextSchema).max(6).default([]),  // ce que ce champion NE dit jamais
+    sampleLines: z.array(FrTextSchema).min(1).max(5),
+  }),
 
-    loreHooks: z.array(FrTextSchema).min(1).max(8), // amorces d'intrigue
-    relations: z
-      .array(
-        z.object({
-          championId: RefSchema('champion'),
-          kind: z.enum(['allie', 'rival', 'parent', 'ennemi', 'mentor', 'inconnu']),
-          text: FrTextSchema,
-        }),
-      )
-      .max(8)
-      .default([]),
+  loreHooks: z.array(FrTextSchema).min(1).max(8),  // amorces d'intrigue
+  relations: z.array(z.object({
+    championId: RefSchema('champion'),
+    kind: z.enum(['allie', 'rival', 'parent', 'ennemi', 'mentor', 'inconnu']),
+    text: FrTextSchema,
+  })).max(8).default([]),
 
-    source: z.enum(['handwritten', 'forged']),
-    portraitUrl: z.string().url().optional(),
-    contentWarnings: z.array(SlugSchema).max(6).default([]),
-    tags: TagsSchema,
-  })
-  .superRefine((c, ctx) => {
-    if (c.relations.some((r) => r.championId === c.id)) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['relations'],
-        message: 'un champion ne peut pas être en relation avec lui-même',
-      });
-    }
-  });
+  source: z.enum(['handwritten', 'forged']),
+  portraitUrl: z.string().url().optional(),
+  contentWarnings: z.array(SlugSchema).max(6).default([]),
+  tags: TagsSchema,
+}).superRefine((c, ctx) => {
+  if (c.relations.some((r) => r.championId === c.id)) {
+    ctx.addIssue({ code: 'custom', path: ['relations'],
+      message: 'un champion ne peut pas être en relation avec lui-même' });
+  }
+});
 ```
 
 **`ChampionSchema` est le schéma UNIQUE d'une fiche de champion** — écrite à la main ou forgée.
@@ -1823,18 +1769,17 @@ déclaré ici, jamais un schéma parallèle :
 ```ts
 // packages/contracts/src/ai/forge.ts — ce que le MODÈLE a le droit de remplir
 export const ForgeOutputSchema = ChampionSchema.omit({
-  schemaVersion: true, // imposé par le serveur
-  id: true, // imposé par le serveur (slug de la demande)
-  source: true, // toujours 'forged', imposé par le serveur
-  portraitUrl: true, // jamais inventé par un modèle
-  relations: true, // une fiche forgée ne cite AUCUN autre champion (règle 8 du prompt)
-  aliases: true, // imposés par content/champions-index.json — un modèle ne
-  // choisit jamais les noms sous lesquels on le reconnaîtra
+  schemaVersion: true,   // imposé par le serveur
+  id: true,              // imposé par le serveur (slug de la demande)
+  source: true,          // toujours 'forged', imposé par le serveur
+  portraitUrl: true,     // jamais inventé par un modèle
+  relations: true,       // une fiche forgée ne cite AUCUN autre champion (règle 8 du prompt)
+  aliases: true,         // imposés par content/champions-index.json — un modèle ne
+                         // choisit jamais les noms sous lesquels on le reconnaîtra
 });
 ```
 
 Le serveur :
-
 1. appelle `structurer<ForgeOutput>({ purpose: 'forge', schema: ForgeOutputSchema, … })` sur le
    port du conteur (`02-mj-ia.md` §0.1) — la valeur rendue est déjà validée ;
 2. valide avec `ForgeOutputSchema.safeParse`, puis applique les réparations V1→V12
@@ -1856,26 +1801,19 @@ références le rendent impossible.
 ```ts
 // packages/contracts/src/content/oracle.ts
 export const DieSizeSchema = z.union([
-  z.literal(4),
-  z.literal(6),
-  z.literal(8),
-  z.literal(10),
-  z.literal(12),
-  z.literal(20),
-  z.literal(100),
+  z.literal(4), z.literal(6), z.literal(8), z.literal(10), z.literal(12),
+  z.literal(20), z.literal(100),
 ]);
 
-export const OracleEntrySchema = z
-  .object({
-    id: SlugSchema,
-    min: z.number().int().positive(),
-    max: z.number().int().positive(),
-    text: FrTextSchema,
-    tags: TagsSchema,
-    /** Enchaînement : tirer ensuite sur une autre table (ex. lieu -> nom). */
-    chain: z.array(RefSchema('oracle')).max(3).default([]),
-  })
-  .refine((e) => e.max >= e.min, { message: 'max doit être ≥ min' });
+export const OracleEntrySchema = z.object({
+  id: SlugSchema,
+  min: z.number().int().positive(),
+  max: z.number().int().positive(),
+  text: FrTextSchema,
+  tags: TagsSchema,
+  /** Enchaînement : tirer ensuite sur une autre table (ex. lieu -> nom). */
+  chain: z.array(RefSchema('oracle')).max(3).default([]),
+}).refine((e) => e.max >= e.min, { message: 'max doit être ≥ min' });
 
 /** Couverture exacte et sans trou d'un dé : la garantie la plus utile du chargeur. */
 const coversDie = (entries: { min: number; max: number }[], die: number, ctx: z.RefinementCtx) => {
@@ -1883,39 +1821,30 @@ const coversDie = (entries: { min: number; max: number }[], die: number, ctx: z.
   let cursor = 1;
   for (const e of sorted) {
     if (e.min !== cursor) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['entries'],
-        message:
-          e.min > cursor
-            ? `trou dans la table : ${cursor}..${e.min - 1} non couvert`
-            : `chevauchement à ${e.min} (déjà couvert jusqu'à ${cursor - 1})`,
-      });
+      ctx.addIssue({ code: 'custom', path: ['entries'],
+        message: e.min > cursor
+          ? `trou dans la table : ${cursor}..${e.min - 1} non couvert`
+          : `chevauchement à ${e.min} (déjà couvert jusqu'à ${cursor - 1})` });
       return;
     }
     cursor = e.max + 1;
   }
   if (cursor !== die + 1) {
-    ctx.addIssue({
-      code: 'custom',
-      path: ['entries'],
-      message: `table incomplète : ${cursor}..${die} non couvert`,
-    });
+    ctx.addIssue({ code: 'custom', path: ['entries'],
+      message: `table incomplète : ${cursor}..${die} non couvert` });
   }
 };
 
-export const OracleTableSchema = z
-  .object({
-    schemaVersion: z.literal(1),
-    id: SlugSchema,
-    name: FrTextSchema,
-    kind: z.literal('table'),
-    die: DieSizeSchema,
-    usage: FrTextSchema, // quand le MJ doit s'en servir
-    entries: z.array(OracleEntrySchema).min(2),
-    tags: TagsSchema,
-  })
-  .superRefine((t, ctx) => coversDie(t.entries, t.die, ctx));
+export const OracleTableSchema = z.object({
+  schemaVersion: z.literal(1),
+  id: SlugSchema,
+  name: FrTextSchema,
+  kind: z.literal('table'),
+  die: DieSizeSchema,
+  usage: FrTextSchema,                             // quand le MJ doit s'en servir
+  entries: z.array(OracleEntrySchema).min(2),
+  tags: TagsSchema,
+}).superRefine((t, ctx) => coversDie(t.entries, t.die, ctx));
 
 /** Oracle oui/non pondéré : seuils sur d100. */
 export const YesNoOracleSchema = z.object({
@@ -1926,10 +1855,10 @@ export const YesNoOracleSchema = z.object({
   /** Valeur ≤ seuil ⇒ « oui ». */
   likelihoods: z.object({
     'quasi-certain': z.literal(90),
-    probable: z.literal(75),
-    incertain: z.literal(50),
+    'probable': z.literal(75),
+    'incertain': z.literal(50),
     'peu-probable': z.literal(25),
-    improbable: z.literal(10),
+    'improbable': z.literal(10),
   }),
   /** Doubles (11, 22, …) ⇒ « oui, mais » / « non, et » : un retournement imposé. */
   extremeRule: FrTextSchema,
@@ -1937,33 +1866,27 @@ export const YesNoOracleSchema = z.object({
 });
 
 /** Table « payer le prix » — d12, thématisée Freljord. */
-export const PriceTableSchema = z
-  .object({
-    schemaVersion: z.literal(1),
-    id: z.literal('pay-the-price'),
-    kind: z.literal('price'),
-    die: z.literal(12),
-    entries: z
-      .array(
-        OracleEntrySchema.extend({
-          severity: z.enum(['legere', 'serieuse', 'grave']),
-          /** Effets de l'entrée. Le MOTEUR les applique : ce n'est pas une suggestion au modèle,
-           *  et ce n'est jamais une proposition. Plusieurs effets ⇒ le moteur tranche par un
-           *  second tirage sur le flux RNG `price` et écrit l'index dans
-           *  `roll.price_paid.effectIndex` (§3.4). Rien de tout cela ne transite par le modèle. */
-          suggestedEffects: z.array(EffectSchema).max(3).default([]),
-          /** Mots-clés de l'entrée, en français, sans chiffre : ce sont eux que l'assertion DURE
-           *  `price_respected` (02-mj-ia.md §8.4) cherche dans la narration pour vérifier que le
-           *  conteur a bien mis en scène le prix imposé et ne l'a pas remplacé par autre chose.
-           *  Sans cette liste, l'assertion — qui est aussi un post-filtre de production — n'a
-           *  aucune donnée contre quoi noter. Relue en PR, comme le reste du contenu. */
-          keywords: z.array(FrTextSchema.max(40)).min(1).max(6),
-        }),
-      )
-      .length(12),
-    tags: TagsSchema,
-  })
-  .superRefine((t, ctx) => coversDie(t.entries, 12, ctx));
+export const PriceTableSchema = z.object({
+  schemaVersion: z.literal(1),
+  id: z.literal('pay-the-price'),
+  kind: z.literal('price'),
+  die: z.literal(12),
+  entries: z.array(OracleEntrySchema.extend({
+    severity: z.enum(['legere', 'serieuse', 'grave']),
+    /** Effets de l'entrée. Le MOTEUR les applique : ce n'est pas une suggestion au modèle,
+     *  et ce n'est jamais une proposition. Plusieurs effets ⇒ le moteur tranche par un
+     *  second tirage sur le flux RNG `price` et écrit l'index dans
+     *  `roll.price_paid.effectIndex` (§3.4). Rien de tout cela ne transite par le modèle. */
+    suggestedEffects: z.array(EffectSchema).max(3).default([]),
+    /** Mots-clés de l'entrée, en français, sans chiffre : ce sont eux que l'assertion DURE
+     *  `price_respected` (02-mj-ia.md §8.4) cherche dans la narration pour vérifier que le
+     *  conteur a bien mis en scène le prix imposé et ne l'a pas remplacé par autre chose.
+     *  Sans cette liste, l'assertion — qui est aussi un post-filtre de production — n'a
+     *  aucune donnée contre quoi noter. Relue en PR, comme le reste du contenu. */
+    keywords: z.array(FrTextSchema.max(40)).min(1).max(6),
+  })).length(12),
+  tags: TagsSchema,
+}).superRefine((t, ctx) => coversDie(t.entries, 12, ctx));
 
 /** Table des présages (dés de défi identiques). */
 export const PresageTableSchema = OracleTableSchema.extend({
@@ -2109,30 +2032,24 @@ compare ; l'écart fait échouer le démarrage.
 `CampaignSettings` (stocké dans `campaigns.settings_json`) relève du même traitement :
 
 ```ts
-export const CampaignSettingsSchema = z
-  .object({
-    schemaVersion: z.literal(1),
-    // Surcharge par campagne du nom de modèle. Vide = on retombe sur NARRATOR_MODEL /
-    // NARRATOR_MODEL_STRUCTURED, puis sur le défaut de l'adaptateur (ARCHITECTURE.md §4.5).
-    // Aucun identifiant de modèle n'est écrit en dur ici : c'est une donnée d'adaptateur.
-    models: z
-      .object({
-        narration: z.string().min(1).nullable().default(null), // usage narrer()
-        structured: z.string().min(1).nullable().default(null), // usage structurer()
-      })
-      .default({}),
-    gmVerbosity: z.enum(['sobre', 'standard', 'ample']).default('standard'),
-    oracleBias: z.enum(['clement', 'neutre', 'impitoyable']).default('neutre'),
-    safety: z
-      .object({
-        lines: z.array(FrTextSchema).max(20).default([]), // interdits absolus
-        veils: z.array(FrTextSchema).max(20).default([]), // hors-champ
-      })
-      .default({}),
-    allowForgedChampions: z.boolean().default(true),
-    requireForgeReview: z.boolean().default(true),
-  })
-  .strict();
+export const CampaignSettingsSchema = z.object({
+  schemaVersion: z.literal(1),
+  // Surcharge par campagne du nom de modèle. Vide = on retombe sur NARRATOR_MODEL /
+  // NARRATOR_MODEL_STRUCTURED, puis sur le défaut de l'adaptateur (ARCHITECTURE.md §4.5).
+  // Aucun identifiant de modèle n'est écrit en dur ici : c'est une donnée d'adaptateur.
+  models: z.object({
+    narration: z.string().min(1).nullable().default(null),   // usage narrer()
+    structured: z.string().min(1).nullable().default(null),  // usage structurer()
+  }).default({}),
+  gmVerbosity: z.enum(['sobre', 'standard', 'ample']).default('standard'),
+  oracleBias: z.enum(['clement', 'neutre', 'impitoyable']).default('neutre'),
+  safety: z.object({
+    lines: z.array(FrTextSchema).max(20).default([]),   // interdits absolus
+    veils: z.array(FrTextSchema).max(20).default([]),   // hors-champ
+  }).default({}),
+  allowForgedChampions: z.boolean().default(true),
+  requireForgeReview: z.boolean().default(true),
+}).strict();
 ```
 
 `.strict()` est important : une clé inconnue dans `settings_json` signale une migration
@@ -2144,11 +2061,11 @@ ratée ou une écriture parasite, et doit lever.
 // packages/content/src/load.ts
 export type ContentBundle = Readonly<{
   version: string;
-  hash: string; // sha256 du JSON canonique du bundle
+  hash: string;                                    // sha256 du JSON canonique du bundle
   rulesVersion: number;
   moves: ReadonlyMap<string, Move>;
-  champions: ReadonlyMap<string, Champion>; // fiches jouables
-  championIndex: ReadonlyMap<string, ChampionIndexEntry>; // les ~170, pour le verrouillage
+  champions: ReadonlyMap<string, Champion>;          // fiches jouables
+  championIndex: ReadonlyMap<string, ChampionIndexEntry>;  // les ~170, pour le verrouillage
   regions: ReadonlyMap<string, Region>;
   oracles: ReadonlyMap<string, OracleTable>;
   yesNo: YesNoOracle;
@@ -2291,11 +2208,11 @@ n'a pas de coût de migration.**
 
 Protocole étendre/contracter, sur trois déploiements :
 
-| Phase          | Migration                                                                         | Code                                                              |
-| -------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| **Étendre**    | `ADD COLUMN new_col … NULL` + index                                               | écrit dans l'ancienne **et** la nouvelle colonne ; lit l'ancienne |
-| **Remplir**    | aucune (tâche applicative `pnpm db:backfill <nom>`, idempotente, par lots de 500) | inchangé                                                          |
-| **Contracter** | `DROP COLUMN old_col` après un déploiement complet vérifié                        | lit et écrit la nouvelle uniquement                               |
+| Phase | Migration | Code |
+|---|---|---|
+| **Étendre** | `ADD COLUMN new_col … NULL` + index | écrit dans l'ancienne **et** la nouvelle colonne ; lit l'ancienne |
+| **Remplir** | aucune (tâche applicative `pnpm db:backfill <nom>`, idempotente, par lots de 500) | inchangé |
+| **Contracter** | `DROP COLUMN old_col` après un déploiement complet vérifié | lit et écrit la nouvelle uniquement |
 
 Entre les phases, on laisse passer au moins un déploiement **et** on vérifie
 `SELECT count(*) FROM t WHERE new_col IS NULL`. Contracter le même jour qu'on étend est
@@ -2321,14 +2238,14 @@ impossible (triggers) et ce serait une falsification d'archive.
 
 ### 5.4 Garde-fous de migration en CI
 
-| Contrôle                                   | Commande                                                                                        | Ce qu'il attrape                                       |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| Schéma généré == schéma déclaré            | `pnpm db:check-schema`                                                                          | quelqu'un a modifié un `.ts` sans générer la migration |
-| Dump normalisé == `schema.expected.sql`    | idem                                                                                            | une migration qui ne produit pas le DDL de ce document |
-| Migration depuis zéro                      | `pnpm db:migrate` sur base vide                                                                 | SQL invalide                                           |
-| Migration depuis la **release précédente** | applique les migrations sur `packages/db/tests/fixtures/prev-release.sqlite` (commité, ~200 Ko) | une migration qui casse sur des données réelles        |
-| Append-only préservé                       | `packages/db/tests/append-only.test.ts`                                                         | triggers perdus par une reconstruction de table        |
-| Intégrité post-migration                   | `pnpm db:check` (§7.3)                                                                          | FK orphelines, jauges hors bornes, trous de séquence   |
+| Contrôle | Commande | Ce qu'il attrape |
+|---|---|---|
+| Schéma généré == schéma déclaré | `pnpm db:check-schema` | quelqu'un a modifié un `.ts` sans générer la migration |
+| Dump normalisé == `schema.expected.sql` | idem | une migration qui ne produit pas le DDL de ce document |
+| Migration depuis zéro | `pnpm db:migrate` sur base vide | SQL invalide |
+| Migration depuis la **release précédente** | applique les migrations sur `packages/db/tests/fixtures/prev-release.sqlite` (commité, ~200 Ko) | une migration qui casse sur des données réelles |
+| Append-only préservé | `packages/db/tests/append-only.test.ts` | triggers perdus par une reconstruction de table |
+| Intégrité post-migration | `pnpm db:check` (§7.3) | FK orphelines, jauges hors bornes, trous de séquence |
 
 `packages/db/tests/fixtures/prev-release.sqlite` est régénéré à chaque release par le workflow de
 déploiement (dump de la base de démo après migration) et commité. C'est le test de
@@ -2553,11 +2470,11 @@ Un contrôle de santé simple vaut mieux qu'un tableau de bord jamais regardé.
 **Trois sondes, trois rôles, à ne jamais confondre** (`01-architecture.md` §6,
 `ARCHITECTURE.md` §4.5) :
 
-| Route                   | Rôle                                     | Contenu                                                                                            |
-| ----------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `GET /healthz`          | liveness                                 | `{ status, version, uptimeMs }`, **sans toucher la base**. Toujours 200 tant que le process répond |
-| `GET /readyz`           | readiness                                | ping SQLite + migrations à jour. 503 sinon                                                         |
-| `GET /api/admin/health` | diagnostic profond, **admin uniquement** | le bloc ci-dessous                                                                                 |
+| Route | Rôle | Contenu |
+|---|---|---|
+| `GET /healthz` | liveness | `{ status, version, uptimeMs }`, **sans toucher la base**. Toujours 200 tant que le process répond |
+| `GET /readyz` | readiness | ping SQLite + migrations à jour. 503 sinon |
+| `GET /api/admin/health` | diagnostic profond, **admin uniquement** | le bloc ci-dessous |
 
 `/healthz` et `/readyz` ne font **jamais** de contrôle profond : un WAL volumineux ou une
 sauvegarde vieillissante ne doivent pas sortir le conteneur de la rotation — sans quoi une
@@ -2585,21 +2502,21 @@ fixture de migration (§5.4), et donner au harnais d'éval IA un état de jeu r�
 
 Contenu de `pnpm db:seed` :
 
-| Élément     | Détail                                                                                                                                                                                                                                                                                        |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Joueurs     | 4 : `demo-mj` (propriétaire), `demo-braum`, `demo-ashe`, `demo-sejuani`. Identifiants Discord factices `900000000000000001`+                                                                                                                                                                  |
-| Campagne    | « Le Pacte de la Griffe-de-Givre », slug `pacte-griffe-de-givre`, `status: 'active'`, 3 vérités choisies                                                                                                                                                                                      |
-| Personnages | Braum (fer 3), Ashe (vif 3), Sejuani (cœur 3) — trois fiches **écrites à la main**                                                                                                                                                                                                            |
-| Verrous     | 3 champions `reserved_pc`, 6 `allowed_npc` (Olaf, Lissandra, Volibear, Udyr, Trundle, Gragas), le reste implicite                                                                                                                                                                             |
-| Séances     | 2 : une close (`ordinal: 1`, 180 événements) et une en cours (`ordinal: 2`, 68 événements) — 180 + 68 = 248, le total du journal ci-dessous                                                                                                                                                   |
-| Journal     | **248 événements**, couvrant **au moins un exemplaire de chacun des 71 types** — c'est une assertion du seed, pas un vœu. Les quatre événements ajoutés sont des `scene.facts_updated` : une entrée en scène, une sortie de personnage non joueur, un décès reflété, et un changement de lieu |
-| Jets        | au moins un de chaque : réussite franche, partielle, échec, présage, souffle brûlé, souffle négatif annulé, plafonnement à 10                                                                                                                                                                 |
-| Serments    | 1 accompli (_dangereux_), 1 en cours (_redoutable_, 17 crans), 1 abandonné                                                                                                                                                                                                                    |
-| Horloges    | 1 à 3/6 visible, 1 à 5/8 cachée du MJ                                                                                                                                                                                                                                                         |
-| Entités     | 11 (4 PNJ, 3 lieux, 2 factions, 2 fils)                                                                                                                                                                                                                                                       |
-| Chroniques  | **3 versions d'un document unique** (`version` 1, 2, 3), écrites à la main, aucun appel IA. Le modèle à trois couches est abandonné (§1.5)                                                                                                                                                    |
-| Instantanés | 2 (`rolling` à seq 180, `session_end` à seq 180)                                                                                                                                                                                                                                              |
-| Annulation  | 1 `system.reverted` sur une cascade de 3 événements, pour que le chemin soit testé                                                                                                                                                                                                            |
+| Élément | Détail |
+|---|---|
+| Joueurs | 4 : `demo-mj` (propriétaire), `demo-braum`, `demo-ashe`, `demo-sejuani`. Identifiants Discord factices `900000000000000001`+ |
+| Campagne | « Le Pacte de la Griffe-de-Givre », slug `pacte-griffe-de-givre`, `status: 'active'`, 3 vérités choisies |
+| Personnages | Braum (fer 3), Ashe (vif 3), Sejuani (cœur 3) — trois fiches **écrites à la main** |
+| Verrous | 3 champions `reserved_pc`, 6 `allowed_npc` (Olaf, Lissandra, Volibear, Udyr, Trundle, Gragas), le reste implicite |
+| Séances | 2 : une close (`ordinal: 1`, 180 événements) et une en cours (`ordinal: 2`, 68 événements) — 180 + 68 = 248, le total du journal ci-dessous |
+| Journal | **248 événements**, couvrant **au moins un exemplaire de chacun des 71 types** — c'est une assertion du seed, pas un vœu. Les quatre événements ajoutés sont des `scene.facts_updated` : une entrée en scène, une sortie de personnage non joueur, un décès reflété, et un changement de lieu |
+| Jets | au moins un de chaque : réussite franche, partielle, échec, présage, souffle brûlé, souffle négatif annulé, plafonnement à 10 |
+| Serments | 1 accompli (*dangereux*), 1 en cours (*redoutable*, 17 crans), 1 abandonné |
+| Horloges | 1 à 3/6 visible, 1 à 5/8 cachée du MJ |
+| Entités | 11 (4 PNJ, 3 lieux, 2 factions, 2 fils) |
+| Chroniques | **3 versions d'un document unique** (`version` 1, 2, 3), écrites à la main, aucun appel IA. Le modèle à trois couches est abandonné (§1.5) |
+| Instantanés | 2 (`rolling` à seq 180, `session_end` à seq 180) |
+| Annulation | 1 `system.reverted` sur une cascade de 3 événements, pour que le chemin soit testé |
 
 ### 7.2 Déterminisme du seed
 
@@ -2607,8 +2524,8 @@ Le seed est **totalement déterministe** : mêmes ULID, mêmes horodatages, mêm
 
 ```ts
 export const DEMO_SEED = {
-  rngSeed: '00'.repeat(32), // graine maître de la campagne de démo
-  epoch: Date.UTC(2026, 0, 15, 20, 0, 0), // t0 fixe
+  rngSeed: '00'.repeat(32),                  // graine maître de la campagne de démo
+  epoch: Date.UTC(2026, 0, 15, 20, 0, 0),    // t0 fixe
   ulid: monotonicUlidFactory('01JQ0000000000000000000000'),
 };
 ```
@@ -2639,20 +2556,20 @@ coûté cinq lignes et évite l'accident qu'on ne raconte pas.
 Contrôles exécutés en CI après seed, après migration et après reconstruction. Chacun
 renvoie zéro ligne en cas de succès ; toute ligne renvoyée fait échouer la commande.
 
-| #   | Contrôle                       | Requête / méthode                                                                                                                                    |
-| --- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Intégrité SQLite               | `PRAGMA integrity_check`                                                                                                                             |
-| 2   | FK physiques                   | `PRAGMA foreign_key_check`                                                                                                                           |
-| 3   | FK logiques                    | `characters.player_id`, `campaign_members.character_id`, `events.play_session_id`, `chronicles.ai_call_id` sans cible                                |
-| 4   | Densité de séquence            | `SELECT campaign_id FROM events GROUP BY campaign_id HAVING max(seq) <> count(*) OR min(seq) <> 1`                                                   |
-| 5   | Compteur cohérent              | `events.max(seq)` == `campaigns.seq` pour chaque campagne                                                                                            |
-| 6   | Bornes des jauges              | redondant avec les `CHECK`, vérifié quand même après reconstruction                                                                                  |
-| 7   | Verrous de distribution        | aucun `entity` de type `npc` dont le `champion_id` est `reserved_pc`                                                                                 |
-| 8   | Instantanés                    | pour chaque instantané : rejeu depuis zéro jusqu'à `seq`, comparaison de `state_hash`                                                                |
-| 9   | **Reconstruction idempotente** | dump des projections → `db:rebuild` → dump → comparaison octet à octet                                                                               |
-| 10  | Payloads                       | chaque `events.payload_json` repasse `GameEventSchema` après `upcast`                                                                                |
-| 11  | Chroniques                     | `version` dense de 1 à N par campagne (aucun trou), `source_event_seq` strictement croissant avec `version`, et `source_event_seq` ≤ `campaigns.seq` |
-| 12  | Contenu                        | `campaigns.content_pack_hash` présent dans `content_packs`                                                                                           |
+| # | Contrôle | Requête / méthode |
+|---|---|---|
+| 1 | Intégrité SQLite | `PRAGMA integrity_check` |
+| 2 | FK physiques | `PRAGMA foreign_key_check` |
+| 3 | FK logiques | `characters.player_id`, `campaign_members.character_id`, `events.play_session_id`, `chronicles.ai_call_id` sans cible |
+| 4 | Densité de séquence | `SELECT campaign_id FROM events GROUP BY campaign_id HAVING max(seq) <> count(*) OR min(seq) <> 1` |
+| 5 | Compteur cohérent | `events.max(seq)` == `campaigns.seq` pour chaque campagne |
+| 6 | Bornes des jauges | redondant avec les `CHECK`, vérifié quand même après reconstruction |
+| 7 | Verrous de distribution | aucun `entity` de type `npc` dont le `champion_id` est `reserved_pc` |
+| 8 | Instantanés | pour chaque instantané : rejeu depuis zéro jusqu'à `seq`, comparaison de `state_hash` |
+| 9 | **Reconstruction idempotente** | dump des projections → `db:rebuild` → dump → comparaison octet à octet |
+| 10 | Payloads | chaque `events.payload_json` repasse `GameEventSchema` après `upcast` |
+| 11 | Chroniques | `version` dense de 1 à N par campagne (aucun trou), `source_event_seq` strictement croissant avec `version`, et `source_event_seq` ≤ `campaigns.seq` |
+| 12 | Contenu | `campaigns.content_pack_hash` présent dans `content_packs` |
 
 Le contrôle 9 est l'oracle central de l'invariant 4, et le contrôle 8 celui de la
 politique d'instantanés. Un agent qui casse le réducteur les voit rougir en moins d'une
@@ -2696,7 +2613,7 @@ Les points de nommage, de taille de seed et de portée du cache de forge ont ét
 1. **Chiffrement au repos.** La base contient des identités Discord et des textes de joueurs.
    SQLCipher fermerait le sujet mais ajoute une dépendance native et complique les sauvegardes.
    Position retenue pour M0 : disque du VPS chiffré, sauvegardes chiffrées par `age`, base en
-   clair. À revoir dès que la table dépasse le cercle privé. _Décision à reprendre en M2._
+   clair. À revoir dès que la table dépasse le cercle privé. *Décision à reprendre en M2.*
 2. **Recherche plein texte** dans le journal et les chroniques (« où a-t-on vu Olaf ? »).
    FTS5 est disponible, mais c'est une table à maintenir en cohérence. Hors M0 ; à traiter
    comme une projection de plus (zone C), reconstruite par `db:rebuild` — donc sans migration

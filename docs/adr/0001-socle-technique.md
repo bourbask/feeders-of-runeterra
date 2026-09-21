@@ -32,8 +32,8 @@ que la prochaine personne qui voudra en devier sache contre quoi elle argumente.
 
 Un seul depot, dix paquets `@for/*` en six couches acycliques. Les frontieres de paquet ne sont
 pas de l'esthetique : **chaque invariant du projet est porte par une frontiere verifiable en
-CI** plutot que par de la discipline. `@for/engine` a zero dependance, donc il ne _peut pas_
-appeler la base ; `@for/ai` ne connait pas SQLite, donc l'eval _peut_ tourner hors base ;
+CI** plutot que par de la discipline. `@for/engine` a zero dependance, donc il ne *peut pas*
+appeler la base ; `@for/ai` ne connait pas SQLite, donc l'eval *peut* tourner hors base ;
 `@for/contracts` importe le moteur en type-only, donc le typecheck casse des que les deux
 derivent.
 
@@ -166,13 +166,13 @@ une cle privee qui ne vit pas sur le VPS.
 
 ## Alternatives ecartees
 
-| Alternative                                    | Pourquoi non                                                                                                                                                               |
-| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Postgres                                       | Un serveur de plus a exploiter pour quelques joueurs. Rien dans le produit n'en a besoin. A reconsiderer le jour ou l'ecrivain unique devient un probleme reel — pas avant |
-| Next.js / SSR                                  | Rien a referencer, tout est derriere authentification. Une seconde surface d'execution pour zero benefice                                                                  |
-| Etat final seul, sans journal d'evenements     | Perd le carnet de campagne, l'annulation et le debogage, et rend le schema d'etat de jeu couteux a migrer                                                                  |
-| Contenu de jeu en base                         | Impose un back-office, des migrations de donnees, et rend irretrouvable la version de contenu qui a produit un jet                                                         |
-| Outils IA capables de muter l'etat             | Rend l'issue d'une action dependante d'un modele non deterministe, non rejouable et non testable. C'est exactement ce que l'invariant 1 interdit                           |
-| Resume glissant du contexte (resume de resume) | Derive garantie sur une campagne de plusieurs mois : les faits se deforment, les noms glissent, les morts reviennent                                                       |
-| Chronique hierarchique a trois couches         | Meme defaut, en plus structure : elle empile des resumes sans provenance ni detection de reformulation                                                                     |
-| Generation de code depuis les schemas Zod      | Une etape de build de plus a synchroniser. `satisfies z.ZodType<T>` donne la meme garantie a la compilation, sans artefact                                                 |
+| Alternative | Pourquoi non |
+|---|---|
+| Postgres | Un serveur de plus a exploiter pour quelques joueurs. Rien dans le produit n'en a besoin. A reconsiderer le jour ou l'ecrivain unique devient un probleme reel — pas avant |
+| Next.js / SSR | Rien a referencer, tout est derriere authentification. Une seconde surface d'execution pour zero benefice |
+| Etat final seul, sans journal d'evenements | Perd le carnet de campagne, l'annulation et le debogage, et rend le schema d'etat de jeu couteux a migrer |
+| Contenu de jeu en base | Impose un back-office, des migrations de donnees, et rend irretrouvable la version de contenu qui a produit un jet |
+| Outils IA capables de muter l'etat | Rend l'issue d'une action dependante d'un modele non deterministe, non rejouable et non testable. C'est exactement ce que l'invariant 1 interdit |
+| Resume glissant du contexte (resume de resume) | Derive garantie sur une campagne de plusieurs mois : les faits se deforment, les noms glissent, les morts reviennent |
+| Chronique hierarchique a trois couches | Meme defaut, en plus structure : elle empile des resumes sans provenance ni detection de reformulation |
+| Generation de code depuis les schemas Zod | Une etape de build de plus a synchroniser. `satisfies z.ZodType<T>` donne la meme garantie a la compilation, sans artefact |

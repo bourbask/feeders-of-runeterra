@@ -1,6 +1,7 @@
 import js from '@eslint/js';
 import vitest from '@vitest/eslint-plugin';
 import prettier from 'eslint-config-prettier';
+import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript';
 import importX from 'eslint-plugin-import-x';
 import unicorn from 'eslint-plugin-unicorn';
 import tseslint from 'typescript-eslint';
@@ -32,6 +33,16 @@ export default tseslint.config(
       parserOptions: { projectService: true, tsconfigRootDir: process.cwd() },
     },
     plugins: { 'import-x': importX, unicorn },
+    // Sans ce résolveur, `import-x/no-cycle` ne voit aucun cycle TypeScript :
+    // il ne sait pas que `./b.js` désigne `b.ts`. La règle serait déclarée et morte.
+    settings: {
+      'import-x/resolver-next': [
+        createTypeScriptImportResolver({
+          alwaysTryTypes: true,
+          project: ['packages/*/tsconfig.json', 'tsconfig.tools.json'],
+        }),
+      ],
+    },
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-floating-promises': 'error',

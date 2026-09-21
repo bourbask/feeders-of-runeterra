@@ -24,9 +24,12 @@ par de la discipline.
 ## Frontières mécaniques
 
 - `@for/engine` est **pur**. Son `tsconfig` ne lui donne aucun typage ambiant (`types: []`), donc
-  un `import 'node:fs'` est une **erreur de compilation**, pas un avertissement. Ni horloge ni
-  hasard ambiants : `new Date()` et `Math.random()` y sont interdits par le lint, dans le moteur
-  comme dans `server/src/game`. Ce dont tu as besoin arrive par un paramètre.
+  `import { readFileSync } from 'node:fs'` est une **erreur de compilation** (`TS2307`). Attention
+  à la portée exacte de cette garantie : l'import à effet de bord nu, `import 'node:fs';`, compile
+  sans broncher — c'est le lint qui l'attrape, pas le compilateur. Les deux filets sont là, mais
+  ils n'ont pas la même maille. Ni horloge ni hasard ambiants non plus : `new Date()` et
+  `Math.random()` sont interdits par le lint, dans le moteur comme dans `server/src/game`.
+  Ce dont tu as besoin arrive par un paramètre.
 - Le graphe de dépendances entre paquets est vérifié par `pnpm depcruise`, pas par la bonne volonté.
 - Les assertions de style du conteur vivent dans `@for/ai`, jamais dans `@for/ai-eval` : elles
   servent à la fois d'eval et de post-filtre de production.
