@@ -17,6 +17,10 @@ const COMMANDES_RACINE = [
   'build',
   'verify',
   'test',
+  // Le seul chemin qui évalue le seuil global de couverture : `turbo run test`
+  // lance les configurations de paquet, qui ne le connaissent pas. Le job 6 de la
+  // CI doit appeler celle-ci (ADR 0002).
+  'test:coverage',
   'lint',
   'typecheck',
   'format:check',

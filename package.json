@@ -12,6 +12,7 @@
     "build": "turbo run build",
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm depcruise && pnpm check:workspace && pnpm content:check && pnpm test && pnpm test:golden && pnpm eval:offline",
     "test": "turbo run test",
+    "test:coverage": "vitest run --coverage",
     "lint": "turbo run lint && eslint scripts tooling --no-error-on-unmatched-pattern",
     "typecheck": "tsc -b --pretty false && tsc -p tsconfig.tools.json --noEmit",
     "format:check": "prettier --check .",

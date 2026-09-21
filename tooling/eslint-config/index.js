@@ -1,3 +1,5 @@
+import { dirname, join } from 'node:path';
+
 import js from '@eslint/js';
 import vitest from '@vitest/eslint-plugin';
 import prettier from 'eslint-config-prettier';
@@ -5,6 +7,9 @@ import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescrip
 import importX from 'eslint-plugin-import-x';
 import unicorn from 'eslint-plugin-unicorn';
 import tseslint from 'typescript-eslint';
+
+/** La racine du dépôt, déduite de l'emplacement de ce fichier (tooling/eslint-config). */
+const RACINE = join(dirname(new URL(import.meta.url).pathname), '..', '..');
 
 /** Interdit l'horloge et le hasard ambiants : ils sont injectés (invariant 4, rejouabilité). */
 export const noAmbientNondeterminism = {
@@ -33,13 +38,18 @@ export default tseslint.config(
       parserOptions: { projectService: true, tsconfigRootDir: process.cwd() },
     },
     plugins: { 'import-x': importX, unicorn },
-    // Sans ce résolveur, `import-x/no-cycle` ne voit aucun cycle TypeScript :
-    // il ne sait pas que `./b.js` désigne `b.ts`. La règle serait déclarée et morte.
+    // Le résolveur sert à `import-x/no-extraneous-dependencies`, qui tient la pureté
+    // du moteur. Les CYCLES, eux, ne sont PAS l'affaire d'ESLint ici : `import-x/no-cycle`
+    // ne rapporte rien sur du TypeScript, quelle que soit la résolution. C'est
+    // `dependency-cruiser` qui les attrape, règle `pas-de-cycle` (ADR 0002).
     settings: {
       'import-x/resolver-next': [
         createTypeScriptImportResolver({
           alwaysTryTypes: true,
-          project: ['packages/*/tsconfig.json', 'tsconfig.tools.json'],
+          noWarnOnMultipleProjects: true,
+          // Chemin absolu : `eslint .` tourne depuis chaque paquet, et un glob
+          // relatif s'y évaluait à vide, sans le moindre avertissement.
+          project: [join(RACINE, 'packages/*/tsconfig.json'), join(RACINE, 'tsconfig.tools.json')],
         }),
       ],
     },
@@ -53,7 +63,6 @@ export default tseslint.config(
       ],
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
       '@typescript-eslint/no-unnecessary-condition': 'error',
-      'import-x/no-cycle': 'error',
       'import-x/no-default-export': 'error',
       'unicorn/prefer-node-protocol': 'error',
       'unicorn/no-array-push-push': 'error',

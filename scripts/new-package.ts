@@ -101,4 +101,9 @@ ecrire(
   `import { describe, expect, it } from 'vitest';\nimport { NOM } from './index.js';\n\ndescribe('@for/${nom}', () => {\n  it("s'annonce sous son nom", () => {\n    expect(NOM).toBe('@for/${nom}');\n  });\n});\n`,
 );
 
-console.log(`packages/${nom} créé (${genre}). Ajoute-le aux références de tsconfig.json racine.`);
+console.log(
+  `packages/${nom} créé (${genre}).\n` +
+    '  1. Ajoute-le aux références de tsconfig.json racine.\n' +
+    "  2. Lance `pnpm format` : le JSON généré ici n'est pas au format Prettier.\n" +
+    "  3. Lance `pnpm install` pour le lier à l'espace de travail.",
+);

@@ -19,7 +19,7 @@ const outillage = [
   {
     files: ['tooling/**/*.js', 'scripts/**/*.mjs', 'tools/**/*.mjs', '*.js'],
     languageOptions: {
-      globals: { process: 'readonly', console: 'readonly' },
+      globals: { process: 'readonly', console: 'readonly', URL: 'readonly', fetch: 'readonly' },
     },
     rules: {
       // Une configuration s'exporte par défaut : c'est ce que les outils attendent.

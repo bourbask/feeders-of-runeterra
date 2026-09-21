@@ -27,7 +27,35 @@ export default [
         },
       ],
       // Les modules natifs, eux, ne sont pas des dépendances : il faut les nommer.
-      'no-restricted-imports': ['error', { patterns: [{ group: ['node:*'], message: MOTIF }] }],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            { group: ['node:*'], message: MOTIF },
+            // Sans préfixe, un module natif n'est pas non plus une dépendance : sans
+            // ce groupe le lint échouait quand même, mais sur « préfère node:fs », et
+            // le message qui explique POURQUOI le moteur les refuse disparaissait.
+            {
+              group: [
+                'fs',
+                'path',
+                'crypto',
+                'os',
+                'http',
+                'https',
+                'child_process',
+                'stream',
+                'buffer',
+                'util',
+                'events',
+                'url',
+                'worker_threads',
+              ],
+              message: MOTIF,
+            },
+          ],
+        },
+      ],
       'no-restricted-globals': [
         'error',
         { name: 'process', message: MOTIF },
