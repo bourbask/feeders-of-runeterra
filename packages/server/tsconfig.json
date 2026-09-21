@@ -1,0 +1,26 @@
+{
+  "extends": "@for/tsconfig/node.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "dist"],
+  "references": [
+    {
+      "path": "../contracts"
+    },
+    {
+      "path": "../engine"
+    },
+    {
+      "path": "../content"
+    },
+    {
+      "path": "../db"
+    },
+    {
+      "path": "../ai"
+    }
+  ]
+}

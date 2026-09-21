@@ -1,0 +1,12 @@
+# Prettier possède le code, pas la prose normative.
+# Les documents de conception arbitrent les tâches : ils ne sont pas reformatés
+# automatiquement. Une passe de Prettier y a déjà soudé un élément de liste
+# numérotée au paragraphe précédent, dans un passage qui fait autorité.
+docs/
+
+# Artefacts
+node_modules/
+dist/
+coverage/
+pnpm-lock.yaml
+*.golden.json
