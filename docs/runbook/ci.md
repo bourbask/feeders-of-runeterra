@@ -58,9 +58,22 @@ Ce qui tient le budget :
 
 - Le **chemin critique** est `install → build → deps → {test-unit, …}`, soit quatre
   travaux en série. Tout le reste est parallèle.
-- Le **cache Turborepo** est indexé sur le SHA du commit. Le travail `build` le
-  remplit ; `deps` relance `pnpm build`, obtient un succès de cache et récupère les
-  `dist/` sans rien reconstruire.
+- Le **cache Turborepo** a un seul producteur, et c'est le travail `build` : lui seul
+  passe `turbo-cache: write` à l'action de préparation, les onze autres n'ont qu'une
+  étape de restauration, sans sauvegarde. La clé est
+  `turbo-build-${{ runner.os }}-${{ github.sha }}`. `deps` dépend de `build`, donc la
+  clé exacte existe quand il la demande : il relance `pnpm build`, obtient
+  `FULL TURBO` et récupère les `dist/` sans rien reconstruire.
+
+  > **Pourquoi un seul producteur.** Une clé unique partagée par les douze travaux est
+  > une course : `pnpm lint` remplit `.turbo/cache` sans produire un seul `dist/`, et
+  > le premier travail arrivé réserve la clé pour tous les autres. Mesuré sur la série
+  > 1 de cette PR : `build` a réservé la clé, et `lint` a rapporté `Unable to reserve
+  > cache with key turbo-Linux-<sha>, another job may be creating this cache`. Ça
+  > tombait bien ; rien ne le garantissait. Le jour où `lint` finit avant `build`,
+  > `deps` restaure un cache sans `dist/` et reconstruit pour de vrai — correct, mais
+  > le chiffrage ci-dessous devient faux. Avec un producteur unique, il n'y a plus de
+  > course à gagner.
 - Le **cache du magasin pnpm** est géré par `actions/setup-node` (`cache: pnpm`).
 - `docker build` est en **post-merge**, pas dans la porte (§8) : le module natif
   `better-sqlite3` coûte trop cher pour le budget.
@@ -115,6 +128,25 @@ M0-30 retire les cinq lignes. L'invariant qui l'empêche d'en oublier une :
 `scripts/check-ci-jobs.sh` exige autant de marqueurs `TODO M0-30` que de
 `continue-on-error: true`, et le travail 5 le lance à chaque PR.
 
+### Ce que `ai-eval.yml` ne fait pas encore, et qui est écrit en §8
+
+Deux lignes de `docs/design/01-architecture.md` §8 ne sont pas implémentées. Aucune des
+deux n'est un oubli : ni l'une ni l'autre n'a d'objet tant que M0-27 n'a pas fixé le
+format du rapport d'éval. Elles sont écrites ici pour que la tâche qui livrera ce format
+les retrouve.
+
+| Ce que §8 prévoit                                 | État                                    | À livrer par                                                       |
+| ------------------------------------------------- | --------------------------------------- | ------------------------------------------------------------------ |
+| Le rapport d'éval publié en commentaire de PR      | absent — l'artefact tient lieu de sortie | **M0-27**, en même temps que le format du rapport                   |
+| « Une régression de score ouvre une issue automatiquement » | absent                       | **M0-27** ; exige d'ajouter `issues: write` aux permissions du workflow |
+
+Sur le second point : `ai-eval.yml` porte `permissions: contents: read`. Ouvrir une
+issue demanderait `issues: write`, et cette permission n'est pas posée d'avance — un
+jeton plus large que ce que le workflow sait faire est une surface offerte pour rien.
+Il n'existe par ailleurs aucun score à comparer : `eval:live` et `eval:judge` sortent en
+1 avec « niveau N1/N2 : jalon M1 ». Un ouvreur d'issues branché sur deux absences
+n'ouvrirait que des issues vides.
+
 La tolérance est posée **sur l'étape**, pas sur le travail. Une tolérance au niveau du
 travail neutraliserait aussi les gardes qui, eux, sont bloquants dès aujourd'hui — le
 refus de `GOLDEN_UPDATE` dans le travail 7 en est un.
@@ -138,15 +170,35 @@ tolérance en M0-30, c'est retirer les deux.
 - `NARRATOR_PROVIDER`, `NARRATOR_BASE_URL`, `NARRATOR_MODEL` : **variables** de dépôt
   (non secrètes). Elles sont déclarées dans `.github/actionlint.yaml` : toute autre
   `vars.X` fait échouer `actionlint`. Ajouter une variable côté GitHub sans l'ajouter
-  là est une erreur de lint, pas une surprise à l'exécution.
+  là est une erreur de lint, pas une surprise à l'exécution. `PUBLIC_URL` y figure
+  aussi : le fichier est commun à M0-03 et M0-04, au caractère près, par arbitrage du
+  lead — les deux branches portent le même contenu pour que la fusion soit triviale.
+
+- `.github/actionlint.yaml` **ne contient qu'un réglage**, et c'est voulu. La clé
+  `self-hosted-runner.labels` n'interdit pas les runners auto-hébergés : mesuré,
+  `runs-on: self-hosted` sort en 0 avec ou sans elle. Elle a donc été retirée, et
+  l'interdiction est passée dans `scripts/check-ci-jobs.sh`, vérification 4 : tout
+  `runs-on:` hors de la liste blanche (`ubuntu-latest`) fait sortir le script en 1.
+
+## 6 bis. Les runners autorisés
+
+Un runner auto-hébergé exécute le code de n'importe quelle pull request sur une machine
+à nous. La liste blanche vit dans `scripts/check-ci-jobs.sh` (`runners_autorises`), pas
+dans la configuration d'`actionlint`, qui ne sait pas la tenir. Élargir la liste — une
+image Windows, un runner ARM — se fait là, et se voit en revue.
 
 ## 7. Vérifier la chaîne sans attendre GitHub
 
 ```
 actionlint                        # les workflows (shellcheck compris sur les run:)
-bash scripts/check-ci-jobs.sh     # travaux, commandes pnpm, tolérances marquées
+bash scripts/check-ci-jobs.sh     # travaux, commandes pnpm, tolérances, runners
 pnpm test:coverage                # le seuil global, que `pnpm test` n'évalue pas
 ```
+
+`check-ci-jobs.sh` découvre sa portée : tous les `.github/workflows/*.yml` et tous les
+`.github/actions/**/action.yml`, et il sort en 1 si l'ensemble est vide. Un workflow
+ajouté par une autre tâche — `deploy.yml` de M0-04, par exemple — entre dans la
+vérification sans qu'on ait à toucher le script.
 
 `actionlint` n'est pas une dépendance du dépôt : binaire unique, à récupérer depuis la
 page des versions de `rhysd/actionlint`, ou `docker run --rm -v "$PWD":/repo -w /repo

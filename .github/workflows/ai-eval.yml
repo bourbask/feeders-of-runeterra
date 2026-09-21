@@ -22,6 +22,12 @@ concurrency:
   group: ai-eval-${{ github.ref }}
   cancel-in-progress: true
 
+# ÉCART DÉCLARÉ, voir docs/runbook/ci.md §5. `01-architecture.md` §8 écrit qu'« une
+# régression de score ouvre une issue automatiquement ». Rien ne l'implémente ici, et
+# `contents: read` l'interdirait de toute façon — il faudrait `issues: write`. Motif :
+# il n'y a pas de score tant que M0-27 n'a pas livré le format du rapport, donc pas de
+# régression mesurable ; un ouvreur d'issues qui compare deux absences ouvrirait des
+# issues vides. La permission reste au minimum jusqu'à ce que M0-27 livre le format.
 permissions:
   contents: read
 

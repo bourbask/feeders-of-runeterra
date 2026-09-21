@@ -82,6 +82,8 @@ jobs:
 
   # 12 — remonté avant `deps`, voir docs/adr/0003. Turborepo enchaîne déjà `^build`
   # pour `test` et `typecheck` : construire tôt ne coûte rien et remplit le cache.
+  # C'est le seul travail qui ÉCRIT le cache Turborepo : les onze autres ne font
+  # que le lire. Un seul producteur, donc pas de course pour la clé.
   build:
     name: 12 · Construction
     needs: [install]
@@ -90,6 +92,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-node-pnpm
+        with:
+          turbo-cache: write
       - name: Installer les dépendances
         run: pnpm install --frozen-lockfile
       - name: Construire tous les paquets
