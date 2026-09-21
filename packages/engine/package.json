@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Regles du jeu. Pur : ni entree-sortie, ni horloge, ni hasard ambiant.",
+  "sideEffects": false,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -16,7 +17,7 @@
     "build": "tsc -b",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
-    "test": "vitest run",
+    "test": "tsc -b && vitest run",
     "test:watch": "vitest"
   },
   "devDependencies": {
