@@ -1,0 +1,12 @@
+{
+  "name": "@for/tsconfig",
+  "version": "0.0.0",
+  "private": true,
+  "files": [
+    "base.json",
+    "library.json",
+    "node.json",
+    "react.json",
+    "test.json"
+  ]
+}

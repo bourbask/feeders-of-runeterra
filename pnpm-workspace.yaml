@@ -1,0 +1,14 @@
+packages:
+  - 'packages/*'
+  - 'tooling/*'
+
+# pnpm refuse par défaut d'exécuter les scripts d'installation d'une dépendance.
+# On les autorise un par un, en connaissance de cause : chaque ligne ajoutée ici
+# est une décision, pas une commodité.
+#
+# Attention au nom du réglage : depuis pnpm 12 c'est `allowBuilds`.
+# L'ancien `onlyBuiltDependencies` est ignoré en silence — l'installation
+# échoue alors sur ERR_PNPM_IGNORED_BUILDS sans dire pourquoi.
+allowBuilds:
+  esbuild: true # binaire natif, utilisé par Vite et par tsx
+  unrs-resolver: true # résolveur natif d'eslint-plugin-import-x
