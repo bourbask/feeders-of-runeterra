@@ -1,0 +1,4 @@
+* text=auto eol=lf
+*.json text eol=lf
+*.golden.json -diff
+pnpm-lock.yaml -diff linguist-generated

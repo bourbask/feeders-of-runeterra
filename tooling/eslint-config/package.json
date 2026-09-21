@@ -1,0 +1,11 @@
+{
+  "name": "@for/eslint-config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./react": "./react.js",
+    "./engine-purity": "./engine-purity.js"
+  }
+}

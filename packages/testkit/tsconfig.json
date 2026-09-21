@@ -1,0 +1,17 @@
+{
+  "extends": "@for/tsconfig/library.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "dist"],
+  "references": [
+    {
+      "path": "../engine"
+    },
+    {
+      "path": "../contracts"
+    }
+  ]
+}

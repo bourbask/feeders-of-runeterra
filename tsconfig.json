@@ -1,0 +1,32 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "packages/engine"
+    },
+    {
+      "path": "packages/contracts"
+    },
+    {
+      "path": "packages/content"
+    },
+    {
+      "path": "packages/testkit"
+    },
+    {
+      "path": "packages/db"
+    },
+    {
+      "path": "packages/ai"
+    },
+    {
+      "path": "packages/ai-eval"
+    },
+    {
+      "path": "packages/server"
+    },
+    {
+      "path": "packages/sim"
+    }
+  ]
+}
