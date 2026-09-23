@@ -1590,10 +1590,18 @@ export const EffectSchema: z.ZodType<EngineEffect> = z.lazy(() =>
                 rank: RankSchema.optional() }),
     z.object({ op: z.literal('clock_advance'), segments: z.number().int().min(1).max(3) }),
     z.object({ op: z.literal('xp'), amount: z.number().int().min(-10).max(10) }),
+    // ADR 0006 : un seul mode. Le moteur tire le d12 sur la table des prix et
+    // transmet l'entrée tirée comme un fait imposé. Ni le modèle ni le joueur ne
+    // choisit sa propre conséquence — les modes `gm_choice` et `player_choice`
+    // rouvraient l'invariant 1 par la porte de derrière.
     z.object({ op: z.literal('pay_price'),
-                mode: z.enum(['roll', 'gm_choice', 'player_choice']) }),
+                mode: z.literal('roll') }),
     z.object({ op: z.literal('oracle'), tableId: RefSchema('oracle') }),
     z.object({ op: z.literal('narrative'), prompt: FrTextSchema }),  // consigne au MJ, zéro mécanique
+    // ADR 0006 : `choice` est l'agentivité ordinaire du JOUEUR — « perds des vivres
+    // ou encaisse » —, jamais celle du modèle, et jamais atteignable depuis
+    // `pay_price`. Ses options viennent du contenu versionné ou du moteur ; la
+    // sélection arrive comme une intention ordinaire, validée par le serveur.
     z.object({ op: z.literal('choice'),
                 label: FrTextSchema,
                 pick: z.number().int().min(1).max(3).default(1),

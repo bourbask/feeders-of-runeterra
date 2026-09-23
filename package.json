@@ -14,7 +14,7 @@
     "test": "turbo run test",
     "test:coverage": "vitest run --coverage",
     "lint": "turbo run lint && eslint scripts tooling --no-error-on-unmatched-pattern",
-    "typecheck": "tsc -b --pretty false && tsc -p tsconfig.tools.json --noEmit",
+    "typecheck": "tsc -b --pretty false && tsc -p tsconfig.tools.json --noEmit && turbo run typecheck:tests",
     "format:check": "prettier --check .",
     "format": "prettier --write .",
     "depcruise": "depcruise --config .dependency-cruiser.cjs packages tooling",

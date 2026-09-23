@@ -10,7 +10,16 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import process from 'node:process';
 
-const SCRIPTS_DE_PAQUET = ['build', 'typecheck', 'lint', 'test', 'test:watch'] as const;
+const SCRIPTS_DE_PAQUET = [
+  'build',
+  'typecheck',
+  // Les tests sont hors du tsconfig de build : sans cette passe, un fichier de
+  // test peut porter une erreur de type franche sans qu'aucune porte ne bronche.
+  'typecheck:tests',
+  'lint',
+  'test',
+  'test:watch',
+] as const;
 
 const COMMANDES_RACINE = [
   'dev',

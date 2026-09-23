@@ -198,7 +198,7 @@ les rejoue.
 - `src/index.ts` (seule surface publique), `tsup.config.ts`, `tests/purity.test.ts`.
 
 **Critères d'acceptation**
-- `pnpm --filter @for/engine build typecheck lint test` sort en 0.
+- `pnpm turbo run build typecheck lint test --filter @for/engine` sort en 0.
 - `tests/purity.test.ts` échoue si l'on ajoute `import 'node:crypto'`, `Math.random()`,
   `new Date()` ou `process.env` dans `src/` (le testeur applique les quatre patchs, un par un).
 - Le moteur exporte `export const GAME_EVENT_TYPES = [...] as const` (les 71 chaînes, ordre du
@@ -343,7 +343,7 @@ test qui **casse la compilation** quand le moteur évolue sans son schéma.
   (lit `docs/design/03-donnees.md` §3.4 et compare la liste des types au markdown).
 
 **Critères d'acceptation**
-- `pnpm --filter @for/contracts build typecheck lint test` sort en 0. *(Seule tâche à livrer
+- `pnpm turbo run build typecheck lint test --filter @for/contracts` sort en 0. *(Seule tâche à livrer
   dans `@for/contracts` à cette vague : la suite entière est un critère légitime ici.)*
 - `tests/event-catalog.test.ts` échoue si l'on retire une ligne du tableau de la spec ou une
   variante du schéma (le testeur applique les deux patchs).
@@ -389,7 +389,7 @@ une modification de règle **visible en diff** au lieu de silencieuse.
 - `src/index.ts` exportant le tout, plus un `src/fixtures/index.ts` vide que M0-10 remplira.
 
 **Critères d'acceptation**
-- `pnpm --filter @for/testkit build typecheck lint test` sort en 0.
+- `pnpm turbo run build typecheck lint test --filter @for/testkit` sort en 0.
 - Un test vérifie qu'un `scriptedRng` épuisé lève `ScriptedRngExhausted` avec le nombre de
   tirages consommés dans le message.
 - Un test vérifie que `stableStringify` donne le même octet pour deux objets aux clés
