@@ -1,0 +1,11 @@
+# Configuration actionlint.
+#
+# La cle `self-hosted-runner.labels` n'interdit PAS les runners auto-heberges : mesure,
+# `runs-on: self-hosted` passe avec ou sans ce fichier. Elle ne sert qu'a declarer des
+# etiquettes personnalisees valides. Elle est donc absente d'ici : un garde-fou qui ne
+# refuse rien ne doit pas figurer dans une configuration (ADR 0002, lecon de M0-01).
+config-variables:
+  - PUBLIC_URL
+  - NARRATOR_PROVIDER
+  - NARRATOR_BASE_URL
+  - NARRATOR_MODEL

@@ -1,0 +1,32 @@
+# Qui doit relire quoi.
+#
+# La dernière règle qui correspond l'emporte : les entrées les plus spécifiques
+# sont donc en bas. Tout ce qui est listé ici exige la revue du tech lead avant
+# fusion, parce qu'un agent développeur ne peut pas s'auto-arbitrer.
+
+# Propriété par défaut.
+*                           @bourbask
+
+# ── La prose qui fait autorité ────────────────────────────────────────────────
+# Les documents de conception arbitrent les tâches. Une correction silencieuse de
+# spécification est le pire défaut du projet : elle rend vertes des tâches fausses.
+# Une PR qui les touche doit expliquer pourquoi un ADR n'a pas suffi.
+/docs/ARCHITECTURE.md       @bourbask
+/docs/design/               @bourbask
+/docs/adr/                  @bourbask
+/docs/M0-TASKS.md           @bourbask
+/CLAUDE.md                  @bourbask
+
+# ── La porte de merge elle-même ───────────────────────────────────────────────
+# Assouplir la porte est toujours plus rapide que réparer ce qu'elle attrape.
+/.github/                   @bourbask
+/scripts/check-ci-jobs.sh   @bourbask
+/scripts/check-workspace.ts @bourbask
+/.dependency-cruiser.cjs    @bourbask
+/eslint.config.js           @bourbask
+/tooling/                   @bourbask
+/vitest.config.ts           @bourbask
+/vitest.workspace.ts        @bourbask
+
+# ── Exploitation ──────────────────────────────────────────────────────────────
+/infra/                     @bourbask

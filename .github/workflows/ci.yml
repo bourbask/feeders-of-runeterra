@@ -1,0 +1,256 @@
+name: CI
+
+# Les douze travaux de docs/design/01-architecture.md §8, dans l'ordre de dépendance.
+# Les travaux dont la cible n'est pas encore livrée tolèrent l'échec de l'étape
+# concernée — le marqueur porte le numéro de la tâche qui les rendra bloquants.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Une porte lente est une porte que l'on contourne : on annule la série précédente
+# dès qu'un nouveau commit arrive sur la même référence.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Le cache Turborepo doit tomber à l'endroit que l'action de préparation
+  # sauvegarde et restaure. Par défaut il vit ailleurs selon la version.
+  TURBO_CACHE_DIR: ${{ github.workspace }}/.turbo/cache
+  TURBO_TELEMETRY_DISABLED: 1
+  DO_NOT_TRACK: 1
+
+jobs:
+  # 1 — Un lockfile désynchronisé est rouge. C'est aussi ce travail qui amorce le
+  # cache du magasin pnpm pour tous les autres.
+  install:
+    name: 1 · Installation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-node-pnpm
+      - name: Installer les dépendances
+        run: pnpm install --frozen-lockfile
+
+  # 2 — Prettier possède le code ; docs/ est hors de sa portée (.prettierignore).
+  format:
+    name: 2 · Format
+    needs: [install]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-node-pnpm
+      - name: Installer les dépendances
+        run: pnpm install --frozen-lockfile
+      - name: Vérifier le formatage
+        run: pnpm format:check
+
+  # 3
+  lint:
+    name: 3 · Lint
+    needs: [install]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-node-pnpm
+      - name: Installer les dépendances
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm lint
+
+  # 4
+  typecheck:
+    name: 4 · Typage
+    needs: [install]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-node-pnpm
+      - name: Installer les dépendances
+        run: pnpm install --frozen-lockfile
+      - name: Typage du graphe de projets
+        run: pnpm typecheck
+
+  # 12 — remonté avant `deps`, voir docs/adr/0003. Turborepo enchaîne déjà `^build`
+  # pour `test` et `typecheck` : construire tôt ne coûte rien et remplit le cache.
+  # C'est le seul travail qui ÉCRIT le cache Turborepo : les onze autres ne font
+  # que le lire. Un seul producteur, donc pas de course pour la clé.
+  build:
+    name: 12 · Construction
+    needs: [install]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-node-pnpm
+        with:
+          turbo-cache: write
+      - name: Installer les dépendances
+        run: pnpm install --frozen-lockfile
+      - name: Construire tous les paquets
+        run: pnpm build
+
+  # 5 — Graphe, cycles, pureté du moteur, scripts obligatoires, cohérence de la
+  # chaîne elle-même. Dépend de `build` : sans les `dist/`, dependency-cruiser
+  # résout mal les paquets de l'espace de travail et rapporte une violation
+  # d'arête comme « dépendance orpheline ». Le garde-fou tient, le diagnostic
+  # trompe — et un diagnostic trompeur se contourne. Voir docs/adr/0003.
+  deps:
+    name: 5 · Dépendances et cohérence
+    needs: [build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-node-pnpm
+      - name: Installer les dépendances
+        run: pnpm install --frozen-lockfile
+      - name: Restaurer les dist/ depuis le cache Turborepo
+        run: pnpm build
+      - name: Graphe de dépendances entre paquets
+        run: pnpm depcruise
+      - name: Cohérence de l'espace de travail
+        run: pnpm check:workspace
+      - name: Cohérence de la chaîne d'intégration
+        run: bash scripts/check-ci-jobs.sh
+
+  # 6 — `pnpm test:coverage`, et surtout pas `pnpm test` : `turbo run test` lance les
+  # configurations de paquet, qui ignorent le seuil global de 70 %. C'est la seule
+  # commande qui l'évalue (ADR 0002 §3).
+  test-unit:
+    name: 6 · Tests unitaires et couverture
+    needs: [deps]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-node-pnpm
+      - name: Installer les dépendances
+        run: pnpm install --frozen-lockfile
+      - name: Tests unitaires avec seuils de couverture
+        run: pnpm test:coverage
+
+  # 7
+  test-golden:
+    name: 7 · Corpus dorés
+    needs: [deps]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-node-pnpm
+      - name: Installer les dépendances
+        run: pnpm install --frozen-lockfile
+      # Ce garde-fou-ci est bloquant dès aujourd'hui, et le reste : un corpus doré
+      # régénéré pendant la porte de merge ne prouve rien du tout.
+      - name: Refuser GOLDEN_UPDATE dans l'environnement
+        run: |
+          if [ -n "${GOLDEN_UPDATE:-}" ]; then
+            echo "GOLDEN_UPDATE est présent dans l'environnement du travail." >&2
+            echo "Un corpus doré régénéré en CI ne prouve rien : la porte est fermée." >&2
+            exit 1
+          fi
+      - name: Comparer aux corpus dorés
+        id: golden
+        continue-on-error: true # TODO M0-30: retirer
+        run: pnpm test:golden
+      # Une étape tolérée est rapportée « success » par GitHub : sans cette
+      # annotation, l'échec ne se voit qu'en dépliant le journal, et une tolérance
+      # invisible est une tolérance qu'on oublie de retirer.
+      - name: Annoncer la tolérance
+        if: steps.golden.outcome == 'failure'
+        run: echo "::warning title=Étape tolérée::« Comparer aux corpus dorés » a échoué. Cible livrée par M0-10 ; tolérance retirée en M0-30."
+
+  # 8
+  migrations:
+    name: 8 · Migrations
+    needs: [deps]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-node-pnpm
+      - name: Installer les dépendances
+        run: pnpm install --frozen-lockfile
+      - name: Schéma, migration à blanc et amorçage sur base jetable
+        id: migrations
+        continue-on-error: true # TODO M0-30: retirer
+        env:
+          DATABASE_PATH: ${{ runner.temp }}/ci-migrations.db
+        run: |
+          pnpm db:check-schema
+          pnpm db:migrate
+          pnpm db:seed
+      - name: Annoncer la tolérance
+        if: steps.migrations.outcome == 'failure'
+        run: echo "::warning title=Étape tolérée::« Schéma, migration à blanc et amorçage » a échoué. Cibles livrées par M0-11 et M0-26 ; tolérance retirée en M0-30."
+
+  # 9
+  content:
+    name: 9 · Contenu de jeu
+    needs: [deps]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-node-pnpm
+      - name: Installer les dépendances
+        run: pnpm install --frozen-lockfile
+      - name: Chargeur en quatre passes, puis index régénéré à l'identique
+        id: content
+        continue-on-error: true # TODO M0-30: retirer
+        run: |
+          pnpm content:check
+          pnpm content:index
+          git diff --exit-code
+      - name: Annoncer la tolérance
+        if: steps.content.outcome == 'failure'
+        run: echo "::warning title=Étape tolérée::« Chargeur de contenu et index » a échoué. Cible livrée par M0-14 ; tolérance retirée en M0-30."
+
+  # 10 — Niveau N0 : zéro appel d'API, zéro clé (docs/design/02-mj-ia.md §8.5).
+  ai-eval-offline:
+    name: 10 · Éval IA hors ligne
+    needs: [deps]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-node-pnpm
+      - name: Installer les dépendances
+        run: pnpm install --frozen-lockfile
+      - name: Éval N0
+        id: eval-offline
+        continue-on-error: true # TODO M0-30: retirer
+        run: pnpm eval:offline
+      - name: Annoncer la tolérance
+        if: steps.eval-offline.outcome == 'failure'
+        run: echo "::warning title=Étape tolérée::« Éval N0 » a échoué. Cible livrée par M0-27 ; tolérance retirée en M0-30."
+
+  # 11 — `pnpm sim fuzz` n'est pas dans la porte de PR en M0 (§8) : la trame
+  # malformée est déjà couverte par les tests du travail 6.
+  sim:
+    name: 11 · Simulateur
+    needs: [deps]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-node-pnpm
+      - name: Installer les dépendances
+        run: pnpm install --frozen-lockfile
+      - name: Tous les scénarios
+        id: sim
+        continue-on-error: true # TODO M0-30: retirer
+        run: pnpm sim run --format=json
+      - name: Annoncer la tolérance
+        if: steps.sim.outcome == 'failure'
+        run: echo "::warning title=Étape tolérée::« Tous les scénarios » a échoué. Cible livrée par M0-28 ; tolérance retirée en M0-30."

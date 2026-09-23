@@ -1,0 +1,65 @@
+name: Installer Node et pnpm
+description: >-
+  Prépare un runner neuf : pnpm à la version épinglée par `packageManager`, Node à la
+  version du `.nvmrc`, cache du magasin pnpm et cache Turborepo. N'installe volontairement
+  pas les dépendances : chaque travail écrit son `pnpm install --frozen-lockfile` en clair,
+  pour que `scripts/check-ci-jobs.sh` voie toutes les commandes de la chaîne — le script
+  parcourt les workflows et les actions composites, ce fichier compris.
+
+inputs:
+  turbo-cache:
+    description: >-
+      `write` dans le seul travail qui produit le cache Turborepo (`build`), `read`
+      partout ailleurs. Un seul producteur, donc pas de course : voir docs/adr/0003.
+    required: false
+    default: read
+
+runs:
+  using: composite
+  steps:
+    # La version de pnpm vient de `packageManager` dans le package.json racine.
+    # On ne la redit pas ici : deux sources de vérité qui divergent, c'est une
+    # installation qui passe sur une machine et échoue sur l'autre.
+    - name: Installer pnpm
+      uses: pnpm/action-setup@v4
+
+    - name: Installer Node
+      uses: actions/setup-node@v4
+      with:
+        node-version-file: .nvmrc
+        cache: pnpm
+
+    # Un seul travail écrit ce cache, et c'est `build`. La clé le dit : les travaux
+    # qui ne construisent rien ne peuvent plus la réserver avant lui.
+    #
+    # Mesuré sur la première série : avec une clé unique partagée par les douze
+    # travaux, `lint` — qui remplit `.turbo/cache` sans produire un seul `dist/` —
+    # entre en course avec `build` pour la même clé. Sur la série 1 c'est `build`
+    # qui l'a réservée le premier et `lint` a rapporté « Unable to reserve cache
+    # with key turbo-Linux-<sha>, another job may be creating this cache ». L'ordre
+    # d'arrivée n'est garanti par rien : un jour où `lint` finit avant `build`,
+    # `deps` restaure un cache sans `dist/` et reconstruit pour de vrai. On ne
+    # laisse pas un argument de coût reposer sur une course.
+    - name: Cache Turborepo — production
+      if: inputs.turbo-cache == 'write'
+      uses: actions/cache@v4
+      with:
+        path: .turbo/cache
+        key: turbo-build-${{ runner.os }}-${{ github.sha }}
+        restore-keys: |
+          turbo-build-${{ runner.os }}-
+
+    # Restauration seule : pas d'étape de sauvegarde, donc aucune réservation de clé
+    # et aucun cache pollué. Les travaux qui dépendent de `build` trouvent la clé
+    # exacte, puisque `build` est terminé — sauvegarde de fin de travail comprise.
+    # Les travaux lancés en parallèle de `build` (`format`, `lint`, `typecheck`)
+    # tombent sur le repli par préfixe, ou sur rien : ils n'ont pas de `dist/` à y
+    # gagner et ne perdent rien à le manquer.
+    - name: Cache Turborepo — consommation
+      if: inputs.turbo-cache != 'write'
+      uses: actions/cache/restore@v4
+      with:
+        path: .turbo/cache
+        key: turbo-build-${{ runner.os }}-${{ github.sha }}
+        restore-keys: |
+          turbo-build-${{ runner.os }}-
