@@ -91,9 +91,24 @@ export interface CampaignTruthSetPayload {
   readonly customText?: string | undefined;
 }
 
+/**
+ * Every field optional, `undefined` included.
+ *
+ * `Partial<T>` CANNOT BE MIRRORED BY A ZOD SCHEMA here.
+ * `exactOptionalPropertyTypes` is on, so `Partial<T>` produces `k?: V` — a key
+ * that may be ABSENT but never `undefined` — while `z.object(...).partial()`
+ * produces `k?: V | undefined`. The second is not assignable to the first, so
+ * `zCampaignSettingsUpdatedPayload satisfies z.ZodType<...>` refuses to
+ * compile. Measured, not guessed.
+ *
+ * Any future payload with an optional-everything shape uses this alias rather
+ * than `Partial`.
+ */
+export type PartialPayload<T> = { readonly [K in keyof T]?: T[K] | undefined };
+
 export interface CampaignSettingsUpdatedPayload {
-  readonly patch: Partial<CampaignSettings>;
-  readonly before: Partial<CampaignSettings>;
+  readonly patch: PartialPayload<CampaignSettings>;
+  readonly before: PartialPayload<CampaignSettings>;
 }
 
 export interface CampaignStatusChangedPayload {
