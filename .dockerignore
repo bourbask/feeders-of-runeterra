@@ -1,0 +1,54 @@
+# Ce que l'image ne doit jamais voir.
+#
+# Deux raisons distinctes de figurer ici :
+#  - les artefacts locaux (node_modules, dist, caches) fausseraient la
+#    construction : l'image doit reconstruire depuis le verrou, jamais hériter
+#    du poste du développeur ;
+#  - les secrets et l'historique n'ont rien à faire dans un contexte de build,
+#    qui est envoyé en entier au démon Docker.
+
+# Artefacts de construction locaux
+node_modules
+**/node_modules
+dist
+**/dist
+build
+**/build
+coverage
+**/coverage
+.turbo
+**/.turbo
+.vite
+**/.vite
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# Historique et outillage de dépôt
+.git
+.gitignore
+.gitattributes
+.github
+.editorconfig
+.claude
+
+# Secrets et bases locales — jamais dans un contexte de build
+.env
+.env.*
+!.env.example
+*.db
+*.db-wal
+*.db-shm
+data
+
+# Prose : l'image n'en a pas besoin, et la faire entrer invaliderait le cache
+# de couche à chaque correction de typo dans un runbook.
+docs
+README.md
+CLAUDE.md
+
+# L'infrastructure se décrit elle-même : elle n'entre pas dans l'image.
+infra
+
+# Divers
+*.log
+.DS_Store

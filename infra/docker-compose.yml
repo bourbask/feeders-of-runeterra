@@ -1,0 +1,98 @@
+# Composition de production — un VPS, deux conteneurs (01-architecture.md §9.2).
+#
+# ════════════════════════════════════════════════════════════════════════════
+#  IL N'Y AURA JAMAIS DEUX INSTANCES DE `app`.
+#
+#  SQLite en mode WAL suppose un écrivain unique. Deux processus `app` sur le
+#  même fichier corrompraient la sérialisation par campagne et feraient perdre
+#  les tampons de narration, qui vivent en mémoire de processus. Il n'existe
+#  donc AUCUNE montée en charge horizontale ici : `deploy.replicas` vaut 1, et
+#  ce 1 n'est pas un réglage de capacité, c'est une contrainte d'intégrité.
+#
+#  Passer à plusieurs instances exige de changer de base de données. C'est une
+#  décision d'architecture, pas de déploiement. Voir docs/runbook/deploy.md,
+#  paragraphe « Pourquoi il n'y aura jamais deux instances ».
+# ════════════════════════════════════════════════════════════════════════════
+
+name: feeders
+
+services:
+  app:
+    image: ${FEEDERS_IMAGE:-ghcr.io/bourbask/feeders-of-runeterra}:${FEEDERS_TAG:-latest}
+    restart: unless-stopped
+
+    # Écrivain unique — voir l'encadré ci-dessus. Ne pas toucher.
+    deploy:
+      replicas: 1
+
+    env_file:
+      # Absent du dépôt par construction (`.env` est dans .gitignore) ; présent
+      # sur le VPS à côté de ce fichier. `required: false` permet à
+      # `docker compose config` de valider la composition en CI, où il n'y a
+      # ni secret ni hôte.
+      - path: .env
+        required: false
+
+    environment:
+      NODE_ENV: production
+      PORT: '8787'
+      DATABASE_PATH: /app/data/app.db
+
+    volumes:
+      # La base vit sur l'hôte, jamais dans la couche éphémère du conteneur.
+      - ${FEEDERS_DATA_DIR:-/srv/feeders/data}:/app/data
+
+    # Pas de `ports:` : rien n'est exposé sur l'hôte. Caddy est la seule
+    # porte d'entrée, et il joint `app` par le réseau interne de la
+    # composition.
+    expose:
+      - '8787'
+
+    # Le HEALTHCHECK est déclaré dans l'image (infra/Dockerfile) et hérité
+    # ici. C'est lui que `docker compose up -d --wait` attend, et c'est lui qui
+    # fait qu'une migration échouée au démarrage laisse l'ancien conteneur en
+    # place au lieu de basculer sur un serveur mort.
+
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '5'
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+
+    depends_on:
+      app:
+        condition: service_healthy
+
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp' # HTTP/3
+
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data # certificats ACME — à sauvegarder, sinon on re-émet
+      - caddy_config:/config
+
+    environment:
+      FEEDERS_DOMAIN: ${FEEDERS_DOMAIN:-feeders.example.com}
+      FEEDERS_ACME_EMAIL: ${FEEDERS_ACME_EMAIL:-ops@example.com}
+
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '5'
+
+# Litestream n'est PAS livré en M0 (01-architecture.md §9.4, 03-donnees.md §6.4) :
+# pas de vrais joueurs, donc pas de minutes de partie à perdre. Le service et
+# son `litestream.yml` sont écrits dans docs/runbook/backup-restore.md, prêts à
+# être décommentés le jour du premier joueur réel. C'est une ligne à activer,
+# pas un chantier.
+
+volumes:
+  caddy_data:
+  caddy_config:
