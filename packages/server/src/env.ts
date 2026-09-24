@@ -82,7 +82,14 @@ const zEnvFields = z.object({
   DISCORD_REDIRECT_URI: z.url(),
 
   // The five base variables of 02-mj-ia.md section 0.6.
-  NARRATOR_PROVIDER: z.enum(NARRATOR_PROVIDER_IDS).default('stub'),
+  //
+  // NO DEFAULT, and that is the whole point: section 0.6 marks this row
+  // "obligatoire : oui", and `stub` is the product's ONLY degraded-mode
+  // switch. A default would let a real table boot on the fallback storyteller
+  // — no key, no network, nobody told — which is precisely the silent
+  // degradation section 0.6 exists to forbid. `.env.example`,
+  // `infra/docker-compose.dev.yml` and the CI all set it explicitly.
+  NARRATOR_PROVIDER: z.enum(NARRATOR_PROVIDER_IDS),
   NARRATOR_BASE_URL: z.url().optional(),
   NARRATOR_API_KEY: z.string().min(1).optional(),
   NARRATOR_MODEL: z.string().min(1).optional(),

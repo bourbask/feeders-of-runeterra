@@ -15,7 +15,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { staticContent } from '@for/content';
+import { GENERATED_FILES, GENERATED_HASH, staticContent } from '@for/content';
 import {
   zAdminHealthResponse,
   zAppErrorPayload,
@@ -29,7 +29,12 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { buildApp } from '../../src/app.js';
 import { campaignRng, createUlidFactory } from '../../src/deps.js';
 import { readEnv } from '../../src/env.js';
-import { healthRoutes } from '../../src/http/health.js';
+import { AppError, installErrorHandling } from '../../src/errors.js';
+import {
+  expectedMigrationCount,
+  healthRoutes,
+  recomputeContentHash,
+} from '../../src/http/health.js';
 import { createLogger } from '../../src/logger.js';
 
 import type { SqliteConnection } from '@for/db';
@@ -182,6 +187,32 @@ describe('/readyz', () => {
       migrations: true,
     });
   });
+
+  it('répond 503 quand le schéma est là mais la trace des migrations est incomplète', async () => {
+    // THE OTHER HALF OF THE PROBE. The test above only ever meets a database
+    // where `__drizzle_migrations` does not exist at all: the `prepare` throws
+    // and the `catch` answers false, so the COMPARISON of the two counts is
+    // never reached. The case that matters at a deployment is this one — the
+    // schema is there, the applied trace is short of what the repository
+    // ships — and it is the case a container would otherwise declare ready on
+    // a stale schema. Measured: `>= expected` weakened to `>= 0` turns this
+    // red and leaves every other test in the file green.
+    const { connection } = freshFile();
+    migrateConnection(connection);
+    // Without this the case would be vacuous: zero expected migrations are
+    // trivially applied, and the assertion below would hold for any code.
+    expect(expectedMigrationCount()).toBeGreaterThan(0);
+    connection.prepare('DELETE FROM __drizzle_migrations').run();
+
+    const response = await (await bedOver(connection)).inject({ method: 'GET', url: '/readyz' });
+
+    expect(response.statusCode).toBe(503);
+    expect(zReadyzResponse.parse(response.json())).toEqual({
+      status: 'not_ready',
+      database: true,
+      migrations: false,
+    });
+  });
 });
 
 describe('/api/admin/health', () => {
@@ -214,9 +245,57 @@ describe('/api/admin/health', () => {
     expect(response.statusCode).toBe(200);
     const body = zAdminHealthResponse.parse(response.json());
     expect(body.quickCheck).toBe('ok');
-    // Two independent readings of the content: the hash recomputed when the
-    // bundle is validated, and the one `content:index` committed.
-    expect(body.contentHash).toBe(body.contentHashExpected);
+    // TWO INDEPENDENT READINGS, and this time there really are two: the digest
+    // `health.ts` recomputes from `GENERATED_FILES`, and the one
+    // `content:index` committed as `GENERATED_HASH`. The first version of this
+    // line compared `body.contentHash` to `body.contentHashExpected` while
+    // both came from `GENERATED_HASH` — a value compared to itself, green on a
+    // bundle whose announced hash was `deadbeef…`.
+    expect(body.contentHash).toBe(GENERATED_HASH);
+    expect(body.contentHashExpected).toBe(GENERATED_HASH);
+  });
+
+  it('recalcule le hachage du contenu au lieu de recopier celui du paquet', async () => {
+    // The direction that kills the tautology for good: one of the two sources
+    // is corrupted — a bundle that ANNOUNCES a false hash — and the route must
+    // still report what the files actually say. Reading
+    // `deps.content.bundle.hash` back, as the first version did, makes this
+    // test red.
+    const { connection } = freshFile();
+    migrateConnection(connection);
+    const registry = staticContent();
+    const lying = {
+      ...registry,
+      bundle: { ...registry.bundle, hash: 'deadbeef'.repeat(8) },
+    } as typeof registry;
+
+    const app = Fastify();
+    app.decorate('requireAdmin', () => undefined);
+    void app.register(healthRoutes, { deps: { ...depsOver(connection), content: lying } });
+    await app.ready();
+    open.push({ app, close: () => app.close() });
+
+    const response = await app.inject({ method: 'GET', url: '/api/admin/health' });
+
+    const body = zAdminHealthResponse.parse(response.json());
+    expect(body.contentHash).not.toBe('deadbeef'.repeat(8));
+    expect(body.contentHash).toBe(GENERATED_HASH);
+  });
+
+  it('un octet changé dans un fichier de contenu fait diverger le hachage recalculé', () => {
+    // The other corrupted source: the files. Without this, "recomputed" would
+    // be a word in a comment — a digest that never moves proves nothing.
+    const file = 'champions/braum.json';
+    expect(GENERATED_FILES[file]).toBeDefined();
+    const document = JSON.parse(GENERATED_FILES[file] ?? '{}') as Record<string, unknown>;
+    const corrupted = {
+      ...GENERATED_FILES,
+      [file]: JSON.stringify({ ...document, name: 'Braumm' }),
+    };
+
+    expect(recomputeContentHash(corrupted)).not.toBe(GENERATED_HASH);
+    // And back the other way, on the shipped files, untouched.
+    expect(recomputeContentHash()).toBe(GENERATED_HASH);
   });
 });
 
@@ -230,5 +309,30 @@ describe('la surface d’erreur', () => {
     const body = zAppErrorPayload.parse(response.json());
     expect(body.code).toBe('route_not_found');
     expect(body.requestId).not.toBe('');
+  });
+
+  it('ne laisse pas « details » traverser vers le client', async () => {
+    // ASSERTED ON THE RAW KEYS, never through `zAppErrorPayload.parse`:
+    // the contract is a non-strict `z.object`, so parsing STRIPS a surnumerary
+    // key and the test would observe the payload through the very filter that
+    // sanitises it. Measured: sending `details` alongside the payload left the
+    // 28 tests of the package green before this one existed.
+    const app = Fastify();
+    installErrorHandling(app);
+    app.get('/boum', () => {
+      throw new AppError('internal_error', 500, 'Une erreur interne est survenue.', {
+        sql: 'SELECT token FROM sessions',
+      });
+    });
+    await app.ready();
+    open.push({ app, close: () => app.close() });
+
+    const response = await app.inject({ method: 'GET', url: '/boum' });
+
+    expect(response.statusCode).toBe(500);
+    // The three keys of `zAppErrorPayload`, written out in full here rather
+    // than derived from the schema the handler already uses.
+    expect(Object.keys(response.json()).sort()).toEqual(['code', 'message', 'requestId']);
+    expect(response.body).not.toContain('SELECT token');
   });
 });

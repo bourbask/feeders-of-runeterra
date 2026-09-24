@@ -17,10 +17,11 @@
  * `/healthz`, the test goes red instead of the probe going quiet.
  */
 
+import { createHash } from 'node:crypto';
 import { readFileSync, statSync, statfsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-import { GENERATED_HASH } from '@for/content';
+import { GENERATED_FILES, GENERATED_HASH, contentHash } from '@for/content';
 import {
   ADMIN_HEALTH_BACKUP_MAX_AGE_MS,
   ADMIN_HEALTH_MIN_FREE_DISK_RATIO,
@@ -89,6 +90,34 @@ export function migrationsApplied(connection: SqliteConnection): boolean {
   }
 }
 
+/**
+ * The content digest, RECOMPUTED from the files rather than read back.
+ *
+ * `deps.content.bundle.hash` cannot answer this question: `staticContent()`
+ * hands `GENERATED_HASH` to `validateContent`, which copies it into the
+ * bundle. Comparing that field to `GENERATED_HASH` compares a value to
+ * itself — the fifth mode of "rule present and inert" (ADR 0007), and it is
+ * what shipped here first. `contentHash(files, sha256)` and `GENERATED_FILES`
+ * are the two exports that make the comparison real: the digest below is a
+ * function of WHAT THE FILES SAY, `GENERATED_HASH` is what `content:index`
+ * committed, and the two diverge as soon as either side is touched alone.
+ *
+ * Computed ONCE per import, not per request: `/api/admin/health` is allowed to
+ * be expensive, a probe tick is not.
+ */
+function sha256(input: string): string {
+  return createHash('sha256').update(input, 'utf8').digest('hex');
+}
+
+/** Exported so a test can corrupt one of the two sources and demand the red. */
+export function recomputeContentHash(
+  files: Readonly<Record<string, string>> = GENERATED_FILES,
+): string {
+  return contentHash(new Map(Object.entries(files)), sha256);
+}
+
+const CONTENT_HASH: string = recomputeContentHash();
+
 function sizeOf(path: string): number {
   try {
     return statSync(path).size;
@@ -147,14 +176,13 @@ export function adminHealth(deps: AppDeps): AdminHealthResponse {
   const walBytes = sizeOf(`${deps.env.DATABASE_PATH}-wal`);
   const lastBackupAgeMs = lastBackupAge();
   const ratio = freeDiskRatio(deps.env.DATABASE_PATH);
-  const contentHash = deps.content.bundle.hash;
 
   return {
     quickCheck: check,
     walBytes,
     lastBackupAgeMs,
     freeDiskRatio: ratio,
-    contentHash,
+    contentHash: CONTENT_HASH,
     contentHashExpected: GENERATED_HASH,
     healthy:
       check === 'ok' &&
@@ -162,7 +190,7 @@ export function adminHealth(deps: AppDeps): AdminHealthResponse {
       lastBackupAgeMs !== null &&
       lastBackupAgeMs <= ADMIN_HEALTH_BACKUP_MAX_AGE_MS &&
       ratio >= ADMIN_HEALTH_MIN_FREE_DISK_RATIO &&
-      contentHash === GENERATED_HASH,
+      CONTENT_HASH === GENERATED_HASH,
   };
 }
 

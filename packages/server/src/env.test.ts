@@ -64,7 +64,10 @@ describe('les variables de base', () => {
     expect(failureVariables(baseVars({ SESSION_SECRET: 'a'.repeat(31) }))).toContain(
       'SESSION_SECRET',
     );
-    expect(readEnv(baseVars({ SESSION_SECRET: 'a'.repeat(32) })).SESSION_SECRET).toHaveLength(32);
+    expect(
+      readEnv(baseVars({ SESSION_SECRET: 'a'.repeat(32), NARRATOR_PROVIDER: 'stub' }))
+        .SESSION_SECRET,
+    ).toHaveLength(32);
   });
 
   it('traite une variable vide comme absente, pas comme une valeur', () => {
@@ -74,6 +77,16 @@ describe('les variables de base', () => {
 
 describe('la validation conditionnelle du conteur (02-mj-ia.md §0.6)', () => {
   const URL_OK = 'http://localhost:11434/v1';
+
+  it('refuse une configuration sans NARRATOR_PROVIDER en nommant la variable', () => {
+    // Section 0.6 marks the row "obligatoire : oui", and the sentence above the
+    // table says a missing variable STOPS THE PROCESS by name. `stub` is the
+    // single degraded-mode switch of the product: a default here would let a
+    // real table boot on the fallback storyteller without a word. Both
+    // directions, so putting `.default('stub')` back makes this red.
+    expect(failureVariables(baseVars())).toContain('NARRATOR_PROVIDER');
+    expect(readEnv(baseVars({ NARRATOR_PROVIDER: 'stub' })).NARRATOR_PROVIDER).toBe('stub');
+  });
 
   it('stub passe sans aucune autre variable NARRATOR_*', () => {
     const env = readEnv(baseVars({ NARRATOR_PROVIDER: 'stub' }));
@@ -137,7 +150,7 @@ describe('la validation conditionnelle du conteur (02-mj-ia.md §0.6)', () => {
 
 describe('les trois variables d’appoint (P19)', () => {
   it('reçoivent leurs valeurs par défaut, jamais undefined', () => {
-    const env = readEnv(baseVars());
+    const env = readEnv(baseVars({ NARRATOR_PROVIDER: 'stub' }));
 
     expect(env.NARRATOR_TOOLS).toBe('probe');
     expect(env.NARRATOR_TIMEOUT_MS).toBe(60_000);
@@ -148,7 +161,7 @@ describe('les trois variables d’appoint (P19)', () => {
     // `buildNarrator` reads all three unconditionally (01-architecture.md
     // §2.8). An `undefined` reaching it would be a silent configuration bug,
     // so the assertion is on the built config, not on the parsed environment.
-    const config = narratorConfig(readEnv(baseVars()));
+    const config = narratorConfig(readEnv(baseVars({ NARRATOR_PROVIDER: 'stub' })));
 
     expect(config.tools).toBe('probe');
     expect(config.timeoutMs).toBe(60_000);
@@ -159,6 +172,7 @@ describe('les trois variables d’appoint (P19)', () => {
   it('sont surchargeables', () => {
     const env = readEnv(
       baseVars({
+        NARRATOR_PROVIDER: 'stub',
         NARRATOR_TOOLS: 'off',
         NARRATOR_TIMEOUT_MS: '900000',
         NARRATOR_CONTEXT_WINDOW: '8192',
