@@ -28,6 +28,16 @@ export const ManifestSchema = z.object({
     oracles: z.number().int().positive(),
     tables: z.number().int().positive(),
     assets: z.number().int().positive(),
+    /**
+     * NOT IN SECTION 4.7 — added, and declared in the PR as a proposed ADR.
+     *
+     * `champions-index.json` was counted by nothing. Measured on the previous
+     * version: cutting the directory from 3 entries down to the 2 that have a
+     * sheet left `pnpm content:check` at 0. That file carries the casting lock
+     * and the character-choice screen (~170 entries in V1), so it is exactly
+     * the truncated-file bug `expectedCounts` exists to catch.
+     */
+    championIndex: z.number().int().positive(),
   }),
 });
 

@@ -55,7 +55,15 @@ const manifest = (): Record<string, unknown> => ({
   schemaVersion: 1,
   version: '0.1.0',
   rulesVersion: 1,
-  expectedCounts: { moves: 11, champions: 3, regions: 4, oracles: 9, tables: 2, assets: 5 },
+  expectedCounts: {
+    moves: 11,
+    champions: 3,
+    regions: 4,
+    oracles: 9,
+    tables: 2,
+    assets: 5,
+    championIndex: 170,
+  },
 });
 
 describe('RegionSchema', () => {

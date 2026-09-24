@@ -17,7 +17,10 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { parseJsonSource } from '../src/json-source.js';
+import type { MoveContent } from '@for/contracts';
+
+import { staticBundle } from '../src/index.js';
+import { JsonSyntaxError, parseJsonSource } from '../src/json-source.js';
 import { loadContent, readContentFiles } from '../src/load.js';
 import { canonicalJson } from '../src/manifest.js';
 import { createRegistry, UnknownContentIdError } from '../src/registry.js';
@@ -170,6 +173,33 @@ describe('le manifeste qui annonce plus qu’il n’y en a', () => {
     expect(messages(refused(deflated))).toContain('le manifeste annonce 2 moves, 3 chargé(s)');
   });
 
+  /**
+   * `champions-index.json` was counted by NOTHING. Measured on the previous
+   * version: cutting the directory to the 2 entries that have a sheet left
+   * `content:check` at 0 and printed « 2 entrées d'annuaire » without
+   * blinking — on the file that carries the casting lock.
+   */
+  it('rougit quand l’annuaire est tronqué, et reverdit quand il est entier', () => {
+    const truncated = edit(files(), 'champions-index.json', (document) => {
+      document['champions'] = (document['champions'] as Record<string, unknown>[]).filter(
+        (entry) => entry['id'] !== 'sejuani',
+      );
+    });
+    expect(messages(refused(truncated))).toContain(
+      'le manifeste annonce 3 championIndex, 2 chargé(s)',
+    );
+    expect(() => validateContent(files())).not.toThrow();
+  });
+
+  it('rougit AUSSI quand l’annuaire en compte plus que le manifeste', () => {
+    const inflated = edit(files(), 'manifest.json', (document) => {
+      (document['expectedCounts'] as Record<string, number>)['championIndex'] = 2;
+    });
+    expect(messages(refused(inflated))).toContain(
+      'le manifeste annonce 2 championIndex, 3 chargé(s)',
+    );
+  });
+
   it('rougit quand une fiche manque alors que le manifeste la compte', () => {
     const missing = files();
     missing.delete('champions/ashe.json');
@@ -192,6 +222,58 @@ describe('passe 1 — syntaxe', () => {
     for (const raw of files().values()) {
       expect(parseJsonSource(raw).value).toStrictEqual(JSON.parse(raw));
     }
+  });
+
+  /**
+   * The loader owns its JSON reader (section 1.2), so two readers can
+   * disagree — and they did. `Number('01')` is 1 and `Number('1.')` is 1,
+   * while `JSON.parse` refuses both. Measured on the previous version: a
+   * manifest carrying `"rulesVersion": 01` left `content:check` at 0, and
+   * `content:index` then died on a raw stack. This compares the two readers
+   * token by token instead of trusting either.
+   */
+  it.each(['01', '1.', '.5', '-', '+1', '1e', '0x10', '1.2.3', '00', '-.5', '1e+'])(
+    'refuse le nombre « %s », exactement comme JSON.parse',
+    (token) => {
+      const document = `{ "schemaVersion": 1, "n": ${token} }`;
+      expect(() => {
+        JSON.parse(document);
+      }).toThrow();
+      expect(() => parseJsonSource(document)).toThrow(JsonSyntaxError);
+    },
+  );
+
+  it.each(['0', '-0', '1', '-1', '1.5', '1e3', '1E+3', '1e-3', '0.5', '12345'])(
+    'accepte le nombre « %s », et rend la même valeur que JSON.parse',
+    (token) => {
+      const document = `{ "schemaVersion": 1, "n": ${token} }`;
+      expect(parseJsonSource(document).value).toStrictEqual(JSON.parse(document));
+    },
+  );
+
+  it('rougit sur un « 01 » dans le manifeste, et reverdit sans', () => {
+    const broken = files();
+    const raw = broken.get('manifest.json') ?? '';
+    broken.set('manifest.json', raw.replace('"rulesVersion": 1', '"rulesVersion": 01'));
+    expect(messages(refused(broken))).toContain('nombre malformé');
+    expect(() => validateContent(files())).not.toThrow();
+  });
+
+  /**
+   * `fallbacks/narration.json` has no schema, and the previous version
+   * skipped it in pass 1 too: `{ ceci n est pas du JSON` left
+   * `content:check` at 0 while the summary announced the file as present.
+   */
+  it('rougit sur un fichier NON VALIDÉ dont la syntaxe est cassée', () => {
+    const broken = files();
+    broken.set('fallbacks/narration.json', '{ ceci n’est pas du JSON');
+    const issue = refused(broken).find((candidate) => candidate.file === UNVALIDATED_PATHS[0]);
+    expect(issue?.message).toContain('JSON invalide');
+    expect(issue?.pass).toBe(1);
+    // Green without: its SHAPE is still nobody's business.
+    const reshaped = files();
+    reshaped.set('fallbacks/narration.json', '{"nimporte":"quoi"}');
+    expect(() => validateContent(reshaped)).not.toThrow();
   });
 });
 
@@ -243,6 +325,64 @@ describe('passe 3 — références', () => {
     const raw = broken.get('moves/secure-advantage.json') ?? '';
     broken.set('moves/secure-advantage.json', raw.replace('"complication"', '"complications"'));
     expect(messages(refused(broken))).toContain('table \\"complications\\" introuvable');
+  });
+
+  /**
+   * The `choice` effect is RECURSIVE (ADR 0006), so its options point back at
+   * the same `z.lazy`. A guard keyed on the getter alone stopped the walk
+   * there and reported nothing underneath — measured: exit 0 on a dead
+   * `conditionId` AND a dead `tableId` nested in a `choice`.
+   */
+  const withChoice = (conditionId: string, tableId: string): Map<string, string> =>
+    edit(files(), 'moves/endure-cold.json', (document) => {
+      const outcomes = document['outcomes'] as Record<string, Record<string, unknown>>;
+      const echec = outcomes['echec'];
+      if (echec === undefined) throw new Error('la fixture n’a plus d’issue « echec »');
+      echec['effects'] = [
+        {
+          op: 'choice',
+          label: 'Céder du terrain, ou tenir et payer.',
+          options: [
+            { id: 'ceder', label: 'Céder', effects: [{ op: 'condition_add', conditionId }] },
+            {
+              id: 'tenir',
+              label: 'Tenir',
+              effects: [
+                {
+                  op: 'choice',
+                  label: 'Et comment ?',
+                  options: [
+                    { id: 'vite', label: 'Vite', effects: [{ op: 'oracle', tableId }] },
+                    { id: 'lentement', label: 'Lentement', effects: [] },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ];
+    });
+
+  it('refuse une référence morte imbriquée dans un effet `choice`', () => {
+    const issues = refused(withChoice('transis', 'complication'));
+    const dead = issues.find((issue) => issue.message.includes('transis'));
+    expect(dead?.message).toBe('condition "transis" introuvable (suggestion : "transi")');
+    expect(dead?.path).toBe('outcomes.echec.effects[0].options[0].effects[0].conditionId');
+  });
+
+  it('refuse une `tableId` morte DEUX `choice` plus bas', () => {
+    const issues = refused(withChoice('transi', 'complications'));
+    const dead = issues.find((issue) => issue.message.includes('complications'));
+    expect(dead?.message).toBe('table "complications" introuvable (suggestion : "complication")');
+    expect(dead?.path).toBe(
+      'outcomes.echec.effects[0].options[1].effects[0].options[0].effects[0].tableId',
+    );
+  });
+
+  it('accepte le MÊME `choice` quand les deux références existent', () => {
+    // Green without, red with, on the same bundle: the two above would pass
+    // just as well if the walk had simply stopped short of the `choice`.
+    expect(() => validateContent(withChoice('transi', 'complication'))).not.toThrow();
   });
 
   it('vérifie les références d’un fichier qui a DÉJÀ échoué en passe 2', () => {
@@ -328,6 +468,18 @@ describe('passe 4 — invariants globaux', () => {
     expect(() => validateContent(files())).not.toThrow();
   });
 
+  it('refuse un nom affiché qui diverge de la fiche', () => {
+    const renamed = edit(files(), 'champions-index.json', (document) => {
+      document['champions'] = (document['champions'] as Record<string, unknown>[]).map((entry) =>
+        entry['id'] === 'ashe' ? { ...entry, displayName: 'Quelqu un d autre' } : entry,
+      );
+    });
+    expect(messages(refused(renamed))).toContain(
+      'nom « Ashe » ≠ displayName « Quelqu un d autre »',
+    );
+    expect(() => validateContent(files())).not.toThrow();
+  });
+
   it('refuse une région canonique qui diverge de la fiche', () => {
     const drifted = edit(files(), 'champions-index.json', (document) => {
       document['champions'] = (document['champions'] as Record<string, unknown>[]).map((entry) =>
@@ -346,6 +498,73 @@ describe('content-fixtures-broken — le rapport de la section 4.8', () => {
     expect(report.split('\n').filter((line) => /^\s*→/.test(line))).toHaveLength(3);
     expect(report).toContain('(suggestion :');
     expect(report).toContain('✖ Contenu invalide — le serveur ne démarrera pas (3 erreurs)');
+  });
+});
+
+describe('le bundle est gelé pour de vrai, pas seulement dans les types', () => {
+  /**
+   * `staticContent()` memoises ONE bundle for the whole process. Measured on
+   * the version this test was written against: the map accepted a `set` and a
+   * document accepted a field assignment, so any caller could rewrite a rule
+   * of the game for every campaign. `ReadonlyMap` is a type; these are writes.
+   */
+  it('refuse d’ajouter une règle inventée à chaud', () => {
+    const bundle = loadContent(FIXTURES);
+    const moves = bundle.moves as Map<string, MoveContent>;
+    const copie = moves.get('endure-cold');
+    if (copie === undefined) throw new Error('la fixture n’a plus « endure-cold »');
+    expect(() => moves.set('invente-par-le-mj', copie)).toThrow(TypeError);
+    expect(bundle.moves.size).toBe(3);
+    expect(bundle.moves.has('invente-par-le-mj')).toBe(false);
+  });
+
+  it('refuse de retirer ou de vider une carte du bundle', () => {
+    const bundle = loadContent(FIXTURES);
+    const moves = bundle.moves as Map<string, MoveContent>;
+    expect(() => moves.delete('endure-cold')).toThrow(TypeError);
+    expect(() => {
+      moves.clear();
+    }).toThrow(TypeError);
+    expect(bundle.moves.size).toBe(3);
+  });
+
+  it('refuse de réécrire un champ d’un document déjà chargé', () => {
+    const bundle = loadContent(FIXTURES);
+    const move = bundle.moves.get('endure-cold') as { name: string };
+    expect(() => {
+      move.name = 'Nom réécrit à chaud';
+    }).toThrow(TypeError);
+    expect(bundle.moves.get('endure-cold')?.name).toBe('Endurer le froid');
+  });
+
+  it('gèle en PROFONDEUR : un effet imbriqué ne se réécrit pas non plus', () => {
+    const bundle = loadContent(FIXTURES);
+    const effects = bundle.moves.get('endure-cold')?.outcomes.echec.effects as unknown[];
+    expect(Object.isFrozen(effects)).toBe(true);
+    expect(() => effects.push({ op: 'momentum_reset' })).toThrow(TypeError);
+    const effect = effects[1] as { conditionId: string };
+    expect(() => {
+      effect.conditionId = 'autre-chose';
+    }).toThrow(TypeError);
+  });
+
+  it('gèle aussi les documents uniques et les listes', () => {
+    const bundle = loadContent(FIXTURES);
+    expect(Object.isFrozen(bundle)).toBe(true);
+    expect(Object.isFrozen(bundle.priceTable.entries)).toBe(true);
+    expect(Object.isFrozen(bundle.truths)).toBe(true);
+    expect(Object.isFrozen(bundle.unvalidated)).toBe(true);
+    expect(Object.isFrozen(bundle.yesNo)).toBe(true);
+    expect(Object.isFrozen(bundle.presages)).toBe(true);
+  });
+
+  it('gèle le bundle STATIQUE, celui que staticContent() mémoïse', () => {
+    const first = staticBundle();
+    expect(() => (first.moves as Map<string, MoveContent>).set('x', {} as MoveContent)).toThrow(
+      TypeError,
+    );
+    // Same object on the second call: a leak here would be a leak for everyone.
+    expect(staticBundle()).toBe(first);
   });
 });
 
@@ -373,5 +592,37 @@ describe('aucun accès disque hors du chargeur', () => {
     };
     walk(SRC);
     expect(offenders).toStrictEqual([]);
+  });
+
+  /**
+   * THE NET THAT WAS TRADED AWAY, REBUILT AS A TEST.
+   *
+   * `packages/content/tsconfig.json` had to move from `@for/tsconfig/library`
+   * to `@for/tsconfig/node` so `load.ts` could compile. That gave the WHOLE
+   * package `types: ["node"]`, including the `./ui` sub-entry that
+   * 01-architecture.md section 2.5 designates as the only one the client may
+   * import — so `import … from 'node:fs'` inside `ui.ts` is no longer a
+   * compile error. Declared in the PR. The compile-time net is replaced by
+   * this one, which walks the real import graph of `ui.ts` and is run by
+   * `pnpm test`, which the CI runs.
+   */
+  it('l’entrée cliente « @for/content/ui » n’atteint aucun module Node', () => {
+    const reachable = new Set<string>();
+    const visit = (file: string): void => {
+      if (reachable.has(file)) return;
+      reachable.add(file);
+      const source = readFileSync(file, 'utf8');
+      const builtins = [...source.matchAll(/from\s+'(node:[^']+)'|require\('(node:[^']+)'\)/g)];
+      expect(builtins.map((match) => match[1] ?? match[2])).toStrictEqual([]);
+      for (const match of source.matchAll(/from\s+'(\.[^']+)'/g)) {
+        const specifier = match[1] ?? '';
+        visit(join(dirname(file), specifier.replace(/\.js$/, '.ts')));
+      }
+    };
+    visit(join(SRC, 'ui.ts'));
+    // Green without, red with: the walk must actually have walked, and must
+    // never have reached the one module allowed to touch the disk.
+    expect(reachable.size).toBeGreaterThan(1);
+    expect([...reachable].some((file) => file.endsWith('load.ts'))).toBe(false);
   });
 });

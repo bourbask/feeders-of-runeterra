@@ -150,9 +150,16 @@ export function parseJsonSource(raw: string): JsonSource {
       while (index < raw.length && /[0-9]/.test(raw[index] ?? '')) index += 1;
     }
     const text = raw.slice(start, index);
-    const parsed = Number(text);
-    if (text === '' || Number.isNaN(parsed)) fail('nombre malformé', start);
-    return parsed;
+    // `Number()` IS NOT THE JSON GRAMMAR. It reads `01` as 1 and `1.` as 1,
+    // both of which `JSON.parse` refuses. Measured on the previous version:
+    // a `manifest.json` carrying `"rulesVersion": 01` left `content:check` at
+    // 0, so the loader said yes to a file no other JSON reader will open —
+    // and `content:index` then died on a raw stack. The grammar is spelled
+    // out here so the two readers cannot disagree.
+    if (!/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(text)) {
+      fail('nombre malformé', start);
+    }
+    return Number(text);
   };
 
   const readLiteral = (word: string, literal: null | boolean): null | boolean => {

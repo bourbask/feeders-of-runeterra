@@ -6,12 +6,24 @@
  * imports statically, and CI replays it followed by `git diff --exit-code`.
  *
  * ── WHY THE DATA IS EMBEDDED RATHER THAN `import … with { type: 'json' }` ──
- * Section 2.5 shows JSON import attributes. They cannot work here: the content
- * root lives at the REPOSITORY root, outside `packages/content`, and a
- * composite `tsc -b` project refuses a file outside its `rootDir` (TS6059).
- * Embedding the documents as canonical JSON strings keeps the same property
- * that mattered — nothing is read from disk, ever — and costs one indirection.
- * Reported in the PR as a divergence from the spec, not patched into it.
+ * Section 2.5's form COMPILES here. An earlier note in this file blamed
+ * TS6059; that error does not happen. Measured: a `src/generated/*.ts` holding
+ * `import doc from '../../../../content-fixtures/manifest.json' with { type:
+ * 'json' }` leaves `tsc -b packages/content --force` and `tsc -b --force` at 0,
+ * emits a `.d.ts` carrying the document's exact shape, and runs from `dist/`.
+ * Dropping the attribute fails on TS1543, which only confirms that section
+ * 2.5 writes the right form.
+ *
+ * The reason to embed is what the EMITTED module carries. `tsc` copies the
+ * specifier verbatim, so `dist/generated/index.js` would hold that same
+ * relative path and Node would resolve it ON DISK at module load. Measured:
+ * the emitted file, copied into a directory at another depth, fails with
+ * ERR_MODULE_NOT_FOUND. That turns this task's criterion — the content is
+ * never read from disk at runtime — into a promise the deployment image has to
+ * keep, by shipping the content root at a fixed position relative to `dist/`.
+ * Embedding the documents as canonical JSON strings holds the criterion inside
+ * the artefact. Reported in the PR as a divergence from the spec, with that
+ * reason, not the one written before.
  *
  * ── WHY CANONICAL JSON AND NOT THE FILE TEXT ─────────────────────────────
  * So that running Prettier over the content root does not change this file.
