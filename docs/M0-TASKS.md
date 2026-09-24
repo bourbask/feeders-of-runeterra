@@ -942,6 +942,13 @@ projet jouable avec un fournisseur gratuit ou un modèle local (P18).
 - Un test vérifie qu'aucun nom interdit (`apply_damage`, `set_gauge`, `resolve_move`,
   `roll_dice`, `kill_character`, `advance_vow`, `spend_momentum`, `propose_price`) n'apparaît
   dans le registre.
+- **`FORBIDDEN_TOOL_NAMES` est épinglé avant d'être parcouru.** Le tuple vit dans
+  `@for/contracts` (`src/ai/tools.ts`) et le seul test qui le lit aujourd'hui **itère dessus** :
+  le vider ne fait donc rien échouer. Mesuré en recette de M0-12 — tuple réduit à
+  `['apply_damage']`, 569/569 verts. `tests/tool-surface.test.ts` écrit les huit noms ci-dessus
+  **en toutes lettres** et les compare à `FORBIDDEN_TOOL_NAMES` par `toStrictEqual` **avant** de
+  s'en servir comme source de boucle. Preuve dans les deux sens : un nom retiré du tuple rougit,
+  restauré vert.
 
 **Fichiers touchés** : `packages/ai/src/index.ts`, `packages/ai/src/narrator/**`,
 `packages/ai/src/prompts/**`, `packages/ai/src/tools/**`,
