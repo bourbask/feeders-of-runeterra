@@ -774,6 +774,69 @@ est la seule protection sérieuse contre le double-jet sur réseau instable.
 
 ## Vague 6 — Contenu, reconstruction, prompts, page table, serveur
 
+### M0-33 · Moteur et contrats : le brief est adressé et porte ses faits perceptibles
+**Taille** : moyenne · **Dépend de** : M0-13 · **Parallélisable** : oui ·
+**Bloque** : M0-18, M0-22
+
+**À quoi ça sert.** Porter la décision 3 de l'ADR 0008 — *« le moteur calcule, pour chaque
+destinataire, la liste des faits perceptibles, et le conteur n'a le droit d'utiliser que
+celle-là »* — dans un **type**, avant que M0-18 ne gèle les prompts et la surface d'outils.
+
+Aujourd'hui elle n'est portée par rien. Le développeur de M0-12 l'a écrit sans le contourner,
+dans l'en-tête de `packages/contracts/src/ai/narration.ts` : *« a field added here alone would be
+a contract nothing produces »*. Il avait raison — le porteur va sur le type du moteur d'abord, le
+miroir suit.
+
+**Ce qui rend la contrainte mécanique et pas décorative.** Ce n'est pas le champ, c'est le
+**canal**. Tant que `@for/ai` bâtit le bloc `<scene>` depuis `state.scene`, filtrer la sortie du
+conteur ne sert à rien : l'information est déjà dans sa fenêtre de contexte. Le changement qui
+porte est que `@for/ai` lit `brief.perceivableFacts` **et rien d'autre**.
+
+**Le périmètre M0, dit en clair.** La bande reste groupée — `DEFAULT_SCOPE` vaut `table` et la
+portée par groupe attend M1 (ADR 0008 décision 1). Le filtre est donc **l'identité** en M0, et
+c'est normal. Ce qui entre maintenant est le champ, la fonction de filtrage et le canal étroit ;
+M1 ne change que ce que le filtre renvoie — pas le contrat, pas le prompt, pas le corpus doré.
+
+**Livrables**
+- `packages/engine/src/types/brief.ts` : `BriefAudience` (`scope`, `recipients`) et
+  `BriefPerceivableFact`, plus les deux champs correspondants sur `NarrationBrief`.
+- `packages/engine/src/decide.ts` : `buildBrief` les produit. Le filtrage vit dans une fonction
+  **nommée et exportée**, pas en ligne — c'est elle que M1 changera.
+- `packages/contracts/src/ai/narration.ts` : le miroir Zod, et l'en-tête « WHAT IS NOT HERE »
+  retiré parce qu'il ne l'est plus.
+- `packages/contracts/tests/exhaustive-union.test.ts` : les constantes neuves comparées membre à
+  membre, per ADR 0007.
+
+**Critères d'acceptation**
+- `pnpm turbo run build typecheck lint test --force` sort en 0 sur le dépôt entier.
+- `brief.audience.recipients` est `null` **exactement quand** `scope` vaut `table` : un test
+  écrit les deux sens et le testeur casse chacun.
+- Un test vérifie que `perceivableFacts` est **dérivé de la scène**, pas recopié : le testeur
+  retire une présence de `state.scene.present`, le fait correspondant disparaît du brief.
+- Un test vérifie que la liste est **triée** et **bornée** comme `SceneState` l'est
+  (`SCENE_PRESENCE_MAX`), avec au moins **deux** entrées dans la fixture et une assertion de
+  **tableau exact** — pas un ensemble, pas deux côtés triés. *(Trois tris inertes ont déjà été
+  trouvés sur ce dépôt pour cette raison exacte : fixture à un seul élément.)*
+- Le miroir Zod rougit quand le type du moteur gagne un champ, per ADR 0007 : le testeur ajoute
+  un champ à `NarrationBrief`, `pnpm turbo run typecheck --force` sort en code non nul.
+- **Aucun chiffre ne se compare à lui-même**, et aucun littéral de test n'est importé de `src/`.
+- `perceivableFacts` ne porte **aucun chiffre de jeu** — ni jauge, ni segment, ni rang — comme
+  `SceneState` n'en porte pas (propriété 1 de `03-donnees.md` §3.5). Un test le vérifie.
+
+**Ce que cette tâche NE fait PAS**
+- Les atouts de perception de l'ADR 0009 (`domaine`, `declencheur`, `force`, `frequence`,
+  `effet`) : ce sont du **contenu**, ils arrivent en M0-16 et s'équilibrent en M1. Ici on livre
+  le **porteur**, pas ce qui le remplit.
+- La portée par groupe, le tchat par joueur, le drapeau de discrétion : M1.
+- Brancher `@for/ai` sur le champ : c'est **M0-18**, qui prend cette tâche en dépendance.
+
+**Fichiers touchés** : `packages/engine/src/types/brief.ts`, `packages/engine/src/decide.ts`,
+`packages/engine/src/decide.test.ts`, `packages/contracts/src/ai/narration.ts`,
+`packages/contracts/tests/ai/narration.test.ts`,
+`packages/contracts/tests/exhaustive-union.test.ts`
+
+---
+
 ### M0-16 · Contenu de jeu versionné (règles, monde et fiches de champion)
 **Taille** : grosse · **Dépend de** : M0-13, M0-14 · **Parallélisable** : oui
 
@@ -871,7 +934,7 @@ hors du réducteur — sinon, un bug silencieux découvert trois mois plus tard.
 ---
 
 ### M0-18 · IA : le port du conteur, ses adaptateurs, les prompts et la surface d'outils gelée
-**Taille** : grosse · **Dépend de** : M0-12, M0-14 · **Parallélisable** : oui
+**Taille** : grosse · **Dépend de** : M0-33, M0-12, M0-14 · **Parallélisable** : oui
 
 **À quoi ça sert.** Deux choses qui tiennent ensemble. Le garde-fou de l'invariant 1 côté
 modèle : douze outils, en lecture ou en proposition, dans un ordre figé. Un outil qui
