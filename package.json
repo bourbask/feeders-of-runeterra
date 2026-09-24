@@ -19,7 +19,7 @@
     "format": "prettier --write .",
     "depcruise": "depcruise --config .dependency-cruiser.cjs packages tooling",
     "check:workspace": "tsx scripts/check-workspace.ts",
-    "test:golden": "turbo run build --filter @for/testkit && vitest run --project @for/engine tests/golden",
+    "test:golden": "turbo run build --filter @for/testkit && vitest run tests/golden",
     "golden:update": "GOLDEN_UPDATE=1 pnpm test:golden",
     "sim": "node scripts/pas-encore.mjs M0-28 \"simulateur de table headless\"",
     "db:generate": "node scripts/pas-encore.mjs M0-11 \"generation des migrations Drizzle\"",
