@@ -10,6 +10,7 @@ import * as testkit from './index.js';
 
 const SURFACE = [
   'FIXTURE_ATTRIBUTES',
+  'FIXTURE_CHAMPION',
   'FIXTURE_EPOCH',
   'FIXTURE_GAUGES',
   'FIXTURE_MOMENTUM_BOUNDS',

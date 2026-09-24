@@ -24,6 +24,7 @@ export type { JournalOptions } from './campaigns.js';
 
 export {
   FIXTURE_ATTRIBUTES,
+  FIXTURE_CHAMPION,
   FIXTURE_GAUGES,
   FIXTURE_MOMENTUM_BOUNDS,
   aCharacter,

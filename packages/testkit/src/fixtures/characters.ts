@@ -14,15 +14,35 @@
  *     only legal one (3/2/2/1/1, `zAttributeSpread`), the gauges are the full
  *     set of three, and the momentum bounds are the -6 / +10 / 2 of the rules.
  *
- * The champion is Braum because M0 ships his sheet first, and because a
- * character named after a RESERVED champion is what
- * `expectNoReservedChampion` is there to catch: a fixture that quietly used
- * `Sejuani` would make that assertion fire on half the suite.
+ * THE CHAMPION IS ASHE, AND THAT IS A CONSTRAINT, NOT A TASTE. A reserved
+ * champion is one PLAYED BY ANOTHER PLAYER of the table (02-mj-ia.md, section
+ * « Champions interdits (réservés) »): the same champion cannot be both this
+ * table's player character and reserved by someone else. So the default
+ * character must be a champion ABSENT from `RESERVED_CHAMPIONS` — Ashe, whose
+ * sheet M0-16 ships next to Braum's and Sejuani's.
+ *
+ * What it costs to get this wrong is not cosmetic. This package is what the
+ * other tasks prove their own guardrails with: M0-21 (lockout) and M0-27
+ * (eval N0) run `expectNoReservedChampion` over text built from these
+ * fixtures. A default character named after a reserved champion makes that
+ * assertion fire on a clean run — a red that checks nothing — and the day
+ * somebody "fixes" it by loosening the assertion, it turns green on a real
+ * leak. `champions.test.ts` holds this both ways.
  */
 
 import type { CharacterState } from '@for/engine';
 
 import { anId } from './ids.js';
+
+/**
+ * The champion every fixture character plays. ONE place, so `aCharacter`,
+ * `aScenePresence` and any future fixture cannot drift apart — and so the
+ * check « no fixture names a reserved champion » has a single thing to move.
+ *
+ * INVARIANT: this identifier and this name are absent from
+ * `RESERVED_CHAMPIONS`. `champions.test.ts` measures it.
+ */
+export const FIXTURE_CHAMPION = { championId: 'ashe', displayName: 'Ashe' } as const;
 
 /** Both bounds of the rules, plus the value a burn resets to. */
 export const FIXTURE_MOMENTUM_BOUNDS = { min: -6, max: 10, reset: 2 } as const;
@@ -44,12 +64,12 @@ export function aCharacter(overrides: CharacterOverrides = {}): CharacterState {
   const base: CharacterState = {
     id: anId('character'),
     playerId: anId('player'),
-    championId: 'braum',
-    displayName: 'Braum',
+    championId: FIXTURE_CHAMPION.championId,
+    displayName: FIXTURE_CHAMPION.displayName,
     sheet: {
-      championId: 'braum',
+      championId: FIXTURE_CHAMPION.championId,
       source: 'handwritten',
-      ref: 'content:champions/braum@1.0.0',
+      ref: `content:champions/${FIXTURE_CHAMPION.championId}@1.0.0`,
     },
     attributes: FIXTURE_ATTRIBUTES,
     gauges: FIXTURE_GAUGES,

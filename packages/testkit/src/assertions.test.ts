@@ -20,7 +20,7 @@ import { RESERVED_CHAMPIONS, reservedChampionNames } from './fixtures/champions.
 import { aCharacter } from './fixtures/characters.js';
 import { anEvent } from './fixtures/events.js';
 import { anId } from './fixtures/ids.js';
-import { aTableState } from './fixtures/table.js';
+import { aChampionLock, aClock, aTableState, aTrack, anEntity } from './fixtures/table.js';
 
 /**
  * Rend l'erreur levée, ou `undefined`. Existe pour que les `expect` restent
@@ -92,6 +92,68 @@ describe('expectValidState', () => {
     expect(() => {
       expectValidState(menteur);
     }).toThrow(/classé sous une clé qui n’est pas son id/);
+  });
+
+  /**
+   * Le contrôle clé/identifiant porte sur CINQ collections. Quatre d'entre
+   * elles n'étaient mesurées par rien : supprimer leur appel à `keysMatchIds`
+   * laissait la suite verte. Un garde-fou supprimable en silence est absent.
+   *
+   * Chaque ligne porte son cas propre à côté de son cas sali : une assertion
+   * qui refuse tout ne vaut pas mieux qu'une qui accepte tout.
+   */
+  describe('le contrôle clé/identifiant tient sur les CINQ collections', () => {
+    const table = aTableState({
+      characters: [aCharacter()],
+      tracks: [aTrack()],
+      clocks: [aClock()],
+      entities: [anEntity()],
+      championLocks: [aChampionLock()],
+    });
+
+    /** Reclasse l'unique entrée de `collection` sous `fausseCle`. */
+    function reclasse(collection: keyof typeof table, fausseCle: string): unknown {
+      const entrees = Object.values(table[collection] as Record<string, unknown>);
+      return { ...table, [collection]: { [fausseCle]: entrees[0] } };
+    }
+
+    const cas = [
+      ['characters', anId('character', 42), 'id'],
+      ['tracks', anId('track', 42), 'id'],
+      ['clocks', anId('clock', 42), 'id'],
+      ['entities', anId('entity', 42), 'id'],
+      ['championLocks', 'lissandra', 'championId'],
+    ] as const;
+
+    it('accepte la table propre, dont les cinq collections sont peuplées', () => {
+      expect(() => {
+        expectValidState(table);
+      }).not.toThrow();
+    });
+
+    it.each(cas)(
+      'refuse une entrée de %s classée sous une clé étrangère',
+      (collection, fausseCle, champ) => {
+        const erreur = capture(() => {
+          expectValidState(reclasse(collection, fausseCle));
+        });
+
+        expect(erreur).toBeInstanceOf(InvalidTableState);
+        expect((erreur as InvalidTableState).issues).toStrictEqual([
+          expect.stringContaining(`${collection}.${fausseCle}`) as unknown as string,
+        ]);
+        // Le nom du champ comparé fait partie du garde-fou : `championLocks` est
+        // la seule collection classée sur autre chose qu'`id`, et une faute de
+        // frappe sur ce nom n'était rattrapée par rien.
+        expect((erreur as InvalidTableState).issues[0]).toContain(`n’est pas son ${champ}`);
+      },
+    );
+
+    it.each(cas)('et accepte la même entrée classée sous sa propre clé (%s)', (collection) => {
+      expect(() => {
+        expectValidState({ ...table, [collection]: table[collection] });
+      }).not.toThrow();
+    });
   });
 
   it('refuse un propriétaire de bande qui n’est pas membre', () => {

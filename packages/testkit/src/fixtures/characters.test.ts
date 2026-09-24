@@ -5,7 +5,7 @@
 import { zAttributeSpread, zCharacterState } from '@for/contracts';
 import { describe, expect, it } from 'vitest';
 
-import { FIXTURE_ATTRIBUTES, aCharacter } from './characters.js';
+import { FIXTURE_ATTRIBUTES, FIXTURE_CHAMPION, aCharacter } from './characters.js';
 import { anId } from './ids.js';
 
 describe('aCharacter', () => {
@@ -26,10 +26,12 @@ describe('aCharacter', () => {
     expect(aCharacter().momentumBounds).toStrictEqual({ min: -6, max: 10, reset: 2 });
   });
 
-  it('n’emprunte pas le nom d’un champion réservé', () => {
-    // Un personnage nommé « Sejuani » ferait exploser expectNoReservedChampion
-    // sur la moitié de la suite.
-    expect(aCharacter().displayName).toBe('Braum');
+  it('joue le champion de FIXTURE_CHAMPION, sans le retaper', () => {
+    const personnage = aCharacter();
+
+    expect(personnage.championId).toBe(FIXTURE_CHAMPION.championId);
+    expect(personnage.displayName).toBe(FIXTURE_CHAMPION.displayName);
+    expect(personnage.sheet.championId).toBe(FIXTURE_CHAMPION.championId);
   });
 
   it('les surcharges remplacent, le reste tient', () => {

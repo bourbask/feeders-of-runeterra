@@ -47,7 +47,7 @@ import type {
 } from '@for/engine';
 
 import { SEEDS } from '../rng/seeded.js';
-import { aCharacter } from './characters.js';
+import { FIXTURE_CHAMPION, aCharacter } from './characters.js';
 import { anId } from './ids.js';
 
 type Overrides<T> = { readonly [K in keyof T]?: T[K] };
@@ -142,6 +142,14 @@ export function anEntity(overrides: Overrides<EntityState> = {}): EntityState {
   return { ...base, ...overrides };
 }
 
+/**
+ * THE ONE FIXTURE THAT NAMES A RESERVED CHAMPION ON PURPOSE, and the exception
+ * that makes the rule readable. A `ChampionLock` of kind `reserved_pc` exists
+ * precisely to say « this champion is taken »: locking a champion that is NOT
+ * reserved would be the defect. So the default lock is Sejuani, and the
+ * default table carries NO lock — `champions.test.ts` pins both, because
+ * « the sweep found nothing » and « the sweep looks at nothing » read alike.
+ */
 export function aChampionLock(overrides: Overrides<ChampionLock> = {}): ChampionLock {
   const base: ChampionLock = {
     championId: 'sejuani',
@@ -161,11 +169,17 @@ export function aTruth(overrides: Overrides<CampaignTruth> = {}): CampaignTruth 
   return { ...base, ...overrides };
 }
 
+/**
+ * The default presence IS the default character: same `ref.id`, same name,
+ * taken from `FIXTURE_CHAMPION` rather than re-typed. A hand-typed name here
+ * is how the two drifted apart and how a reserved champion got into a scene
+ * (`champions.test.ts` measures both).
+ */
 export function aScenePresence(overrides: Overrides<ScenePresence> = {}): ScenePresence {
   const base: ScenePresence = {
     ref: { kind: 'character', id: anId('character') },
-    name: 'Braum',
-    state: 'debout, appuyé sur sa porte',
+    name: FIXTURE_CHAMPION.displayName,
+    state: 'debout, l’arc encore bandé',
     sinceSeq: 1,
   };
   return { ...base, ...overrides };
