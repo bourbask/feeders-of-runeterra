@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { zAttributeId, zGaugeId, zOutcome } from '@for/contracts';
+import { zAttributeId, zGaugeId, zMoveId, zOutcome } from '@for/contracts';
 import { describe, expect, it } from 'vitest';
 
 import { LABELS } from '../src/generated/labels.js';
@@ -48,11 +48,12 @@ describe('l’index généré est à jour', () => {
   it('se valide lui-même en quatre passes, sans toucher au disque', () => {
     const registry = staticContent();
     expect(registry.bundle.hash).toBe(GENERATED_HASH);
-    expect(registry.listMoves().map((move) => move.id)).toStrictEqual([
-      'endure-cold',
-      'face-danger',
-      'secure-advantage',
-    ]);
+    // M0-16 replaced the generated root: `content-fixtures` (three moves) gave
+    // way to `content/`, the real bundle. The list is compared to the ENGINE's
+    // closed `MOVE_IDS` rather than to a literal recopied here — ADR 0007's
+    // operating rule: a number or a list that comes from the engine is compared
+    // to the engine, never to itself. Shrink `content/moves/` and this reddens.
+    expect(registry.listMoves().map((move) => move.id)).toStrictEqual([...zMoveId.options].sort());
     expect(contentVersion(registry.bundle.version, registry.bundle.hash)).toBe(
       `0.1.0+${GENERATED_HASH.slice(0, 12)}`,
     );

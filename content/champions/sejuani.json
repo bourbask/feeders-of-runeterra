@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "id": "sejuani",
+  "name": "Sejuani",
+  "title": "La Fureur du Nord",
+  "aliases": [
+    "La Fureur du Nord",
+    "the Fury of the North",
+    "La Griffe de Givre",
+    "Sejuani Avarosan"
+  ],
+  "origin": {
+    "regionId": "ice-reaches",
+    "homeText": "Aucun. Sa bande dort où elle s'arrête, et elle s'arrête rarement."
+  },
+  "pitch": "Une bande de guerre, un sanglier de mauvaise humeur, et l'absolue certitude que le nord ne pardonne pas la faiblesse.",
+  "description": "Elle a grandi là où rien ne pousse, chez ceux qui prennent parce qu'il n'y a rien à semer. Elle ne s'en excuse pas et ne s'en vante pas : c'est une arithmétique, et elle la tient à jour. Ce qu'on lit chez elle comme de la cruauté est presque toujours de l'impatience — elle voit plus vite que les autres où une situation va casser, et elle déteste attendre que ça casse. Elle respecte deux choses : ceux qui tiennent parole, et ceux qui la battent honnêtement. Elle n'a jamais accordé la première à quiconque n'avait pas d'abord obtenu la seconde.",
+  "attributes": { "vif": 2, "coeur": 1, "fer": 3, "ombre": 2, "esprit": 1 },
+  "startingGauges": { "vigueur": 5, "ame": 5, "vivres": 5 },
+  "startingMomentum": 2,
+  "startingAssets": ["sanglier-de-guerre", "chant-de-la-horde"],
+  "signatureAsset": {
+    "id": "fouet-de-la-horde",
+    "name": "Fouet de la horde",
+    "text": "Il ne sert pas à frapper. Il sert à ce que cinquante personnes regardent au même endroit en même temps.",
+    "effects": [{ "op": "momentum", "delta": 1, "target": "all-allies" }]
+  },
+  "startingVow": {
+    "title": "Que le nord cesse de mendier",
+    "rank": "redoutable",
+    "description": "Obtenir par la force ce que les siens ont passé trois générations à demander poliment."
+  },
+  "startingBonds": [
+    {
+      "with": "Sa bande",
+      "text": "Ils la suivent sans poser de question, et elle n'en a jamais perdu un par négligence."
+    },
+    {
+      "with": "La bête",
+      "text": "Elle est la seule à pouvoir l'approcher, et ça ne lui donne aucun droit sur elle."
+    }
+  ],
+  "perceptionTraits": [
+    {
+      "id": "flaire-la-faiblesse",
+      "domain": "faiblesse",
+      "trigger": {
+        "text": "Un groupe adverse lui fait face, et l'un d'eux tient moins bien que les autres.",
+        "presentEntity": { "kinds": ["npc"], "dispositions": ["hostile", "neutre"] },
+        "moveIds": []
+      },
+      "strength": 50,
+      "frequency": "scene",
+      "effect": {
+        "kind": "reveal",
+        "text": "Elle sait lequel cédera le premier, et ce qu'il faut lui dire pour que ce soit tout de suite."
+      }
+    },
+    {
+      "id": "connait-la-glace",
+      "domain": "froid",
+      "trigger": {
+        "text": "La route traverse une étendue gelée dont personne ne connaît l'épaisseur.",
+        "moveIds": ["endure-cold", "face-danger"]
+      },
+      "strength": 40,
+      "frequency": "session",
+      "effect": {
+        "kind": "reveal",
+        "text": "Elle sait où la glace tient et où elle ment, et elle n'explique pas comment."
+      }
+    }
+  ],
+  "voice": {
+    "register": "sec, frontal, impatient ; des ordres plutôt que des phrases, et jamais deux fois",
+    "speechTics": [
+      "Coupe la parole à qui explique au lieu de répondre",
+      "Compte à voix haute le temps qu'elle laisse à quelqu'un pour décider"
+    ],
+    "forbidden": [
+      "la cruauté gratuite",
+      "la moquerie envers ses propres gens",
+      "toute promesse faite pour gagner du temps"
+    ],
+    "sampleLines": [
+      "Tu as jusqu'à ce que je remonte en selle.",
+      "Ce n'est pas de la faim. La faim, c'était l'hiver d'avant.",
+      "Je ne demande rien. Demander, c'est ce que faisaient les miens."
+    ]
+  },
+  "loreHooks": [
+    "Elle a laissé repartir un convoi entier, un hiver, et personne de sa bande n'a jamais su pourquoi.",
+    "Un feu partagé dans l'enfance l'oblige encore, et elle le nie.",
+    "Quelqu'un de la Citadelle lui a proposé une alliance, et elle n'a pas encore répondu."
+  ],
+  "relations": [
+    {
+      "championId": "ashe",
+      "kind": "parent",
+      "text": "Elles ont partagé un feu, enfants. Elle est la seule à savoir laquelle des deux est partie la première."
+    },
+    {
+      "championId": "braum",
+      "kind": "rival",
+      "text": "Il refuse de la traiter en ennemie, et c'est la seule chose au monde contre laquelle elle ne sait rien faire."
+    }
+  ],
+  "source": "handwritten",
+  "contentWarnings": [],
+  "tags": ["commandement", "combat"]
+}

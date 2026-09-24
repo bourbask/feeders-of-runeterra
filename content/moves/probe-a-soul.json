@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "probe-a-soul",
+  "name": "Sonder une âme",
+  "category": "relation",
+  "trigger": "Quand tu cherches à savoir ce que quelqu'un veut vraiment, ou ce qu'il tait.",
+  "rollKind": "action",
+  "attributeOptions": ["coeur", "ombre", "esprit"],
+  "allowsMomentumBurn": true,
+  "outcomes": {
+    "franche": {
+      "text": "Tu vois sous la surface, et la surface ne s'en remet pas tout de suite.",
+      "gmGuidance": "Dis un désir et une peur. Deux choses, pas trois.",
+      "effects": [{ "op": "momentum", "delta": 2 }]
+    },
+    "partielle": {
+      "text": "Tu entrevois quelque chose, et l'autre le sent passer.",
+      "gmGuidance": "Le fait révélé est vrai mais partiel, et la confiance a bougé.",
+      "effects": [{ "op": "momentum", "delta": 1 }]
+    },
+    "echec": {
+      "text": "Tu lis de travers, et tu le dis à voix haute.",
+      "gmGuidance": "La méprise est publique : elle coûte de l'estime, pas du sang.",
+      "effects": [{ "op": "gauge", "gauge": "ame", "delta": -1, "target": "self" }]
+    }
+  },
+  "tags": ["relation", "lecture"]
+}

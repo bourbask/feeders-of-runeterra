@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "sanglier-de-guerre",
+  "name": "Sanglier de guerre",
+  "category": "compagnon",
+  "text": "Une montagne de poils et de mauvaise humeur, qui n'obéit qu'à une seule personne et pas toujours.",
+  "abilities": [
+    {
+      "text": "Quand tu charges une ligne tenue, elle cède quelque part.",
+      "xpCost": 1,
+      "effects": [{ "op": "track_tick", "trackKind": "combat", "ticks": 2 }]
+    },
+    {
+      "text": "Quand tu traverses une étendue que personne d'autre ne traverse l'hiver, tu arrives avant la nouvelle.",
+      "xpCost": 2,
+      "effects": [{ "op": "momentum", "delta": 1 }]
+    }
+  ],
+  "track": { "label": "Humeur de la bête", "max": 4 },
+  "tags": ["compagnon", "combat"]
+}

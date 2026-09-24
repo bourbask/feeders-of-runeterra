@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "champions": [
+    {
+      "id": "anivia",
+      "displayName": "Anivia",
+      "canonicalRegionId": "freljord",
+      "aliases": ["le Cryophénix", "the Cryophoenix"],
+      "playable": false
+    },
+    {
+      "id": "ashe",
+      "displayName": "Ashe",
+      "canonicalRegionId": "avarosa-reach",
+      "aliases": ["L'Archère de Givre", "the Frost Archer", "La Reine Guerrière", "the Warmother"],
+      "playable": true
+    },
+    {
+      "id": "braum",
+      "displayName": "Braum",
+      "canonicalRegionId": "rakelstake",
+      "aliases": [
+        "Le Cœur du Freljord",
+        "Le Coeur du Freljord",
+        "the Heart of the Freljord",
+        "L'homme à la porte"
+      ],
+      "playable": true
+    },
+    {
+      "id": "gnar",
+      "displayName": "Gnar",
+      "canonicalRegionId": "freljord",
+      "aliases": ["le Chaînon Manquant", "the Missing Link"],
+      "playable": false
+    },
+    {
+      "id": "gragas",
+      "displayName": "Gragas",
+      "canonicalRegionId": "freljord",
+      "aliases": ["le Trouble-fête", "the Rabble Rouser"],
+      "playable": false
+    },
+    {
+      "id": "lissandra",
+      "displayName": "Lissandra",
+      "canonicalRegionId": "frostguard-citadel",
+      "aliases": ["la Sorcière de Glace", "the Ice Witch", "la Gardienne de Glace"],
+      "playable": false
+    },
+    {
+      "id": "nunu-willump",
+      "displayName": "Nunu & Willump",
+      "canonicalRegionId": "freljord",
+      "aliases": ["Nunu", "Willump", "le Garçon et son Yéti", "the Boy and His Yeti"],
+      "playable": false
+    },
+    {
+      "id": "olaf",
+      "displayName": "Olaf",
+      "canonicalRegionId": "freljord",
+      "aliases": ["le Berserker", "the Berserker"],
+      "playable": false
+    },
+    {
+      "id": "ornn",
+      "displayName": "Ornn",
+      "canonicalRegionId": "freljord",
+      "aliases": ["le Feu sous la Montagne", "the Fire below the Mountain"],
+      "playable": false
+    },
+    {
+      "id": "sejuani",
+      "displayName": "Sejuani",
+      "canonicalRegionId": "ice-reaches",
+      "aliases": [
+        "La Fureur du Nord",
+        "the Fury of the North",
+        "La Griffe de Givre",
+        "Sejuani Avarosan"
+      ],
+      "playable": true
+    },
+    {
+      "id": "trundle",
+      "displayName": "Trundle",
+      "canonicalRegionId": "freljord",
+      "aliases": ["le Roi des Trolls", "the Troll King"],
+      "playable": false
+    },
+    {
+      "id": "tryndamere",
+      "displayName": "Tryndamere",
+      "canonicalRegionId": "freljord",
+      "aliases": ["le Roi Barbare", "the Barbarian King"],
+      "playable": false
+    },
+    {
+      "id": "udyr",
+      "displayName": "Udyr",
+      "canonicalRegionId": "freljord",
+      "aliases": ["le Marcheur d'Esprits", "the Spirit Walker"],
+      "playable": false
+    },
+    {
+      "id": "volibear",
+      "displayName": "Volibear",
+      "canonicalRegionId": "freljord",
+      "aliases": ["la Tempête Implacable", "the Relentless Storm"],
+      "playable": false
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "arc-de-givre",
+  "name": "Arc de givre",
+  "category": "equipement",
+  "text": "Un arc dont la corde ne gèle pas, et dont personne n'explique pourquoi.",
+  "abilities": [
+    {
+      "text": "Quand tu frappes de loin, la cible ne sait pas d'où le trait est parti.",
+      "xpCost": 1,
+      "effects": [{ "op": "momentum", "delta": 1 }]
+    },
+    {
+      "text": "Quand tu tires pour immobiliser plutôt que pour tuer, la voie s'ouvre pour quelqu'un d'autre.",
+      "xpCost": 2,
+      "effects": [{ "op": "momentum", "delta": 1, "target": "chosen-ally" }]
+    }
+  ],
+  "track": { "label": "Flèches de givre", "max": 3 },
+  "tags": ["distance"]
+}

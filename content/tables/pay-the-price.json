@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 1,
+  "id": "pay-the-price",
+  "kind": "price",
+  "die": 12,
+  "entries": [
+    {
+      "id": "un-allie-paie-a-ta-place",
+      "min": 1,
+      "max": 1,
+      "text": "Quelqu'un d'autre paie à ta place, et il le saura toute sa vie.",
+      "severity": "serieuse",
+      "suggestedEffects": [
+        { "op": "gauge", "gauge": "ame", "delta": -1, "target": "self" },
+        { "op": "condition_add", "conditionId": "endette" }
+      ],
+      "keywords": ["allié", "dette", "à ta place"],
+      "tags": ["lien"],
+      "chain": []
+    },
+    {
+      "id": "le-froid-mord",
+      "min": 2,
+      "max": 2,
+      "text": "Le froid mord là où tu ne l'attendais pas : la main, l'oreille, le pied.",
+      "severity": "legere",
+      "suggestedEffects": [{ "op": "gauge", "gauge": "vigueur", "delta": -1, "target": "self" }],
+      "keywords": ["froid", "morsure", "gel"],
+      "tags": ["froid"],
+      "chain": []
+    },
+    {
+      "id": "les-vivres-manquent",
+      "min": 3,
+      "max": 3,
+      "text": "Le sac est plus léger que tu ne le croyais, et tu t'en aperçois trop tard.",
+      "severity": "legere",
+      "suggestedEffects": [{ "op": "gauge", "gauge": "vivres", "delta": -1, "target": "self" }],
+      "keywords": ["vivres", "sac", "faim"],
+      "tags": ["survie"],
+      "chain": []
+    },
+    {
+      "id": "une-marque-reste",
+      "min": 4,
+      "max": 4,
+      "text": "Tu repars avec quelque chose qui ne partira pas au prochain feu.",
+      "severity": "serieuse",
+      "suggestedEffects": [{ "op": "condition_add", "conditionId": "transi" }],
+      "keywords": ["marque", "engourdi", "gel"],
+      "tags": ["froid"],
+      "chain": []
+    },
+    {
+      "id": "l-elan-se-brise",
+      "min": 5,
+      "max": 5,
+      "text": "Ton élan se brise net, et il faudra tout reprendre du début.",
+      "severity": "legere",
+      "suggestedEffects": [{ "op": "momentum_reset" }],
+      "keywords": ["élan", "rupture", "reprendre"],
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "un-ennui-nouveau",
+      "min": 6,
+      "max": 6,
+      "text": "Un ennui que personne n'avait vu venir prend le dessus sur le reste.",
+      "severity": "serieuse",
+      "suggestedEffects": [{ "op": "oracle", "tableId": "complication" }],
+      "keywords": ["ennui", "surprise", "imprévu"],
+      "tags": [],
+      "chain": ["complication"]
+    },
+    {
+      "id": "le-terrain-se-derobe",
+      "min": 7,
+      "max": 7,
+      "text": "Le terrain se dérobe et t'éloigne de là où tu voulais aller.",
+      "severity": "serieuse",
+      "suggestedEffects": [
+        { "op": "gauge", "gauge": "vigueur", "delta": -1, "target": "self" },
+        { "op": "condition_add", "conditionId": "epuise" }
+      ],
+      "keywords": ["chute", "terrain", "détour"],
+      "tags": ["voyage"],
+      "chain": []
+    },
+    {
+      "id": "une-parole-de-trop",
+      "min": 8,
+      "max": 8,
+      "text": "Une parole de trop coûte un appui sur lequel tu comptais.",
+      "severity": "serieuse",
+      "suggestedEffects": [{ "op": "gauge", "gauge": "ame", "delta": -1, "target": "self" }],
+      "keywords": ["parole", "appui", "rupture"],
+      "tags": ["relation"],
+      "chain": []
+    },
+    {
+      "id": "la-nuit-tombe-avant-l-abri",
+      "min": 9,
+      "max": 9,
+      "text": "La nuit tombe avant l'abri, et il faudra la passer dehors.",
+      "severity": "serieuse",
+      "suggestedEffects": [
+        { "op": "gauge", "gauge": "vivres", "delta": -2, "target": "self" },
+        { "op": "condition_add", "conditionId": "transi" }
+      ],
+      "keywords": ["nuit", "abri", "dehors"],
+      "tags": ["froid"],
+      "chain": []
+    },
+    {
+      "id": "le-coup-porte",
+      "min": 10,
+      "max": 10,
+      "text": "Le coup porte, et il porte plus loin que ce que tu peux cacher.",
+      "severity": "grave",
+      "suggestedEffects": [
+        { "op": "gauge", "gauge": "vigueur", "delta": -2, "target": "self" },
+        { "op": "condition_add", "conditionId": "blesse" }
+      ],
+      "keywords": ["coup", "sang", "blessure"],
+      "tags": ["combat"],
+      "chain": []
+    },
+    {
+      "id": "tout-bascule",
+      "min": 11,
+      "max": 11,
+      "text": "La situation bascule d'un coup : ce que tu croyais acquis ne l'est plus.",
+      "severity": "grave",
+      "suggestedEffects": [
+        { "op": "gauge", "gauge": "ame", "delta": -2, "target": "self" },
+        { "op": "momentum_reset" }
+      ],
+      "keywords": ["bascule", "effroi", "renversement"],
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "le-pire-arrive",
+      "min": 12,
+      "max": 12,
+      "text": "Le pire que tu pouvais imaginer arrive, et il était prévisible depuis le début.",
+      "severity": "grave",
+      "suggestedEffects": [
+        { "op": "gauge", "gauge": "vigueur", "delta": -2, "target": "self" },
+        { "op": "condition_add", "conditionId": "blesse" },
+        { "op": "condition_add", "conditionId": "traque" }
+      ],
+      "keywords": ["pire", "prévisible", "poursuite"],
+      "tags": [],
+      "chain": []
+    }
+  ],
+  "tags": ["prix"]
+}

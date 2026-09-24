@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "avarosa-reach",
+  "name": "La Marche d'Avarosa",
+  "parentId": "freljord",
+  "kind": "territoire",
+  "summary": "Des vallées basses où l'on sème encore, et où l'on compte les sacs avant la neige.",
+  "description": "La seule terre du nord qui nourrit plus d'une bouche par foyer. Les greniers y valent des armées, et tout le monde le sait — y compris ceux qui n'y sèment rien. On y accueille les exilés, on y compte leurs bras, et on leur demande un serment avant le printemps. La Marche ne se défend pas par ses murs, qu'elle n'a pas, mais par le nombre de gens qui ont intérêt à ce qu'elle tienne.",
+  "dangerRank": "genant",
+  "climate": "Froid sec, vents de vallée, neige tardive et redoux traîtres.",
+  "factions": [
+    {
+      "id": "avarosans",
+      "name": "Avarosans",
+      "stance": "Chez eux, et responsables de tout ce qui va mal."
+    }
+  ],
+  "landmarks": ["Le Grenier de Pierre", "Le Gué Bas"],
+  "hooks": [
+    "Le grenier a été ouvert de l'intérieur, et personne n'accuse personne.",
+    "Deux hameaux se disputent le même gué depuis trois générations."
+  ],
+  "oracleRefs": ["settlement-troubles", "npc-roles"],
+  "neighborIds": ["freljord", "ice-reaches"],
+  "tags": ["clan", "survie"]
+}

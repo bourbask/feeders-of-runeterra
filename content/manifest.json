@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "version": "0.1.0",
+  "rulesVersion": 1,
+  "expectedCounts": {
+    "moves": 11,
+    "champions": 3,
+    "regions": 6,
+    "oracles": 9,
+    "tables": 2,
+    "assets": 7,
+    "championIndex": 14
+  }
+}

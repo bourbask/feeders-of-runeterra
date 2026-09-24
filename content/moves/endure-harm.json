@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "endure-harm",
+  "name": "Encaisser",
+  "category": "combat",
+  "trigger": "Quand tu prends un coup, une chute ou une brûlure, et que tu dois tenir debout après.",
+  "rollKind": "action",
+  "attributeOptions": ["fer", "esprit"],
+  "allowsMomentumBurn": true,
+  "outcomes": {
+    "franche": {
+      "text": "Tu encaisses et tu restes dans l'échange.",
+      "gmGuidance": "Le mal est déjà pris : montre qu'il n'a rien changé au but.",
+      "effects": [{ "op": "momentum", "delta": 1 }]
+    },
+    "partielle": {
+      "text": "Tu tiens debout, et quelque chose lâche en dedans.",
+      "gmGuidance": "Ce qui cède est moral, pas anatomique.",
+      "effects": [{ "op": "gauge", "gauge": "ame", "delta": -1, "target": "self" }]
+    },
+    "echec": {
+      "text": "Le coup entre, et il reste.",
+      "gmGuidance": "La blessure est acquise avant le prix tiré : enchaîne les deux.",
+      "effects": [
+        { "op": "condition_add", "conditionId": "blesse" },
+        { "op": "pay_price", "mode": "roll" }
+      ]
+    }
+  },
+  "tags": ["combat", "resistance"],
+  "notes": "Le mal est imposé avant le jet par le moteur : les effets ci-dessus s'y ajoutent."
+}

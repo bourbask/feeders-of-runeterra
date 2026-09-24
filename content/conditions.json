@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "conditions": [
+    {
+      "id": "transi",
+      "name": "Transi",
+      "kind": "physique",
+      "text": "Le froid est entré. Tes doigts obéissent avec un temps de retard.",
+      "blocksMomentumReset": false,
+      "momentumMaxPenalty": 1,
+      "clearMoveHint": "Un feu, un abri, et une nuit entière sans marcher."
+    },
+    {
+      "id": "blesse",
+      "name": "Blessé",
+      "kind": "physique",
+      "text": "Une plaie qui se rouvre chaque fois que tu forces.",
+      "blocksMomentumReset": true,
+      "momentumMaxPenalty": 2,
+      "clearMoveHint": "Des soins, du repos, et quelqu'un qui sait recoudre."
+    },
+    {
+      "id": "epuise",
+      "name": "Épuisé",
+      "kind": "physique",
+      "text": "Tu fonctionnes, et chaque geste coûte deux fois son prix.",
+      "blocksMomentumReset": false,
+      "momentumMaxPenalty": 2,
+      "clearMoveHint": "Manger chaud, dormir long, et ne rien décider avant."
+    },
+    {
+      "id": "endeuille",
+      "name": "Endeuillé",
+      "kind": "morale",
+      "text": "Quelqu'un manque, et tu comptes encore sa part au moment de servir.",
+      "blocksMomentumReset": true,
+      "momentumMaxPenalty": 2,
+      "clearMoveHint": "Un rite mené jusqu'au bout, devant ceux qui l'aimaient aussi."
+    },
+    {
+      "id": "parjure",
+      "name": "Parjure",
+      "kind": "fardeau",
+      "text": "Tu as retiré ta parole. Ceux qui l'avaient entendue ne l'ont pas oubliée.",
+      "blocksMomentumReset": true,
+      "momentumMaxPenalty": 3,
+      "clearMoveHint": "Un nouveau serment tenu jusqu'au bout, devant les mêmes témoins."
+    },
+    {
+      "id": "traque",
+      "name": "Traqué",
+      "kind": "fardeau",
+      "text": "Quelque chose suit ta piste et ne se presse pas.",
+      "blocksMomentumReset": false,
+      "momentumMaxPenalty": 1,
+      "clearMoveHint": "Semer la piste, ou se retourner et en finir."
+    },
+    {
+      "id": "endette",
+      "name": "Endetté",
+      "kind": "lien",
+      "text": "Quelqu'un a payé à ta place, et il sait compter.",
+      "blocksMomentumReset": false,
+      "momentumMaxPenalty": 1,
+      "clearMoveHint": "Rendre ce qui a été avancé, dans la monnaie demandée."
+    }
+  ]
+}

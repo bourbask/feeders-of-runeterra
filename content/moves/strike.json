@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "strike",
+  "name": "Frapper",
+  "category": "combat",
+  "trigger": "Quand tu attaques le premier, ou que tu presses un adversaire déjà engagé.",
+  "rollKind": "action",
+  "attributeOptions": ["vif", "fer"],
+  "allowsMomentumBurn": true,
+  "outcomes": {
+    "franche": {
+      "text": "Le coup porte, et il porte là où ça compte.",
+      "gmGuidance": "Décris l'effet sur le corps ou sur la posture, jamais un décompte.",
+      "effects": [
+        { "op": "track_tick", "trackKind": "combat", "ticks": 2 },
+        { "op": "momentum", "delta": 1 }
+      ]
+    },
+    "partielle": {
+      "text": "Tu touches, et tu t'ouvres en le faisant.",
+      "gmGuidance": "Le coup compte, et l'adversaire prend l'initiative.",
+      "effects": [{ "op": "track_tick", "trackKind": "combat", "ticks": 1 }]
+    },
+    "echec": {
+      "text": "Tu frappes le vide, et le vide te rend la monnaie.",
+      "gmGuidance": "Le prix tiré est la riposte : ne la double pas.",
+      "effects": [{ "op": "pay_price", "mode": "roll" }]
+    }
+  },
+  "presage": {
+    "text": "Les deux lames tombent au même instant.",
+    "tableId": "presages"
+  },
+  "tags": ["combat"]
+}
