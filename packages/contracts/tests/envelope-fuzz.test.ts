@@ -25,7 +25,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { PROTOCOL_VERSION } from '../src/version.js';
-import { zC2SEnvelope } from '../src/ws/c2s.js';
+import { c2sMessageTypesOfSchema, zC2SEnvelope } from '../src/ws/c2s.js';
 
 const TIRAGES = 10_000;
 const PROFONDEUR = 50;
@@ -205,6 +205,40 @@ describe('zC2SEnvelope face à 10 000 entrées hostiles', () => {
       });
       expect(resultat.success, `${t} devrait passer`).toBe(true);
     }
+  });
+
+  /**
+   * LA PORTÉE DU CORPUS, MESURÉE PLUTÔT QUE SUPPOSÉE. « 10 000 entrées » ne dit
+   * rien si aucune n'atteint le corps d'une trame : un `safeParse` qui décide
+   * sur le discriminant et s'arrête n'aurait jamais été sollicité au-delà.
+   * Mesuré en recette : `TYPES_CONNUS` réduit à `['c2s.nexiste_pas']` sortait
+   * 4/4 VERT — plus une seule trame structurée n'atteignait `p`, et rien ne le
+   * signalait. Les deux lignes ci-dessous tiennent cette propriété.
+   */
+  it('le corpus atteint vraiment le corps des trames, et il nomme les 8 types', () => {
+    // Les types tirés SONT les huit de l'union. Un nom inventé, ou un type
+    // retiré, rougit ici : la portée du fuzz est dérivée, pas recopiée.
+    expect([...TYPES_CONNUS].toSorted()).toStrictEqual([...c2sMessageTypesOfSchema()].toSorted());
+
+    const next = rng(GRAINE);
+    const connus = new Set(TYPES_CONNUS);
+    let structurees = 0;
+    for (let i = 0; i < TIRAGES; i += 1) {
+      const brut = entree(next, i);
+      if (
+        typeof brut === 'object' &&
+        brut !== null &&
+        !Array.isArray(brut) &&
+        connus.has((brut as { t?: unknown }).t as string) &&
+        (brut as { v?: unknown }).v === PROTOCOL_VERSION
+      ) {
+        structurees += 1;
+      }
+    }
+    // Mesuré : 833 trames sur 10 000 passent le discriminant et se font juger
+    // sur leur charge utile. Le seuil est bas exprès — il garde la PROPRIÉTÉ
+    // (« le corps est atteint »), pas le chiffre exact d'un générateur.
+    expect(structurees).toBeGreaterThan(500);
   });
 
   it('une charge utile de profondeur 50 est refusée sans faire sauter la pile', () => {

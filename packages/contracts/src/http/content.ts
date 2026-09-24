@@ -27,8 +27,18 @@ export const zContentManifestResponse = z.strictObject({
 
 export const zContentDocParams = z.strictObject({ kind: zSlug, id: zSlug });
 
+/**
+ * THE DECLARED HOLE, WRITTEN DOWN. Section 2.4 requires every route to declare
+ * `{ body, querystring, params, response }`; a route with no response schema at
+ * all would be an undeclared hole rather than a declared one, and the two are
+ * not the same thing. `z.unknown()` says "M0-09 validates this, at the loader"
+ * in the one place a reader looks for the answer.
+ */
+export const zContentDocResponse = z.unknown();
+
 /** Safe to cache forever: the URL is keyed on an immutable content version. */
 export const CONTENT_CACHE_CONTROL = 'public, max-age=31536000, immutable';
 
 export type ContentManifestResponse = z.output<typeof zContentManifestResponse>;
 export type ContentDocParams = z.output<typeof zContentDocParams>;
+export type ContentDocResponse = z.output<typeof zContentDocResponse>;
