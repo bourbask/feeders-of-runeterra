@@ -10,3 +10,8 @@ dist/
 coverage/
 pnpm-lock.yaml
 *.golden.json
+
+# Migrations : écrites par drizzle-kit, relues à la main, jamais reformatées.
+# Prettier réindente `meta/*.json` ; le générateur les réécrit ensuite à sa
+# façon, et `format:check` devient rouge après chaque `pnpm db:generate`.
+packages/db/migrations/

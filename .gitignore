@@ -20,6 +20,10 @@ data/
 .turbo/
 .vite/
 *.tsbuildinfo
+# `db:check-schema` génère dans un dossier jetable, sous le paquet parce que
+# drizzle-kit exige un `--out` relatif. Il le supprime ; si le processus meurt
+# avant, la copie des migrations ne doit pas se retrouver dans un commit.
+packages/db/.check-schema-*/
 
 # Worktrees et etat local des agents : jamais versionnes.
 .claude/
