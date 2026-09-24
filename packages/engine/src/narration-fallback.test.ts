@@ -33,6 +33,8 @@ function aBrief(overrides: Partial<NarrationBrief> = {}): NarrationBrief {
   return {
     correlationId: 'turn-1',
     sceneId: null,
+    audience: { scope: 'table', recipients: null },
+    perceivableFacts: [],
     actorCharacterId: HERO,
     moveId: 'face-danger',
     outcome: 'franche',
