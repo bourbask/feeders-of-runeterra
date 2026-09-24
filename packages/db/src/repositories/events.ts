@@ -36,6 +36,19 @@
  * `subset` or `private` event reaches exactly the identifiers in
  * `recipients_json`. The membership test goes through `json_each`, never
  * through `LIKE`: `["p10"]` must not deliver to `p1`, and a test proves it.
+ *
+ * The same invariant forbids the other end of the range: a `subset` whose
+ * recipient list is EMPTY is written by no one, because no replay could ever
+ * return it. See `UnaddressableEventError`.
+ *
+ * ── WHY `BEGIN IMMEDIATE` AND WHAT PROVES IT ─────────────────────────────
+ * Both write paths open with `.immediate()`, never the default deferred
+ * transaction: the writer lock is taken at `BEGIN`, before the first read, so
+ * no allocation is decided on a snapshot another writer has already moved.
+ * `tests/immediate-transaction.test.ts` measures BOTH halves of that claim —
+ * that `.immediate()` really takes the lock up front on this engine (a
+ * deferred read-only transaction gets in while the lock is held, an immediate
+ * one does not), and that these two functions really go through it.
  */
 
 import type { SqliteConnection } from '../client.js';
@@ -53,7 +66,11 @@ export interface AppendableEvent {
   readonly payload: unknown;
   readonly actorKind: ActorKind;
   readonly scope: EventScope;
-  /** Required on `subset` and `private`, forbidden on `table` (DDL CHECK). */
+  /**
+   * Required and NON-EMPTY on `subset` and `private`, forbidden on `table`.
+   * The DDL CHECK carries the first and third; `UnaddressableEventError`
+   * carries "non-empty", which the CHECK does not express.
+   */
   readonly recipients?: readonly string[] | null;
   readonly createdAt: number;
   readonly playSessionId?: string | null;
@@ -78,6 +95,29 @@ export class UnknownCampaignError extends Error {
   constructor(readonly campaignId: string) {
     super(`campagne inconnue : ${campaignId}`);
     this.name = 'UnknownCampaignError';
+  }
+}
+
+/**
+ * Raised when a `subset` or `private` event names NOBODY.
+ *
+ * The DDL CHECK `events_recipients_match_scope` only ties `scope = 'table'` to
+ * `recipients_json IS NULL`; it says nothing about `[]`. An empty list passes
+ * the CHECK and writes a row that `readSinceForPlayer` delivers to no one —
+ * a journal entry no replay can ever produce, for anybody. That is a hole in
+ * invariant 4 rather than a narrow event, so the only write path refuses it.
+ *
+ * The canonical type already says so in prose: `EventEnvelope.recipients` is
+ * "non-empty only when `scope` is `subset` or `private`". Tightening the CHECK
+ * itself would be a migration, which is an ADR, not a repository change.
+ */
+export class UnaddressableEventError extends Error {
+  constructor(
+    readonly eventId: string,
+    readonly scope: EventScope,
+  ) {
+    super(`événement ${eventId} de portée ${scope} sans destinataire`);
+    this.name = 'UnaddressableEventError';
   }
 }
 
@@ -119,6 +159,9 @@ export function appendEvents(
     let finalSeq = 0;
 
     for (const event of input.events) {
+      if (event.scope !== 'table' && (event.recipients ?? []).length === 0) {
+        throw new UnaddressableEventError(event.id, event.scope);
+      }
       const allocated = allocate.get(input.now, input.campaignId) as { seq: number } | undefined;
       if (allocated === undefined) {
         throw new UnknownCampaignError(input.campaignId);

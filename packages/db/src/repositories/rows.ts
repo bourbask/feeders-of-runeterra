@@ -2,12 +2,22 @@
  * The raw SQLite row shapes and the mapping to camel case.
  *
  * WHY HAND-WRITTEN SQL RATHER THAN THE DRIZZLE QUERY BUILDER, everywhere in
- * `repositories/`. The journal needs four things the builder does not express:
- * `BEGIN IMMEDIATE`, `UPDATE … RETURNING`, `json_each` over
- * `recipients_json`, and a `ROW_NUMBER()` window. Writing half the layer in
- * one style and half in another would hide where the interesting SQL lives, so
- * the whole layer is one style. Drizzle stays what it already was here: the
- * declaration the migrations are generated from.
+ * `repositories/`. TWO things the journal needs are genuinely outside the
+ * builder at the pinned version: `json_each` over `recipients_json`, and a
+ * `ROW_NUMBER()` window. The DECIDING reason for the rest of the layer is
+ * style, not capability: writing half of it in one style and half in another
+ * would hide where the interesting SQL lives.
+ *
+ * An earlier version of this header also claimed `BEGIN IMMEDIATE` and
+ * `UPDATE … RETURNING` were beyond the builder. BOTH CLAIMS WERE FALSE for
+ * drizzle-orm 0.45.3, the version this package pins:
+ * `SQLiteTransactionConfig.behavior` accepts `'immediate'`
+ * (sqlite-core/session.d.ts:51) and `.returning()` exists on the UPDATE
+ * builder (sqlite-core/query-builders/update.d.ts). The decision stands on the
+ * style argument alone; the technical argument is withdrawn.
+ *
+ * Drizzle stays what it already was here: the declaration the migrations are
+ * generated from.
  *
  * `payload_json` and `recipients_json` come back as TEXT through this path,
  * not as parsed objects: the `{ mode: 'json' }` of the Drizzle declaration is
@@ -37,7 +47,17 @@ export interface EventRow {
   readonly created_at: number;
 }
 
-/** A row of `events`, read back. Mirrors `EventEnvelopeDto` field for field. */
+/**
+ * A row of `events`, read back.
+ *
+ * MIRRORS `EventEnvelopeDto` (@for/contracts) FIELD FOR FIELD, plus `type` and
+ * `payload`, which the envelope leaves to each of the 71 variants. Per ADR
+ * 0007 a mirror is guaranteed by an EXECUTION test, never by this sentence:
+ * `tests/journal-mirror.test.ts` writes one event with every envelope field
+ * populated, reads it back through the only read path, compares the key sets
+ * against `eventEnvelopeShape` and parses the result with `zEventEnvelope`. A
+ * field added to the canonical envelope turns that test red here.
+ */
 export interface JournalEvent {
   readonly id: string;
   readonly campaignId: string;
