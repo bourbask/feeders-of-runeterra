@@ -63,6 +63,28 @@ Ce fichier importe des **valeurs** du moteur, et il en a le droit : il est hors 
 règle `dependency-cruiser` et exclu du cruise par `exclude: { path: '(coverage|\.test\.ts$)' }`.
 Ce n'était pas une impossibilité technique, c'était un oubli.
 
+## Le corollaire, ajouté le 25 septembre : aucun chiffre ne se compare à lui-même
+
+Un test qui **borne avec la constante qu'il vérifie** est inerte, exactement comme une recopie
+non comparée. Il passe toujours, et il ne prouve rien.
+
+Mesuré sur M0-12 : deux plafonds — celui de la chronique, celui de la prose — étaient vérifiés
+par un test qui lisait la constante puis comparait la constante à elle-même. Verts, et
+parfaitement vides.
+
+La règle opératoire :
+
+| D'où vient le chiffre | Comment il se teste |
+|---|---|
+| d'un critère d'acceptation | écrit **en toutes lettres** dans le test |
+| du moteur | comparé **au moteur**, valeur contre valeur |
+| de nulle part ailleurs | il ne se compare pas à lui-même |
+
+Même famille que la covariance : dans les deux cas, le test a l'air de garder quelque chose et
+ne garde rien. C'est le cinquième mode de « règle présente et inerte » trouvé sur ce projet, et
+le premier qui ne vient ni d'une configuration ni d'une propriété du langage, mais d'une manière
+d'écrire un test.
+
 Et la preuve se fait **dans les deux sens** : rouge quand on élargit la source canonique, vert
 quand on la remet. Prouver que le test existe ne vaut rien.
 
