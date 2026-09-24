@@ -27,7 +27,9 @@ import {
 import { UnknownCampaignError, readSince, readSinceForPlayer } from '../src/repositories/events.js';
 import { settleIntentOnce } from '../src/repositories/intents.js';
 
+import { APP_ERROR_CODES } from '@for/contracts';
 import type { CampaignId } from '@for/engine';
+import { anId } from '@for/testkit';
 import type { Fixture } from './support/campaign.test.js';
 import {
   CAMPAIGN,
@@ -305,6 +307,152 @@ describe('one campaign at a time', () => {
     expect(reports[0]).toMatchObject({ events: 12, applied: 11, seq: 12 });
     expect(dumpProjections(connection, CAMPAIGN)).not.toBe('');
     expect(dumpProjections(connection, OTHER_CAMPAIGN)).not.toBe('');
+  });
+});
+
+/**
+ * The two clocks the disordered fixture writes, minted OUT of key order.
+ *
+ * `anId('clock', 21)` ends on `N`, `anId('clock', 22)` on `P`: the first is
+ * the smaller key, and it is inserted SECOND, so the physical order of the
+ * table is the reverse of the order the dump must print.
+ */
+const CLOCK_SMALL = anId('clock', 21);
+const CLOCK_LARGE = anId('clock', 22);
+
+/**
+ * Zone C written by hand, IN DISORDER, so the normalisations of
+ * `dumpProjections` have something to normalise.
+ *
+ * Nothing here goes through the reducer on purpose: this suite measures the
+ * dump, not the replay, and the replay would hand it rows already sorted —
+ * the "fixture already sorted" failure that made all three sorts removable
+ * with the suite still green.
+ *
+ * The two rows differ in `id` and `title` and in nothing else, so the order
+ * the dump prints them in is decided by `id` alone and cannot be read as an
+ * accident of some other column.
+ */
+function aDisorderedZoneC(): SqliteConnection {
+  const connection = seeded();
+  const insert = connection.prepare(
+    `INSERT INTO clocks
+       (id, campaign_id, title, description, segments, filled, status, visibility,
+        consequence, created_seq, updated_seq)
+     VALUES (?, ?, ?, '', 6, 0, 'ticking', 'public', 'Le col se ferme.', 7, 7)`,
+  );
+  insert.run(CLOCK_LARGE, CAMPAIGN, 'La tempête monte');
+  insert.run(CLOCK_SMALL, CAMPAIGN, 'Le vent se lève');
+  return connection;
+}
+
+/**
+ * What `dumpProjections` must print for that base, to the byte.
+ *
+ * Six headers in the order of `PROJECTION_TABLES`; the clock rows in KEY
+ * order, which is the reverse of the insertion order above; and inside each
+ * line the eleven columns in ALPHABETICAL order, which is not the order the
+ * table declares them in. One assertion, three normalisations — remove any
+ * one of them and this string stops matching.
+ */
+const EXPECTED_DUMP = `# characters
+
+# progress_tracks
+
+# clocks
+{"campaign_id":"0CAMPA1GN00000000000000001","consequence":"Le col se ferme.","created_seq":7,"description":"","filled":0,"id":"0C10CK0000000000000000000N","segments":6,"status":"ticking","title":"Le vent se lève","updated_seq":7,"visibility":"public"}
+{"campaign_id":"0CAMPA1GN00000000000000001","consequence":"Le col se ferme.","created_seq":7,"description":"","filled":0,"id":"0C10CK0000000000000000000P","segments":6,"status":"ticking","title":"La tempête monte","updated_seq":7,"visibility":"public"}
+# entities
+
+# campaign_champion_locks
+
+# scene_state
+
+`;
+
+describe('the dump is a canonical form', () => {
+  /**
+   * The fixture's own guard. If SQLite ever hands these rows back in key
+   * order by itself, the three assertions below would be green on a dump that
+   * normalises nothing, and this file would be back to proving nothing.
+   */
+  it('is fed a base SQLite really does hand back out of order', () => {
+    const connection = aDisorderedZoneC();
+    const raw = connection
+      .prepare(`SELECT * FROM clocks WHERE campaign_id = ?`)
+      .all(CAMPAIGN) as Record<string, unknown>[];
+
+    // Rows: insertion order, which is the REVERSE of key order.
+    expect(raw.map((row) => row['id'])).toEqual([CLOCK_LARGE, CLOCK_SMALL]);
+    // Columns: the declaration order of 03-donnees.md, which is not the
+    // alphabet — `id` before `campaign_id`, `title` before `consequence`.
+    expect(Object.keys(raw[0]!)).toEqual([
+      'id',
+      'campaign_id',
+      'title',
+      'description',
+      'segments',
+      'filled',
+      'status',
+      'visibility',
+      'consequence',
+      'created_seq',
+      'updated_seq',
+    ]);
+  });
+
+  it('prints tables, rows and columns in one fixed order — to the byte', () => {
+    expect(dumpProjections(aDisorderedZoneC(), CAMPAIGN)).toBe(EXPECTED_DUMP);
+  });
+
+  /**
+   * And the consequence that makes the row sort load-bearing rather than
+   * decorative: control 9 compares this string across a rebuild, and
+   * `writeProjections` inserts sorted by key. Two rows whose physical order
+   * is not their key order are exactly what the live writer produces, and
+   * without the sort the comparison calls a sound base divergent.
+   */
+  it('gives the same bytes whichever order the rows were inserted in', () => {
+    const inserted = dumpProjections(aDisorderedZoneC(), CAMPAIGN);
+    open?.db.close();
+    open = undefined;
+
+    const connection = seeded();
+    const insert = connection.prepare(
+      `INSERT INTO clocks
+         (id, campaign_id, title, description, segments, filled, status, visibility,
+          consequence, created_seq, updated_seq)
+       VALUES (?, ?, ?, '', 6, 0, 'ticking', 'public', 'Le col se ferme.', 7, 7)`,
+    );
+    insert.run(CLOCK_SMALL, CAMPAIGN, 'Le vent se lève');
+    insert.run(CLOCK_LARGE, CAMPAIGN, 'La tempête monte');
+
+    expect(dumpProjections(connection, CAMPAIGN)).toBe(inserted);
+  });
+});
+
+describe('the refusal carries the protocol, not a copy of it', () => {
+  /**
+   * ADR 0007, fourth mode: `4011` and `campaign_rebuilding` used to be typed
+   * out in `rebuild.ts`, under a comment promising they could not drift from
+   * the lock. `rebuild.ts` now READS both from `@for/contracts`, so there is
+   * no second copy left to drift — and the two assertions below are what
+   * makes that visible from here.
+   *
+   * THE NAME AND THE NUMBER ARE SPELLED OUT, from `01-architecture.md`
+   * section 5.5. Asserting `WS_CLOSE_CODES.campaign_rebuilding` instead would
+   * be the constant compared to itself, since that is now exactly where the
+   * value comes from: green whatever the protocol says. The third assertion
+   * is the member-to-member one — the name against the OTHER vocabulary it
+   * has to belong to, `APP_ERROR_CODES`, which is a different array in a
+   * different file.
+   */
+  it('is the pair of section 5.5, spelled out', () => {
+    const error = new CampaignRebuildingError(CAMPAIGN);
+
+    expect(error.code).toBe('campaign_rebuilding');
+    expect(error.closeCode).toBe(4011);
+    expect(APP_ERROR_CODES).toContain(error.code);
   });
 });
 

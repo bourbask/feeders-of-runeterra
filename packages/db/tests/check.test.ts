@@ -232,8 +232,19 @@ describe('each control, violated', () => {
 
     const findings = runIntegrityChecks(connection);
     expect(numbers(findings)).toEqual([9]);
-    expect(formatFinding(findings[0]!)).toContain('contrôle 9');
-    expect(formatFinding(findings[0]!)).toContain('Reconstruction idempotente');
+    // The whole line, not a fragment of it. `firstDifference` and its two
+    // helpers are thirty lines whose entire point is the tail — "vigueur
+    // 0 -> 3", the column and the two values that send you to the write that
+    // had no event behind it. Asserting only "contrôle 9" left those thirty
+    // lines replaceable by a constant string with the suite still green.
+    //
+    // Both numbers are spelled out rather than read back: 0 is what the
+    // violation above writes, 3 is what the journal says (5 at creation,
+    // -2 at seq 10). Neither comes from the code under test.
+    expect(formatFinding(findings[0]!)).toBe(
+      `contrôle 9 — Reconstruction idempotente [${CAMPAIGN}] : ` +
+        `projections divergentes après reconstruction : vigueur 0 -> 3`,
+    );
   });
 
   it('10 — a payload the event schema refuses', () => {

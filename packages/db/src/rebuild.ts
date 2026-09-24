@@ -74,7 +74,8 @@ import { campaignSeq } from './repositories/campaigns.js';
 import { UnknownCampaignError, readSince } from './repositories/events.js';
 import type { JournalEvent } from './repositories/rows.js';
 
-import { upcast, zGameEvent } from '@for/contracts';
+import type { AppErrorCode, WsCloseReason } from '@for/contracts';
+import { WS_CLOSE_CODES, upcast, zGameEvent } from '@for/contracts';
 import type { CampaignId, CampaignState, GameEvent, PlayerId } from '@for/engine';
 import {
   REDUCER_VERSION,
@@ -114,16 +115,32 @@ export class JournalGapError extends Error {
 }
 
 /**
+ * The one name this refusal answers to, checked against BOTH vocabularies it
+ * belongs to (ADR 0007: a constant that comes from elsewhere is compared to
+ * elsewhere, member by member).
+ *
+ * `satisfies AppErrorCode` fails to compile if the name leaves
+ * `APP_ERROR_CODES`; `satisfies WsCloseReason` fails to compile if it leaves
+ * `WS_CLOSE_CODES`. Neither is a copy: the number below is READ from
+ * `WS_CLOSE_CODES`, so there is nothing left here that could drift.
+ */
+const REBUILDING_REASON = 'campaign_rebuilding' satisfies AppErrorCode & WsCloseReason;
+
+/**
  * Raised when an intent arrives for a campaign whose projections are being
  * rebuilt.
  *
- * `closeCode` is the WebSocket code of `01-architecture.md` section 5:
- * `4011 campaign_rebuilding`. It is carried here rather than in the server so
- * that the refusal and the lock that causes it cannot drift apart.
+ * `closeCode` is the WebSocket code of `01-architecture.md` section 5.5,
+ * `4011 campaign_rebuilding`. It used to be WRITTEN OUT here, under a comment
+ * claiming the refusal and the lock "cannot drift apart" — a promise nothing
+ * kept, since `@for/contracts` holds the canonical pair and `@for/db` already
+ * depends on it at runtime. It is now read from there, and
+ * `tests/rebuild.test.ts` spells out 4011 from section 5.5 so that a move on
+ * the contracts side is red HERE too, not only in the package that moved.
  */
 export class CampaignRebuildingError extends Error {
-  readonly code = 'campaign_rebuilding';
-  readonly closeCode = 4011;
+  readonly code = REBUILDING_REASON;
+  readonly closeCode = WS_CLOSE_CODES[REBUILDING_REASON];
 
   constructor(readonly campaignId: string) {
     super(`campagne ${campaignId} en cours de reconstruction`);
@@ -481,11 +498,34 @@ export function rebuildAll(connection: SqliteConnection): readonly RebuildReport
 /**
  * Zone C of one campaign, as bytes.
  *
- * Control 9 compares this string before and after a rebuild, so it must depend
- * on the CONTENT of the rows and on nothing else: columns are read by name and
- * sorted, rows are ordered by their key, and tables come in the order of
- * `PROJECTION_TABLES`. A `SELECT *` in declaration order would have made a
- * column rename look like a divergence.
+ * Control 9 compares this string before and after a rebuild, so it must be a
+ * function of the CONTENT of the rows and of nothing else. Three
+ * normalisations get it there, and all three are pinned by
+ * `tests/rebuild.test.ts` against a base written OUT OF ORDER on purpose —
+ * rows inserted in reverse key order, columns in the order SQLite hands them
+ * back, which is the declaration order and not the alphabet. A fixture that
+ * arrived already normalised would have left the three sorts free to vanish
+ * with the suite still green, which is exactly what recette measured on the
+ * first version of this file.
+ *
+ *   - ROWS are sorted, and this one is LOAD-BEARING rather than hygiene. A
+ *     `SELECT` with no `ORDER BY` gives the order of whichever index SQLite
+ *     picked; `characters_campaign_idx`, `clocks_campaign_idx` and
+ *     `progress_tracks_campaign_idx` all end on `status`, so at equal status
+ *     the order is `rowid` — the order the rows were INSERTED. The live
+ *     writer inserts on arrival and `writeProjections` inserts sorted by key,
+ *     so without this sort control 9 reports a divergence on a base that is
+ *     perfectly sound.
+ *   - COLUMNS are sorted, which makes the line a canonical form instead of a
+ *     copy of the declaration order — and makes the finding of control 9
+ *     readable, since `differingColumns` walks the same alphabet. The
+ *     justification this comment used to carry ("a `SELECT *` in declaration
+ *     order would have made a column rename look like a divergence") was
+ *     WRONG and is withdrawn: both dumps read the same `SELECT`, so a rename
+ *     moves the two sides together.
+ *   - TABLES come in the order of `PROJECTION_TABLES`, the same order they are
+ *     truncated in, so the dump and the truncation cannot disagree about what
+ *     zone C is.
  */
 export function dumpProjections(connection: SqliteConnection, campaignId: string): string {
   const parts: string[] = [];
