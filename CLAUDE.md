@@ -48,13 +48,19 @@ par de la discipline.
 ```
 pnpm verify          # la porte de merge locale : si elle passe, la CI passe
 pnpm test            # tous les paquets
-pnpm typecheck
+pnpm typecheck       # le code de production SEULEMENT
+pnpm typecheck:tests # les fichiers de test — tâche turbo distincte, job 4 de la CI
 pnpm lint
 pnpm format          # avant de committer
 pnpm check:workspace # cohérence des package.json et de la liste contractuelle de commandes
 pnpm db:reset        # base locale remise à zéro puis réamorcée
 pnpm sim run <scénario>
 ```
+
+**`pnpm typecheck` ne regarde pas les fichiers de test.** Ce sont deux tâches turbo distinctes, et
+`turbo run build typecheck lint test` ne couvre donc pas les `*.test.ts`. Un type élargi côté moteur
+passe les quatre portes locales et tombe au job 4 de la CI, sur une fixture de test qui ne compile
+plus. Toute mesure de recette lance **les deux**.
 
 `pnpm verify` **n'a pas à être verte avant la fin de M0** : la porte se ferme progressivement,
 tâche après tâche, et c'est M0-30 qui la referme entièrement. Ne cherche pas à rendre vertes des
