@@ -44,12 +44,30 @@
  *     and never carries a seed — `zTableState` strips `rng` precisely so a
  *     browser cannot compute a roll before declaring it. Nothing to mirror.
  *
- *   The four values this task DOES declare from scratch — `WS_CLOSE_CODES`,
- *   `zNarrationStatus`, `zNarrationErrorCode`, `WS_RATE_LIMITS` — have no
- *   engine counterpart at all: they are protocol vocabulary, fixed by
- *   01-architecture.md sections 5.4/5.5/5.6 and 02-mj-ia.md section 6.3. Each
- *   is compared below against the section that fixes it, which is the closest
- *   thing to a mirror they have.
+ *   The values this task DOES declare from scratch have no engine counterpart
+ *   at all: they are protocol vocabulary, fixed by 01-architecture.md sections
+ *   5, 5.4, 5.5 and 5.6, by 02-mj-ia.md section 6.3, and — for `src/http/**` —
+ *   by section 6. Each is compared below, VALUE BY VALUE, against the section
+ *   that fixes it, which is the closest thing to a mirror it has:
+ *
+ *     WS_CLOSE_CODES                    -> §5.5, les huit numéros
+ *     WS_RATE_LIMITS                    -> §5.6, les cinq seaux
+ *     WS_MAX_INCOMING/OUTGOING_FRAME_BYTES, WS_HEARTBEAT_INTERVAL_MS,
+ *     WS_HEARTBEAT_TIMEOUT_MS           -> §5
+ *     WS_RATE_LIMIT_STRIKES_BEFORE_CLOSE -> §5.6
+ *     WS_SOCKET_QUEUE_MAX_MESSAGES      -> 02-mj-ia §6.3
+ *     zNarrationErrorCode               -> §5.4
+ *     zNarrationStatus                  -> 02-mj-ia §6.3
+ *     zEnvelopeHead, zWsErrorCode       -> §5.1 et §3.3
+ *     la surface HTTP et ses constantes -> §6 et 03-donnees §6.7
+ *
+ *   CETTE LISTE A ÉTÉ FAUSSE. La version précédente affirmait « each is
+ *   compared below » alors que `zNarrationStatus`, `zNarrationErrorCode` et
+ *   trois seaux sur cinq n'étaient comparés nulle part : mesuré en recette,
+ *   `zNarrationErrorCode` réduit à `z.enum(['nimporte_quoi'])` sortait 290/290
+ *   vert. Un garde-fou AFFIRMÉ qui ne garde rien est le cas que ce dépôt tient
+ *   pour pire qu'une règle absente (ADR 0002, ADR 0007). La phrase n'a pas été
+ *   adoucie : les assertions manquantes ont été écrites.
  */
 import {
   ATTRIBUTES,
@@ -63,7 +81,12 @@ import {
 import { describe, expect, it } from 'vitest';
 import type { z } from 'zod';
 
-import { zCampaignStatus, zRuleViolationCode } from '../src/core/enums.js';
+import {
+  zCampaignStatus,
+  zCharacterStatus,
+  zRuleViolationCode,
+  zSheetSource,
+} from '../src/core/enums.js';
 import { zTableState } from '../src/dto/table-state.js';
 import {
   TURN_PROOF_LABEL_MAX,
@@ -76,6 +99,44 @@ import { APP_ERROR_CODES, zAppErrorCode } from '../src/errors.js';
 import { eventEnvelopeShape, zEventEnvelope } from '../src/events/envelope.js';
 import { zGameEvent } from '../src/events/index.js';
 import { zNarrationGmMessagePayload } from '../src/events/narrative.js';
+import {
+  CSRF_HEADER_NAME,
+  CSRF_HEADER_VALUE,
+  DEV_ALLOWED_ORIGIN,
+  SESSION_COOKIE_NAME,
+  SESSION_MAX_AGE_MS,
+  zAuthCallbackErrorQuery,
+  zAuthCallbackQuery,
+  zAuthStartQuery,
+  zCsrfHeaders,
+  zLogoutResponse,
+} from '../src/http/auth.js';
+import { zCharacterSummary, zMeResponse, zPlayerProfile } from '../src/http/characters.js';
+import {
+  CONTENT_CACHE_CONTROL,
+  zContentDocParams,
+  zContentDocResponse,
+  zContentManifestResponse,
+} from '../src/http/content.js';
+import {
+  ADMIN_HEALTH_BACKUP_MAX_AGE_MS,
+  ADMIN_HEALTH_MIN_FREE_DISK_RATIO,
+  ADMIN_HEALTH_WAL_MAX_BYTES,
+  zAdminHealthResponse,
+  zHealthzResponse,
+  zReadyzResponse,
+} from '../src/http/health.js';
+import {
+  CAMPAIGN_LOG_PAGE_MAX,
+  zCampaignDetailResponse,
+  zCampaignListResponse,
+  zCampaignLogEntry,
+  zCampaignLogQuery,
+  zCampaignLogResponse,
+  zCampaignParams,
+  zCampaignSummary,
+  zCreateCampaignBody,
+} from '../src/http/tables.js';
 import { zIntent, zSpeechSayIntent } from '../src/intents/index.js';
 import { PROTOCOL_VERSION } from '../src/version.js';
 import {
@@ -89,13 +150,22 @@ import {
 import {
   WS_CLOSE_CODES,
   WS_CLOSE_REASONS,
+  WS_HEARTBEAT_INTERVAL_MS,
+  WS_HEARTBEAT_TIMEOUT_MS,
+  WS_MAX_INCOMING_FRAME_BYTES,
   WS_MAX_OUTGOING_FRAME_BYTES,
+  WS_RATE_LIMIT_STRIKES_BEFORE_CLOSE,
+  WS_SOCKET_QUEUE_MAX_MESSAGES,
   zRejectionCode,
+  zWsErrorCode,
 } from '../src/ws/codes.js';
+import { zEnvelopeHead } from '../src/ws/envelope.js';
 import {
   fitsOutgoingFrame,
   s2cMessageTypesOfSchema,
+  zNarrationErrorCode,
   zNarrationSource,
+  zNarrationStatus,
   zS2CEnvelope,
   zS2CEvent,
   zS2CMessage,
@@ -212,6 +282,31 @@ const s2c = walk(zS2CMessage);
 function payloadKeys(option: { shape: Record<string, AnySchema> }): readonly string[] {
   const payload = option.shape['p']!;
   return Object.keys(defOf(payload)['shape'] as Record<string, AnySchema>).sort();
+}
+
+/**
+ * UN NOM DE CHAMP NE DIT PAS S'IL EST OBLIGATOIRE, et c'est une classe entière
+ * de relâchements qu'une assertion de noms laisse passer. Mesuré : rendre
+ * `state` facultatif dans `zAuthCallbackQuery`, ou `correlationId` facultatif
+ * dans `c2s.why`, ne changeait AUCUN nom de clé — donc aucune ligne ne
+ * rougissait, alors que `state` est le jeton anti-rejeu d'OAuth et que
+ * « `c2s.why` ne porte QUE `correlationId` » est un critère de la fiche.
+ *
+ * `shapeSpec` marque ce que `Object.keys` efface :
+ *   `nom`   obligatoire · `nom?` facultatif · `nom=` a une valeur par défaut
+ */
+function optionalityMark(child: AnySchema): string {
+  const kind = defOf(child)['type'] as string;
+  if (kind === 'optional') return '?';
+  if (kind === 'default' || kind === 'prefault') return '=';
+  return '';
+}
+
+function shapeSpec(schema: AnySchema): readonly string[] {
+  const shape = defOf(schema)['shape'] as Record<string, AnySchema>;
+  return Object.entries(shape)
+    .map(([key, child]) => `${key}${optionalityMark(child)}`)
+    .toSorted();
 }
 
 function optionByType(union: typeof zC2SMessage | typeof zS2CMessage, type: string) {
@@ -449,6 +544,47 @@ describe('invariant 3 — aucun message client ne transporte un résultat', () =
     }
   });
 
+  /**
+   * AUCUN CHAMP DE CHARGE UTILE N'EST FACULTATIF, sur aucun des 23 messages.
+   * Un protocole gelé dont un champ devient facultatif est un protocole
+   * élargi en silence : le champ disparaît des trames sans qu'aucun nom ne
+   * change, donc sans qu'aucune assertion de noms ne rougisse. Mesuré :
+   * `correlationId` rendu facultatif sur `c2s.why` — le critère même de la
+   * fiche — laissait la suite verte avant cette ligne.
+   *
+   * `nullable` reste permis, et ce n'est pas la même chose : « la valeur est
+   * null » voyage sur le fil, « la clé est absente » non.
+   *
+   * UNE SEULE EXCEPTION, ET LA SPEC L'ÉCRIT AVEC SON POINT D'INTERROGATION :
+   * §5.4 donne `s2c.error { code, message, requestId, intentId? }` — une erreur
+   * peut répondre à une intention précise ou à aucune. L'énumérer plutôt que de
+   * l'exclure fait mordre la ligne DANS LES DEUX SENS : un champ qui devient
+   * facultatif rougit, et `intentId` qui deviendrait obligatoire aussi.
+   */
+  it('le seul champ de charge utile facultatif est celui que §5.4 écrit « intentId? »', () => {
+    const facultatifs: string[] = [];
+    for (const type of [...c2sMessageTypesOfSchema(), ...s2cMessageTypesOfSchema()]) {
+      const union = type.startsWith('c2s.') ? zC2SMessage : zS2CMessage;
+      const payload = optionByType(union, type).shape['p']!;
+      const shape = defOf(payload)['shape'] as Record<string, AnySchema>;
+      for (const [key, child] of Object.entries(shape)) {
+        if (optionalityMark(child) !== '') facultatifs.push(`${type}.${key}`);
+      }
+    }
+    expect(facultatifs.toSorted()).toStrictEqual(['s2c.error.intentId']);
+  });
+
+  it('les enveloppes non plus : v, t, id, ts, seq, deliverySeq sont tous obligatoires', () => {
+    const facultatifs: string[] = [];
+    for (const type of [...c2sMessageTypesOfSchema(), ...s2cMessageTypesOfSchema()]) {
+      const union = type.startsWith('c2s.') ? zC2SMessage : zS2CMessage;
+      for (const [key, child] of Object.entries(optionByType(union, type).shape)) {
+        if (key !== 'p' && optionalityMark(child) !== '') facultatifs.push(`${type}.${key}`);
+      }
+    }
+    expect(facultatifs).toStrictEqual([]);
+  });
+
   it('une clé inconnue au premier niveau de l’enveloppe est refusée', () => {
     const frame = {
       v: PROTOCOL_VERSION,
@@ -500,12 +636,24 @@ describe('seq, deliverySeq, chunk — trois compteurs, trois origines', () => {
     }
   });
 
-  it('chunk n’apparaît que dans des charges utiles de narration', () => {
+  /**
+   * AVEC LE MARCHEUR, PAS AVEC `payloadKeys`. Mesuré en recette : la version
+   * qui ne lisait que le PREMIER niveau de `p` restait verte avec un
+   * `chunk: zChunk` glissé dans `s2c.presence.members[]`, un cran plus bas.
+   * Un garde-fou qui ne regarde qu'un niveau annonce une profondeur qu'il n'a
+   * pas — le cas que ce dépôt tient pour pire qu'une règle absente (ADR 0002).
+   *
+   * Le marcheur descend message par message, à travers `zGameEvent`,
+   * `zTableState`, `zTurnProof` et `zIntent`. Un `chunk` n'importe où sous
+   * n'importe lequel des 23 messages rougit cette ligne.
+   */
+  it('chunk n’apparaît que dans des charges utiles de narration, à TOUTE profondeur', () => {
+    const NOMS_DE_FRAGMENT = new Set(['chunk', 'lastChunk']);
     const porteurs: string[] = [];
     for (const type of [...c2sMessageTypesOfSchema(), ...s2cMessageTypesOfSchema()]) {
       const union = type.startsWith('c2s.') ? zC2SMessage : zS2CMessage;
-      const keys = payloadKeys(optionByType(union, type));
-      if (keys.some((key) => key === 'chunk' || key === 'lastChunk')) porteurs.push(type);
+      const atteignables = walk(optionByType(union, type) as unknown as AnySchema).keys;
+      if ([...NOMS_DE_FRAGMENT].some((nom) => atteignables.has(nom))) porteurs.push(type);
     }
     expect(porteurs.toSorted()).toStrictEqual([
       'c2s.resume_narration',
@@ -514,6 +662,13 @@ describe('seq, deliverySeq, chunk — trois compteurs, trois origines', () => {
       's2c.narration_started',
     ]);
     for (const type of porteurs) expect(type).toContain('narration');
+    // Et les quatre le portent bien au PREMIER niveau : sans cette ligne, un
+    // `chunk` qui descendrait d'un cran dans `s2c.narration_delta` passerait.
+    for (const type of porteurs) {
+      const union = type.startsWith('c2s.') ? zC2SMessage : zS2CMessage;
+      const dessus = payloadKeys(optionByType(union, type));
+      expect(dessus.some((key) => NOMS_DE_FRAGMENT.has(key))).toBe(true);
+    }
   });
 
   /**
@@ -801,11 +956,76 @@ describe('codes de fermeture et limitation de débit (sections 5.5 et 5.6)', () 
       expect(limite.count).toBeGreaterThan(0);
       expect(limite.windowMs).toBeGreaterThan(0);
     }
-    // Les valeurs de la section 5.6, celles qui ont une raison d'être ce
-    // qu'elles sont : « Pourquoi ? » sur plusieurs scènes d'affilée est un
-    // usage normal, boucler dessus n'en est pas un.
-    expect(WS_RATE_LIMITS['c2s.why']).toStrictEqual({ count: 10, windowMs: 10_000 });
-    expect(WS_RATE_LIMITS['c2s.intent']).toStrictEqual({ count: 5, windowMs: 10_000, burst: 10 });
+  });
+
+  /**
+   * LA TABLE ENTIÈRE, SEAU PAR SEAU. Mesuré en recette : la version qui
+   * n'assertait que `c2s.why` et `c2s.intent` laissait passer
+   * `'c2s.speak': { count: 9999, windowMs: 1 }` — trois seaux sur cinq
+   * n'étaient gardés par rien. `toStrictEqual` sur l'objet entier ferme aussi
+   * l'autre sens : un sixième seau, ou un seau retiré, rougit ici.
+   */
+  it('les cinq seaux sont EXACTEMENT ceux de la section 5.6, valeur par valeur', () => {
+    expect(WS_RATE_LIMITS).toStrictEqual({
+      'c2s.intent': { count: 5, windowMs: 10_000, burst: 10 },
+      'c2s.speak': { count: 20, windowMs: 60_000 },
+      'c2s.resume': { count: 2, windowMs: 10_000 },
+      'c2s.why': { count: 10, windowMs: 10_000 },
+      'c2s.typing': { count: 1, windowMs: 1_000 },
+    });
+  });
+
+  /**
+   * LES QUATRE NOMBRES DE LA SECTION 5, ET LES DEUX DE 5.6 / 02-mj-ia §6.3.
+   * Mesuré en recette : `WS_HEARTBEAT_INTERVAL_MS = 1` et
+   * `WS_MAX_INCOMING_FRAME_BYTES = 7` passaient 290/290. Une constante que
+   * personne ne lit n'est pas gelée, elle est seulement écrite.
+   */
+  it('les bornes de transport sont celles de la section 5', () => {
+    expect(WS_MAX_INCOMING_FRAME_BYTES).toBe(64 * 1024);
+    expect(WS_MAX_OUTGOING_FRAME_BYTES).toBe(256 * 1024);
+    // L'entrant est le plus petit des deux : un client ne peut pas saturer la
+    // mémoire du serveur avec ce que le serveur s'autorise à émettre.
+    expect(WS_MAX_INCOMING_FRAME_BYTES).toBeLessThan(WS_MAX_OUTGOING_FRAME_BYTES);
+  });
+
+  it('le battement de cœur est celui de la section 5 : 25 s, fermeture à 60 s', () => {
+    expect(WS_HEARTBEAT_INTERVAL_MS).toBe(25_000);
+    expect(WS_HEARTBEAT_TIMEOUT_MS).toBe(60_000);
+    // Le délai laisse passer au moins deux `ping` manqués : une fermeture au
+    // premier raté couperait une socket pour une hoquet de réseau.
+    expect(WS_HEARTBEAT_TIMEOUT_MS).toBeGreaterThanOrEqual(2 * WS_HEARTBEAT_INTERVAL_MS);
+  });
+
+  it('le troisième dépassement ferme, et la file de socket plafonne à 64', () => {
+    expect(WS_RATE_LIMIT_STRIKES_BEFORE_CLOSE).toBe(3);
+    expect(WS_SOCKET_QUEUE_MAX_MESSAGES).toBe(64);
+  });
+
+  it('zWsErrorCode EST zAppErrorCode : un vocabulaire d’erreur, deux transports', () => {
+    // Par identité : une recopie serait un second endroit où la liste dérive.
+    expect(zWsErrorCode).toBe(zAppErrorCode);
+  });
+
+  /**
+   * `zEnvelopeHead` est le pré-parse de la section 5.1 : il regarde `v` et `t`
+   * pour répondre 4001 avant d'ouvrir l'union. Il est DÉLIBÉRÉMENT non strict,
+   * et les deux sens le disent — il accepte une trame qu'il ne comprend pas,
+   * et il refuse celle dont `v` n'est pas un entier.
+   */
+  it('zEnvelopeHead lit v et t, et rien d’autre', () => {
+    expect(Object.keys(defOf(zEnvelopeHead)['shape'] as Record<string, AnySchema>).sort()).toEqual([
+      't',
+      'v',
+    ]);
+    const inconnue = { v: PROTOCOL_VERSION + 99, t: 'c2s.dun_futur', id: 'x', p: { a: 1 } };
+    expect(zEnvelopeHead.safeParse(inconnue).success).toBe(true);
+    // L'autre sens : non strict ne veut pas dire permissif sur ce qu'il lit.
+    expect(zEnvelopeHead.safeParse({ v: 'un', t: 'c2s.pong' }).success).toBe(false);
+    expect(zEnvelopeHead.safeParse({ v: PROTOCOL_VERSION, t: '' }).success).toBe(false);
+    // Et l'union complète refuse ce que le pré-parse accepte : c'est bien un
+    // aiguillage, pas une seconde porte d'entrée.
+    expect(zC2SMessage.safeParse(inconnue).success).toBe(false);
   });
 
   it('s2c.rejected sépare la règle qui refuse de la requête qui échoue', () => {
@@ -814,6 +1034,73 @@ describe('codes de fermeture et limitation de débit (sections 5.5 et 5.6)', () 
     );
     expect(zRejectionCode.safeParse('rate_limited').success).toBe(true);
     expect(zRejectionCode.safeParse('pas_un_code').success).toBe(false);
+  });
+});
+
+// ──────────────────────────── 5 bis. les deux énumérations propres à la narration
+
+/**
+ * LES DEUX ENUMS QUE CETTE TÂCHE DÉCLARE DE ZÉRO. Elles n'ont pas de
+ * contrepartie dans le moteur — donc pas de miroir à comparer au sens d'ADR
+ * 0007 —, et c'est précisément pour ça qu'elles ont failli n'être gardées par
+ * rien. Mesuré en recette : `zNarrationErrorCode` réduit à
+ * `z.enum(['nimporte_quoi'])` sortait 290/290 vert. Une liste sans mesure est
+ * une liste sans garde ; la section qui la fixe est son seul oracle.
+ */
+describe('les deux énumérations de narration (§5.4, 02-mj-ia §6.3)', () => {
+  it('zNarrationErrorCode porte les cinq codes de la section 5.4, dans l’ordre', () => {
+    expect(zNarrationErrorCode.options).toStrictEqual([
+      'rate_limited',
+      'refused',
+      'engine_fallback',
+      'aborted',
+      'action_impossible',
+    ]);
+    // L'autre sens : un code inventé est refusé, et le droit de refus du
+    // conteur (P22, 02-mj-ia §4.8) est bien dans la liste.
+    expect(zNarrationErrorCode.safeParse('action_impossible').success).toBe(true);
+    expect(zNarrationErrorCode.safeParse('nimporte_quoi').success).toBe(false);
+  });
+
+  /**
+   * ÉCART DÉCLARÉ, MESURÉ, NON CORRIGÉ ICI. `02-mj-ia.md` §6.1 donne à
+   * `NarrationBroadcast.status` CINQ valeurs — `streaming`, `finalizing`,
+   * `done`, `aborted`, `failed` — alors que §6.3, qui décrit ce que le serveur
+   * fait à l'abonnement, n'en branche que QUATRE : `finalizing` n'a aucune
+   * branche et donc aucune traduction sur le fil.
+   *
+   * `zNarrationStatus` suit §6.3, parce que c'est la section qui fixe le
+   * CONTENU DE LA TRAME. Élargir l'enum à cinq valeurs serait trancher une
+   * contradiction de spec depuis un test, ce que cette tâche n'a pas à faire.
+   * Signalé au lead ; la ligne ci-dessous est l'endroit où ça rougira le jour
+   * où un ADR tranchera dans l'autre sens.
+   */
+  it('zNarrationStatus porte les quatre statuts que §6.3 branche', () => {
+    expect(zNarrationStatus.options).toStrictEqual(['streaming', 'done', 'failed', 'aborted']);
+    expect(zNarrationStatus.safeParse('au_hasard').success).toBe(false);
+    // L'écart, énoncé en assertion plutôt qu'en commentaire : tant que
+    // `finalizing` n'est pas tranché, il n'est PAS sur le fil.
+    expect(zNarrationStatus.safeParse('finalizing').success).toBe(false);
+  });
+
+  it('s2c.narration_started ouvre le flux au littéral 0, comme §5.4 le fixe', () => {
+    // `chunk: 0` est une VALEUR fixée par la spec, pas un `zChunk` quelconque :
+    // le premier fragment d'un flux est toujours le zéro, et un client peut s'y
+    // fier pour distinguer une ouverture d'une reprise.
+    const p = optionByType(zS2CMessage, 's2c.narration_started').shape['p']!;
+    const chunk = (defOf(p)['shape'] as Record<string, AnySchema>)['chunk']!;
+    expect(defOf(chunk)['type']).toBe('literal');
+    expect(chunk.safeParse(0).success).toBe(true);
+    expect(chunk.safeParse(1).success).toBe(false);
+  });
+
+  it('les deux listes ne se mélangent pas : un statut n’est pas un code d’erreur', () => {
+    // `aborted` est dans les deux, et c'est le seul. Deux vocabulaires qui
+    // partagent un mot restent deux vocabulaires.
+    const communs = zNarrationStatus.options.filter((v) =>
+      (zNarrationErrorCode.options as readonly string[]).includes(v),
+    );
+    expect(communs).toStrictEqual(['aborted']);
   });
 });
 
@@ -853,5 +1140,352 @@ describe('les nœuds partagés — aucune recopie, donc aucun miroir à garder',
     expect(c2s.nodes.has(zIntent)).toBe(true);
     expect(ATTRIBUTES.length).toBeGreaterThan(0);
     expect(zCampaignStatus.options.length).toBeGreaterThan(0);
+  });
+});
+
+// ──────────────────────────────────────────── 7. la surface HTTP de la section 6
+
+/**
+ * LA SURFACE HTTP, GELÉE — et elle est ici plutôt que dans un troisième
+ * fichier pour deux raisons : la fiche M0-08 fixe la liste des fichiers
+ * touchés, et son critère d'acceptation ne lance QUE
+ * `tests/ws-protocol.test.ts` et `tests/envelope-fuzz.test.ts`. Un test d'HTTP
+ * dans un fichier que ce critère n'exécute pas serait un garde-fou qu'on ne
+ * mesure jamais.
+ *
+ * POURQUOI CE BLOC EXISTE. `src/http/**` est un livrable nommé de la fiche et
+ * n'avait AUCUNE assertion : mesuré en recette, `zHealthzResponse` remplacé par
+ * `{ statut: z.literal('KO'), uptimeSeconds: z.number() }` sortait 290/290
+ * vert. La « couverture à 100 % » citée alors en preuve était de la couverture
+ * d'EXÉCUTION DE MODULE : un `export const z… = z.strictObject({…})` s'exécute
+ * à l'import et compte 100 % sans qu'aucune assertion ne le regarde. Ce chiffre
+ * est retiré de la preuve ; ce bloc le remplace.
+ *
+ * CE QU'IL MESURE : que chaque route de §6 déclare ses schémas, que les NOMS DE
+ * CHAMPS sont ceux de §6, et que les constantes de §6 valent ce que §6 écrit.
+ * Les deux sens à chaque fois : une charge utile conforme passe, une charge
+ * utile déviante est refusée.
+ */
+describe('la surface HTTP (section 6)', () => {
+  const ulid = '01J9ZC4M8N7P6Q5R4S3T2V1W0X';
+  const uuid = '018f3a2b-1c4d-7e8f-9a0b-1c2d3e4f5a6c';
+
+  // ── 7.1 les treize routes de §6, et le schéma que chacune déclare
+
+  /**
+   * LA TABLE DE §6, LIGNE PAR LIGNE. `params`, `querystring`, `body` et
+   * `response` viennent d'ici (§2.4) : une route dont une case manque sans
+   * justification est un TROU NON DÉCLARÉ, et c'est ce que cette table refuse.
+   * `/api/content/:kind/:id` porte `zContentDocResponse` — un `z.unknown()`
+   * assumé, parce que les schémas par genre appartiennent à M0-09.
+   */
+  const ROUTES = [
+    ['GET /healthz', { response: zHealthzResponse }],
+    ['GET /readyz', { response: zReadyzResponse }],
+    ['GET /api/auth/discord/start', { querystring: zAuthStartQuery }],
+    ['GET /api/auth/discord/callback', { querystring: zAuthCallbackQuery }],
+    ['POST /api/auth/logout', { headers: zCsrfHeaders, response: zLogoutResponse }],
+    ['GET /api/me', { response: zMeResponse }],
+    ['GET /api/campaigns', { response: zCampaignListResponse }],
+    ['POST /api/campaigns', { body: zCreateCampaignBody, headers: zCsrfHeaders }],
+    ['GET /api/campaigns/:id', { params: zCampaignParams, response: zCampaignDetailResponse }],
+    [
+      'GET /api/campaigns/:id/log',
+      { params: zCampaignParams, querystring: zCampaignLogQuery, response: zCampaignLogResponse },
+    ],
+    ['GET /api/content/manifest', { response: zContentManifestResponse }],
+    ['GET /api/content/:kind/:id', { params: zContentDocParams, response: zContentDocResponse }],
+    ['GET /api/admin/health', { response: zAdminHealthResponse }],
+  ] as const satisfies readonly (readonly [string, Record<string, AnySchema>])[];
+
+  it('les treize routes de la section 6 sont couvertes, sans doublon', () => {
+    const routes = ROUTES.map(([route]) => route);
+    expect(routes).toHaveLength(13);
+    expect(new Set(routes).size).toBe(routes.length);
+  });
+
+  it.each(ROUTES)('%s déclare des schémas Zod, jamais un trou non déclaré', (_route, schemas) => {
+    const cases = Object.entries(schemas);
+    expect(cases.length).toBeGreaterThan(0);
+    for (const [role, schema] of cases) {
+      expect(
+        typeof (schema as { safeParse?: unknown }).safeParse,
+        `${role} doit être un schéma Zod, pas un trou`,
+      ).toBe('function');
+    }
+  });
+
+  // ── 7.2 les noms de champs que §6 écrit
+
+  it.each([
+    ['zHealthzResponse', zHealthzResponse, ['status', 'uptimeMs', 'version']],
+    ['zReadyzResponse', zReadyzResponse, ['database', 'migrations', 'status']],
+    ['zMeResponse', zMeResponse, ['campaigns', 'characters', 'player']],
+    ['zContentManifestResponse', zContentManifestResponse, ['contentVersion', 'counts', 'etag']],
+    ['zContentDocParams', zContentDocParams, ['id', 'kind']],
+    ['zCampaignLogResponse', zCampaignLogResponse, ['entries', 'lastSeq', 'nextSinceSeq']],
+    ['zCampaignLogQuery', zCampaignLogQuery, ['limit=', 'sinceSeq=']],
+    ['zCampaignLogEntry', zCampaignLogEntry, ['event', 'seq']],
+    ['zCampaignListResponse', zCampaignListResponse, ['campaigns']],
+    ['zAuthCallbackQuery', zAuthCallbackQuery, ['code', 'state']],
+    ['zAuthCallbackErrorQuery', zAuthCallbackErrorQuery, ['error', 'error_description?', 'state?']],
+    ['zLogoutResponse', zLogoutResponse, ['ok']],
+    ['zCreateCampaignBody', zCreateCampaignBody, ['name', 'pitch=', 'slug?']],
+    ['zCampaignParams', zCampaignParams, ['id']],
+    ['zPlayerProfile', zPlayerProfile, ['avatarUrl', 'displayName', 'id', 'isAdmin', 'locale']],
+    [
+      'zCharacterSummary',
+      zCharacterSummary,
+      ['campaignId', 'championId', 'displayName', 'id', 'sheetSource', 'status'],
+    ],
+    [
+      'zAdminHealthResponse',
+      zAdminHealthResponse,
+      [
+        'contentHash',
+        'contentHashExpected',
+        'freeDiskRatio',
+        'healthy',
+        'lastBackupAgeMs',
+        'quickCheck',
+        'walBytes',
+      ],
+    ],
+    [
+      'zCampaignSummary',
+      zCampaignSummary,
+      ['contentPackVersion', 'id', 'name', 'ownerPlayerId', 'pitch', 'seq', 'slug', 'status'],
+    ],
+  ])(
+    '%s porte exactement les champs de la section 6, obligatoires compris',
+    (_nom, schema, cles) => {
+      // `shapeSpec`, pas `Object.keys` : « ? » et « = » sont la moitié du contrat.
+      expect(shapeSpec(schema)).toStrictEqual(cles);
+    },
+  );
+
+  /**
+   * LES NOMS DE CHAMPS NE SUFFISENT PAS, et c'est une leçon payée deux fois.
+   * `shapeKeys` ne voit pas un `.optional()` : mesuré ici même, rendre `state`
+   * facultatif dans `zAuthCallbackQuery` laissait la suite VERTE, alors que
+   * `state` EST le jeton anti-rejeu du aller-retour OAuth (§6). Une assertion
+   * de forme se double donc d'une assertion de parsing partout où un champ
+   * absent changerait le sens de la route.
+   */
+  it('le retour Discord exige code ET state : ni l’un ni l’autre n’est facultatif', () => {
+    expect(zAuthCallbackQuery.safeParse({ code: 'abc', state: 'xyz' }).success).toBe(true);
+    expect(zAuthCallbackQuery.safeParse({ code: 'abc' }).success).toBe(false);
+    expect(zAuthCallbackQuery.safeParse({ state: 'xyz' }).success).toBe(false);
+    // Vide n'est pas fourni : un `state` vide ne prouve rien.
+    expect(zAuthCallbackQuery.safeParse({ code: 'abc', state: '' }).success).toBe(false);
+    expect(zAuthCallbackQuery.safeParse({ code: '', state: 'xyz' }).success).toBe(false);
+    // Et rien d'autre ne passe par là.
+    expect(zAuthCallbackQuery.safeParse({ code: 'a', state: 'b', token: 'c' }).success).toBe(false);
+  });
+
+  it('le refus Discord est un AUTRE schéma : « non » et « voici ton code » ne se confondent pas', () => {
+    // `error` seul suffit ; `error_description` et `state` sont facultatifs et
+    // le restent — c'est l'asymétrie qui distingue les deux réponses.
+    expect(zAuthCallbackErrorQuery.safeParse({ error: 'access_denied' }).success).toBe(true);
+    expect(zAuthCallbackErrorQuery.safeParse({}).success).toBe(false);
+    // Un refus ne porte pas de `code` : sinon les deux schémas se recouvriraient.
+    expect(zAuthCallbackErrorQuery.safeParse({ error: 'x', code: 'abc' }).success).toBe(false);
+    expect(zAuthCallbackQuery.safeParse({ error: 'access_denied' }).success).toBe(false);
+  });
+
+  it('zAuthStartQuery ne prend AUCUN paramètre : state et PKCE sont en cookie', () => {
+    // Le vide est une affirmation, pas un oubli : §6 met `state` et le
+    // vérificateur PKCE en cookie `HttpOnly`, et §5 interdit un jeton en URL.
+    expect(shapeSpec(zAuthStartQuery)).toStrictEqual([]);
+    expect(zAuthStartQuery.safeParse({}).success).toBe(true);
+    expect(zAuthStartQuery.safeParse({ state: 'x' }).success).toBe(false);
+  });
+
+  it('zCampaignDetailResponse est le résumé PLUS lastSeq (section 6)', () => {
+    expect(shapeSpec(zCampaignDetailResponse)).toStrictEqual(
+      [...shapeSpec(zCampaignSummary), 'contentPackHash', 'lastSeq', 'rulesVersion'].toSorted(),
+    );
+  });
+
+  // ── 7.3 les deux sens : une charge conforme passe, une charge déviante est refusée
+
+  it('/healthz rend { status: "ok", version, uptimeMs } et rien d’autre', () => {
+    expect(
+      zHealthzResponse.safeParse({ status: 'ok', version: '0.1.0', uptimeMs: 12 }).success,
+    ).toBe(true);
+    // Le littéral est un littéral : `/healthz` ne répond pas 200 avec « KO ».
+    expect(
+      zHealthzResponse.safeParse({ status: 'KO', version: '0.1.0', uptimeMs: 12 }).success,
+    ).toBe(false);
+    // Les secondes ne sont pas des millisecondes, et un champ en trop est refusé.
+    expect(
+      zHealthzResponse.safeParse({ status: 'ok', version: '0.1.0', uptimeSeconds: 12 }).success,
+    ).toBe(false);
+    expect(
+      zHealthzResponse.safeParse({ status: 'ok', version: '0.1.0', uptimeMs: 12, db: true })
+        .success,
+    ).toBe(false);
+  });
+
+  it('/readyz sépare prêt et pas prêt, et dit sur quoi', () => {
+    const pret = { status: 'ready', database: true, migrations: true };
+    expect(zReadyzResponse.safeParse(pret).success).toBe(true);
+    expect(zReadyzResponse.safeParse({ ...pret, status: 'not_ready' }).success).toBe(true);
+    expect(zReadyzResponse.safeParse({ ...pret, status: 'ok' }).success).toBe(false);
+  });
+
+  it('/api/me rend le triplet de la section 6, projeté et non miroir', () => {
+    const reponse = {
+      player: { id: ulid, displayName: 'Katla', avatarUrl: null, locale: 'fr-FR', isAdmin: false },
+      characters: [],
+      campaigns: [],
+    };
+    expect(zMeResponse.safeParse(reponse).success).toBe(true);
+    // CE QUI N'EST PAS LÀ EST LA CONCEPTION : la ligne `players` porte le
+    // flocon Discord, l'e-mail, `last_seen_at` ; aucun n'atteint un navigateur.
+    for (const fuite of ['email', 'discordId', 'lastSeenAt', 'avatarHash']) {
+      const pollue = { ...reponse, player: { ...reponse.player, [fuite]: 'x' } };
+      expect(
+        zMeResponse.safeParse(pollue).success,
+        `${fuite} ne doit pas atteindre un navigateur`,
+      ).toBe(false);
+    }
+  });
+
+  it('/api/admin/health porte les cinq lignes de 03-donnees §6.7 plus le verdict', () => {
+    const sain = {
+      quickCheck: 'ok',
+      walBytes: 1024,
+      lastBackupAgeMs: null,
+      freeDiskRatio: 0.5,
+      contentHash: 'abc',
+      contentHashExpected: 'abc',
+      healthy: true,
+    };
+    expect(zAdminHealthResponse.safeParse(sain).success).toBe(true);
+    // `null` est une valeur, pas un oubli : « aucune sauvegarde n'a jamais
+    // tourné » n'est pas « la dernière est fraîche ».
+    expect(zAdminHealthResponse.safeParse({ ...sain, lastBackupAgeMs: 0 }).success).toBe(true);
+    expect(zAdminHealthResponse.safeParse({ ...sain, freeDiskRatio: 1.5 }).success).toBe(false);
+    expect(zAdminHealthResponse.safeParse({ ...sain, quickCheck: '' }).success).toBe(false);
+  });
+
+  it('le journal se parcourt par seq, et la page est bornée', () => {
+    expect(zCampaignLogQuery.parse({})).toStrictEqual({
+      sinceSeq: 0,
+      limit: CAMPAIGN_LOG_PAGE_MAX,
+    });
+    expect(zCampaignLogQuery.safeParse({ limit: CAMPAIGN_LOG_PAGE_MAX + 1 }).success).toBe(false);
+    // `sinceDeliverySeq` n'a pas cours ici : cette route lit le JOURNAL, qui
+    // est numéroté par `seq`. Deux curseurs, deux domiciles (ADR 0010).
+    expect(zCampaignLogQuery.safeParse({ sinceDeliverySeq: 3 }).success).toBe(false);
+  });
+
+  it('nextSinceSeq vaut null en fin de journal : « plus rien à demander » se dit', () => {
+    // `null` n'est pas une commodité : c'est la SEULE façon pour le serveur de
+    // dire « la page a atteint la tête ». Sans lui, un client ne peut pas
+    // distinguer la fin du journal d'un curseur à zéro, et pagine en boucle.
+    const page = { entries: [], nextSinceSeq: null, lastSeq: 412 };
+    expect(zCampaignLogResponse.safeParse(page).success).toBe(true);
+    expect(zCampaignLogResponse.safeParse({ ...page, nextSinceSeq: 200 }).success).toBe(true);
+    // L'autre sens : la clé reste obligatoire, elle n'est pas facultative.
+    expect(zCampaignLogResponse.safeParse({ entries: [], lastSeq: 412 }).success).toBe(false);
+  });
+
+  it('/api/content/:kind/:id déclare son schéma de réponse, trou assumé compris', () => {
+    // `z.unknown()` accepte tout — c'est un trou DÉCLARÉ, ce que « pas de
+    // schéma du tout » n'est pas. M0-09 valide le document au chargeur, là où
+    // une erreur de contenu est diagnosticable.
+    expect(zContentDocResponse.safeParse({ id: 'braum' }).success).toBe(true);
+    expect(zContentDocResponse.safeParse(null).success).toBe(true);
+    // Les paramètres, eux, sont bornés : un genre ou un id hors slug est refusé.
+    expect(zContentDocParams.safeParse({ kind: 'champions', id: 'braum' }).success).toBe(true);
+    expect(zContentDocParams.safeParse({ kind: 'Champions', id: 'braum' }).success).toBe(false);
+    expect(zContentDocParams.safeParse({ kind: 'champions', id: '../../etc' }).success).toBe(false);
+  });
+
+  it('la création de campagne ne laisse pas le client fixer ce qu’il n’a pas à fixer', () => {
+    expect(zCreateCampaignBody.parse({ name: 'Le Freljord' })).toStrictEqual({
+      name: 'Le Freljord',
+      pitch: '',
+    });
+    // Le serveur possède l'unicité, le statut et le compteur : un client qui
+    // les proposerait est refusé, pas silencieusement ignoré.
+    for (const trop of [{ status: 'active' }, { seq: 12 }, { id: ulid }]) {
+      expect(zCreateCampaignBody.safeParse({ name: 'X', ...trop }).success).toBe(false);
+    }
+  });
+
+  // ── 7.4 les constantes que §6 écrit noir sur blanc
+
+  it('le cookie de session est celui de la section 6 : fr_session, 30 jours', () => {
+    expect(SESSION_COOKIE_NAME).toBe('fr_session');
+    expect(SESSION_MAX_AGE_MS).toBe(30 * 24 * 60 * 60 * 1000);
+    expect(SESSION_MAX_AGE_MS).toBe(2_592_000_000);
+  });
+
+  it('le CSRF est l’en-tête de la section 6, en minuscules', () => {
+    expect(CSRF_HEADER_NAME).toBe('x-requested-with');
+    expect(CSRF_HEADER_VALUE).toBe('for-app');
+    // §6 écrit `X-Requested-With: for-app` ; un serveur lit les en-têtes en
+    // minuscules. Même en-tête, une seule orthographe côté code.
+    expect(CSRF_HEADER_NAME).toBe(CSRF_HEADER_NAME.toLowerCase());
+    expect(zCsrfHeaders.safeParse({ [CSRF_HEADER_NAME]: CSRF_HEADER_VALUE }).success).toBe(true);
+    expect(zCsrfHeaders.safeParse({ [CSRF_HEADER_NAME]: 'autre-chose' }).success).toBe(false);
+    expect(zCsrfHeaders.safeParse({}).success).toBe(false);
+  });
+
+  it('l’origine de développement est celle de la section 6', () => {
+    expect(DEV_ALLOWED_ORIGIN).toBe('http://localhost:5173');
+  });
+
+  it('les seuils de 03-donnees §6.7 valent ce que la section écrit', () => {
+    expect(ADMIN_HEALTH_WAL_MAX_BYTES).toBe(64 * 1024 * 1024);
+    expect(ADMIN_HEALTH_BACKUP_MAX_AGE_MS).toBe(8 * 60 * 60 * 1000);
+    expect(ADMIN_HEALTH_MIN_FREE_DISK_RATIO).toBe(0.2);
+  });
+
+  it('la page de journal est bornée à 200, et le cache de contenu est immuable', () => {
+    expect(CAMPAIGN_LOG_PAGE_MAX).toBe(200);
+    expect(CONTENT_CACHE_CONTROL).toBe('public, max-age=31536000, immutable');
+  });
+
+  // ── 7.5 ce que la surface HTTP NE recopie pas
+
+  it('les DTO HTTP réutilisent les nœuds du moteur, jamais une recopie', () => {
+    const http = walk(zMeResponse);
+    expect(http.nodes.has(zCharacterStatus)).toBe(true);
+    expect(http.nodes.has(zSheetSource)).toBe(true);
+    expect(http.nodes.has(zCampaignStatus)).toBe(true);
+    // Et le journal HTTP porte le MÊME `zGameEvent` que `s2c.event`.
+    expect(walk(zCampaignLogResponse).nodes.has(zGameEvent)).toBe(true);
+  });
+
+  it('aucun secret ne traverse une query string (section 6)', () => {
+    // `code` et `state` de Discord y sont, et c'est Discord qui les met ; rien
+    // de ce que NOUS fabriquons n'y passe.
+    const entrees = [
+      zAuthStartQuery,
+      zAuthCallbackQuery,
+      zAuthCallbackErrorQuery,
+      zCampaignLogQuery,
+    ];
+    const interdits = ['token', 'accessToken', 'sessionId', 'fr_session', 'apiKey', 'password'];
+    for (const schema of entrees) {
+      const cles = new Set(walk(schema).keys);
+      for (const mot of interdits) {
+        expect(cles.has(mot), `${mot} ne doit pas voyager en query string`).toBe(false);
+      }
+    }
+    // Et la preuve que la ligne ci-dessus regarde bien quelque chose :
+    expect([...walk(zAuthCallbackQuery).keys]).toContain('code');
+  });
+
+  it('uuid et ulid ne se confondent pas : chaque identifiant a sa forme', () => {
+    // `correlationId` est un UUID (enveloppe de journal), les identifiants
+    // d'entités sont des ULID. Une route qui accepterait l'un pour l'autre
+    // laisserait entrer un identifiant fabriqué.
+    expect(zCampaignParams.safeParse({ id: ulid }).success).toBe(true);
+    expect(zCampaignParams.safeParse({ id: uuid }).success).toBe(false);
   });
 });
