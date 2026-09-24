@@ -280,7 +280,28 @@ function mergeSettings(
   return next as unknown as CampaignSettings;
 }
 
-/** Upsert a truth by `truthId`: answering twice is answering once. */
+/**
+ * Upsert a truth by `truthId`: answering twice is answering once.
+ *
+ * THE SORT IS KEPT, AND IT IS NOW GUARDED (M0-17). A probe of M0-13 measured
+ * it inert: inverting the comparator or deleting the `.sort()` left 563 tests
+ * of 563 green, because the only fixture that answered a truth answered ONE,
+ * and a one-element list is sorted whatever you do to it.
+ *
+ * Two ways out were on the table — pin it, or drop it as dead weight. Pinned,
+ * for one reason that can be stated without guessing at a package that is not
+ * written yet: sorted, `truths` is a function of the ANSWERS; unsorted, it is
+ * a function of the ORDER THEY ARRIVED IN. Every reader downstream —
+ * `campaigns.truths_json`, the campaign block of the prompt, a diff of two
+ * states — then depends on who answered first, for no gain. Dropping the sort
+ * would have been a behaviour change whose consequences I cannot measure here;
+ * pinning it costs one fixture.
+ *
+ * The guard is `tests/reduce.test.ts`, "keeps truths in `truthId` order": TWO
+ * truths, answered in descending order, compared with an exact `toEqual` on
+ * the array. Invert the comparator and it goes red; delete the sort and it
+ * goes red.
+ */
 function withTruth(
   truths: readonly CampaignTruth[],
   truth: CampaignTruth,

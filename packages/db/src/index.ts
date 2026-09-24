@@ -7,8 +7,10 @@
 
 export const NOM = '@for/db' as const;
 
+export * from './check.js';
 export * from './client.js';
 export * from './migrate.js';
+export * from './rebuild.js';
 export * from './repositories/index.js';
 export * from './schema-dump.js';
 export * from './schema/index.js';

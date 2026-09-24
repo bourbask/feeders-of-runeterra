@@ -342,6 +342,9 @@ importers:
       '@for/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@for/engine':
+        specifier: workspace:*
+        version: link:../engine
       better-sqlite3:
         specifier: ^13.0.3
         version: 13.0.3
@@ -349,9 +352,9 @@ importers:
         specifier: ^0.45.3
         version: 0.45.3(@types/better-sqlite3@9.6.0)(better-sqlite3@13.0.3)
     devDependencies:
-      '@for/engine':
+      '@for/testkit':
         specifier: workspace:*
-        version: link:../engine
+        version: link:../testkit
       '@for/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/tsconfig
@@ -361,6 +364,9 @@ importers:
       drizzle-kit:
         specifier: ^0.31.11
         version: 0.31.11
+      tsx:
+        specifier: ^4.20.6
+        version: 4.23.15
 
   packages/engine:
     devDependencies:

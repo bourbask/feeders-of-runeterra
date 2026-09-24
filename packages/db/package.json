@@ -18,17 +18,21 @@
     "typecheck:tests": "tsc -p tsconfig.test.json --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:rebuild": "tsx src/cli/rebuild.ts",
+    "db:check": "tsx src/cli/check.ts"
   },
   "dependencies": {
     "@for/contracts": "workspace:*",
+    "@for/engine": "workspace:*",
     "better-sqlite3": "^13.0.3",
     "drizzle-orm": "^0.45.3"
   },
   "devDependencies": {
-    "@for/engine": "workspace:*",
+    "@for/testkit": "workspace:*",
     "@for/tsconfig": "workspace:*",
     "@types/better-sqlite3": "^9.6.0",
-    "drizzle-kit": "^0.31.11"
+    "drizzle-kit": "^0.31.11",
+    "tsx": "^4.20.6"
   }
 }
