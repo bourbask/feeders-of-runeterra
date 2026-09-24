@@ -30,28 +30,40 @@
  * there is no engine-side list of `NarrationBrief`'s keys to compare against.
  * Said out loud rather than left implied.
  *
- * ── WHAT IS NOT HERE, AND SHOULD BE ─────────────────────────────────────────
+ * ── WHO THE BRIEF IS FOR ────────────────────────────────────────────────────
  * ADR 0008 decision 3 makes the perceptible-fact list PER RECIPIENT a
  * mechanical constraint, not a style note: "le moteur calcule, pour chaque
  * destinataire, la liste des faits perceptibles, et le conteur n'a le droit
- * d'utiliser que celle-là". `NarrationBrief` carries no such list, and this
- * schema mirrors the engine rather than inventing one — the engine is
- * canonical (01-architecture.md section 2.4), and a field added here alone
- * would be a contract nothing produces. Reported, not worked around: the
- * carrier belongs on the engine type first (M0-13), and the mirror follows.
+ * d'utiliser que celle-là". The carrier went on the ENGINE type first, as it
+ * had to — the engine is canonical, and a field added here alone would have
+ * been a contract nothing produces. `audience` and `perceivableFacts` are
+ * mirrored below because `NarrationBrief` now declares them, and
+ * `perceivableFactsFor()` in `@for/engine` is what M1 changes when the party
+ * splits. The constraint only becomes mechanical once `@for/ai` builds its
+ * `<scene>` block from `perceivableFacts` AND FROM NOTHING ELSE (M0-18):
+ * filtering the storyteller's output would be too late, the information would
+ * already be in its context window.
  */
 
 import { z } from 'zod';
 
-import type { NarrationBrief } from '@for/engine';
+import type { BriefAudience, BriefPerceivableFact, NarrationBrief } from '@for/engine';
 
 import { zEngineEffect } from '../core/effects.js';
-import { zAttributeId, zMoveId, zOutcome } from '../core/enums.js';
+import {
+  zAttributeId,
+  zEventScope,
+  zMoveId,
+  zOutcome,
+  zPerceivableFactKind,
+} from '../core/enums.js';
+import { SCENE_NAME_MAX, SCENE_PRESENCE_STATE_MAX, zSceneRef } from '../core/scene-state.js';
 import { zChallengeDice, zRollAdd } from '../events/dice.js';
 import {
   zCharacterId,
   zCorrelationId,
   zEventSeq,
+  zPlayerId,
   zRollId,
   zSceneId,
   zTrackId,
@@ -119,10 +131,59 @@ export const zBriefAppliedEffect = z.object({
   eventSeq: zEventSeq,
 });
 
+/**
+ * Who the storyteller is writing for — ADR 0008 decision 1.
+ *
+ * `.refine` rather than two independent fields: `recipients` is `null` EXACTLY
+ * WHEN `scope` is `'table'`, and the schema says so because the engine says so
+ * (`briefAudience()`). At table scope there is nobody to enumerate; at any
+ * other scope the list IS the scope. A `satisfies` cannot express that; a
+ * refinement can. NOT enforced here: that a non-table list be non-empty — the
+ * event envelope does not enforce it either, and one mirror stricter than the
+ * other is how the two start disagreeing.
+ */
+export const zBriefAudience = z
+  .object({
+    scope: zEventScope,
+    recipients: z.array(zPlayerId).nullable(),
+  })
+  .refine((audience) => (audience.recipients === null) === (audience.scope === 'table'), {
+    message: "recipients doit etre null exactement quand scope vaut 'table'",
+  }) satisfies z.ZodType<BriefAudience>;
+
+/**
+ * ONE fact the audience perceives, and the only material the storyteller may
+ * use (ADR 0008 decision 3).
+ *
+ * The bounds are `SceneState`'s own, reused rather than retyped: a perceptible
+ * fact IS a scene fact, seen from one recipient. NO GAME NUMBER — the five
+ * fields below are the whole shape, and `sinceSeq` is a journal sequence, not
+ * a gauge (03-donnees.md section 3.5, property 1).
+ */
+export const zBriefPerceivableFact = z.object({
+  kind: zPerceivableFactKind,
+  ref: zSceneRef,
+  name: z.string().max(SCENE_NAME_MAX),
+  detail: z.string().max(SCENE_PRESENCE_STATE_MAX),
+  sinceSeq: zEventSeq,
+}) satisfies z.ZodType<BriefPerceivableFact>;
+
+/**
+ * Cap on `perceivableFacts`. Hand-copied from `@for/engine`, like every other
+ * number in this package, and compared to it member by member in
+ * `tests/exhaustive-union.test.ts` — a copied number is worse than a copied
+ * enum, the compiler sees only `number` (ADR 0007).
+ */
+export const BRIEF_PERCEIVABLE_FACTS_MAX = 16;
+
 export const zNarrationBrief = z.object({
   /** Groups every event of the turn; the proof view keys on it. */
   correlationId: zCorrelationId,
   sceneId: zSceneId.nullable(),
+  /** ADR 0008 decision 1. */
+  audience: zBriefAudience,
+  /** Sorted by `ref.id` then `kind`, capped. ADR 0008 decision 3. */
+  perceivableFacts: z.array(zBriefPerceivableFact).max(BRIEF_PERCEIVABLE_FACTS_MAX),
   actorCharacterId: zCharacterId,
   moveId: zMoveId.nullable(),
   outcome: zOutcome.nullable(),

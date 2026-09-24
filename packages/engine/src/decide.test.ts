@@ -13,6 +13,7 @@
 import {
   aCharacter,
   aScene,
+  aSceneAbsence,
   aScenePresence,
   aTableState,
   anId,
@@ -29,6 +30,7 @@ import {
   oneStream,
 } from '../tests/support/engine-content.test.js';
 import type {
+  BriefPerceivableFact,
   CampaignState,
   DecisionContext,
   GameEvent,
@@ -36,16 +38,24 @@ import type {
   Rng,
   RngStream,
   RuleViolation,
+  SceneState,
   TrackState,
 } from './index.js';
 import {
+  BRIEF_PERCEIVABLE_FACTS_MAX,
+  EVENT_SCOPES,
+  GAUGES,
   NO_EFFECT_INDEX,
+  PROGRESS_RANKS,
+  SCENE_PRESENCE_MAX,
+  briefAudience,
   createSeededRng,
   decide,
   fallbackTemplateId,
   isErr,
   isExtremeAnswer,
   isOk,
+  perceivableFactsFor,
 } from './index.js';
 
 const HERO = anId('character');
@@ -1262,6 +1272,231 @@ describe('five hundred syntactically valid intents', () => {
     expect(decided).toBeGreaterThan(0);
     expect(decided).toBeLessThan(500);
     expect(codes.size).toBeGreaterThan(1);
+  });
+});
+
+// ------------------------------------------------- ADR 0008 : who it is for
+
+/**
+ * THE BRIEF IS ADDRESSED, AND IT CARRIES ITS PERCEPTIBLE FACTS.
+ *
+ * ADR 0008 decision 3 — "le moteur calcule, pour chaque destinataire, la liste
+ * des faits perceptibles, et le conteur n'a le droit d'utiliser que celle-là" —
+ * is a TYPE from here on. These tests hold the four properties that make it
+ * mechanical rather than decorative, and each one is written so that breaking
+ * the property turns it red:
+ *
+ *   1. `recipients` is null EXACTLY WHEN `scope` is 'table' — BOTH directions;
+ *   2. the list is DERIVED from `state.scene`, so removing a presence removes
+ *      a fact;
+ *   3. the list is SORTED ACROSS BOTH scene lists and BOUNDED by them;
+ *   4. it carries NO GAME NUMBER, as `SceneState` carries none.
+ */
+describe('the brief is addressed (ADR 0008 decision 1)', () => {
+  const OTHER = anId('player', 2);
+
+  // Les trois portées sont écrites à la main, d'après l'ADR 0008 décision 1,
+  // PUIS comparées au tuple du moteur. Une liste qui est sa propre source de
+  // boucle ne prouve rien : la vider ne ferait rien échouer.
+  const SCOPES = ['table', 'subset', 'private'] as const;
+
+  it('les trois portées de l’ADR 0008 sont exactement celles du moteur', () => {
+    expect([...EVENT_SCOPES]).toStrictEqual([...SCOPES]);
+  });
+
+  it('un tour ordinaire est adressé à la table, sans destinataire nommé', () => {
+    const result = decide(
+      aPlayableState(),
+      { type: 'move.face_danger', attribute: 'fer', description: 'je saute' },
+      aCtx(CLEAN_HIT),
+    );
+    if (isErr(result)) throw new Error(result.error.code);
+    expect(result.value.brief.audience).toStrictEqual({ scope: 'table', recipients: null });
+  });
+
+  it('SENS 1 — portée `table` ⇒ recipients null, même quand des joueurs sont fournis', () => {
+    expect(briefAudience('table', [PLAYER, OTHER]).recipients).toBeNull();
+  });
+
+  it('SENS 2 — toute autre portée ⇒ recipients non null, et c’est la liste donnée', () => {
+    expect(briefAudience('subset', [PLAYER, OTHER]).recipients).toStrictEqual([PLAYER, OTHER]);
+    expect(briefAudience('private', [OTHER]).recipients).toStrictEqual([OTHER]);
+  });
+
+  it('LES DEUX SENS À LA FOIS, portée par portée', () => {
+    for (const scope of SCOPES) {
+      const audience = briefAudience(scope, [PLAYER]);
+      expect(
+        (audience.recipients === null) === (scope === 'table'),
+        `${scope} : recipients doit être null exactement à la portée table`,
+      ).toBe(true);
+    }
+  });
+
+  it('la liste de destinataires est recopiée, pas partagée avec l’appelant', () => {
+    const players = [PLAYER, OTHER];
+    const audience = briefAudience('subset', players);
+    players.pop();
+    expect(audience.recipients).toStrictEqual([PLAYER, OTHER]);
+  });
+});
+
+describe('les faits perceptibles du brief (ADR 0008 décision 3)', () => {
+  /** Identifiants lisibles : l'ordre attendu se lit sans décoder un ULID. */
+  const A = 'ref-a';
+  const B = 'ref-b';
+  const C = 'ref-c';
+
+  /**
+   * Les deux listes de `SceneState` sont triées SÉPARÉMENT par la fixture,
+   * comme le réducteur les trie. Leur concaténation ne l'est donc pas : c'est
+   * exactement ce que le tri du moteur doit rattraper.
+   */
+  function aSceneWith(present: readonly string[], absent: readonly string[]): SceneState {
+    return aScene({
+      present: present.map((id) =>
+        aScenePresence({ ref: { kind: 'character', id }, name: id, state: 'debout' }),
+      ),
+      absent: absent.map((id) =>
+        aSceneAbsence({ ref: { kind: 'entity', id }, name: id, cause: 'parti' }),
+      ),
+    });
+  }
+
+  function factsOf(scene: SceneState | null): readonly BriefPerceivableFact[] {
+    const result = decide(
+      aPlayableState({ scene }),
+      { type: 'move.face_danger', attribute: 'fer', description: 'je saute' },
+      aCtx(CLEAN_HIT),
+    );
+    if (isErr(result)) throw new Error(result.error.code);
+    return result.value.brief.perceivableFacts;
+  }
+
+  const labelsOf = (facts: readonly BriefPerceivableFact[]): readonly string[] =>
+    facts.map((fact) => `${fact.kind}:${fact.ref.id}`);
+
+  it('TRIE À TRAVERS LES DEUX LISTES, pas deux côtés triés mis bout à bout', () => {
+    // Présents [a, c], absent [b] : la concaténation donne a, c, b. Assertion
+    // de TABLEAU EXACT, trois entrées, et l'ordre attendu écrit à la main.
+    expect(labelsOf(factsOf(aSceneWith([A, C], [B])))).toStrictEqual([
+      'present:ref-a',
+      'absent:ref-b',
+      'present:ref-c',
+    ]);
+  });
+
+  it('départage un même ref présent ET absent par le genre, jamais au hasard', () => {
+    expect(labelsOf(factsOf(aSceneWith([A], [A])))).toStrictEqual([
+      'absent:ref-a',
+      'present:ref-a',
+    ]);
+  });
+
+  it('DÉRIVÉ de la scène : retirer une présence retire le fait correspondant', () => {
+    expect(labelsOf(factsOf(aSceneWith([A, C], [B])))).toStrictEqual([
+      'present:ref-a',
+      'absent:ref-b',
+      'present:ref-c',
+    ]);
+    // La MÊME scène sans `ref-c`. Rien d'autre ne change.
+    expect(labelsOf(factsOf(aSceneWith([A], [B])))).toStrictEqual([
+      'present:ref-a',
+      'absent:ref-b',
+    ]);
+  });
+
+  it('recopie le détail de chaque fait depuis la scène, sans le réécrire', () => {
+    const facts = factsOf(aSceneWith([A], [B]));
+    expect(facts).toStrictEqual([
+      {
+        kind: 'present',
+        ref: { kind: 'character', id: A },
+        name: A,
+        detail: 'debout',
+        sinceSeq: 1,
+      },
+      { kind: 'absent', ref: { kind: 'entity', id: B }, name: B, detail: 'parti', sinceSeq: 1 },
+    ]);
+  });
+
+  it('pas de scène ouverte ⇒ pas de fait, et surtout pas une exception', () => {
+    expect(factsOf(null)).toStrictEqual([]);
+  });
+
+  it('BORNÉ comme SceneState l’est : huit présents et huit partis font seize faits', () => {
+    // Les deux 8 viennent du critère d'acceptation n° 3 de M0-05 (« 8 présents,
+    // 8 partis »), donc ils sont écrits en toutes lettres ; c'est le moteur qui
+    // est comparé à eux, pas l'inverse.
+    expect(SCENE_PRESENCE_MAX).toBe(8);
+    expect(BRIEF_PERCEIVABLE_FACTS_MAX).toBe(16);
+    const ids = (prefix: string): readonly string[] =>
+      Array.from({ length: 8 }, (_unused, index) => `${prefix}${String(index)}`);
+    expect(factsOf(aSceneWith(ids('p'), ids('q')))).toHaveLength(16);
+  });
+
+  it('AUCUN CHIFFRE DE JEU : cinq champs, et un seul nombre, la séquence', () => {
+    const facts = factsOf(aSceneWith([A, C], [B]));
+    expect(facts).not.toHaveLength(0);
+    for (const fact of facts) {
+      expect(Object.keys(fact).sort()).toStrictEqual(['detail', 'kind', 'name', 'ref', 'sinceSeq']);
+      for (const [key, value] of Object.entries(fact)) {
+        // Un seul nombre, et c'est `sinceSeq` : une séquence de journal, pas un
+        // chiffre de jeu — `ScenePresence` la porte déjà (03-donnees.md §3.5,
+        // propriété 1). Écrit comme une équivalence : les deux sens d'un coup.
+        expect(typeof value === 'number', `${key} : nombre attendu seulement pour sinceSeq`).toBe(
+          key === 'sinceSeq',
+        );
+      }
+    }
+  });
+
+  it('aucun nom de jauge ni de rang ne peut devenir un champ de fait', () => {
+    const FORBIDDEN = [
+      ...GAUGES,
+      ...PROGRESS_RANKS,
+      'momentum',
+      'gauge',
+      'delta',
+      'segments',
+      'ticks',
+      'boxes',
+      'rank',
+      'score',
+      'total',
+      'value',
+      'xp',
+      'outcome',
+    ];
+    // ÉPINGLÉ AVANT D'ÊTRE PARCOURU : une liste qui est sa propre source de
+    // boucle ne prouve rien, la vider ne ferait rien échouer. 3 jauges + 5
+    // rangs + 12 noms écrits ici.
+    expect(FORBIDDEN).toHaveLength(20);
+    const facts = factsOf(aSceneWith([A, C], [B]));
+    expect(facts).not.toHaveLength(0);
+    for (const fact of facts) {
+      for (const name of FORBIDDEN) expect(Object.keys(fact)).not.toContain(name);
+    }
+  });
+});
+
+describe('perceivableFactsFor, la fonction que M1 remplacera', () => {
+  const scene = aScene({ present: [aScenePresence({ ref: { kind: 'character', id: 'x' } })] });
+
+  it('à la portée `table`, le filtre est l’IDENTITÉ : toute la scène passe', () => {
+    expect(perceivableFactsFor(scene, briefAudience('table', []))).toHaveLength(1);
+  });
+
+  it('à toute autre portée, il ne rend RIEN plutôt que tout', () => {
+    // M0 n'a aucune règle par groupe à appliquer (ADR 0008 décision 1) et la
+    // panne que cette liste existe pour empêcher est la SUR-DIVULGATION.
+    // Aucun chemin de M0 n'atteint cette branche ; M1 la remplace.
+    expect(perceivableFactsFor(scene, briefAudience('subset', [PLAYER]))).toStrictEqual([]);
+    expect(perceivableFactsFor(scene, briefAudience('private', [PLAYER]))).toStrictEqual([]);
+  });
+
+  it('sans scène, rien, quelle que soit la portée', () => {
+    expect(perceivableFactsFor(null, briefAudience('table', []))).toStrictEqual([]);
   });
 });
 
