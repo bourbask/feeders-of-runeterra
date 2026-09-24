@@ -396,6 +396,9 @@ importers:
       '@for/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/tsconfig
+      '@types/node':
+        specifier: ^24.10.1
+        version: 24.13.6
 
   tooling/eslint-config: {}
 
