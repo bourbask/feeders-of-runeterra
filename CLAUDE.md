@@ -19,7 +19,9 @@ par de la discipline.
 2. **La mémoire vit dans la base**, jamais dans la fenêtre de contexte. État structuré plus une
    chronique compactée.
 3. **Le serveur est l'autorité.** Le client n'envoie que des intentions.
-4. **Tout état de partie est rejouable** depuis un journal d'événements en ajout seul.
+4. **Tout état de partie est rejouable** depuis un journal d'événements en ajout seul. Depuis
+   l'ADR 0008, les entrées portent une **portée de visibilité** : rejouer le journal du point de
+   vue d'un joueur doit redonner exactement ce qu'il a vu, ni plus ni moins.
 
 ## Frontières mécaniques
 
@@ -31,6 +33,11 @@ par de la discipline.
   `Math.random()` sont interdits par le lint, dans le moteur comme dans `server/src/game`.
   Ce dont tu as besoin arrive par un paramètre.
 - Le graphe de dépendances entre paquets est vérifié par `pnpm depcruise`, pas par la bonne volonté.
+- **`satisfies z.ZodType<T>` ne garde pas le miroir.** Il attrape un champ manquant, et c'est
+  tout : ni un champ en trop, ni une variante d'union absente ou inventée, ni un enum rétréci
+  côté schéma — `ZodType` est covariant en sortie. Un miroir n'est garanti que par un test
+  d'exécution qui compare les deux listes membre à membre (`exhaustive-union.test.ts`).
+  Mesuré, pas supposé : ADR 0007.
 - Les assertions de style du conteur vivent dans `@for/ai`, jamais dans `@for/ai-eval` : elles
   servent à la fois d'eval et de post-filtre de production.
 
