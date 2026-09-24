@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "face-danger",
+  "name": "Affronter le danger",
+  "category": "aventure",
+  "trigger": "Quand tu agis malgré une menace immédiate, ou que tu traverses ce qui devrait t'arrêter.",
+  "rollKind": "action",
+  "attributeOptions": ["vif", "coeur", "fer", "ombre", "esprit"],
+  "allowsMomentumBurn": true,
+  "outcomes": {
+    "franche": {
+      "text": "Tu passes, et rien ne se referme derrière toi.",
+      "gmGuidance": "Donne du terrain gagné, pas du répit : le Freljord attend son tour.",
+      "effects": [{ "op": "momentum", "delta": 1 }]
+    },
+    "partielle": {
+      "text": "Tu passes, mais le nord prélève sa part.",
+      "gmGuidance": "Nomme ce qui a été laissé derrière, et ne le reprends jamais.",
+      "effects": [{ "op": "gauge", "gauge": "vivres", "delta": -1, "target": "self" }]
+    },
+    "echec": {
+      "text": "Le danger arrive le premier, et il arrive entier.",
+      "gmGuidance": "Le prix est déjà tiré : habille-le, ne le négocie pas.",
+      "effects": [{ "op": "pay_price", "mode": "roll" }]
+    }
+  },
+  "presage": {
+    "text": "Le vent tourne avant que ton geste soit fini : l'issue change de nature.",
+    "tableId": "presages"
+  },
+  "tags": ["peril", "aventure"]
+}

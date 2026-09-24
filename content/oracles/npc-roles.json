@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "id": "npc-roles",
+  "name": "Rôles d'un personnage",
+  "kind": "table",
+  "die": 12,
+  "usage": "Quand quelqu'un entre en scène et qu'on ignore ce qu'il fait là.",
+  "entries": [
+    {
+      "id": "gardien-de-troupeau",
+      "min": 1,
+      "max": 1,
+      "text": "Gardien de troupeau, loin de son troupeau.",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "porteuse-de-message",
+      "min": 2,
+      "max": 2,
+      "text": "Porteuse de message, en retard de trois jours.",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "forgeron-itinerant",
+      "min": 3,
+      "max": 3,
+      "text": "Forgeron itinérant qui refuse de dire d'où il vient.",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "chasseur-de-glace",
+      "min": 4,
+      "max": 4,
+      "text": "Chasseur des étendues gelées, payé au retour.",
+      "tags": ["glace"],
+      "chain": []
+    },
+    {
+      "id": "aine-du-hameau",
+      "min": 5,
+      "max": 5,
+      "text": "Aîné du hameau, qui parle pour tout le monde.",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "exile-d-un-clan",
+      "min": 6,
+      "max": 6,
+      "text": "Exilé d'un clan, sans dire lequel.",
+      "tags": ["clan"],
+      "chain": []
+    },
+    {
+      "id": "guerisseuse",
+      "min": 7,
+      "max": 7,
+      "text": "Guérisseuse qui demande à être payée d'avance.",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "eclaireur-de-guerre",
+      "min": 8,
+      "max": 8,
+      "text": "Éclaireur d'une bande de guerre, seul et pressé.",
+      "tags": ["clan"],
+      "chain": []
+    },
+    {
+      "id": "gardienne-d-un-rite",
+      "min": 9,
+      "max": 9,
+      "text": "Gardienne d'un rite que plus personne ne pratique.",
+      "tags": ["rite"],
+      "chain": []
+    },
+    {
+      "id": "marchand-de-grain",
+      "min": 10,
+      "max": 10,
+      "text": "Marchand de grain, escorté par trop d'hommes.",
+      "tags": ["survie"],
+      "chain": []
+    },
+    {
+      "id": "enfant-seul",
+      "min": 11,
+      "max": 11,
+      "text": "Un enfant seul, qui ne pleure pas.",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "ancien-serviteur",
+      "min": 12,
+      "max": 12,
+      "text": "Ancien serviteur d'une maison disparue.",
+      "tags": [],
+      "chain": []
+    }
+  ],
+  "tags": ["pnj"]
+}

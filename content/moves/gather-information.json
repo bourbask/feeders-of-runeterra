@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "gather-information",
+  "name": "Rassembler des informations",
+  "category": "aventure",
+  "trigger": "Quand tu cherches ce qui ne se voit pas : une piste, une rumeur, la raison d'un silence.",
+  "rollKind": "action",
+  "attributeOptions": ["esprit"],
+  "allowsMomentumBurn": true,
+  "outcomes": {
+    "franche": {
+      "text": "Tu apprends ce que tu cherchais, et un fil que tu ne cherchais pas.",
+      "gmGuidance": "Donne un fait net, puis une amorce. Jamais une interprétation.",
+      "effects": [{ "op": "momentum", "delta": 2 }]
+    },
+    "partielle": {
+      "text": "Tu apprends quelque chose, et ça te coûte du temps ou une promesse.",
+      "gmGuidance": "Le fait est vrai ; c'est son prix qui pèse.",
+      "effects": [{ "op": "momentum", "delta": 1 }]
+    },
+    "echec": {
+      "text": "Tu poses la mauvaise question à la mauvaise personne.",
+      "gmGuidance": "Le prix tiré dit ce que la question a réveillé.",
+      "effects": [{ "op": "pay_price", "mode": "roll" }]
+    }
+  },
+  "presage": {
+    "text": "La réponse arrive, mais quelqu'un sait maintenant que tu la cherchais.",
+    "tableId": "presages"
+  },
+  "tags": ["enquete", "aventure"],
+  "notes": "L'attribut est imposé : le moteur joue esprit, le joueur ne choisit pas."
+}

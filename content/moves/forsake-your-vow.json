@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "forsake-your-vow",
+  "name": "Renier son serment",
+  "category": "serment",
+  "trigger": "Quand tu abandonnes ce que tu avais juré, et que tu l'assumes devant les tiens.",
+  "rollKind": "none",
+  "attributeOptions": [],
+  "allowsMomentumBurn": false,
+  "outcomes": {
+    "franche": {
+      "text": "Tu retires ta parole. Personne ne t'en empêche, et c'est bien le problème.",
+      "gmGuidance": "Le silence de ceux qui écoutaient vaut mieux que leurs reproches.",
+      "effects": [{ "op": "momentum_reset" }, { "op": "condition_add", "conditionId": "parjure" }]
+    },
+    "partielle": {
+      "text": "Renier ne se rate pas à moitié : cette issue n'est jamais atteinte.",
+      "effects": []
+    },
+    "echec": {
+      "text": "Renier ne se rate pas : ce mouvement ne tire aucun dé.",
+      "effects": []
+    }
+  },
+  "tags": ["serment", "rupture"],
+  "notes": "Sans jet : abandonner n'est pas une chose qu'on peut manquer."
+}

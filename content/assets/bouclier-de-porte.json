@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "bouclier-de-porte",
+  "name": "Bouclier de porte",
+  "category": "equipement",
+  "text": "Une porte de grange, portée comme un bouclier. Elle tient. Elle a toujours tenu.",
+  "abilities": [
+    {
+      "text": "Quand tu t'interposes entre un danger et quelqu'un d'autre, le coup est pour toi et il s'arrête là.",
+      "xpCost": 1,
+      "effects": [{ "op": "gauge", "gauge": "vigueur", "delta": -1, "target": "self" }]
+    },
+    {
+      "text": "Quand tu tiens la ligne sans reculer d'un pas, prends de l'élan.",
+      "xpCost": 2,
+      "effects": [{ "op": "momentum", "delta": 1 }]
+    },
+    {
+      "text": "Quand tu fais passer les autres derrière toi avant de reculer, chacun d'eux repart intact.",
+      "xpCost": 3,
+      "effects": [{ "op": "gauge", "gauge": "vigueur", "delta": 1, "target": "all-allies" }]
+    }
+  ],
+  "tags": ["defense"]
+}

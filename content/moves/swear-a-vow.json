@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "swear-a-vow",
+  "name": "Jurer un serment",
+  "category": "serment",
+  "trigger": "Quand tu engages ta parole devant témoin, et que tu acceptes d'être jugé dessus.",
+  "rollKind": "action",
+  "attributeOptions": ["coeur", "esprit"],
+  "allowsMomentumBurn": true,
+  "outcomes": {
+    "franche": {
+      "text": "La parole est donnée, et ceux qui l'ont entendue s'en souviendront.",
+      "gmGuidance": "Nomme un témoin. Un serment sans témoin n'est qu'une intention.",
+      "effects": [
+        { "op": "track_create", "trackKind": "vow", "rankFrom": "player" },
+        { "op": "momentum", "delta": 2 }
+      ]
+    },
+    "partielle": {
+      "text": "La parole est donnée, et quelqu'un doute déjà.",
+      "gmGuidance": "Le doute a un visage et une raison ; dis les deux.",
+      "effects": [
+        { "op": "track_create", "trackKind": "vow", "rankFrom": "player" },
+        { "op": "momentum", "delta": 1 }
+      ]
+    },
+    "echec": {
+      "text": "Tu as juré, et tu as entendu ta propre voix trembler.",
+      "gmGuidance": "Le serment tient quand même : c'est l'élan qui tombe, pas la promesse.",
+      "effects": [
+        { "op": "track_create", "trackKind": "vow", "rankFrom": "player" },
+        { "op": "momentum_reset" }
+      ]
+    }
+  },
+  "tags": ["serment", "relation"],
+  "notes": "Le serment est ouvert sur les trois issues : les mots ont été dits dans les trois cas."
+}

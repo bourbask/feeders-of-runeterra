@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "id": "action-theme",
+  "name": "Action et thème",
+  "kind": "table",
+  "die": 12,
+  "usage": "Quand le conteur a besoin d'une direction pour une scène et qu'aucune ne s'impose.",
+  "entries": [
+    {
+      "id": "briser-une-alliance",
+      "min": 1,
+      "max": 1,
+      "text": "Briser — une alliance",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "proteger-un-secret",
+      "min": 2,
+      "max": 2,
+      "text": "Protéger — un secret",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "echanger-des-vivres",
+      "min": 3,
+      "max": 3,
+      "text": "Échanger — des vivres",
+      "tags": ["survie"],
+      "chain": []
+    },
+    {
+      "id": "reclamer-un-du",
+      "min": 4,
+      "max": 4,
+      "text": "Réclamer — un dû ancien",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "cacher-une-faute",
+      "min": 5,
+      "max": 5,
+      "text": "Cacher — une faute",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "guider-un-passage",
+      "min": 6,
+      "max": 6,
+      "text": "Guider — un passage dangereux",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "trahir-une-parole",
+      "min": 7,
+      "max": 7,
+      "text": "Trahir — une parole donnée",
+      "tags": ["serment"],
+      "chain": []
+    },
+    {
+      "id": "enterrer-un-mort",
+      "min": 8,
+      "max": 8,
+      "text": "Enterrer — un mort qu'on n'attendait pas",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "reveiller-une-chose",
+      "min": 9,
+      "max": 9,
+      "text": "Réveiller — une chose qui dormait sous la glace",
+      "tags": ["glace"],
+      "chain": []
+    },
+    {
+      "id": "rassembler-des-clans",
+      "min": 10,
+      "max": 10,
+      "text": "Rassembler — des clans qui se haïssent",
+      "tags": ["clan"],
+      "chain": []
+    },
+    {
+      "id": "abandonner-un-poste",
+      "min": 11,
+      "max": 11,
+      "text": "Abandonner — un poste qu'on tenait",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "payer-une-dette",
+      "min": 12,
+      "max": 12,
+      "text": "Payer — une dette de sang",
+      "tags": [],
+      "chain": []
+    }
+  ],
+  "tags": ["scene"]
+}

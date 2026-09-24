@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 1,
+  "templates": {
+    "face-danger": {
+      "franche": [
+        "Le passage s'ouvre, et rien ne se referme derrière.",
+        "C'est passé. Personne ne commente, et la marche reprend."
+      ],
+      "partielle": [
+        "Tu passes, et le froid prend sa part au passage.",
+        "La voie est franchie. Le sac est plus léger qu'avant."
+      ],
+      "echec": [
+        "Le danger arrive le premier, et il arrive entier.",
+        "Ce qui devait t'arrêter t'arrête, et te garde un moment."
+      ]
+    },
+    "secure-advantage": {
+      "franche": [
+        "L'avantage est pris, et il tiendra le temps qu'il faut.",
+        "Ce que tu as posé là servira, et servira à toi."
+      ],
+      "partielle": [
+        "Tu gagnes du terrain, et moins que tu n'en voulais.",
+        "L'avantage existe. Il est étroit, et il a un bord."
+      ],
+      "echec": [
+        "Ta préparation se retourne, et elle se retourne contre toi.",
+        "Ce que tu avais posé là sert à quelqu'un d'autre."
+      ]
+    },
+    "gather-information": {
+      "franche": [
+        "Tu repars en sachant, et en sachant plus que prévu.",
+        "La réponse vient, nette, et elle ouvre une autre question."
+      ],
+      "partielle": [
+        "Tu apprends, et le prix de ce savoir se paie plus tard.",
+        "On te répond. On te fera payer d'avoir demandé."
+      ],
+      "echec": [
+        "Tu as posé la question à la mauvaise personne.",
+        "Personne ne répond, et quelqu'un retient ton visage."
+      ]
+    },
+    "probe-a-soul": {
+      "franche": [
+        "Tu vois sous la surface, et la surface s'en aperçoit.",
+        "Ce qu'il tait se lit, et il sait que tu l'as lu."
+      ],
+      "partielle": [
+        "Tu entrevois quelque chose, et l'autre le sent passer.",
+        "Un morceau de vérité, et une porte qui se referme après."
+      ],
+      "echec": [
+        "Tu lis de travers, et tu le dis à voix haute.",
+        "Tu te trompes de personne, devant témoins."
+      ]
+    },
+    "strike": {
+      "franche": [
+        "Le coup porte là où ça compte.",
+        "Un seul geste, et l'échange a changé de camp."
+      ],
+      "partielle": [
+        "Tu touches, et tu t'ouvres en le faisant.",
+        "Le coup entre. Le suivant sera pour toi."
+      ],
+      "echec": [
+        "Tu frappes le vide, et le vide te rend la monnaie.",
+        "Rien. Et l'autre avait attendu exactement ça."
+      ]
+    },
+    "endure-harm": {
+      "franche": [
+        "Tu encaisses, et tu restes dans l'échange.",
+        "Le coup est pris. Rien n'a bougé de ce que tu voulais."
+      ],
+      "partielle": [
+        "Tu restes debout, et quelque chose lâche en dedans.",
+        "Le corps tient. Le reste tient moins bien."
+      ],
+      "echec": [
+        "Le coup entre, et il reste.",
+        "Ça casse quelque part, et ça ne se rattrape pas ici."
+      ]
+    },
+    "endure-cold": {
+      "franche": [
+        "Tu tiens. Le froid te laisse passer sans rien prendre.",
+        "La nuit passe. Au matin, tout le monde est là."
+      ],
+      "partielle": [
+        "Tu passes, et le gel prélève sa part sur le sac.",
+        "On a brûlé ce qu'on gardait pour demain."
+      ],
+      "echec": [
+        "Le froid entre. Il ne ressortira pas de sitôt.",
+        "Les doigts obéissent avec un temps de retard, et ça durera."
+      ]
+    },
+    "swear-a-vow": {
+      "franche": [
+        "La parole est donnée, et ceux qui l'ont entendue s'en souviendront.",
+        "C'est dit. Devant tout le monde, et sans condition."
+      ],
+      "partielle": [
+        "La parole est donnée, et quelqu'un doute déjà.",
+        "C'est dit. Un des témoins regarde ailleurs."
+      ],
+      "echec": [
+        "Tu as juré, et tu as entendu ta propre voix trembler.",
+        "Les mots sont sortis. Ils sonnent creux, et tout le monde l'a entendu."
+      ]
+    },
+    "fulfill-your-vow": {
+      "franche": [
+        "C'est fait, et c'est fait proprement.",
+        "Le serment est tenu. Le monde s'en trouve changé d'un cran."
+      ],
+      "partielle": [
+        "C'est fait, et il reste une ombre au tableau.",
+        "Tenu. Quelqu'un, quelque part, n'appelle pas ça tenu."
+      ],
+      "echec": [
+        "Tu réclames la fin, et le monde te répond que non.",
+        "Le serment se referme sans avoir été tenu."
+      ]
+    },
+    "reach-a-milestone": {
+      "franche": [
+        "Une étape est franchie, et elle compte.",
+        "Le chemin est plus court qu'hier, et tout le monde le sait."
+      ],
+      "partielle": [
+        "Une étape est franchie, et elle compte.",
+        "Le chemin est plus court qu'hier, et tout le monde le sait."
+      ],
+      "echec": [
+        "Une étape est franchie, et elle compte.",
+        "Le chemin est plus court qu'hier, et tout le monde le sait."
+      ]
+    },
+    "forsake-your-vow": {
+      "franche": [
+        "Tu retires ta parole. Personne ne t'en empêche.",
+        "C'est fini, et personne ne dit rien, ce qui est pire."
+      ],
+      "partielle": [
+        "Tu retires ta parole. Personne ne t'en empêche.",
+        "C'est fini, et personne ne dit rien, ce qui est pire."
+      ],
+      "echec": [
+        "Tu retires ta parole. Personne ne t'en empêche.",
+        "C'est fini, et personne ne dit rien, ce qui est pire."
+      ]
+    },
+    "default": {
+      "franche": [
+        "Le moment passe, et la table reste où elle était.",
+        "Rien de plus pour l'instant. Le froid, et l'attente."
+      ],
+      "partielle": [
+        "Le moment passe, et quelque chose a bougé sans qu'on sache quoi.",
+        "Rien de net. Le vent, et une porte qui bat plus loin."
+      ],
+      "echec": [
+        "Le moment passe mal, et personne n'en tire avantage.",
+        "Rien ne vient. Le silence dure une seconde de trop."
+      ]
+    }
+  }
+}

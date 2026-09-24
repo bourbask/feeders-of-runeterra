@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "id": "place-features",
+  "name": "Traits d'un lieu",
+  "kind": "table",
+  "die": 12,
+  "usage": "Quand un lieu doit exister tout de suite et que rien n'est écrit dessus.",
+  "entries": [
+    {
+      "id": "un-toit-effondre",
+      "min": 1,
+      "max": 1,
+      "text": "Un toit effondré sous le poids de la neige, et rien n'a été dégagé.",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "des-marques-gravees",
+      "min": 2,
+      "max": 2,
+      "text": "Des marques gravées dans la pierre, récentes, et personne ne sait les lire.",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "un-feu-encore-tiede",
+      "min": 3,
+      "max": 3,
+      "text": "Un feu encore tiède, abandonné en vitesse.",
+      "tags": [],
+      "chain": ["npc-roles"]
+    },
+    {
+      "id": "une-eau-qui-ne-gele-pas",
+      "min": 4,
+      "max": 4,
+      "text": "Une eau qui ne gèle pas, et qui ne sent rien.",
+      "tags": ["glace"],
+      "chain": []
+    },
+    {
+      "id": "des-os-empiles",
+      "min": 5,
+      "max": 5,
+      "text": "Des os empilés avec soin, en tas réguliers.",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "un-passage-etroit",
+      "min": 6,
+      "max": 6,
+      "text": "Un passage étroit où l'on ne peut avancer qu'un par un.",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "des-etendards-fanes",
+      "min": 7,
+      "max": 7,
+      "text": "Des étendards fanés, d'un clan que personne ne cite plus.",
+      "tags": ["clan"],
+      "chain": []
+    },
+    {
+      "id": "un-grenier-vide",
+      "min": 8,
+      "max": 8,
+      "text": "Un grenier vide, ouvert de l'intérieur.",
+      "tags": ["survie"],
+      "chain": []
+    },
+    {
+      "id": "une-crevasse-recente",
+      "min": 9,
+      "max": 9,
+      "text": "Une crevasse récente que la carte ignore.",
+      "tags": ["glace"],
+      "chain": []
+    },
+    {
+      "id": "un-abri-trop-confortable",
+      "min": 10,
+      "max": 10,
+      "text": "Un abri trop bien tenu pour un endroit pareil.",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "des-traces-qui-tournent",
+      "min": 11,
+      "max": 11,
+      "text": "Des traces qui tournent en rond depuis deux jours.",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "un-silence-sans-bete",
+      "min": 12,
+      "max": 12,
+      "text": "Un silence complet : aucune bête ne vient ici.",
+      "tags": ["bete"],
+      "chain": []
+    }
+  ],
+  "tags": ["lieu"]
+}

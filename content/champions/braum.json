@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "id": "braum",
+  "name": "Braum",
+  "title": "Le Cœur du Freljord",
+  "aliases": [
+    "Le Cœur du Freljord",
+    "Le Coeur du Freljord",
+    "the Heart of the Freljord",
+    "L'homme à la porte"
+  ],
+  "origin": {
+    "regionId": "rakelstake",
+    "homeText": "Un hameau de quarante feux accroché sous les pics, qui n'a jamais eu qu'une porte."
+  },
+  "pitch": "Une porte de grange portée comme un bouclier, et un rire qu'on entend d'une vallée à l'autre.",
+  "description": "Le plus grand cœur du nord, porté par les plus grands bras. Il se met devant, toujours, et il trouve ça tellement normal qu'il ne comprend pas qu'on le remercie. Il connaît le prénom des enfants de trois vallées, les dettes de chacun envers chacun, et l'endroit exact où la neige s'accumule sur chaque toit. Sa force est célèbre ; sa mémoire des gens l'est moins, et c'est elle qui fait qu'on lui ouvre partout. On ne l'a jamais vu frapper le premier. On l'a vu tenir une porte pendant six heures, et plaisanter à la cinquième.",
+  "attributes": { "vif": 1, "coeur": 3, "fer": 2, "ombre": 1, "esprit": 2 },
+  "startingGauges": { "vigueur": 5, "ame": 5, "vivres": 5 },
+  "startingMomentum": 2,
+  "startingAssets": ["bouclier-de-porte", "rite-du-feu-partage"],
+  "signatureAsset": {
+    "id": "poigne-de-braum",
+    "name": "Poigne de Braum",
+    "text": "Ce qu'il retient ne tombe pas. Ni une porte, ni un toit, ni quelqu'un au-dessus du vide.",
+    "effects": [{ "op": "momentum", "delta": 1 }]
+  },
+  "startingVow": {
+    "title": "Que la porte tienne",
+    "rank": "dangereux",
+    "description": "Nul ne passe cette porte tant qu'il est debout devant, et il compte rester debout longtemps."
+  },
+  "startingBonds": [
+    {
+      "with": "Le hameau des pics",
+      "text": "Ils lui ont appris à tenir une porte, et il n'a jamais rien appris de plus utile."
+    },
+    {
+      "with": "Les enfants des trois vallées",
+      "text": "Il les appelle tous « petit », et aucun ne le corrige."
+    }
+  ],
+  "perceptionTraits": [
+    {
+      "id": "pressent-le-danger",
+      "domain": "danger",
+      "trigger": {
+        "text": "Une menace non perçue s'approche de quelqu'un qu'il protège.",
+        "presentEntity": { "kinds": ["npc", "beast"], "dispositions": ["hostile"] },
+        "moveIds": []
+      },
+      "strength": 60,
+      "frequency": "scene",
+      "effect": {
+        "kind": "reveal",
+        "text": "Il sait de quel côté ça vient avant de l'avoir vu, et il s'est déjà tourné."
+      }
+    },
+    {
+      "id": "voit-qui-va-lacher",
+      "domain": "blessure",
+      "trigger": {
+        "text": "Quelqu'un de la bande tient encore debout alors qu'il ne devrait plus.",
+        "presentEntity": { "kinds": ["npc"], "dispositions": ["allie", "neutre"] },
+        "moveIds": ["face-danger", "strike"]
+      },
+      "strength": 35,
+      "frequency": "session",
+      "effect": {
+        "kind": "grant",
+        "text": "Il arrive à temps pour prendre le coup à la place de celui qui allait lâcher.",
+        "moveIds": ["endure-harm"]
+      }
+    }
+  ],
+  "voice": {
+    "register": "chaleureux, bourru, protecteur ; des phrases courtes et des images de métier",
+    "speechTics": [
+      "Appelle tout le monde « petit », quels que soient l'âge et la taille",
+      "Parle de lui à la troisième personne quand il s'agit de rassurer"
+    ],
+    "forbidden": [
+      "l'ironie froide",
+      "la menace voilée",
+      "toute phrase qui laisse entendre qu'il laisserait quelqu'un derrière"
+    ],
+    "sampleLines": [
+      "Approche, petit. Le bouclier tient.",
+      "Six heures, sept heures. C'est long, oui. C'est pas grave.",
+      "Mange d'abord. On discutera après, et tu discuteras mieux."
+    ]
+  },
+  "loreHooks": [
+    "Le bouclier a une histoire que personne ne lui a jamais entendu raconter en entier.",
+    "Il doit quelque chose à un hameau de l'autre versant, et il change de sujet quand on l'évoque.",
+    "Il connaît l'ordre des dalles du pont, et refuse de dire qui le lui a appris."
+  ],
+  "relations": [
+    {
+      "championId": "ashe",
+      "kind": "allie",
+      "text": "Il la suit sans jamais lui obéir tout à fait, et elle a cessé d'essayer."
+    },
+    {
+      "championId": "sejuani",
+      "kind": "rival",
+      "text": "Il refuse de la traiter en ennemie, ce qui l'agace plus que n'importe quelle insulte."
+    }
+  ],
+  "source": "handwritten",
+  "contentWarnings": [],
+  "tags": ["defense", "protection"]
+}

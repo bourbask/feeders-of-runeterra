@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "npc-names-freljord",
+  "name": "Noms du Freljord",
+  "kind": "table",
+  "die": 20,
+  "usage": "Quand un personnage non joueur doit s'appeler quelque chose avant la fin de la phrase.",
+  "entries": [
+    { "id": "katla", "min": 1, "max": 1, "text": "Katla", "tags": [], "chain": [] },
+    { "id": "hrafn", "min": 2, "max": 2, "text": "Hrafn", "tags": [], "chain": [] },
+    { "id": "sigrun", "min": 3, "max": 3, "text": "Sigrun", "tags": [], "chain": [] },
+    { "id": "yrsa", "min": 4, "max": 4, "text": "Yrsa", "tags": [], "chain": [] },
+    { "id": "bjarke", "min": 5, "max": 5, "text": "Bjarke", "tags": [], "chain": [] },
+    { "id": "estrid", "min": 6, "max": 6, "text": "Estrid", "tags": [], "chain": [] },
+    { "id": "torvald", "min": 7, "max": 7, "text": "Torvald", "tags": [], "chain": [] },
+    { "id": "ragna", "min": 8, "max": 8, "text": "Ragna", "tags": [], "chain": [] },
+    { "id": "ulfar", "min": 9, "max": 9, "text": "Ulfar", "tags": [], "chain": [] },
+    { "id": "svala", "min": 10, "max": 10, "text": "Svala", "tags": [], "chain": [] },
+    { "id": "halvar", "min": 11, "max": 11, "text": "Halvar", "tags": [], "chain": [] },
+    { "id": "ingrid", "min": 12, "max": 12, "text": "Ingrid", "tags": [], "chain": [] },
+    { "id": "knut", "min": 13, "max": 13, "text": "Knut", "tags": [], "chain": [] },
+    { "id": "dagny", "min": 14, "max": 14, "text": "Dagny", "tags": [], "chain": [] },
+    { "id": "leif", "min": 15, "max": 15, "text": "Leif", "tags": [], "chain": [] },
+    { "id": "astrid", "min": 16, "max": 16, "text": "Astrid", "tags": [], "chain": [] },
+    { "id": "thorbjorn", "min": 17, "max": 17, "text": "Thorbjörn", "tags": [], "chain": [] },
+    { "id": "freydis", "min": 18, "max": 18, "text": "Freydis", "tags": [], "chain": [] },
+    { "id": "gudrun", "min": 19, "max": 19, "text": "Gudrun", "tags": [], "chain": [] },
+    { "id": "vigdis", "min": 20, "max": 20, "text": "Vigdis", "tags": [], "chain": [] }
+  ],
+  "tags": ["pnj"]
+}

@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "endure-cold",
+  "name": "Endurer le froid",
+  "category": "survie",
+  "trigger": "Quand la nuit tombe loin d'un abri, ou que la marche dure plus longtemps que les vivres.",
+  "rollKind": "action",
+  "attributeOptions": ["fer", "esprit"],
+  "allowsMomentumBurn": true,
+  "outcomes": {
+    "franche": {
+      "text": "Tu tiens. Le froid te laisse passer sans rien prendre.",
+      "gmGuidance": "Montre un signe que le nord respecte cette endurance.",
+      "effects": [{ "op": "momentum", "delta": 1 }]
+    },
+    "partielle": {
+      "text": "Tu passes, et le gel prélève sa part sur le sac.",
+      "gmGuidance": "Nomme ce qui a brûlé, gelé ou été mangé d'avance.",
+      "effects": [{ "op": "gauge", "gauge": "vivres", "delta": -1, "target": "self" }]
+    },
+    "echec": {
+      "text": "Le froid entre. Il ne ressortira pas de sitôt.",
+      "gmGuidance": "La marque est physique et visible : les doigts, la voix, la démarche.",
+      "effects": [
+        { "op": "gauge", "gauge": "vigueur", "delta": -1, "target": "self" },
+        { "op": "condition_add", "conditionId": "transi" }
+      ]
+    }
+  },
+  "presage": {
+    "text": "Le blizzard se lève : l'issue change de nature.",
+    "tableId": "presages"
+  },
+  "tags": ["froid", "survie", "voyage"]
+}

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "rite-du-feu-partage",
+  "name": "Rite du feu partagé",
+  "category": "rituel",
+  "text": "On partage le feu, on partage le pain, et on ne se doit plus rien. Le nord tient là-dessus depuis longtemps.",
+  "abilities": [
+    {
+      "text": "Quand tu offres le feu à un inconnu selon les formes, il ne peut plus lever la main sur toi cette nuit-là.",
+      "xpCost": 1,
+      "effects": [{ "op": "momentum", "delta": 1 }]
+    },
+    {
+      "text": "Quand tu mènes le rite pour un mort, ceux qui restaient debout peuvent enfin s'asseoir.",
+      "xpCost": 2,
+      "effects": [{ "op": "condition_remove", "conditionId": "endeuille" }]
+    }
+  ],
+  "tags": ["rite", "relation"]
+}

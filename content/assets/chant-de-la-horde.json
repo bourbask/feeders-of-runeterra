@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "chant-de-la-horde",
+  "name": "Chant de la horde",
+  "category": "talent",
+  "text": "Tu donnes le rythme, et cinquante personnes marchent dessus sans y penser.",
+  "abilities": [
+    {
+      "text": "Quand tu lances la marche, personne ne traîne et personne ne discute.",
+      "xpCost": 1,
+      "effects": [{ "op": "momentum", "delta": 1, "target": "all-allies" }]
+    },
+    {
+      "text": "Quand tu décides d'un assaut devant tous, ceux qui hésitaient suivent quand même.",
+      "xpCost": 3,
+      "effects": [{ "op": "track_tick", "trackKind": "combat", "ticks": 1 }]
+    }
+  ],
+  "tags": ["commandement"]
+}

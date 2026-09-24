@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "voie-du-marcheur-de-glace",
+  "name": "Voie du marcheur de glace",
+  "category": "chemin",
+  "text": "Tu lis la glace comme d'autres lisent une piste : son épaisseur, son âge, ce qu'elle cache.",
+  "abilities": [
+    {
+      "text": "Quand tu choisis la route sur une étendue gelée, le trajet coûte une ration de moins.",
+      "xpCost": 1,
+      "effects": [{ "op": "gauge", "gauge": "vivres", "delta": 1, "target": "self" }]
+    },
+    {
+      "text": "Quand la glace cède sous quelqu'un, tu savais déjà où poser les pieds.",
+      "xpCost": 2,
+      "effects": [{ "op": "momentum", "delta": 2 }]
+    }
+  ],
+  "tags": ["glace", "voyage"]
+}

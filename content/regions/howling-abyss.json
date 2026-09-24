@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "howling-abyss",
+  "name": "La Faille Hurlante",
+  "parentId": "freljord",
+  "kind": "site",
+  "summary": "Un pont au-dessus d'un gouffre qui souffle, et qu'on traverse sans se retourner.",
+  "description": "Un pont de pierre au-dessus d'un vide dont personne n'a vu le fond. Le bruit qui en monte ressemble à un vent ; ceux qui y ont passé une nuit disent que ce n'en est pas un. On y jette ce dont on veut se débarrasser pour de bon, et la coutume veut qu'on ne prononce aucun nom pendant la traversée. Les rares caravanes qui l'empruntent le font de jour, en groupe, et payent un guide qui connaît l'ordre des dalles.",
+  "dangerRank": "extreme",
+  "climate": "Courants d'air glacés remontant du gouffre, givre permanent sur les dalles.",
+  "factions": [],
+  "landmarks": ["Le Pont", "Les Dalles Comptées"],
+  "hooks": [
+    "Un guide a changé l'ordre des dalles, et il refuse de dire pourquoi.",
+    "Quelque chose a été jeté ici il y a longtemps, et quelqu'un est venu le chercher."
+  ],
+  "oracleRefs": ["place-features", "complication"],
+  "neighborIds": ["freljord"],
+  "tags": ["glace", "peril"]
+}

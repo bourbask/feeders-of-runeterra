@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "id": "npc-goals",
+  "name": "Buts d'un personnage",
+  "kind": "table",
+  "die": 12,
+  "usage": "Quand il faut savoir ce que quelqu'un veut vraiment, tout de suite.",
+  "entries": [
+    {
+      "id": "retrouver-un-proche",
+      "min": 1,
+      "max": 1,
+      "text": "Retrouver un proche parti avant l'hiver.",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "solder-une-dette",
+      "min": 2,
+      "max": 2,
+      "text": "Solder une dette avant qu'on vienne la réclamer.",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "franchir-le-col",
+      "min": 3,
+      "max": 3,
+      "text": "Franchir le col avant la prochaine tempête.",
+      "tags": ["voyage"],
+      "chain": []
+    },
+    {
+      "id": "cacher-un-mort",
+      "min": 4,
+      "max": 4,
+      "text": "Cacher un mort dont personne ne doit connaître le nom.",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "reprendre-un-bien",
+      "min": 5,
+      "max": 5,
+      "text": "Reprendre un bien de famille volé deux générations plus tôt.",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "obtenir-du-grain",
+      "min": 6,
+      "max": 6,
+      "text": "Obtenir du grain, à n'importe quel prix.",
+      "tags": ["survie"],
+      "chain": []
+    },
+    {
+      "id": "prouver-son-innocence",
+      "min": 7,
+      "max": 7,
+      "text": "Prouver son innocence devant un clan qui a déjà jugé.",
+      "tags": ["clan"],
+      "chain": []
+    },
+    {
+      "id": "tenir-un-serment",
+      "min": 8,
+      "max": 8,
+      "text": "Tenir un serment que plus personne ne lui demande de tenir.",
+      "tags": ["serment"],
+      "chain": []
+    },
+    {
+      "id": "empecher-un-rite",
+      "min": 9,
+      "max": 9,
+      "text": "Empêcher un rite prévu pour la pleine lune.",
+      "tags": ["rite"],
+      "chain": []
+    },
+    {
+      "id": "vendre-un-secret",
+      "min": 10,
+      "max": 10,
+      "text": "Vendre un secret au plus offrant, et partir avant l'aube.",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "proteger-un-passage",
+      "min": 11,
+      "max": 11,
+      "text": "Protéger un passage que personne d'autre ne sait ouvert.",
+      "tags": ["voyage"],
+      "chain": []
+    },
+    {
+      "id": "se-faire-oublier",
+      "min": 12,
+      "max": 12,
+      "text": "Se faire oublier, et échouer à le faire.",
+      "tags": [],
+      "chain": []
+    }
+  ],
+  "tags": ["pnj"]
+}

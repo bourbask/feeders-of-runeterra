@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "freljord",
+  "name": "Le Freljord",
+  "parentId": null,
+  "kind": "royaume",
+  "summary": "Trois peuples, un seul hiver, et une paix que personne ne sait tenir plus d'une saison.",
+  "description": "Un nord de glace et de rancunes, où les clans se disputent des vallées que le gel reprendra de toute façon. On y meurt de froid plus souvent que d'une lame, et les deux arrivent généralement la même nuit. Ce qui tient ici n'est pas la force : c'est le grain mis de côté, la dette qu'on rend, et la parole qu'on a donnée devant témoin. Trois puissances se disputent le nord — celle qui rassemble, celle qui prend, et celle qui attend sous la glace — et aucun hameau n'a le luxe de n'en craindre qu'une.",
+  "dangerRank": "dangereux",
+  "climate": "Hiver permanent, tempêtes sans préavis, nuits de vingt heures au cœur de la saison.",
+  "factions": [
+    {
+      "id": "avarosans",
+      "name": "Avarosans",
+      "stance": "Rassemblent les clans par le grain plutôt que par la lame."
+    },
+    {
+      "id": "griffe-d-hiver",
+      "name": "La Griffe d'Hiver",
+      "stance": "Prennent ce dont ils ont besoin et ne s'en cachent pas."
+    },
+    {
+      "id": "gardiens-du-givre",
+      "name": "Gardiens du Givre",
+      "stance": "Gardent ce qui dort, et ne disent pas quoi."
+    }
+  ],
+  "landmarks": ["La Faille Hurlante", "Les Pierres Dressées", "Le Col Battu"],
+  "hooks": [
+    "Un convoi de vivres n'est jamais arrivé, et les traces s'arrêtent net.",
+    "Quelque chose remonte de sous la glace, et les bêtes le sentent avant les hommes.",
+    "Un clan a rendu son tribut deux fois cette année, sans qu'on lui demande."
+  ],
+  "oracleRefs": ["complication", "freljord-weather", "npc-names-freljord"],
+  "neighborIds": [],
+  "tags": ["froid", "clan"]
+}
