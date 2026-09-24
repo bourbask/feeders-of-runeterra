@@ -1,11 +1,20 @@
 /**
- * `ForgeOutputSchema` — a DERIVATION of `ChampionSchema`, compared by key
- * SETS and never by a list typed here.
+ * `ForgeOutputSchema` — a DERIVATION of `ChampionSchema`, whose KEPT keys are
+ * compared by SETS and never by a list typed here.
  *
- * A written list would be the defect it is meant to catch: add a field to the
- * champion sheet, forget to add it to the forge list, and the forge silently
- * stops filling it while every gate stays green. So the expected key set is
- * COMPUTED from `ChampionSchema.shape` minus `FORGE_OMITTED_FIELDS`.
+ * A written list of the KEPT fields would be the defect the test is meant to
+ * catch: add a field to the champion sheet, forget to add it to the forge
+ * list, and the forge silently stops filling it while every gate stays green.
+ * So the expected kept set stays COMPUTED from `ChampionSchema.shape`.
+ *
+ * THE SIX OMITTED ONES ARE THE OPPOSITE CASE, and this is what was wrong
+ * before: the acceptance criterion NAMES them one by one, so they are pinned
+ * here in full letters. Comparing the computed `missing` set to
+ * `FORGE_OMITTED_FIELDS` — the very tuple the omission mask is built from —
+ * compared the source with itself: removing `portraitUrl` or `relations` from
+ * the mask left 6/6 green, measured. A number, or a name, that comes from a
+ * criterion is written out; one that comes from the engine is compared to the
+ * engine; nothing is ever compared to itself (ADR 0007).
  */
 import { describe, expect, it } from 'vitest';
 
@@ -15,17 +24,33 @@ import { ChampionSchema } from '../../src/content/champion.js';
 const championKeys = Object.keys(ChampionSchema.shape);
 const forgeKeys = Object.keys(ForgeOutputSchema.shape);
 
+/** Les six champs que le critère d'acceptation de M0-12 nomme un par un. */
+const SERVER_OWNED_PER_SPEC: readonly string[] = [
+  'schemaVersion',
+  'id',
+  'source',
+  'portraitUrl',
+  'relations',
+  'aliases',
+];
+
 describe('ForgeOutputSchema', () => {
   it('omet exactement les six champs imposés par le serveur', () => {
     const missing = championKeys.filter((key) => !forgeKeys.includes(key));
-    expect(missing.sort()).toStrictEqual([...FORGE_OMITTED_FIELDS].sort());
+    expect([...missing].sort()).toStrictEqual([...SERVER_OWNED_PER_SPEC].sort());
+    // Et le tuple exporté dit bien les mêmes six : c'est lui que le serveur
+    // lira pour compléter la fiche avant la porte finale (V12).
+    expect([...FORGE_OMITTED_FIELDS].sort()).toStrictEqual([...SERVER_OWNED_PER_SPEC].sort());
+    expect(FORGE_OMITTED_FIELDS).toHaveLength(6);
   });
 
   it('conserve TOUS les autres champs de ChampionSchema', () => {
-    const expected = championKeys.filter(
-      (key) => !(FORGE_OMITTED_FIELDS as readonly string[]).includes(key),
-    );
+    // Attendu CALCULÉ depuis la fiche de champion moins les six du critère :
+    // un champ ajouté à `ChampionSchema` atterrit ici tout seul, et un champ
+    // retiré du masque rougit au lieu de se faire absoudre.
+    const expected = championKeys.filter((key) => !SERVER_OWNED_PER_SPEC.includes(key));
     expect([...forgeKeys].sort()).toStrictEqual([...expected].sort());
+    expect(forgeKeys.length).toBe(championKeys.length - 6);
   });
 
   it('n’invente aucun champ que ChampionSchema n’a pas', () => {

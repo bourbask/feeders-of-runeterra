@@ -43,10 +43,20 @@
  * ADR 0007, applied to tool vocabulary. Wherever a tool enum is the engine's
  * list, it is BUILT from the mirror instead of being typed again:
  * `likelihood` = `zLikelihood.options` + `sans-objet`, `segments` =
- * `zClockSegmentCount`, `rank` = `zProgressRank`. The three tuples that have
- * no engine counterpart — oracle table ids, lore kinds, the dispositions of
- * `propose_npc_introduce` — are written here and compared by the tests to what
- * they are supposed to track.
+ * `zClockSegmentCount`, `rank` = `zProgressRank`. Those three are compared to
+ * the MIRROR by `tests/ai/tools.test.ts`, value against value.
+ *
+ * The tuples that have NO engine counterpart — `get_state` scopes, `get_lore`
+ * kinds, `get_chronicle` sections, oracle table ids, the dispositions of
+ * `propose_npc_introduce`, clock kinds, the two tie kinds and the proposal
+ * statuses — derive from nothing, so nothing in the repository can contradict
+ * them and nothing in it can guard them either. They are written here from
+ * sections 3.2 and 3.3, and PINNED IN FULL LETTERS by the same test file.
+ *
+ * That last sentence used to say they were "compared by the tests" when no
+ * test looked at them at all: rewriting the dispositions to the engine's four
+ * values left the suite green. A guard announced and absent is worse than a
+ * guard missing, because the next task believes it is covered.
  *
  * REPORTED, NOT WORKED AROUND: `propose_npc_introduce.disposition` is the
  * five-value list of section 3.3 (`hostile mefiant neutre curieux allie`),

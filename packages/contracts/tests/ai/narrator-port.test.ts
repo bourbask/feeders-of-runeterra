@@ -8,6 +8,12 @@
  *      the same four strings in the same order. Two lists in two languages:
  *      nothing but a runtime comparison catches a fifth provider added on one
  *      side. Same for the purposes and the finish reasons.
+ *
+ *      BOTH SIDES ARE PINNED TO THE LITERAL VALUES, never to each other. The
+ *      acceptance criterion NAMES the four providers, so they are written out
+ *      in full here (ADR 0007). Comparing the tuple to the `CHECK` alone
+ *      tested their COINCIDENCE and never their value: renaming `ollama` into
+ *      `llama-cpp` on both sides left 98/98 green, measured.
  *   2. NEUTRALITY. The two `grep` commands of the M0-12 sheet, run as tests so
  *      the CI carries them and not only a reviewer's shell history.
  *   3. `NarratorError.retryable` cannot lie: it is computed from the code, and
@@ -58,17 +64,37 @@ function checkValues(constraint: string): readonly string[] {
   return (clause?.[1] ?? '').split(',').map((value) => value.trim().replaceAll("'", ''));
 }
 
+// ─── LES VALEURS DU CRITÈRE, EN TOUTES LETTRES ────────────────────────────
+// Aucune de ces trois listes n'est relue depuis le code qu'elle vérifie. Un
+// chiffre — ou un nom — qui vient d'un critère d'acceptation s'écrit en
+// toutes lettres dans le test ; comparer une liste à celle dont elle dérive
+// ne garde que l'ordre (ADR 0007).
+const PROVIDERS_PER_SPEC: readonly string[] = ['stub', 'anthropic', 'openai-compatible', 'ollama'];
+const PURPOSES_PER_SPEC: readonly string[] = ['narration', 'forge', 'chronicle', 'judge'];
+const FINISHES_PER_SPEC: readonly string[] = [
+  'complete',
+  'truncated',
+  'tool_call',
+  'refused',
+  'aborted',
+];
+/** Les trois codes que la §7.1 autorise à relancer À L'IDENTIQUE. */
+const RETRYABLE_PER_SPEC: readonly string[] = ['rate_limited', 'unavailable', 'timeout'];
+
 describe('le port du conteur — les listes qui doivent coïncider', () => {
-  it('NarratorProviderId vaut le CHECK de ai_calls.provider, dans le même ordre', () => {
-    expect([...NARRATOR_PROVIDER_IDS]).toStrictEqual(checkValues('ai_calls_provider_enum'));
+  it('NarratorProviderId vaut EXACTEMENT les quatre du critère, et le CHECK aussi', () => {
+    expect([...NARRATOR_PROVIDER_IDS]).toStrictEqual(PROVIDERS_PER_SPEC);
+    expect(checkValues('ai_calls_provider_enum')).toStrictEqual(PROVIDERS_PER_SPEC);
   });
 
   it('les quatre usages du port valent le CHECK de ai_calls.purpose', () => {
-    expect([...NARRATOR_PURPOSES]).toStrictEqual(checkValues('ai_calls_purpose_enum'));
+    expect([...NARRATOR_PURPOSES]).toStrictEqual(PURPOSES_PER_SPEC);
+    expect(checkValues('ai_calls_purpose_enum')).toStrictEqual(PURPOSES_PER_SPEC);
   });
 
   it('NarrateFinish vaut le CHECK de ai_calls.finish_reason', () => {
-    expect([...NARRATE_FINISHES]).toStrictEqual(checkValues('ai_calls_finish_reason_enum'));
+    expect([...NARRATE_FINISHES]).toStrictEqual(FINISHES_PER_SPEC);
+    expect(checkValues('ai_calls_finish_reason_enum')).toStrictEqual(FINISHES_PER_SPEC);
   });
 });
 
@@ -96,8 +122,21 @@ describe('neutralité du port (P18)', () => {
 
 describe('NarratorError', () => {
   it('retryable est CALCULÉ, pas fourni : les trois codes de la §7.1 et eux seuls', () => {
-    const retryable = NARRATOR_ERROR_CODES.filter((code) => isRetryableNarratorErrorCode(code));
-    expect(retryable).toStrictEqual([...NARRATOR_RETRYABLE_ERROR_CODES]);
+    // ÉPINGLÉS EN TOUTES LETTRES. La version précédente comparait
+    // `NARRATOR_ERROR_CODES.filter(isRetryable)` à la liste DONT `isRetryable`
+    // dérive : elle ne mordait que sur l'ORDRE, et ajouter `internal` à
+    // `NARRATOR_RETRYABLE_ERROR_CODES` laissait 98/98 verts — mesuré.
+    expect([...NARRATOR_RETRYABLE_ERROR_CODES]).toStrictEqual(RETRYABLE_PER_SPEC);
+    expect(NARRATOR_ERROR_CODES.filter((code) => isRetryableNarratorErrorCode(code))).toStrictEqual(
+      RETRYABLE_PER_SPEC,
+    );
+    // Et les ONZE autres ne le sont pas, un par un : un code retiré de la
+    // liste des quatorze ne doit pas pouvoir éteindre la vérification.
+    for (const code of NARRATOR_ERROR_CODES) {
+      if (RETRYABLE_PER_SPEC.includes(code)) continue;
+      expect(isRetryableNarratorErrorCode(code), `${code} ne doit pas être relançable`).toBe(false);
+    }
+    expect(NARRATOR_ERROR_CODES).toHaveLength(14);
   });
 
   it('quota_exhausted n’est jamais relançable, même si l’adaptateur le voulait', () => {
