@@ -427,7 +427,7 @@ la diff doit rester lisible.
   égaux, les trois issues autour de chaque seuil.
 
 **Critères d'acceptation**
-- `pnpm turbo run test --filter @for/engine --coverage` sort en 0 avec ≥ 95 % lignes et ≥ 90 % branches
+- `pnpm turbo run test --filter @for/engine -- --coverage` sort en 0 avec ≥ 95 % lignes et ≥ 90 % branches
   sur les fichiers livrés.
 - `pnpm test:golden` sort en 0.
 - Le testeur remplace `TICKS_PER_MILESTONE.dangereux` par `7`, puis lance
@@ -680,7 +680,7 @@ le type : ajouter un événement sans le traiter dans le réducteur **ne compile
   `tests/ai-cannot-mutate.test.ts`.
 
 **Critères d'acceptation**
-- `pnpm turbo run test --filter @for/engine --coverage` sort en 0 avec ≥ 95 % lignes / 90 % branches sur
+- `pnpm turbo run test --filter @for/engine -- --coverage` sort en 0 avec ≥ 95 % lignes / 90 % branches sur
   tout le paquet.
 - Le testeur supprime une branche du `switch` de `reduce` : `pnpm typecheck` sort en code non
   nul (exhaustivité par le type, pas par un test).
