@@ -25,6 +25,7 @@
     "@for/contracts": "workspace:*"
   },
   "devDependencies": {
-    "@for/tsconfig": "workspace:*"
+    "@for/tsconfig": "workspace:*",
+    "@types/node": "^24.10.1"
   }
 }
