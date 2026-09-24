@@ -25,12 +25,17 @@
  * (`exclude: { path: '(coverage|\\.test\\.ts$)' }`).
  */
 import {
+  ACTION_SCORE_CAP,
   ACTOR_KINDS,
+  ATTRIBUTE_MAX,
+  ATTRIBUTE_MIN,
   ATTRIBUTE_SPREAD,
   ATTRIBUTES,
   CAMPAIGN_STATUSES,
   CHAMPION_LOCK_KINDS,
   CHARACTER_STATUSES,
+  CLOCK_ADVANCE_MAX,
+  CLOCK_ADVANCE_MIN,
   CLOCK_SEGMENT_COUNTS,
   CLOCK_STATUSES,
   CREATABLE_TRACK_KINDS,
@@ -41,10 +46,14 @@ import {
   ENTITY_KINDS,
   ENTITY_STATUSES,
   GAME_EVENT_TYPES,
+  GAUGE_MAX,
+  GAUGE_MIN,
   GAUGES,
   GM_PROPOSAL_KINDS,
   INTENT_TYPES,
   LIKELIHOODS,
+  MAX_PROGRESS_BOXES,
+  MAX_PROGRESS_TICKS,
   MOVE_IDS,
   OUTCOMES,
   PARTY_ROLES,
@@ -55,11 +64,21 @@ import {
   RNG_STREAMS,
   RULE_VIOLATION_CODES,
   SCENE_ABSENCE_CAUSES,
+  SCENE_PRESENCE_MAX,
   SHEET_SOURCES,
+  TICKS_PER_BOX,
 } from '@for/engine';
 import { describe, expect, it } from 'vitest';
 
-import { ATTRIBUTE_SPREAD_SIGNATURE } from '../src/core/attributes.js';
+import {
+  ATTRIBUTE_SPREAD_SIGNATURE,
+  ATTRIBUTE_MAX as contractsAttributeMax,
+  ATTRIBUTE_MIN as contractsAttributeMin,
+} from '../src/core/attributes.js';
+import {
+  CLOCK_ADVANCE_MAX as contractsClockAdvanceMax,
+  CLOCK_ADVANCE_MIN as contractsClockAdvanceMin,
+} from '../src/core/clock.js';
 import { effectOpsOfSchema, zPayPriceMode } from '../src/core/effects.js';
 import {
   zActorKind,
@@ -88,6 +107,17 @@ import {
   zSceneAbsenceCause,
   zSheetSource,
 } from '../src/core/enums.js';
+import {
+  GAUGE_MAX as contractsGaugeMax,
+  GAUGE_MIN as contractsGaugeMin,
+} from '../src/core/gauges.js';
+import {
+  MAX_PROGRESS_BOXES as contractsMaxProgressBoxes,
+  MAX_PROGRESS_TICKS as contractsMaxProgressTicks,
+  TICKS_PER_BOX as contractsTicksPerBox,
+} from '../src/core/progress-track.js';
+import { SCENE_PRESENCE_MAX as contractsScenePresenceMax } from '../src/core/scene-state.js';
+import { ACTION_SCORE_CAP as contractsActionScoreCap } from '../src/events/dice.js';
 import { gameEventTypesOfSchema } from '../src/events/index.js';
 import { intentTypesOfSchema } from '../src/intents/index.js';
 
@@ -118,6 +148,64 @@ describe('exhaustivité des unions', () => {
   // VALEUR du moteur : règle `contracts-ne-depend-que-de-zod`). La recopie est
   // gardée à la compilation dans les deux sens ; ce test le redit à l'exécution,
   // parce qu'une recopie est exactement le genre de chose qu'on croit juste.
+  // ────────────────────────────────────────────────────────────────────────
+  // LE BARREL DE @for/engine, ÉNUMÉRÉ EN ENTIER — ce que la règle opératoire
+  // d'ADR 0007 exige, pour que « les importantes » cesse d'être un critère.
+  //
+  // 47 exports. 36 sont comparés ici ou ailleurs. Les 11 autres ne le sont pas,
+  // et voici pourquoi, un par un :
+  //
+  //   EFFECT_OPS ............... comparé par effectOpsOfSchema(), effects.test.ts
+  //   GAME_EVENT_TYPES ......... comparé par gameEventTypesOfSchema(), et croisé
+  //                              avec le markdown de 03-donnees.md §3.4 par
+  //                              event-catalog.test.ts
+  //   INTENT_TYPES ............. comparé par intentTypesOfSchema()
+  //   ENGINE_ONLY_EVENT_TYPES .. dérivé de GAME_EVENT_TYPES, couvert avec lui
+  //   ATTRIBUTE_SPREAD ......... recopié côté contrats, mais APLATI en chaîne :
+  //                              c'est ATTRIBUTE_SPREAD_SIGNATURE qui est comparé,
+  //                              et la comparaison de la chaîne suffit puisque
+  //                              la chaîne est dérivée du tuple.
+  //   CLOCK_SEGMENT_COUNTS ..... PAS recopié dans les contrats : rien à mirroiter.
+  //   DEFAULT_MOMENTUM_BOUNDS .. idem, et épinglé côté moteur par index.test.ts
+  //   LIKELIHOOD_THRESHOLDS .... idem
+  //   TICKS_PER_MILESTONE ...... idem
+  //   VOW_RESOLUTION_MOVES ..... idem
+  //   RNG_STREAMS .............. comparé, première ligne du tableau ci-dessous
+  //
+  // La règle : une constante non recopiée n'a pas de miroir à garder. Une
+  // constante recopiée en a un, et il figure ici. Si un export apparaît dans
+  // @for/engine sans être dans cette liste, cette liste est périmée.
+
+  // ────────────────────────────────────────────────────────────────────────
+  // LES SCALAIRES, ajoutés par le lead — précision d'ADR 0007 du 24 septembre.
+  //
+  // Un nombre recopié est PIRE qu'un enum recopié. Un enum garde au moins la
+  // paire `satisfies` + `AssertNever` à la compilation ; dans un nombre, le
+  // compilateur ne voit qu'un `number`. Mesuré : ATTRIBUTE_MAX porté de 3 à 4,
+  // ATTRIBUTE_MIN de 1 à 0, CLOCK_ADVANCE_MAX de 3 à 7 et ACTION_SCORE_CAP de
+  // 10 à 99 dans le moteur, reconstruction complète en `tsc -b --force` — les
+  // quatre portes restaient vertes pendant que les contrats annonçaient encore
+  // les anciennes bornes.
+  //
+  // SCENE_PRESENCE_MAX n'est pas décoratif : il porte le critère d'acceptation
+  // n° 3 de la fiche M0-05 (« 8 présents, 8 partis »), et ce 8 était un chiffre
+  // recopié à la main que rien ne comparait au moteur.
+  it.each([
+    ['ATTRIBUTE_MIN', ATTRIBUTE_MIN, contractsAttributeMin],
+    ['ATTRIBUTE_MAX', ATTRIBUTE_MAX, contractsAttributeMax],
+    ['GAUGE_MIN', GAUGE_MIN, contractsGaugeMin],
+    ['GAUGE_MAX', GAUGE_MAX, contractsGaugeMax],
+    ['CLOCK_ADVANCE_MIN', CLOCK_ADVANCE_MIN, contractsClockAdvanceMin],
+    ['CLOCK_ADVANCE_MAX', CLOCK_ADVANCE_MAX, contractsClockAdvanceMax],
+    ['ACTION_SCORE_CAP', ACTION_SCORE_CAP, contractsActionScoreCap],
+    ['TICKS_PER_BOX', TICKS_PER_BOX, contractsTicksPerBox],
+    ['MAX_PROGRESS_BOXES', MAX_PROGRESS_BOXES, contractsMaxProgressBoxes],
+    ['MAX_PROGRESS_TICKS', MAX_PROGRESS_TICKS, contractsMaxProgressTicks],
+    ['SCENE_PRESENCE_MAX', SCENE_PRESENCE_MAX, contractsScenePresenceMax],
+  ])('%s : la recopie des contrats vaut la constante du moteur', (_name, engine, mirror) => {
+    expect(mirror).toBe(engine);
+  });
+
   it.each([
     ['RNG_STREAMS', [...RNG_STREAMS], zRngStream.options],
     ['ATTRIBUTES', [...ATTRIBUTES], zAttributeId.options],
