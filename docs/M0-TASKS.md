@@ -36,7 +36,7 @@
    trancher sans lire le code est un critère à réécrire.
 7. **Un critère ne lance jamais la suite entière d'un paquet que plusieurs tâches de la même
    vague remplissent.** Trois tâches qui livrent dans `@for/server` ne peuvent pas toutes être
-   jugées sur `pnpm --filter @for/server test` : chacune serait rouge à cause des deux autres.
+   jugées sur `pnpm turbo run test --filter @for/server` : chacune serait rouge à cause des deux autres.
    Chacune cite **ses** fichiers de test (`vitest run <chemins>`), et c'est M0-30 qui exige la
    suite complète.
 8. **Toute commande citée dans un critère existe dans la liste contractuelle de
@@ -205,7 +205,7 @@ rejoue.
   le critère ci-dessous est intestable.
 - `node -e "const{GAME_EVENT_TYPES:t}=require('./packages/engine/dist/index.js');
   process.exit(t.length===71 && new Set(t).size===71 ? 0 : 1)"` sort en 0.
-- Le testeur retire un type de `GAME_EVENT_TYPES` : `pnpm --filter @for/engine typecheck` sort
+- Le testeur retire un type de `GAME_EVENT_TYPES` : `pnpm turbo run typecheck --filter @for/engine` sort
   en code non nul (le garde d'exhaustivité, pas un test).
 - Un test vérifie que `createSeededRng('freljord')` produit deux fois la même série de 100
   tirages, et que `createCampaignRng(seed, seq, stream)` est reproductible sans état.
@@ -352,7 +352,7 @@ quand le moteur évolue sans son schéma.
   toucher `zCampaignState` : `pnpm typecheck` sort en code non nul, et le message pointe le
   `satisfies z.ZodType<CampaignState>` de `packages/contracts/src/core/campaign-state.ts`.
   Il restaure ensuite le fichier.
-- La couverture de `packages/contracts` est ≥ 90 % lignes (`pnpm --filter @for/contracts test
+- La couverture de `packages/contracts` est ≥ 90 % lignes (`pnpm turbo run test --filter @for/contracts
   --coverage`).
 - `grep -rn "z.infer" packages/contracts/src/core/campaign-state.ts` ne renvoie aucune
   déclaration de `CampaignState` (le type canonique vient du moteur, pas du schéma).
@@ -427,7 +427,7 @@ la diff doit rester lisible.
   égaux, les trois issues autour de chaque seuil.
 
 **Critères d'acceptation**
-- `pnpm --filter @for/engine test --coverage` sort en 0 avec ≥ 95 % lignes et ≥ 90 % branches
+- `pnpm turbo run test --filter @for/engine --coverage` sort en 0 avec ≥ 95 % lignes et ≥ 90 % branches
   sur les fichiers livrés.
 - `pnpm test:golden` sort en 0.
 - Le testeur remplace `TICKS_PER_MILESTONE.dangereux` par `7`, puis lance
@@ -543,7 +543,7 @@ Cette tâche livre aussi la campagne longue (≈ 2 000 événements), preuve de 
 - `src/assertions.ts` : `expectValidState`, `expectNoReservedChampion`, `expectSeqContiguous`.
 
 **Critères d'acceptation**
-- `pnpm --filter @for/testkit test` sort en 0.
+- `pnpm turbo run test --filter @for/testkit` sort en 0.
 - Un test vérifie que l'état produit par `aTableState()` passe `zCampaignState.parse` sans
   aucune option, et que chaque constructeur a des valeurs par défaut complètes.
 - Un test vérifie que `LONG_CAMPAIGN` contient ≥ 2 000 événements avec des `seq` contigus à
@@ -576,7 +576,7 @@ discipline, et un test doré vérifie qu'une migration ne les a pas perdus.
   `:memory:`, à cause du WAL).
 
 **Critères d'acceptation**
-- `pnpm --filter @for/db test` sort en 0.
+- `pnpm turbo run test --filter @for/db` sort en 0.
 - `pnpm db:migrate` sur une base vide temporaire sort en 0, puis le dump normalisé est **égal
   octet à octet** à `schema.expected.sql` (assertion du test).
 - Un `UPDATE events SET type='x'` et un `DELETE FROM events` lèvent tous les deux ; le message
@@ -680,7 +680,7 @@ le type : ajouter un événement sans le traiter dans le réducteur **ne compile
   `tests/ai-cannot-mutate.test.ts`.
 
 **Critères d'acceptation**
-- `pnpm --filter @for/engine test --coverage` sort en 0 avec ≥ 95 % lignes / 90 % branches sur
+- `pnpm turbo run test --filter @for/engine --coverage` sort en 0 avec ≥ 95 % lignes / 90 % branches sur
   tout le paquet.
 - Le testeur supprime une branche du `switch` de `reduce` : `pnpm typecheck` sort en code non
   nul (exhaustivité par le type, pas par un test).
@@ -757,7 +757,7 @@ est la seule protection sérieuse contre le double-jet sur réseau instable.
 - `src/index.ts` complété ; `tests/events-repo.test.ts`.
 
 **Critères d'acceptation**
-- `pnpm --filter @for/db test` sort en 0.
+- `pnpm turbo run test --filter @for/db` sort en 0.
 - Un test insère 100 lots d'événements et vérifie que les `seq` sont denses de 1 à N et que
   `campaigns.seq` est égal au maximum.
 - Un test fait échouer la troisième insertion d'un lot de trois et vérifie qu'**aucune** ligne
@@ -847,7 +847,7 @@ hors du réducteur — sinon, un bug silencieux découvert trois mois plus tard.
 - `tests/{rebuild,check}.test.ts`.
 
 **Critères d'acceptation**
-- `pnpm --filter @for/db test` sort en 0.
+- `pnpm turbo run test --filter @for/db` sort en 0.
 - Sur une base construite en test : `pnpm db:check` sort en 0 et n'affiche aucune ligne.
 - Le testeur modifie directement une jauge dans la table `characters` : `pnpm db:check` sort en
   **1** et nomme le contrôle 9.
@@ -899,7 +899,7 @@ projet jouable avec un fournisseur gratuit ou un modèle local (P18).
   le livrait.
 
 **Critères d'acceptation**
-- `pnpm --filter @for/ai test` sort en 0 **sans aucune variable `NARRATOR_*`** dans
+- `pnpm turbo run test --filter @for/ai` sort en 0 **sans aucune variable `NARRATOR_*`** dans
   l'environnement (`env -u NARRATOR_PROVIDER -u NARRATOR_API_KEY`).
 - `tests/narrator-port.contract.test.ts` rejoue **le même** contrat contre les **quatre**
   adaptateurs, transport simulé : exactement un `end`, toujours en dernier ; `result.text`
@@ -979,7 +979,7 @@ l'affichage et se fait écraser par chaque instantané.
 - Tests de composants purs et du store WS.
 
 **Critères d'acceptation**
-- `pnpm --filter @for/client build` et `pnpm --filter @for/client test` sortent en 0.
+- `pnpm turbo run build --filter @for/client` et `pnpm turbo run test --filter @for/client` sortent en 0.
 - Le testeur ajoute `import { decide } from '@for/engine'` dans un fichier du client :
   `pnpm lint` sort en code non nul.
 - Un test envoie au store une trame `s2c.event` malformée : aucune exception, et le store
@@ -1027,7 +1027,7 @@ trois agents de travailler en parallèle sur le serveur.
 - `tests/http/health.test.ts`.
 
 **Critères d'acceptation**
-- `pnpm --filter @for/server test` sort en 0.
+- `pnpm turbo run test --filter @for/server` sort en 0.
 - `app.inject({ method:'GET', url:'/healthz' })` renvoie 200 **sans** base ouverte.
 - `/readyz` renvoie 503 tant que les migrations ne sont pas appliquées, 200 après.
 - Lancer `node dist/main.js` sans `SESSION_SECRET` sort en code 1 et écrit le nom de la
@@ -1115,7 +1115,7 @@ ici servent deux fois — notation dans l'éval, post-filtre en production.
 - `tests/{context-budget,outputs,assertions,degradation,scene-merge,refusal-proof}.test.ts`.
 
 **Critères d'acceptation**
-- `env -u NARRATOR_PROVIDER -u NARRATOR_API_KEY pnpm --filter @for/ai test` sort en 0 (aucun
+- `env -u NARRATOR_PROVIDER -u NARRATOR_API_KEY pnpm turbo run test --filter @for/ai` sort en 0 (aucun
   appel réseau ; `@for/ai` n'a qu'une tâche livrante dans cette vague, la suite entière est donc
   un critère légitime ici).
 - `tests/degradation.test.ts` instancie un port factice pour les **16 combinaisons** de
@@ -1641,7 +1641,7 @@ est **close**.
 - `tests/proposal-surface.test.ts` et `tests/ai/*.test.ts`.
 
 **Critères d'acceptation**
-- `env -u NARRATOR_API_KEY pnpm --filter @for/server test` sort en 0 (port simulé).
+- `env -u NARRATOR_API_KEY pnpm turbo run test --filter @for/server` sort en 0 (port simulé).
 - `grep -rn "@anthropic-ai/sdk" packages/server/src | wc -l` affiche `0` : le serveur ne
   connaît aucun SDK de fournisseur, seulement le port.
 - `tests/proposal-surface.test.ts` vérifie **trois** listes closes, et sort en code non nul si
