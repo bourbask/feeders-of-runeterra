@@ -24,6 +24,12 @@ export * from './gauges.js';
 export * from './momentum.js';
 export * from './progress-track.js';
 
+export * from './decide.js';
+export * from './invariants.js';
+export * from './moves/index.js';
+export * from './narration-fallback.js';
+export * from './reduce.js';
+
 export * from './types/attributes.js';
 export * from './types/brief.js';
 export * from './types/campaign.js';

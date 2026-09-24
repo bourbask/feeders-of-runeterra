@@ -83,8 +83,15 @@ export type EngineEffect =
  * M0-05, which is the follow-up the ADR assigns under "ce qui reste a faire".
  *
  * Keeping this tuple at one member is what stops the effect executor from
- * growing a second state-writing path: `switch (effect.mode)` has one branch
- * to write, because there is one mode to write it for.
+ * growing a second state-writing path — but NOT through a `switch` on the
+ * mode: there is none, and `applyPayPrice` never reads `effect.mode` at all.
+ * It rolls the d12 and applies the drawn entry, full stop. What the single
+ * member buys is that no other value can ever be written into a `pay_price`
+ * effect, so no reader downstream has a second case to branch on.
+ *
+ * What guards the tuple is the runtime mirror of `@for/contracts`
+ * (`exhaustive-union.test.ts`), member by member, per ADR 0007: `satisfies`
+ * is covariant in output and lets the list shrink or grow in silence.
  */
 export const PAY_PRICE_MODES = ['roll'] as const;
 
