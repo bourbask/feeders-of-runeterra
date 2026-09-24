@@ -16,9 +16,16 @@
  * local time, and the same test would then denote two different instants on two
  * machines. Fields are bounded here because `Date.parse` does NOT bound them:
  * `2024-02-31T00:00:00Z` parses happily, as March 2nd.
+ *
+ * The fraction runs to NINE digits and the offset is accepted in basic form
+ * (`+0100`, `+01`) as well as extended (`+01:00`): `2024-01-01T00:00:00.123456Z`
+ * is what SQLite and Postgres hand back for a microsecond timestamp column, and
+ * M0-11 and M0-17 will read those straight into this constructor. Everything is
+ * re-spelled canonically below before parsing, so nothing rests on the
+ * implementation-defined half of `Date.parse`.
  */
 const ISO_INSTANT =
-  /^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])[Tt]([01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,3})?(?:[Zz]|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/;
+  /^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])[Tt]([01]\d|2[0-3]):([0-5]\d):([0-5]\d)(?:\.(\d{1,9}))?(?:[Zz]|([+-])([01]\d|2[0-3])(?::?([0-5]\d))?)$/;
 
 export interface FixedClock {
   /** The instant, canonical ISO-8601 UTC (`2024-01-01T00:00:00.000Z`). */
@@ -30,11 +37,14 @@ export interface FixedClock {
 }
 
 /**
- * @param iso an ISO-8601 instant carrying a timezone (`Z` or `+hh:mm`). A
- * local-time string is refused: it would read differently on a machine in
- * another timezone, which is exactly the bug this file exists to prevent.
- * `now()` returns the CANONICAL form of that instant, so two spellings of the
- * same moment serialise identically.
+ * @param iso an ISO-8601 instant carrying a timezone — `Z`, `+hh:mm`, `+hhmm`
+ * or `+hh`. A local-time string is refused: it would read differently on a
+ * machine in another timezone, which is exactly the bug this file exists to
+ * prevent. Up to nine fractional digits are accepted; anything below the
+ * MILLISECOND is TRUNCATED, as `Date.parse` does, because the clock counts in
+ * milliseconds. The truncation is not hidden — `now()` returns the CANONICAL
+ * three-decimal UTC form, so it is visible in the very first corpus, and two
+ * spellings of the same moment serialise identically.
  */
 export function fixedClock(iso: string): FixedClock {
   const champs = ISO_INSTANT.exec(iso);
@@ -58,7 +68,17 @@ export function fixedClock(iso: string): FixedClock {
     );
   }
 
-  const parsed = Date.parse(iso);
+  // Re-spelled in the one form ECMA-262 REQUIRES every engine to parse, rather
+  // than handed over as typed. `Date.parse` is only specified for the extended
+  // format with at most three fractional digits; `2024-01-01T00:00:00+0100`
+  // falls into its implementation-defined half, where V8 happens to be right
+  // and nothing guarantees the next runtime will be.
+  const fraction = (champs[7] ?? '').padEnd(3, '0').slice(0, 3);
+  const offset =
+    champs[8] === undefined ? 'Z' : `${champs[8]}${champs[9] ?? ''}:${champs[10] ?? '00'}`;
+  const canonical = `${champs[1] ?? ''}-${champs[2] ?? ''}-${champs[3] ?? ''}T${champs[4] ?? ''}:${champs[5] ?? ''}:${champs[6] ?? ''}.${fraction}${offset}`;
+
+  const parsed = Date.parse(canonical);
   // Unreachable after the two checks above; kept so that a change to the regex
   // cannot let an unparsable string through as `NaN` milliseconds.
   if (Number.isNaN(parsed)) {

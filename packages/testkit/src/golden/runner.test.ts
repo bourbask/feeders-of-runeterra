@@ -9,10 +9,12 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
+import { pathToFileURL } from 'node:url';
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   GOLDEN_UPDATE_ENV,
+  GoldenDirUnusable,
   GoldenMismatch,
   GoldenMissing,
   GoldenUpdateMisused,
@@ -237,5 +239,95 @@ describe('GOLDEN_UPDATE', () => {
     expect(goldenUpdateRequested()).toBe(true);
     retirerLaVariable();
     expect(goldenUpdateRequested()).toBe(false);
+  });
+});
+
+/**
+ * Le dossier de corpus ne vient JAMAIS du répertoire courant.
+ *
+ * Mesuré avant correction : `expectGolden('x', v)` sans `dir` résolvait
+ * `<paquet>/tests/golden/x.golden.json` sous `pnpm test` (turbo lance vitest
+ * depuis le paquet) et `<dépôt>/tests/golden/x.golden.json` sous
+ * `pnpm test:coverage` (travail 6 de ci.yml, bloquant, lancé depuis la racine).
+ * Même appel, deux fichiers — et sous `GOLDEN_UPDATE=1` depuis la racine, le
+ * mauvais dossier était CRÉÉ et rempli sans un mot.
+ */
+describe('le dossier de corpus', () => {
+  it('est obligatoire : sans lui, un refus nommé, pas un repli sur le cwd', () => {
+    const sansOptions = expectGolden as (nom: string, valeur: unknown) => void;
+
+    expect(() => {
+      sansOptions('sans-dossier', { a: 1 });
+    }).toThrow(GoldenDirUnusable);
+  });
+
+  it('refuse un chemin RELATIF — c’est le cwd par la porte de derrière', () => {
+    expect(() => {
+      expectGolden('relatif', { a: 1 }, { dir: 'tests/golden' });
+    }).toThrow(/is a RELATIVE path/);
+  });
+
+  it('refuse une chaîne vide et une valeur qui n’est pas un chemin', () => {
+    const malTypé = expectGolden as (nom: string, valeur: unknown, options: unknown) => void;
+
+    expect(() => {
+      expectGolden('vide', { a: 1 }, { dir: '' });
+    }).toThrow(GoldenDirUnusable);
+    expect(() => {
+      malTypé('nombre', { a: 1 }, { dir: 42 });
+    }).toThrow(GoldenDirUnusable);
+  });
+
+  it('refuse une URL qui n’est pas file:', () => {
+    expect(() => {
+      expectGolden('distant', { a: 1 }, { dir: new URL('https://exemple.test/golden/') });
+    }).toThrow(/is not a `file:` URL/);
+  });
+
+  it('n’écrit RIEN quand le dossier est refusé, même sous GOLDEN_UPDATE=1', () => {
+    poserLaVariable('1');
+    expect(() => {
+      expectGolden('jamais-pose', { a: 1 }, { dir: 'tests/golden' });
+    }).toThrow(GoldenDirUnusable);
+    // Le FICHIER, pas le dossier : `tests/golden/` peut exister légitimement le
+    // jour où ce paquet aura ses propres corpus, et l'assertion mentirait alors
+    // en passant pour une autre raison que celle qu'elle prétend vérifier.
+    expect(existsSync(join(process.cwd(), 'tests', 'golden', 'jamais-pose.golden.json'))).toBe(
+      false,
+    );
+  });
+
+  // LA propriété que le défaut sur `process.cwd()` cassait : le fichier résolu
+  // ne dépend que de l'ancre passée, jamais du répertoire de lancement.
+  it('résout le MÊME fichier quel que soit le répertoire courant', () => {
+    const ancre = new URL('golden/', pathToFileURL(`${dossier}/`));
+
+    poserLaVariable('1');
+    expectGolden('meme-fichier', { ticks: 7 }, { dir: ancre });
+    retirerLaVariable();
+
+    const avant = process.cwd();
+    try {
+      process.chdir(tmpdir());
+      expectGolden('meme-fichier', { ticks: 7 }, { dir: ancre });
+      process.chdir(RACINE);
+      expectGolden('meme-fichier', { ticks: 7 }, { dir: ancre });
+    } finally {
+      process.chdir(avant);
+    }
+
+    expect(existsSync(join(dossier, 'golden', 'meme-fichier.golden.json'))).toBe(true);
+  });
+
+  it('accepte une URL file:, une chaîne file: et un chemin absolu, pour le même fichier', () => {
+    poserLaVariable('1');
+    expectGolden('trois-formes', { a: 1 }, { dir: dossier });
+    retirerLaVariable();
+
+    const url = pathToFileURL(`${dossier}/`);
+    expectGolden('trois-formes', { a: 1 }, { dir: url });
+    expectGolden('trois-formes', { a: 1 }, { dir: url.href });
+    expectGolden('trois-formes', { a: 1 }, { dir: dossier });
+    expect(existsSync(join(dossier, 'trois-formes.golden.json'))).toBe(true);
   });
 });

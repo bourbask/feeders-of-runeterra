@@ -10,6 +10,7 @@ import * as testkit from './index.js';
 
 const SURFACE = [
   'GOLDEN_UPDATE_ENV',
+  'GoldenDirUnusable',
   'GoldenMismatch',
   'GoldenMissing',
   'GoldenSerialisationError',

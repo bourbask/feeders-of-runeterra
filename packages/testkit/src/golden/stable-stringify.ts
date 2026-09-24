@@ -16,6 +16,15 @@
  *
  * `-0` is normalised to `0`: the two are indistinguishable in JSON, so leaving
  * `-0` in would produce a file that never matches itself after a round trip.
+ *
+ * 3. It turns a `Map` and a `Set` into `{}`, SILENTLY, because neither exposes
+ *    own enumerable keys. That is the same failure as `NaN` becoming `null`,
+ *    only worse: two campaign states differing on EVERY gauge serialise to the
+ *    same bytes, so the corpus is written on one and compared green against the
+ *    other. It is not an exotic shape either — `03-donnees.md` declares the whole
+ *    content registry in `ReadonlyMap`. So any object whose prototype is neither
+ *    `Object.prototype` nor `null`, and which has no `toJSON`, is REFUSED by
+ *    name here: convert it to a plain object or an array first, on purpose.
  */
 
 /** Thrown when a value cannot be serialised without inventing something. */
@@ -38,6 +47,54 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function hasToJson(value: object): value is { toJSON: () => unknown } {
   return 'toJSON' in value && typeof value.toJSON === 'function';
+}
+
+/** How to flatten the two shapes that would otherwise serialise as `{}` in silence. */
+const CONVERSION: Readonly<Record<string, string>> = {
+  Map:
+    'a Map has no own enumerable keys, so JSON.stringify — and this file, before the check ' +
+    'that raised this — writes `{}` for it. Two states differing on every entry would then ' +
+    'produce the same bytes and the corpus would go green over a drift it never saw. ' +
+    'Convert it on purpose: `Object.fromEntries([...map].sort(([a], [b]) => (a < b ? -1 : 1)))`, ' +
+    'or `[...map.entries()].sort()` to keep non-string keys.',
+  Set:
+    'a Set has no own enumerable keys, so it would serialise as `{}` and hide every member. ' +
+    'Convert it on purpose: `[...set].sort()`.',
+};
+
+/**
+ * Refuse anything carrying state the key walk below cannot see.
+ *
+ * `Object.keys` only reads own enumerable string keys. A `Map`, a `Set`, a
+ * `WeakMap`, a class instance holding private fields — all of them come out as
+ * `{}`, which is the silent-drift mode this whole file exists to close. A plain
+ * object, a null-prototype object and a plain array are the only shapes whose
+ * entire content that walk can reach.
+ *
+ * Checked AFTER `toJSON`, so a `Date` (or any type that states its own JSON
+ * form) still passes, exactly as with `JSON.stringify`.
+ */
+function refuseOpaqueObject(value: object, path: string): void {
+  const proto: unknown = Object.getPrototypeOf(value);
+
+  if (Array.isArray(value)) {
+    if (proto === Array.prototype) return;
+  } else if (proto === Object.prototype || proto === null) {
+    return;
+  }
+
+  // Not `value.constructor.name`: a prototype chain can lack a constructor
+  // entirely (`Object.create(Object.create(null))`), and reporting a shape must
+  // never itself crash.
+  const ctor: unknown = (value as { constructor?: unknown }).constructor;
+  const name = typeof ctor === 'function' ? ctor.name : 'an object with an exotic prototype';
+  throw new GoldenSerialisationError(
+    path,
+    CONVERSION[name] ??
+      `an instance of \`${name}\` is not a plain object: only own enumerable keys are ` +
+        `serialised, so anything it keeps elsewhere would vanish from the corpus without a ` +
+        `word. Convert it to a plain object or an array, or give it a \`toJSON\`.`,
+  );
 }
 
 function serialiseNumber(value: number, path: string): string {
@@ -100,6 +157,8 @@ function serialise(value: unknown, depth: number, path: string, seen: Set<object
     // Same contract as `JSON.stringify`: a `Date` serialises through `toJSON`.
     return serialise(value.toJSON(), depth, path, seen);
   }
+
+  refuseOpaqueObject(value, path);
 
   if (seen.has(value)) {
     throw new GoldenSerialisationError(path, 'circular reference.');

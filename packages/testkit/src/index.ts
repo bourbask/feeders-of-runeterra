@@ -26,6 +26,7 @@ export type { Rng, RngDraw, RngStream, SeedName, TracingRng } from './rng/seeded
 
 export {
   GOLDEN_UPDATE_ENV,
+  GoldenDirUnusable,
   GoldenMismatch,
   GoldenMissing,
   GoldenUpdateMisused,

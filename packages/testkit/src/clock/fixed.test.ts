@@ -93,4 +93,30 @@ describe('fixedClock', () => {
 
     expect(seconde.now()).toBe('2024-01-01T00:00:00.000Z');
   });
+  // SQLite et Postgres rendent une microseconde : M0-11 et M0-17 liront ces
+  // colonnes-là. Refuser de l'ISO-8601 valide, c'était une porte plus étroite
+  // que ce que le JSDoc annonçait.
+  it('accepte une fraction jusqu’à neuf chiffres, tronquée à la milliseconde', () => {
+    expect(fixedClock('2024-01-01T00:00:00.123456Z').now()).toBe('2024-01-01T00:00:00.123Z');
+    expect(fixedClock('2024-01-01T00:00:00.999999999Z').now()).toBe('2024-01-01T00:00:00.999Z');
+    expect(fixedClock('2024-01-01T00:00:00.1Z').now()).toBe('2024-01-01T00:00:00.100Z');
+    expect(fixedClock('2024-01-01T00:00:00.12Z').now()).toBe('2024-01-01T00:00:00.120Z');
+  });
+
+  it('accepte le décalage en forme basique comme en forme étendue', () => {
+    const attendu = '2023-12-31T23:00:00.000Z';
+
+    expect(fixedClock('2024-01-01T00:00:00+01:00').now()).toBe(attendu);
+    expect(fixedClock('2024-01-01T00:00:00+0100').now()).toBe(attendu);
+    expect(fixedClock('2024-01-01T00:00:00+01').now()).toBe(attendu);
+    expect(fixedClock('2024-01-01T00:00:00.123456-05:30').now()).toBe('2024-01-01T05:30:00.123Z');
+  });
+
+  it('refuse toujours une fraction ou un décalage qui n’en sont pas', () => {
+    expect(() => fixedClock('2024-01-01T00:00:00.Z')).toThrow(RangeError);
+    expect(() => fixedClock('2024-01-01T00:00:00.1234567890Z')).toThrow(RangeError);
+    expect(() => fixedClock('2024-01-01T00:00:00+24:00')).toThrow(RangeError);
+    expect(() => fixedClock('2024-01-01T00:00:00+01:60')).toThrow(RangeError);
+    expect(() => fixedClock('2024-01-01T00:00:00+1:00')).toThrow(RangeError);
+  });
 });

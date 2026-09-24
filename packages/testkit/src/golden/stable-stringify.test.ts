@@ -92,4 +92,97 @@ describe('stableStringify', () => {
 
     expect(stableStringify(JSON.parse(texte) as unknown)).toBe(texte);
   });
+  // ── Map, Set et compagnie : la dérive que « {} » rendait invisible ──────────
+  //
+  // Object.keys() ne voit aucune clé propre sur une Map ni sur un Set : sans ce
+  // refus, deux états de table qui diffèrent sur TOUTES les jauges donnent le
+  // même octet, et le corpus passe au vert sur une dérive qu'il n'a pas vue.
+
+  interface ÉtatDeTable {
+    readonly character: string;
+    readonly gauges: ReadonlyMap<string, number>;
+    readonly covered: ReadonlySet<string>;
+  }
+
+  const étatDeTable = (
+    vivres: number,
+    souffle: number,
+    couverts: readonly string[],
+  ): ÉtatDeTable => ({
+    character: 'ashe',
+    gauges: new Map([
+      ['vivres', vivres],
+      ['souffle', souffle],
+    ]),
+    covered: new Set(couverts),
+  });
+
+  it('refuse une Map au lieu de la sérialiser en « {} »', () => {
+    expect(() => stableStringify({ gauges: new Map([['vivres', 3]]) })).toThrow(
+      GoldenSerialisationError,
+    );
+    expect(() => stableStringify({ gauges: new Map([['vivres', 3]]) })).toThrow(
+      /at \$\.gauges: a Map has no own enumerable keys/,
+    );
+  });
+
+  it('refuse un Set au lieu de le sérialiser en « {} »', () => {
+    expect(() => stableStringify({ covered: new Set(['endure-cold']) })).toThrow(
+      /at \$\.covered: a Set has no own enumerable keys/,
+    );
+  });
+
+  it('refuse une Map imbriquée, avec son chemin exact', () => {
+    expect(() => stableStringify({ events: [{ delta: new Map() }] })).toThrow(
+      /at \$\.events\[0\]\.delta: a Map/,
+    );
+  });
+
+  it('la dérive que le silence cachait : deux états distincts ne passent plus', () => {
+    // Sans le refus, ces deux valeurs sérialisaient octet pour octet en
+    // '{\n  "character": "ashe",\n  "covered": {},\n  "gauges": {}\n}\n'.
+    expect(() => stableStringify(étatDeTable(3, 2, ['endure-cold']))).toThrow(
+      GoldenSerialisationError,
+    );
+    expect(() =>
+      stableStringify(étatDeTable(0, -6, ['endure-cold', 'forage', 'undertake-journey'])),
+    ).toThrow(GoldenSerialisationError);
+  });
+
+  it('une Map convertie en objet trié repasse au vert, et les deux états diffèrent', () => {
+    const aplati = (état: ÉtatDeTable): string =>
+      stableStringify({
+        ...état,
+        gauges: Object.fromEntries(état.gauges),
+        covered: [...état.covered].sort(),
+      });
+
+    const avant = aplati(étatDeTable(3, 2, ['endure-cold']));
+    const après = aplati(étatDeTable(0, -6, ['endure-cold', 'forage', 'undertake-journey']));
+
+    expect(avant).toContain('"vivres": 3');
+    expect(après).toContain('"vivres": 0');
+    expect(avant).not.toBe(après);
+  });
+
+  it('refuse une instance de classe, dont l’état privé ne serait pas sérialisé', () => {
+    class ÉtatDeCampagne {
+      readonly #secret = 42;
+      constructor(readonly visible: string) {}
+      lire(): number {
+        return this.#secret;
+      }
+    }
+
+    expect(() => stableStringify(new ÉtatDeCampagne('ashe'))).toThrow(
+      /at \$: an instance of `ÉtatDeCampagne` is not a plain object/,
+    );
+  });
+
+  it('accepte encore un objet sans prototype et un tableau simple', () => {
+    const sansPrototype = Object.assign(Object.create(null) as Record<string, unknown>, { a: 1 });
+
+    expect(stableStringify(sansPrototype)).toBe('{\n  "a": 1\n}\n');
+    expect(stableStringify([1, 2])).toBe('[\n  1,\n  2\n]\n');
+  });
 });
