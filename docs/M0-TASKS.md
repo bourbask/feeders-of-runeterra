@@ -1,18 +1,15 @@
 # M0 — Découpage en tâches
 
-> **À quoi sert ce fichier.** Le jalon M0 construit les fondations du projet : aucune
-> fonctionnalité de jeu, mais tout l'outillage qui permettra ensuite à un agent développeur de
-> savoir **en quelques secondes s'il a cassé quelque chose**.
-> Ce document découpe ce jalon en **31 tâches** (M0-21 a été absorbée par M0-16 ; M0-31 a été
-> ajoutée par le tech lead pour mesurer un fournisseur gratuit sur le corpus complet ; **M0-32**
-> a été ajoutée par le même arbitrage pour obtenir le **signal précoce** bien avant la vague 8),
-> réparties en 9 vagues.
+> M0 construit les fondations : aucune fonctionnalité de jeu, mais tout l'outillage qui permet à
+> un agent développeur de savoir **en quelques secondes s'il a cassé quelque chose**.
+> **31 tâches**, **9 vagues**. (M0-21 est absorbée par M0-16 ; M0-31 a été ajoutée par le tech
+> lead pour mesurer un fournisseur gratuit sur le corpus complet ; **M0-32** par le même
+> arbitrage, pour obtenir le **signal précoce** bien avant la vague 8.)
 >
-> **Comment le lire.** Chaque vague est un groupe de tâches qui peuvent être menées **en même
-> temps** par des agents différents. Une vague ne démarre que lorsque la précédente est finie.
-> Chaque tâche est confiée à **un agent développeur**, puis vérifiée par **un agent testeur
-> distinct** qui n'a qu'à exécuter les commandes listées dans « Critères d'acceptation » : si
-> elles sortent toutes en code 0, la tâche est acceptée. Aucun jugement au doigt mouillé.
+> Une **vague** est un groupe de tâches menées en même temps par des agents différents ; elle ne
+> démarre que lorsque la précédente est finie. Chaque tâche va à **un agent développeur**, puis à
+> **un agent testeur distinct** qui exécute les commandes de « Critères d'acceptation » : toutes
+> en code 0, la tâche est acceptée. Aucun jugement au doigt mouillé.
 >
 > Autorité : `docs/ARCHITECTURE.md`, puis `docs/design/01-architecture.md`,
 > `docs/design/02-mj-ia.md`, `docs/design/03-donnees.md`.
@@ -30,7 +27,7 @@
    et tous les scripts de commande sont écrits une fois pour toutes en M0-01. Le
    `package.json` de chaque paquet appartient à la tâche qui crée ce paquet.
 4. **`pnpm verify` ne devient vert qu'à la toute fin** (M0-30). Pendant la construction, chaque
-   tâche n'est jugée que sur ses propres critères. C'est normal et c'est assumé.
+   tâche n'est jugée que sur ses propres critères.
 5. **Aucun agent ne modifie une spec.** Une divergence constatée entre le code et une spec
    remonte au tech lead ; elle se règle par un ADR, pas par une correction silencieuse.
 6. **Un critère d'acceptation se tranche à la commande, jamais à l'appréciation.** « Un test
@@ -66,17 +63,17 @@ session dense. Aucune tâche ne dépasse une session.
 
 ## 3. Points à trancher par le tech lead (n'arrêtent aucune tâche)
 
-Relevés pendant la lecture des specs. Chacun a une valeur par défaut retenue ici, de façon à ne
-bloquer personne ; une décision contraire se rattrape en quelques lignes.
+Relevés pendant la lecture des specs. Chacun a une valeur par défaut, pour ne bloquer personne ;
+une décision contraire se rattrape en quelques lignes.
 
 **État au 2026-09-17** : la revue de socle (`docs/M0-REVUE.md`) a corrigé les specs sur P1 à P6
-et P8 à P14. Ces lignes restent ici comme mémoire ; il n'y a plus rien à trancher dessus, sauf
-là où c'est écrit noir sur blanc.
+et P8 à P14. Ces lignes restent comme mémoire ; plus rien à trancher dessus, sauf là où c'est
+écrit noir sur blanc.
 
 **Seconde série d'arbitrages, même date** : les quatre points laissés ouverts par la seconde
-passe de revue (`M0-REVUE.md` §11.7) ont été tranchés, plus un cinquième que le lead a soulevé
-de lui-même. Ce sont **P19 à P23** ci-dessous. Ce sont des décisions, pas des propositions :
-`M0-REVUE.md` §12 en porte la trace, et **plus aucun point n'est en attente d'arbitrage**.
+passe de revue (`M0-REVUE.md` §11.7) sont tranchés, plus un cinquième soulevé par le lead —
+**P19 à P23**. Ce sont des décisions, pas des propositions : `M0-REVUE.md` §12 en porte la
+trace, et **plus aucun point n'est en attente d'arbitrage**.
 
 | # | Point | Valeur retenue pour M0 | État |
 |---|---|---|---|
@@ -85,7 +82,7 @@ de lui-même. Ce sont **P19 à P23** ci-dessous. Ce sont des décisions, pas des
 | P3 | `03-donnees.md` §1.7 citait `chronicles.facts_json`, absent du DDL §1.5 qui porte `doc_json` | `doc_json` fait foi | corrigé dans la spec |
 | P4 | `db:check` contrôle 11 interrogeait `covers_from_seq` / `covers_to_seq`, colonnes inexistantes | Contrôle 11 : `version` dense de 1 à N, `source_event_seq` croissant et ≤ `campaigns.seq` | corrigé dans la spec |
 | P5 | `.nvmrc` valait `26`, les specs disent Node 24 partout | **24** | corrigé dans le dépôt |
-| P6 | `.env.example` décrivait un conteur agnostique (`NARRATOR_PROVIDER`, OpenRouter) et `DATABASE_URL` | **RENVERSÉ par le tech lead, et confirmé explicitement depuis** (voir P20) : la lecture « il n'y a qu'un fournisseur : Anthropic » **n'est plus une décision en vigueur**, nulle part. Le conteur *est* agnostique, parce que le produit doit pouvoir tourner sur un fournisseur gratuit ou un modèle local. `.env.example` porte `NARRATOR_PROVIDER`, `NARRATOR_BASE_URL`, `NARRATOR_API_KEY`, `NARRATOR_MODEL`, `NARRATOR_MODEL_STRUCTURED` et `DATABASE_PATH`. `ANTHROPIC_API_KEY`, `AI_MODEL_*` et `AI_ENABLED` n'existent plus | **tranché** — appliqué dans le dépôt et dans les quatre specs |
+| P6 | `.env.example` décrivait un conteur agnostique (`NARRATOR_PROVIDER`, OpenRouter) et `DATABASE_URL` | **RENVERSÉ par le tech lead, confirmé depuis** (voir P20) : « il n'y a qu'un fournisseur : Anthropic » **n'est plus une décision en vigueur**, nulle part. Le conteur *est* agnostique : le produit doit pouvoir tourner sur un fournisseur gratuit ou un modèle local. `.env.example` porte `NARRATOR_PROVIDER`, `NARRATOR_BASE_URL`, `NARRATOR_API_KEY`, `NARRATOR_MODEL`, `NARRATOR_MODEL_STRUCTURED` et `DATABASE_PATH`. `ANTHROPIC_API_KEY`, `AI_MODEL_*` et `AI_ENABLED` n'existent plus | **tranché** — appliqué dans le dépôt et dans les quatre specs |
 | P7 | La spec ne disait pas si `pnpm verify` doit être vert avant la fin du jalon | Non. La porte est progressive, et M0-30 la ferme | tranché |
 | P8 | `ChampionSchema` n'avait **aucun champ `aliases`**, alors que tout le verrouillage de distribution en dépend (`02-mj-ia.md` §2.2, §8.4, M0-10, M0-21) | `aliases: z.array(FrTextSchema).min(1).max(12)`, obligatoire, ajouté au schéma unique | corrigé dans la spec |
 | P9 | `content/champions-index.json` (les ~170 champions et leurs alias) était cité par la forge (V2, V7) mais absent de l'arborescence de contenu et de toute tâche | Fichier et `ChampionIndexSchema` ajoutés à `03-donnees.md` §4.1/§4.7 ; livré par M0-16, limité en M0 aux champions cités par le contenu et le seed | corrigé dans la spec |
@@ -101,15 +98,15 @@ de lui-même. Ce sont **P19 à P23** ci-dessous. Ce sont des décisions, pas des
 | P19 | Les trois variables d'environnement au-delà des cinq nommées (`NARRATOR_TOOLS`, `NARRATOR_TIMEOUT_MS`, `NARRATOR_CONTEXT_WINDOW`) n'avaient jamais été arbitrées (`M0-REVUE.md` §11.7, point 1) | **VALIDÉES.** Elles rejoignent officiellement les cinq `NARRATOR_*` de base. Motif retenu : *le support des outils dépend du modèle et non de la passerelle, et un modèle local qui charge à froid dépasse 60 s sans être en panne*. Toutes trois restent facultatives et propres à un adaptateur ; leur valeur par défaut et l'adaptateur concerné sont écrits **au même endroit et de la même façon** dans `.env.example`, `02-mj-ia.md` §0.6 et `01-architecture.md` §9.4 | **tranché par le tech lead** — appliqué dans `.env.example`, `02-mj-ia.md` §0.3 et §0.6, `01-architecture.md` §9.4, `ARCHITECTURE.md` §4.5, et vérifié par M0-20 |
 | P20 | La réécriture de `.env.example` en fichier agnostique du fournisseur n'avait pas été confirmée (`M0-REVUE.md` §11.7, point 2) | **VALIDÉE, et le point P6 est officiellement RENVERSÉ.** « Il n'y a qu'un fournisseur : Anthropic » n'est plus une décision en vigueur : le produit doit pouvoir tourner sur un fournisseur **gratuit** ou sur un **modèle local**. Toute occurrence contraire est un reste à corriger, pas une règle | **tranché par le tech lead** — appliqué dans `.env.example`, `ARCHITECTURE.md` §4.5, `01-architecture.md` §9.4, et tracé dans `M0-REVUE.md` §12 |
 | P21 | Le départage d'un prix portant plusieurs `suggestedEffects` était une **déduction** de « le moteur tire », pas la décision elle-même (`M0-REVUE.md` §11.7, point 4) | **VALIDÉ tel que spécifié** : second tirage sur le flux RNG `price`, index journalisé dans `roll.price_paid.effectIndex`. Le moteur décide, et c'est rejouable. L'alternative « toujours le premier effet » est **abandonnée**. Aucun document ne doit laisser entendre que le modèle ou le joueur choisit | **tranché par le tech lead** — vérifié dans `ARCHITECTURE.md` §4.4, `02-mj-ia.md` §3.4 et §4.5, `03-donnees.md` §3.4 et §4.6, et M0-29 |
-| P22 | Fallait-il vérifier la présence de la cible **avant** les dés, à l'étape 2 du chemin d'une intention (`M0-REVUE.md` §11.6 et §11.7, point 3) ? | **NON. Le refus reste APRÈS le jet.** Un contrôle de faisabilité avant les dés remettrait le modèle dans le chemin de décision : inacceptable. La conséquence est assumée — un joueur voit brièvement le résultat d'un tour qui sera ensuite annulé. **Ce qui est nouveau** : ce tour annulé n'est pas effacé de l'affichage, il est **montré comme annulé, avec sa preuve consultable**. Le détail mécanique d'une scène (mouvement, dés, calcul, effets, prix, présage) n'est **pas** affiché par défaut : il est replié derrière une commande **« Pourquoi ? »** attachée à chaque scène. Cette preuve est une **projection du journal** (`TurnProofDto`), calculée à la demande sur le groupe `correlation_id`, portée par `c2s.why` → `s2c.turn_proof`, bornée à 32 effets / 120 caractères par libellé / **8 Kio** sérialisés | **tranché par le tech lead, avec l'utilisateur** — appliqué dans `ARCHITECTURE.md` §4.4, `01-architecture.md` §2.4, §2.8, §2.9, §5.2, §5.4, §5.6, `02-mj-ia.md` §4.8.3, §4.8.4, §4.8.6, §6.2, §6.5, `03-donnees.md` §0.5 et §3.7, et les tâches M0-05, M0-08, M0-19, M0-20, M0-24, M0-25, M0-29, M0-30 |
-| P23 | Valider un fournisseur gratuit en **vague 8** (M0-31), c'est trop tard : si un modèle gratuit ne tient pas le prompt contraint, toute la couche se conçoit différemment | **SCINDER.** Une tâche de **fumée** (**M0-32**) sort le signal dès que le prompt intégral et le port existent : six à huit assertions écrites à la main — **sept sont livrées**, et la borne 6–8 est vérifiée par la sonde elle-même —, un verdict lisible par un humain (*tel fournisseur, tel modèle, tant d'assertions passées sur tant*), aucune dépendance au corpus complet d'assertions, et **aucun blocage de la CI** — elle informe une décision. M0-31 garde le corpus complet en vague 8. **Réserve appliquée, et son chiffrage corrigé à la troisième passe** : le lead demandait « vague 4 au plus tard » ; le prompt intégral et le port sont livrés par M0-18 en **vague 6**, donc **la vague 7 est le plus tôt atteignable sans redécouper**. Le redécoupage chiffré par la passe d'application ne suffisait pas — il aboutissait à la vague **5**, pas 4, et oubliait `SceneBlockSchema`. Le vrai coût de la vague 4 est en **§12 A7 de `M0-REVUE.md`** et dans la fiche M0-32 : trois vagues touchées, deux fiches neuves, trois réécrites, et un couplage de compilation intra-vague que le système de vagues existe précisément pour empêcher. **Décision de découpage, elle appartient au lead** | **tranché par le tech lead** — appliqué en M0-32 (nouvelle) et M0-31 (fiche ajustée) ; **placement en vague 7, réserve ouverte** |
+| P22 | Fallait-il vérifier la présence de la cible **avant** les dés, à l'étape 2 du chemin d'une intention (`M0-REVUE.md` §11.6 et §11.7, point 3) ? | **NON. Le refus reste APRÈS le jet.** Un contrôle de faisabilité avant les dés remettrait le modèle dans le chemin de décision : inacceptable. Conséquence assumée — un joueur voit brièvement le résultat d'un tour qui sera ensuite annulé. **Nouveau** : ce tour annulé n'est pas effacé de l'affichage, il est **montré comme annulé, avec sa preuve consultable**. Le détail mécanique d'une scène (mouvement, dés, calcul, effets, prix, présage) n'est **pas** affiché par défaut : il est replié derrière une commande **« Pourquoi ? »** attachée à chaque scène. Cette preuve est une **projection du journal** (`TurnProofDto`), calculée à la demande sur le groupe `correlation_id`, portée par `c2s.why` → `s2c.turn_proof`, bornée à 32 effets / 120 caractères par libellé / **8 Kio** sérialisés | **tranché par le tech lead, avec l'utilisateur** — appliqué dans `ARCHITECTURE.md` §4.4, `01-architecture.md` §2.4, §2.8, §2.9, §5.2, §5.4, §5.6, `02-mj-ia.md` §4.8.3, §4.8.4, §4.8.6, §6.2, §6.5, `03-donnees.md` §0.5 et §3.7, et les tâches M0-05, M0-08, M0-19, M0-20, M0-24, M0-25, M0-29, M0-30 |
+| P23 | Valider un fournisseur gratuit en **vague 8** (M0-31), c'est trop tard : si un modèle gratuit ne tient pas le prompt contraint, toute la couche se conçoit différemment | **SCINDER.** Une tâche de **fumée** (**M0-32**) sort le signal dès que le prompt intégral et le port existent : six à huit assertions écrites à la main — **sept sont livrées**, et la borne 6–8 est vérifiée par la sonde elle-même —, un verdict lisible par un humain (*tel fournisseur, tel modèle, tant d'assertions passées sur tant*), aucune dépendance au corpus complet d'assertions, et **aucun blocage de la CI** — elle informe une décision. M0-31 garde le corpus complet en vague 8. **Réserve appliquée, chiffrage corrigé à la troisième passe** : le lead demandait « vague 4 au plus tard » ; le prompt intégral et le port viennent de M0-18, en **vague 6**, donc **la vague 7 est le plus tôt atteignable sans redécouper**. Le redécoupage chiffré par la passe d'application aboutissait à la vague **5**, pas 4, et oubliait `SceneBlockSchema`. Coût réel de la vague 4 : **§12 A7 de `M0-REVUE.md`** et fiche M0-32 — trois vagues touchées, deux fiches neuves, trois réécrites, un couplage de compilation intra-vague que le système de vagues existe pour empêcher. **Décision de découpage, elle appartient au lead** | **tranché par le tech lead** — appliqué en M0-32 (nouvelle) et M0-31 (fiche ajustée) ; **placement en vague 7, réserve ouverte** |
 
 ---
 
 # Les fiches de tâches
 
-Chaque fiche suit le même format : ce à quoi elle sert (en français courant), ce qu'elle livre,
-comment on vérifie qu'elle est finie, et quels fichiers elle a le droit de toucher.
+Format commun : ce à quoi elle sert, ce qu'elle livre, comment on vérifie qu'elle est finie,
+quels fichiers elle a le droit de toucher.
 
 ---
 
@@ -118,10 +115,10 @@ comment on vérifie qu'elle est finie, et quels fichiers elle a le droit de touc
 ### M0-01 · Socle du monorepo et outillage
 **Taille** : grosse · **Dépend de** : rien · **Parallélisable** : non (vague seule)
 
-**À quoi ça sert.** C'est la fondation que toutes les autres tâches importent : les espaces de
-travail pnpm, la configuration TypeScript stricte partagée, les règles de lint qui rendent les
-invariants mécaniques, l'orchestrateur de tâches, et les dix paquets vides prêts à être
-remplis. Tant que ce n'est pas fini, personne d'autre ne peut commencer.
+**À quoi ça sert.** La fondation que toutes les autres tâches importent : espaces de travail
+pnpm, configuration TypeScript stricte partagée, règles de lint qui rendent les invariants
+mécaniques, orchestrateur de tâches, et les dix paquets vides prêts à être remplis. Tant que ce
+n'est pas fini, personne d'autre ne commence.
 
 **Livrables**
 - `pnpm-workspace.yaml` (`packages/*`, `tooling/*`), `package.json` racine avec **tous** les
@@ -184,8 +181,8 @@ remplis. Tant que ce n'est pas fini, personne d'autre ne peut commencer.
 **À quoi ça sert.** `@for/engine` est le cœur des règles et la seule couche autorisée à
 trancher une issue. Cette tâche pose son vocabulaire de types — dont le catalogue fermé des
 **71 types d'événements** — et son générateur de hasard reproductible. Tout le reste du projet
-en dérive : les contrats Zod en sont le miroir, la base en stocke les payloads, le simulateur
-les rejoue.
+en dérive : les contrats Zod en sont le miroir, la base stocke les payloads, le simulateur les
+rejoue.
 
 **Livrables**
 - `src/result.ts` (`Result<T,E>`, `ok`, `err`, `isOk`), `src/ids.ts` (identifiants marqués,
@@ -226,10 +223,10 @@ les rejoue.
 ### M0-03 · Chaîne d'intégration continue
 **Taille** : moyenne · **Dépend de** : M0-01 · **Parallélisable** : oui
 
-**À quoi ça sert.** C'est le filet qui attrape les régressions avant la fusion. Les douze
-travaux de `01-architecture.md` §8 sont écrits maintenant, dans l'ordre et avec les bonnes
-commandes ; ceux dont la cible n'existe pas encore sont explicitement marqués comme tolérants
-à l'échec, et M0-30 retire ces marqueurs.
+**À quoi ça sert.** Le filet qui attrape les régressions avant la fusion. Les douze travaux de
+`01-architecture.md` §8 sont écrits maintenant, dans l'ordre et avec les bonnes commandes ; ceux
+dont la cible n'existe pas encore sont marqués tolérants à l'échec, et M0-30 retire ces
+marqueurs.
 
 **Livrables**
 - `.github/workflows/ci.yml` : les 12 travaux du tableau §8, dans l'ordre de dépendance
@@ -238,9 +235,8 @@ commandes ; ceux dont la cible n'existe pas encore sont explicitement marqués c
   `# TODO M0-30: retirer`.
 - `.github/workflows/ai-eval.yml` : nocturne + manuel + étiquette `run-ai-eval`, non bloquant.
   Il lance `pnpm eval:live` puis `pnpm eval:judge` — qui sortent en 1 avec « niveau N1/N2 :
-  jalon M1 » tant que M0-27 n'a livré que N0. Le déclencheur `schedule` est donc **commenté**
-  en M0 et activé en M1 : un workflow nocturne rouge toutes les nuits est un workflow que plus
-  personne ne regarde.
+  jalon M1 » tant que M0-27 n'a livré que N0. Le déclencheur `schedule` est donc **commenté** en
+  M0, activé en M1 : un workflow nocturne rouge toutes les nuits, plus personne ne le regarde.
 - `.github/CODEOWNERS`, `.github/pull_request_template.md` (case « un fichier doré modifié est
   justifié dans le message de commit »), `.github/actionlint.yaml`.
 - `docs/runbook/ci.md` : protection de branche à appliquer sur `main`, budget de 8 minutes,
@@ -267,10 +263,10 @@ commandes ; ceux dont la cible n'existe pas encore sont explicitement marqués c
 ### M0-04 · Image Docker, composition, déploiement, sauvegardes
 **Taille** : moyenne · **Dépend de** : M0-01 · **Parallélisable** : oui
 
-**À quoi ça sert.** Mettre en place dès maintenant l'emballage et la mise en ligne : une image
-unique qui sert l'API et le site, Caddy en façade, un déploiement par SSH déclenché après une
-CI verte, et surtout des sauvegardes vérifiées. Faire ça tôt évite la découverte tardive que le
-module natif SQLite ne compile pas dans l'image.
+**À quoi ça sert.** L'emballage et la mise en ligne, dès maintenant : une image unique qui sert
+l'API et le site, Caddy en façade, un déploiement par SSH déclenché après une CI verte, et
+surtout des sauvegardes vérifiées. Tôt, pour ne pas découvrir tard que le module natif SQLite ne
+compile pas dans l'image.
 
 **Livrables**
 - `infra/Dockerfile` multi-étapes (`base`/`deps`/`build`/`runtime`), utilisateur non root,
@@ -280,8 +276,8 @@ module natif SQLite ne compile pas dans l'image.
   `infra/docker-compose.dev.yml`, `infra/Caddyfile` (TLS, HSTS, `@ws` sans tampon).
 - `infra/scripts/{deploy,backup,restore}.sh`. **Périmètre M0 de `backup.sh`** : `VACUUM INTO`,
   `integrity_check`, `foreign_key_check`, compression `zstd`, rétention locale. Le chiffrement
-  `age` et la copie hors site `restic` sont **écrits dans le runbook et laissés commentés** :
-  il n'y a aucun joueur réel à protéger en M0, et une clé `age` à gérer maintenant est un coût
+  `age` et la copie hors site `restic` sont **écrits dans le runbook, laissés commentés** :
+  aucun joueur réel à protéger en M0, et une clé `age` à gérer maintenant est un coût
   d'exploitation sans contrepartie. Ils s'activent au premier joueur, comme Litestream.
 - `.dockerignore`, `.github/workflows/deploy.yml` (sur `workflow_run` de la CI, sauvegarde
   préalable, `docker compose up -d --wait`, vérification `/readyz`, rollback).
@@ -290,7 +286,7 @@ module natif SQLite ne compile pas dans l'image.
 
 > **Ordre.** En vague 2, `packages/server` n'a pas de `dist/main.js` et `packages/client` ne
 > produit pas de `dist/` : l'étape `runtime` du `Dockerfile`, qui copie ces deux répertoires,
-> **ne peut pas** réussir. Deux conséquences, à respecter à la lettre :
+> **ne peut pas** réussir. Deux conséquences :
 > 1. cette tâche livre un `index.html` et un `vite.config.ts` minimaux **seulement si** le
 >    squelette de M0-01 n'en a pas — sinon elle ne touche pas `packages/client` ;
 > 2. le critère de construction d'image ci-dessous s'arrête à l'étape `build`
@@ -322,21 +318,21 @@ module natif SQLite ne compile pas dans l'image.
 ### M0-05 · Contrats : état, événements, intentions, erreurs
 **Taille** : grosse · **Dépend de** : M0-02 · **Parallélisable** : oui
 
-**À quoi ça sert.** `@for/contracts` est le miroir Zod des types du moteur : c'est lui qui
-valide tout ce qui entre et sort du système. Cette tâche livre le noyau — l'état de campagne,
-les 71 événements, les intentions, la projection vue par un joueur, les erreurs — et surtout le
-test qui **casse la compilation** quand le moteur évolue sans son schéma.
+**À quoi ça sert.** `@for/contracts` est le miroir Zod des types du moteur : il valide tout ce
+qui entre et sort du système. Cette tâche livre le noyau — état de campagne, 71 événements,
+intentions, projection vue par un joueur, erreurs — et le test qui **casse la compilation**
+quand le moteur évolue sans son schéma.
 
 **Livrables**
 - `src/{primitives,version,errors,upcast,index}.ts`, `src/core/**` (dont `core/scene-state.ts`,
   miroir Zod de `SceneState` avec ses bornes : 8 présents, 8 partis, `name` ≤ 40, `state` ≤ 60),
   `src/events/**` (les 71 variantes), `src/intents/**`, `src/dto/table-state.ts`.
 - `src/dto/turn-proof.ts` : `zTurnProof` / `TurnProofDto` — la **preuve d'un tour** dépliée par
-  la commande « Pourquoi ? » (P22), écrite à la lettre de `01-architecture.md` §5.4. C'est une
-  **projection du journal**, pas un miroir du moteur : `.strict()`, `status`, `revertedBy`,
+  la commande « Pourquoi ? » (P22), à la lettre de `01-architecture.md` §5.4. **Projection du
+  journal**, pas miroir du moteur : `.strict()`, `status`, `revertedBy`,
   `move`, `roll`, `revision`, `effects` (**max 32**), `price`, `presage`, `narration`, et
-  **un `eventSeq` sur chaque entrée**. Elle vit ici parce que M0-05 est le propriétaire unique
-  de `src/dto/**` ; le message qui la transporte appartient à M0-08.
+  **un `eventSeq` sur chaque entrée**. Elle vit ici : M0-05 est le propriétaire unique de
+  `src/dto/**` ; le message qui la transporte appartient à M0-08.
 - Les index de sous-dossier `src/{ws,http,content,ai}/index.ts` créés **vides mais exportés**
   par le barrel, pour que les tâches de la vague 4 les remplissent sans toucher `src/index.ts`.
 - `tests/engine-parity.test.ts`, `tests/exhaustive-union.test.ts`, `tests/event-catalog.test.ts`
@@ -376,9 +372,9 @@ test qui **casse la compilation** quand le moteur évolue sans son schéma.
 ### M0-06 · Boîte à outils de test : hasard scripté, horloge figée, corpus dorés
 **Taille** : moyenne · **Dépend de** : M0-02 · **Parallélisable** : oui
 
-**À quoi ça sert.** Un test ne doit jamais dépendre du hasard ni de l'heure. Cette tâche livre
-les substituts déterministes et le comparateur de corpus dorés, c'est-à-dire l'outil qui rend
-une modification de règle **visible en diff** au lieu de silencieuse.
+**À quoi ça sert.** Un test ne dépend jamais du hasard ni de l'heure. Cette tâche livre les
+substituts déterministes et le comparateur de corpus dorés, l'outil qui rend une modification de
+règle **visible en diff** au lieu de silencieuse.
 
 **Livrables**
 - `src/rng/scripted.ts` (`scriptedRng([...])`, erreur explicite `ScriptedRngExhausted`),
@@ -411,10 +407,10 @@ une modification de règle **visible en diff** au lieu de silencieuse.
 ### M0-07 · Moteur : dés, jauges, souffle, progression
 **Taille** : grosse · **Dépend de** : M0-02, M0-06 · **Parallélisable** : oui
 
-**À quoi ça sert.** C'est le calcul des règles prototypées : le jet de défi (1d6 + attribut
-contre 2d10), le souffle et sa brûlure, les jauges 0-5, les crans de progression par rang. Le
-corpus doré associé est l'oracle de référence du projet : si quelqu'un modifie une constante de
-règle, la diff doit rester lisible.
+**À quoi ça sert.** Le calcul des règles prototypées : le jet de défi (1d6 + attribut contre
+2d10), le souffle et sa brûlure, les jauges 0-5, les crans de progression par rang. Le corpus
+doré associé est l'oracle de référence du projet : si quelqu'un modifie une constante de règle,
+la diff doit rester lisible.
 
 **Livrables**
 - `src/dice/{challenge,progress,oracle,price,presage}.ts` aux signatures exactes de
@@ -456,14 +452,14 @@ règle, la diff doit rester lisible.
 ### M0-08 · Contrats : protocole WebSocket et surface HTTP
 **Taille** : moyenne · **Dépend de** : M0-05 · **Parallélisable** : oui
 
-**À quoi ça sert.** C'est ici qu'on rend l'invariant 3 mécanique : **aucun message venant du
-client ne transporte un résultat**. Le test associé refuse à la compilation tout message
-`c2s.*` qui porterait une jauge, un dé ou un état.
+**À quoi ça sert.** Ici, l'invariant 3 devient mécanique : **aucun message venant du client ne
+transporte un résultat**. Le test associé refuse à la compilation tout message `c2s.*` qui
+porterait une jauge, un dé ou un état.
 
 **Livrables**
 - `src/ws/{envelope,c2s,s2c,codes}.ts` : enveloppe `{ v, t, id, ts, seq?, p }`, les **8** messages
   client et les **15** messages serveur de `01-architecture.md` §5, les codes de fermeture 4001-4011.
-  Les deux derniers arrivés sont ceux de la preuve « Pourquoi ? » (P22) : `c2s.why
+  Les deux derniers viennent de la preuve « Pourquoi ? » (P22) : `c2s.why
   { correlationId }`, message de **lecture** qui ne transporte aucun résultat, et
   `s2c.turn_proof { correlationId, proof: TurnProofDto, truncated: boolean }`, qui reprend le
   `zTurnProof` de M0-05 sans le redéclarer.
@@ -499,10 +495,9 @@ client ne transporte un résultat**. Le test associé refuse à la compilation t
 ### M0-09 · Contrats : schémas du contenu de jeu
 **Taille** : moyenne · **Dépend de** : M0-05 · **Parallélisable** : oui
 
-**À quoi ça sert.** Le contenu de jeu est du JSON relu en PR ; ces schémas sont ce qui empêche
-un fichier mal écrit de démarrer le serveur. Deux vérifications comptent plus que les autres :
-la répartition d'attributs 3/2/2/1/1 et la **couverture complète d'un dé** par une table
-d'oracle.
+**À quoi ça sert.** Le contenu de jeu est du JSON relu en PR ; ces schémas empêchent un fichier
+mal écrit de démarrer le serveur. Deux vérifications comptent plus que les autres : la
+répartition d'attributs 3/2/2/1/1 et la **couverture complète d'un dé** par une table d'oracle.
 
 **Livrables**
 - `src/content/{common,effect,move,champion,champion-index,oracle,price-table,presage-table,region,asset,condition,truth,manifest,settings}.ts`,
@@ -538,8 +533,7 @@ d'oracle.
 
 **À quoi ça sert.** Règle transverse : **aucun test n'écrit un état de table à la main**. Sans
 constructeurs partagés, un champ ajouté au moteur oblige à toucher cinquante fichiers de test.
-Cette tâche livre aussi la campagne longue (≈ 2 000 événements) qui sert de preuve à
-l'invariant 2.
+Cette tâche livre aussi la campagne longue (≈ 2 000 événements), preuve de l'invariant 2.
 
 **Livrables**
 - `src/fixtures/{characters,table,events,campaigns}.ts` : `aCharacter()`, `aTableState()`,
@@ -566,9 +560,9 @@ l'invariant 2.
 ### M0-11 · Base : schéma Drizzle, migrations, ouverture SQLite
 **Taille** : grosse · **Dépend de** : M0-05 · **Parallélisable** : oui
 
-**À quoi ça sert.** C'est le DDL complet de `03-donnees.md` §1, y compris les trois triggers qui
-rendent le journal **réellement** append-only. Ces triggers ne sont pas de la discipline : ce
-sont des contraintes, et un test doré vérifie qu'une migration ne les a pas perdus.
+**À quoi ça sert.** Le DDL complet de `03-donnees.md` §1, y compris les trois triggers qui
+rendent le journal **réellement** append-only. Ces triggers sont des contraintes, pas de la
+discipline, et un test doré vérifie qu'une migration ne les a pas perdus.
 
 **Livrables**
 - `drizzle.config.ts`, `src/client.ts` (les sept PRAGMA de §0.2, `foreign_keys` repassé à
@@ -607,9 +601,9 @@ sont des contraintes, et un test doré vérifie qu'une migration ne les a pas pe
 ### M0-12 · Contrats : schémas d'entrée-sortie de l'IA
 **Taille** : moyenne · **Dépend de** : M0-09 · **Parallélisable** : oui
 
-**À quoi ça sert.** Tout ce que le modèle produit entre dans le système par une seule porte :
-ces schémas. En particulier, la forge de fiches n'a **aucun privilège** — ce qu'elle remplit est
-un sous-ensemble dérivé du schéma unique de champion.
+**À quoi ça sert.** Tout ce que le modèle produit entre par une seule porte : ces schémas. La
+forge de fiches n'a **aucun privilège** — ce qu'elle remplit est un sous-ensemble dérivé du
+schéma unique de champion.
 
 **Livrables**
 - `src/ai/narrator-port.ts` : **le port du conteur** (`02-mj-ia.md` §0.1) — `NarratorTextBlock`,
@@ -666,9 +660,9 @@ un sous-ensemble dérivé du schéma unique de champion.
 ### M0-13 · Moteur : mouvements, décision, réducteur, repli narratif
 **Taille** : grosse · **Dépend de** : M0-07, M0-10 · **Parallélisable** : oui
 
-**À quoi ça sert.** C'est le cœur de l'invariant 1 et de l'invariant 4 : `decide()` tire les dés
-et tranche, `reduce()` ne tire jamais rien et rejoue le journal à l'identique. La règle d'or est
-vérifiée par le type : ajouter un événement sans le traiter dans le réducteur **ne compile pas**.
+**À quoi ça sert.** Le cœur des invariants 1 et 4 : `decide()` tire les dés et tranche,
+`reduce()` ne tire jamais rien et rejoue le journal à l'identique. La règle d'or est vérifiée par
+le type : ajouter un événement sans le traiter dans le réducteur **ne compile pas**.
 
 **Livrables**
 - `src/moves/` : les 11 mouvements + `MOVE_REGISTRY`.
@@ -720,9 +714,9 @@ démarrage plutôt que de laisser un `undefined` remonter jusque dans le prompt 
 - `src/{load,registry,validate,manifest,index,ui}.ts`, `src/generated/index.ts` (généré),
   `data/labels/{attributes,gauges,outcomes,ui}.json`.
 - `scripts/generate-content-index.ts` et la **cible** de `pnpm content:index` /
-  `pnpm content:check`. Les deux scripts existent déjà dans le `package.json` racine depuis
-  M0-01, qui en est le propriétaire unique : **cette tâche ne modifie pas le `package.json`
-  racine**. Si un script manque, elle s'arrête et le remonte (règle 3).
+  `pnpm content:check`. Les deux existent déjà dans le `package.json` racine depuis M0-01, son
+  propriétaire unique : **cette tâche ne modifie pas le `package.json` racine**. Si un script
+  manque, elle s'arrête et le remonte (règle 3).
 - `content-fixtures/` : un bundle **minimal valide** (2 champions, 3 mouvements, 1 table de
   prix, 2 oracles) pour les tests rapides, et une copie volontairement cassée pour tester le
   rapport d'erreurs.
@@ -749,10 +743,9 @@ démarrage plutôt que de laisser un `undefined` remonter jusque dans le prompt 
 ### M0-15 · Base : dépôts, journal, allocation de séquence
 **Taille** : moyenne · **Dépend de** : M0-11 · **Parallélisable** : oui
 
-**À quoi ça sert.** C'est le seul chemin d'écriture de l'état de partie. L'allocation de `seq`
-en un seul `UPDATE ... RETURNING` est ce qui sérialise proprement les écritures, et
-l'idempotence par identifiant d'intention est la seule protection sérieuse contre le
-double-jet sur réseau instable.
+**À quoi ça sert.** Le seul chemin d'écriture de l'état de partie. L'allocation de `seq` en un
+seul `UPDATE ... RETURNING` sérialise les écritures ; l'idempotence par identifiant d'intention
+est la seule protection sérieuse contre le double-jet sur réseau instable.
 
 **Livrables**
 - `src/repositories/{events,campaigns,characters,players,chronicles,aiCalls}.ts` :
@@ -781,18 +774,17 @@ double-jet sur réseau instable.
 ### M0-16 · Contenu de jeu versionné (règles, monde et fiches de champion)
 **Taille** : grosse · **Dépend de** : M0-13, M0-14 · **Parallélisable** : oui
 
-**À quoi ça sert.** C'est la matière du jeu : les onze mouvements, les oracles, la table
-« payer le prix », les présages, les conditions, les vérités du Freljord, les régions, les
-atouts, les gabarits de narration de repli, l'annuaire des champions et les trois fiches
-jouables du seed. Tout est en français, tout est relu en PR, rien n'est en base.
+**À quoi ça sert.** La matière du jeu : les onze mouvements, les oracles, la table « payer le
+prix », les présages, les conditions, les vérités du Freljord, les régions, les atouts, les
+gabarits de narration de repli, l'annuaire des champions et les trois fiches jouables du seed.
+Tout en français, tout relu en PR, rien en base.
 
-> **Pourquoi les fiches de champion sont ici et non dans une tâche à part.** `pnpm content:check`
-> valide le bundle **entier** : passe 4 compare `expectedCounts` du manifeste à ce qui a été
-> chargé, et exige que chaque fiche ait son entrée d'annuaire. Tant qu'il n'y a aucun champion,
-> le manifeste ne peut pas déclarer un `expectedCounts.champions` positif et la commande ne peut
-> pas sortir en 0. Livrer le contenu sans les fiches, puis les fiches dans une vague suivante,
-> revient à écrire une tâche dont le critère principal est faux par construction. M0-21 est donc
-> absorbée ici.
+> **Pourquoi les fiches de champion sont ici.** `pnpm content:check` valide le bundle **entier** :
+> passe 4 compare `expectedCounts` du manifeste à ce qui a été chargé, et exige que chaque fiche
+> ait son entrée d'annuaire. Sans champion, le manifeste ne peut pas déclarer un
+> `expectedCounts.champions` positif et la commande ne peut pas sortir en 0. Livrer le contenu
+> sans les fiches, puis les fiches dans une vague suivante, c'est écrire une tâche dont le
+> critère principal est faux par construction. M0-21 est donc absorbée ici.
 
 **Livrables**
 - `content/moves/*.json` (les 11), `content/oracles/*.json` (les 9, dont `yes-no`),
@@ -801,12 +793,11 @@ jouables du seed. Tout est en français, tout est relu en PR, rien n'est en base
   `content/assets/*.json` (≥ 6), `content/fallbacks/narration.json`, `content/manifest.json`.
 - `content/champions-index.json` : l'annuaire (`id`, `displayName`, région canonique,
   **`aliases`**, `playable`). **Périmètre M0** : les champions cités par le contenu et le seed,
-  plus ceux du Freljord — pas les 170. Le fichier existe, son schéma est validé, et le compléter
+  plus ceux du Freljord — pas les 170. Le fichier existe, son schéma est validé ; le compléter
   est un chantier de contenu de M1 (`02-mj-ia.md` §11.2 point 5).
 - `content/champions/{braum,ashe,sejuani}.json` : trois fiches **écrites à la main**, chacune
-  avec ses alias complets, sa voix, ses atouts de départ, son serment. Ce sont les fiches de
-  référence auxquelles la forge IA sera comparée : elles passent exactement le même schéma,
-  sans privilège.
+  avec ses alias complets, sa voix, ses atouts de départ, son serment. Fiches de référence
+  auxquelles la forge IA sera comparée : même schéma, sans privilège.
 - `packages/content/tests/game-content.test.ts` : le fichier de test que les critères ci-dessous
   exigent. *(Sans lui, « un test vérifie que… » n'est pas un critère d'acceptation.)*
 
@@ -842,10 +833,9 @@ jouables du seed. Tout est en français, tout est relu en PR, rien n'est en base
 ### M0-17 · Base : reconstruction et les douze oracles d'intégrité
 **Taille** : moyenne · **Dépend de** : M0-13, M0-15 · **Parallélisable** : oui
 
-**À quoi ça sert.** C'est la preuve de l'invariant 4 : les projections sont jetables. Le
-contrôle 9 (vider, rejouer, comparer octet à octet) est le seul dispositif qui attrape une
-projection mutée hors du réducteur — un bug silencieux qui, sinon, se découvre trois mois plus
-tard.
+**À quoi ça sert.** La preuve de l'invariant 4 : les projections sont jetables. Le contrôle 9
+(vider, rejouer, comparer octet à octet) est le seul dispositif qui attrape une projection mutée
+hors du réducteur — sinon, un bug silencieux découvert trois mois plus tard.
 
 **Livrables**
 - `src/rebuild.ts` (tronque les projections, rejoue le journal, une transaction par campagne),
@@ -872,12 +862,12 @@ tard.
 ### M0-18 · IA : le port du conteur, ses adaptateurs, les prompts et la surface d'outils gelée
 **Taille** : grosse · **Dépend de** : M0-12, M0-14 · **Parallélisable** : oui
 
-**À quoi ça sert.** Deux choses, et elles tiennent ensemble. D'abord le garde-fou de
-l'invariant 1 côté modèle : douze outils, en lecture ou en proposition, dans un ordre figé. Un
-outil qui trancherait une issue ne doit pas pouvoir exister, et un changement d'ordre
-invaliderait le cache de prompt de toutes les campagnes — donc il doit être visible en revue.
-Ensuite l'**indépendance de fournisseur** : le serveur parle à un port, pas à une API, et c'est
-ce qui rend le projet jouable avec un fournisseur gratuit ou un modèle local (P18).
+**À quoi ça sert.** Deux choses qui tiennent ensemble. Le garde-fou de l'invariant 1 côté
+modèle : douze outils, en lecture ou en proposition, dans un ordre figé. Un outil qui
+trancherait une issue ne doit pas pouvoir exister, et un changement d'ordre invaliderait le
+cache de prompt de toutes les campagnes — donc il doit être visible en revue. Et
+l'**indépendance de fournisseur** : le serveur parle à un port, pas à une API, ce qui rend le
+projet jouable avec un fournisseur gratuit ou un modèle local (P18).
 
 **Livrables**
 - `src/narrator/port.ts` (ré-export des types de `@for/contracts` + `NarratorError`) et
@@ -892,8 +882,8 @@ ce qui rend le projet jouable avec un fournisseur gratuit ou un modèle local (P
   vaut `"conteur/2.0.0"` : le texte porte l'ancrage de registre, la liste noire, les
   obligations, **la paire d'exemples bon/mauvais**, les faits de scène, le droit de refus et la
   spécification du bloc `<scene_apres>`. Aucun de ces morceaux n'est facultatif ; ils viennent
-  d'une session réellement jouée (P15 à P17). Le prompt du conteur porte
-  les règles 6 (prix imposé, P10) et 7 (pas de saut de temps, P11).
+  d'une session réellement jouée (P15 à P17). Le prompt porte aussi les règles 6 (prix imposé,
+  P10) et 7 (pas de saut de temps, P11).
 - `src/tools/definitions.ts` (les 12 outils, ordre exact, `Object.freeze`, `TOOLS_VERSION`) et
   `src/tools/handlers.ts` (exécution des lectures, validation des propositions).
 - `tests/tool-surface.test.ts`, `tests/prompt-size.test.ts`, `tests/tools.snapshot.json`,
@@ -902,8 +892,8 @@ ce qui rend le projet jouable avec un fournisseur gratuit ou un modèle local (P
 - `tests/spec-neutrality.test.ts` : le test de documentation de `02-mj-ia.md` §0.7. Il lit
   `docs/design/02-mj-ia.md` et applique les **deux** règles N1 (faits d'API) et N2 (noms de
   fournisseur) avec leurs exemptions nominatives. Sans lui, la neutralité de la spec n'est
-  gardée par rien et se perd en trois mois de retouches — la spec l'exige déjà, aucune tâche
-  ne le livrait.
+  gardée par rien et se perd en trois mois de retouches — la spec l'exige déjà, aucune tâche ne
+  le livrait.
 
 **Critères d'acceptation**
 - `pnpm --filter @for/ai test` sort en 0 **sans aucune variable `NARRATOR_*`** dans
@@ -963,8 +953,8 @@ ce qui rend le projet jouable avec un fournisseur gratuit ou un modèle local (P
 
 **À quoi ça sert.** L'écran minimal exigé par la définition de fini : une page table **vide**
 qui se connecte, affiche l'accueil, l'instantané et la présence. Le point important n'est pas
-l'ergonomie, c'est que le client ne détienne **aucune** autorité : il applique les événements
-reçus pour l'affichage, et se fait écraser par chaque instantané.
+l'ergonomie : le client ne détient **aucune** autorité, il applique les événements reçus pour
+l'affichage et se fait écraser par chaque instantané.
 
 **Livrables**
 - `index.html`, `vite.config.ts`, `src/{main.tsx,App.tsx,env.ts}`,
@@ -973,7 +963,7 @@ reçus pour l'affichage, et se fait écraser par chaque instantané.
   `src/routes/{Login,CampaignList,TableRoom,CharacterPicker}.tsx`,
   `src/features/table/**` (journal, présence, coquilles vides), `src/components/ui/**`,
   `src/styles/**`.
-- `src/features/table/Proof/**` : la commande **« Pourquoi ? »** (P22). Elle est attachée à
+- `src/features/table/Proof/**` : la commande **« Pourquoi ? »** (P22), attachée à
   **chaque scène** du journal, **repliée par défaut** — aucun dé, aucun calcul, aucun effet,
   aucun prix, aucun présage n'est affiché tant que personne ne l'ouvre : la fiction reste
   propre. Ouvrir envoie `c2s.why { correlationId }` (le `correlationId` vient de l'enveloppe des
@@ -1017,7 +1007,7 @@ reçus pour l'affichage, et se fait écraser par chaque instantané.
 **À quoi ça sert.** Le processus, sa configuration validée au démarrage, ses journaux avec
 rédaction des secrets, ses sondes de santé, et surtout **le point de composition** : `app.ts`
 enregistre quatre greffons (auth, HTTP, WebSocket, jeu) livrés en vague 7. C'est ce qui permet à
-trois agents de travailler en parallèle sur le serveur sans se marcher dessus.
+trois agents de travailler en parallèle sur le serveur.
 
 **Livrables**
 - `src/main.ts` (charge l'environnement, ouvre la base, migre sous verrou, écoute),
@@ -1062,8 +1052,8 @@ trois agents de travailler en parallèle sur le serveur sans se marcher dessus.
 ### M0-21 · ~~Contenu : les trois fiches de champion du seed~~ — **absorbée par M0-16**
 
 Cette tâche n'existe plus. Ses livrables (`content/champions/{braum,ashe,sejuani}.json`,
-`expectedCounts`) sont passés dans **M0-16**, qui est la seule tâche autorisée à écrire dans
-`content/**` et `content/manifest.json`.
+`expectedCounts`) sont passés dans **M0-16**, seule tâche autorisée à écrire dans `content/**` et
+`content/manifest.json`.
 
 **Raison** : M0-16 et M0-21 se partageaient `content/manifest.json` et
 `packages/content/src/generated/index.ts`, et surtout le critère d'acceptation principal de
@@ -1079,9 +1069,9 @@ désormais de **M0-16**. La vague 7 passe de cinq à quatre tâches.
 ### M0-22 · IA : contexte, budget, assertions, forge et chronique (parties pures)
 **Taille** : grosse · **Dépend de** : M0-18 · **Parallélisable** : oui
 
-**À quoi ça sert.** C'est la réponse à l'invariant 2 : le contexte est **reconstruit** à chaque
-appel, borné, et il pèse la même chose au sixième mois qu'à la deuxième semaine. Les assertions
-livrées ici servent deux fois — comme notation dans l'éval, et comme post-filtre en production.
+**À quoi ça sert.** La réponse à l'invariant 2 : le contexte est **reconstruit** à chaque appel,
+borné, et il pèse la même chose au sixième mois qu'à la deuxième semaine. Les assertions livrées
+ici servent deux fois — notation dans l'éval, post-filtre en production.
 
 **Livrables**
 - `src/context/builder.ts` (l'ordre exact des blocs de `02-mj-ia.md` §4.1, échappement du texte
@@ -1101,8 +1091,8 @@ livrées ici servent deux fois — comme notation dans l'éval, et comme post-fi
   **corpus**, livré par M0-27 dans `packages/ai-eval/src/graders/`, pas une fonction
   `(output, ctx)`. 29 − 1 = 28, et le compte se tranche à la commande :
   `node -e "process.exit(Object.keys(require('./packages/ai/dist/assertions/index.js').ASSERTIONS).length===28?0:1)"`.)*
-  `price_respected` (P10) et `no_time_skip` (P11) sont dures. Les douze ajoutées par P15 à P17
-  se répartissent ainsi : dures — `banned_style_lexicon`, `no_named_emotion`,
+  `price_respected` (P10) et `no_time_skip` (P11) sont dures. Les douze ajoutées par P15 à P17 :
+  dures — `banned_style_lexicon`, `no_named_emotion`,
   `sentence_length_cap`, `max_one_dialogue_line`, `no_atmosphere_ending`,
   `no_absent_reappearance`, `scene_block_consistent` ; souples — `adverb_budget`, `no_triads`,
   `no_anonymous_recurrent`, plus les deux assertions de cas `no_refusal` et `refusal_matches`.
@@ -1212,7 +1202,7 @@ besoin. Une fuite de la base ne doit donner **aucune** session utilisable.
 ### M0-24 · Serveur : le chemin d'une intention
 **Taille** : grosse · **Dépend de** : M0-13, M0-15, M0-20 · **Parallélisable** : oui
 
-**À quoi ça sert.** C'est **le seul** chemin d'écriture de l'état de partie, et l'endroit où les
+**À quoi ça sert.** **Le seul** chemin d'écriture de l'état de partie, et l'endroit où les
 quatre invariants se rencontrent : valider, autoriser, décider (les dés sont tirés ici),
 persister dans une transaction courte **sans le moindre appel réseau**, diffuser, puis — hors
 transaction — demander à l'IA d'habiller le fait déjà acquis.
@@ -1223,21 +1213,21 @@ transaction — demander à l'IA d'habiller le fait déjà acquis.
   refus est `move_in_progress`, jamais `not_your_turn`).
 - `src/game/revert.ts` : `revertTurn(campaignId, correlationId, reason)` — rassemble le groupe
   `correlation_id` complet, écrit `system.reverted`, supprime les instantanés
-  `>= min(targetSeqs)` et reconstruit les projections (`03-donnees.md` §3.7). C'est le seul
-  chemin d'annulation, partagé par la correction d'administration et par le droit de refus du
-  conteur (M0-29). **Il ne rend jamais un index de tirage au RNG.**
+  `>= min(targetSeqs)` et reconstruit les projections (`03-donnees.md` §3.7). Seul chemin
+  d'annulation, partagé par la correction d'administration et par le droit de refus du conteur
+  (M0-29). **Il ne rend jamais un index de tirage au RNG.**
 - `src/ai/narrator.ts` : sélection du port (`selectNarrator`), avec l'adaptateur `stub`
-  déterministe par défaut (c'est ce qui permet au simulateur de tourner sans IA). **C'est le
-  seul endroit du serveur qui lise la configuration du conteur**, et cette tâche en est le
+  déterministe par défaut (c'est ce qui permet au simulateur de tourner sans IA). **Seul endroit
+  du serveur qui lise la configuration du conteur**, et cette tâche en est le
   **propriétaire unique** : M0-29, qui écrit dans le reste de `src/ai/**`, le consomme sans le
   réécrire. Le fichier vit sous `ai/` et non `game/` pour être à côté des autres modules qui
   parlent au port (`02-mj-ia.md` §10, `01-architecture.md` §2.8).
 - `src/game/turn-proof.ts` : `buildTurnProof(events, viewerId): TurnProofDto` — la **preuve
   « Pourquoi ? »** (P22). Fonction **pure** : elle projette les événements déjà persistés du
   groupe `correlation_id`, applique la même règle de visibilité que `getSnapshot`
-  (`visibility: 'gm'` retiré), et **ne tire aucun dé** : elle n'appelle ni `decide()`, ni
-  `rollChallenge()`, ni le moteur d'aucune façon. `campaign-service.getTurnProof` n'est que la
-  lecture des événements du groupe, puis cet appel.
+  (`visibility: 'gm'` retiré), et **ne tire aucun dé** : ni `decide()`, ni `rollChallenge()`, ni
+  le moteur d'aucune façon. `campaign-service.getTurnProof` lit les événements du groupe, puis
+  appelle cette fonction.
 - `src/game/snapshots.ts` (tous les 200 événements + jalons), `src/game/chronicle.ts`
   (déclenchement, sans le travailleur).
 - `tests/game/*.test.ts`.
@@ -1286,10 +1276,10 @@ transaction — demander à l'IA d'habiller le fait déjà acquis.
 ### M0-25 · Serveur : hub WebSocket
 **Taille** : grosse · **Dépend de** : M0-08, M0-20 · **Parallélisable** : oui
 
-**À quoi ça sert.** C'est la table live : une connexion suit une campagne, reçoit les événements
-dans l'ordre strict des `seq` sans trou, sait reprendre après une coupure, et refuse poliment ce
-qui dépasse. Cette tâche consomme l'**interface** `CampaignService` livrée en M0-20 ; elle ne
-dépend pas de son implémentation.
+**À quoi ça sert.** La table live : une connexion suit une campagne, reçoit les événements dans
+l'ordre strict des `seq` sans trou, sait reprendre après une coupure, et refuse poliment ce qui
+dépasse. Cette tâche consomme l'**interface** `CampaignService` livrée en M0-20, pas son
+implémentation.
 
 **Livrables**
 - `src/ws/hub.ts` (`TableHub` : abonnements, diffusion, reprise par `seq`),
@@ -1332,12 +1322,11 @@ dépend pas de son implémentation.
 **Taille** : petite · **Dépend de** : **M0-18, et rien d'autre** · **Parallélisable** : oui
 · **À démarrer en PREMIER dans la vague 7**
 
-> **La dépendance est la décision** (P23). M0-18 apporte les deux seuls livrables dont la sonde
-> a besoin : le **prompt intégral** et le **port du narrateur** avec ses adaptateurs — plus, par
-> transitivité, `SceneBlockSchema` de M0-12. Elle **ne dépend pas** de M0-22 (le corpus
-> d'assertions et le constructeur de contexte, même vague) ni de M0-27 (le harnais N0, vague
-> suivante) : si l'une des deux apparaissait dans ses `depend_de`, la sonde retomberait en vague
-> 8 et perdrait toute sa raison d'être.
+> **La dépendance est la décision** (P23). M0-18 apporte les deux seuls livrables dont la sonde a
+> besoin : le **prompt intégral** et le **port du narrateur** avec ses adaptateurs — plus, par
+> transitivité, `SceneBlockSchema` de M0-12. Elle **ne dépend pas** de M0-22 (corpus d'assertions
+> et constructeur de contexte, même vague) ni de M0-27 (harnais N0, vague suivante) : l'une des
+> deux dans ses `depend_de`, et la sonde retombe en vague 8, sans raison d'être.
 
 **À quoi ça sert.** Sortir le **signal précoce**. Si un modèle gratuit est incapable de tenir le
 prompt contraint — registre, deuxième personne, pas de décision d'issue, bloc de faits bien
@@ -1351,12 +1340,12 @@ possible, *est-ce que ça tient debout ?*
 > **M0-18, en vague 6**, elle-même bloquée par M0-12 et M0-14 (vague 5). **La vague 7 est donc
 > le plus tôt atteignable sans redécouper**, et c'est ce qui est écrit ici.
 >
-> Le chiffrage donné par la passe d'application (« sortir `narrator-port.ts` de M0-12 vers
-> M0-05, et `narrator/**` + `conteur.system.ts` de M0-18 vers une tâche de vague 4 ») **ne
-> donne pas la vague 4**, et c'est la troisième passe qui l'a relevé : une tâche n'est jamais
-> dans la même vague que celle dont elle dépend, donc si le port et le prompt arrivent en
-> vague 4, la sonde arrive en **vague 5**. Ce chiffrage oubliait par ailleurs `SceneBlockSchema`
-> (`packages/contracts/src/ai/scene.ts`, M0-12, **vague 5**), dont l'assertion 7 a besoin.
+> Le chiffrage de la passe d'application (« sortir `narrator-port.ts` de M0-12 vers M0-05, et
+> `narrator/**` + `conteur.system.ts` de M0-18 vers une tâche de vague 4 ») **ne donne pas la
+> vague 4**, comme l'a relevé la troisième passe : une tâche n'est jamais dans la même vague que
+> celle dont elle dépend, donc port et prompt en vague 4 ⇒ sonde en **vague 5**. Ce chiffrage
+> oubliait aussi `SceneBlockSchema` (`packages/contracts/src/ai/scene.ts`, M0-12, **vague 5**),
+> dont l'assertion 7 a besoin.
 >
 > **Le vrai coût de la vague 4**, si le lead la veut :
 > 1. une tâche neuve de **vague 2** (dépendant de M0-01 seul) qui livre
@@ -1371,16 +1360,16 @@ possible, *est-ce que ça tient debout ?*
 >    adaptateurs et d'un prompt, donc de `narrator-port.contract`, `narrator-errors` et d'une
 >    partie de `prompt-size`).
 >
-> **Et un risque à porter explicitement** : un `@for/ai` bâti en vague 3 compile contre un
-> `@for/contracts` que M0-05 est en train de remplir **dans la même vague**, et
-> `packages/contracts/src/index.ts` aurait deux écrivains dans deux vagues successives. C'est
-> exactement le couplage intra-vague que la règle 2 du découpage existe pour empêcher. Deux
-> fiches neuves, trois réécrites, trois vagues touchées : **c'est une décision de découpage, pas
-> une mise en cohérence — elle appartient au lead**, et elle reste ouverte.
+> **Risque à porter explicitement** : un `@for/ai` bâti en vague 3 compile contre un
+> `@for/contracts` que M0-05 remplit **dans la même vague**, et
+> `packages/contracts/src/index.ts` aurait deux écrivains dans deux vagues successives — le
+> couplage intra-vague que la règle 2 du découpage existe pour empêcher. Deux fiches neuves,
+> trois réécrites, trois vagues touchées : **c'est une décision de découpage, pas une mise en
+> cohérence — elle appartient au lead**, et elle reste ouverte.
 
-**Ce qu'elle n'est pas.** Ce n'est pas M0-31. Elle ne note pas contre le corpus complet, ne
-compare pas les fournisseurs entre eux, ne recommande pas de défaut pour le dépôt, et **ne
-bloque pas la CI**. Elle informe une décision.
+**Ce qu'elle n'est pas.** Pas M0-31 : elle ne note pas contre le corpus complet, ne compare pas
+les fournisseurs entre eux, ne recommande pas de défaut pour le dépôt, et **ne bloque pas la
+CI**. Elle informe une décision.
 
 **Livrables**
 - `packages/ai-eval/smoke/cases/*.case.json` : **3 cas**, écrits ici et sans dépendance au
@@ -1409,8 +1398,8 @@ bloque pas la CI**. Elle informe une décision.
   `@for/ai`, jamais recopié**) et un dernier message `user` assemblé ici à partir du cas —, puis
   appelle le **port réel** pour le `--provider=<id>` demandé, `n = 2` échantillons par cas, et
   note. Elle **n'utilise pas** le constructeur de contexte de M0-22, livré dans la même vague :
-  c'est exactement ce qui la rend précoce, et ce qui la distingue de M0-31, qui rejoue la requête
-  de production complète.
+  c'est ce qui la rend précoce, et ce qui la distingue de M0-31, qui rejoue la requête de
+  production complète.
 - `packages/ai-eval/smoke/report.ts` : le **verdict lisible par un humain**, en moins de vingt
   lignes — *tel fournisseur, tel modèle, tant d'assertions passées sur tant*, puis la liste des
   assertions tombées avec un extrait de la sortie fautive.
@@ -1419,9 +1408,9 @@ bloque pas la CI**. Elle informe une décision.
   il tombe »).
 - Le script `pnpm eval:smoke` (déclaré dans le `package.json` racine par M0-01, comme toutes les
   commandes : `01-architecture.md` §2.2).
-- `packages/ai-eval/package.json` : cette tâche est la **première** à livrer dans `@for/ai-eval`
-  (vague 7), elle y déclare donc les dépendances `@for/ai` et `@for/contracts` et le script
-  `eval:smoke` du paquet. **M0-27 seule** le complète en vague 8 ; **M0-31 n'y touche pas** (sa
+- `packages/ai-eval/package.json` : **première** livraison dans `@for/ai-eval` (vague 7), donc
+  elle y déclare les dépendances `@for/ai` et `@for/contracts` et le script `eval:smoke` du
+  paquet. **M0-27 seule** le complète en vague 8 ; **M0-31 n'y touche pas** (sa
   liste de fichiers ne le porte pas, et son script `eval:probe` est déclaré à la racine par
   M0-01). Un seul écrivain par vague, donc aucune simultanéité.
 
@@ -1478,10 +1467,10 @@ M0-23, M0-24 et M0-25 dans `packages/server`.)*
 ### M0-26 · Base : la campagne de démonstration
 **Taille** : grosse · **Dépend de** : M0-17, M0-16 · **Parallélisable** : oui
 
-**À quoi ça sert.** Un seul seed, qui sert quatre usages : lancer l'application en local en une
-commande, servir de base aux tests de bout en bout, servir de fixture de migration, et donner au
-harnais d'éval un état de jeu réaliste. Son déterminisme absolu est ce qui empêche les corpus
-dorés de dériver sans qu'on le voie.
+**À quoi ça sert.** Un seul seed, quatre usages : lancer l'application en local en une commande,
+servir de base aux tests de bout en bout, servir de fixture de migration, donner au harnais
+d'éval un état de jeu réaliste. Son déterminisme absolu empêche les corpus dorés de dériver sans
+qu'on le voie.
 
 **Livrables**
 - `src/seed/demo.ts` : 4 joueurs, 1 campagne, 3 personnages, 2 séances, **248 événements
@@ -1495,17 +1484,17 @@ dorés de dériver sans qu'on le voie.
 
 > **Comment écrire les 248 événements.** Pas à la main. Le seed **joue** une liste d'intentions
 > scriptée à travers le vrai `decide()` avec le RNG seedé de `DEMO_SEED`, et écrit ce que le
-> moteur produit. Un journal de 248 événements saisi à la main est un second moteur de règles
-> à maintenir : il dérive au premier ajustement de payload, et il peut contenir des états que
-> le moteur ne produirait jamais — ce qui rendrait `db:check` contrôle 9 menteur. La liste
-> d'intentions, elle, se relit en PR. Les trois versions de chronique et les textes de
-> narration restent écrits à la main (aucun appel IA).
+> moteur produit. Saisi à la main, un journal de 248 événements serait un second moteur de règles
+> à maintenir : il dérive au premier ajustement de payload et peut contenir des états que le
+> moteur ne produirait jamais — ce qui rendrait `db:check` contrôle 9 menteur. La liste
+> d'intentions, elle, se relit en PR. Les trois versions de chronique et les textes de narration
+> restent écrits à la main (aucun appel IA).
 
 > **`tests/fixtures/prev-release.sqlite` n'est pas livré en M0.** Il n'existe aucune release
 > précédente : le fichier serait une copie de la base que la migration `0000_init.sql` vient de
 > créer, et le test « migrer depuis la release précédente » ne testerait rien. Il est généré par
 > le workflow de déploiement **à la première release** (`03-donnees.md` §5.4) et le test
-> correspondant est activé à ce moment-là. Livrer un garde-fou qui ne garde rien coûte du temps
+> correspondant est activé à ce moment-là. Un garde-fou qui ne garde rien coûte du temps
 > maintenant et une fausse confiance ensuite.
 
 **Critères d'acceptation**
@@ -1547,9 +1536,9 @@ sorties enregistrées.
 > **Périmètre M0 : N0 et rien d'autre.** `src/run-live.ts` (N1), `src/run-judge.ts` (N2) et le
 > dossier `forge/` **ne sont pas livrés ici** : ils consomment une clé d'API, ne tournent sur
 > aucune porte bloquante de M0, et leur valeur est nulle tant qu'aucune partie n'a été jouée.
-> Les scripts `eval:live` et `eval:judge` existent dans le `package.json` racine depuis M0-01
-> et sortent en 1 avec un message explicite « niveau N1/N2 : jalon M1 ». Ce qui protège le
-> conteur en M0, c'est N0, et c'est le seul qui soit bloquant.
+> Les scripts `eval:live` et `eval:judge` existent dans le `package.json` racine depuis M0-01 et
+> sortent en 1 avec « niveau N1/N2 : jalon M1 ». En M0, ce qui protège le conteur c'est N0, seul
+> niveau bloquant.
 
 **Critères d'acceptation**
 - `env -u NARRATOR_API_KEY pnpm eval:offline` sort en 0, en **moins de 5 secondes**, et écrit
@@ -1591,9 +1580,9 @@ vague 7 : cette tâche le complète, elle ne le réécrit pas.)*
 ### M0-28 · Simulateur de table headless
 **Taille** : grosse · **Dépend de** : M0-24, M0-25 · **Parallélisable** : oui
 
-**À quoi ça sert.** C'est la réponse directe à l'objectif du jalon : jouer des parties
-complètes, sans navigateur et sans appel IA, contre le **vrai** service applicatif, pour
-répondre en quelques secondes à « est-ce que ma modification a cassé une partie ? ».
+**À quoi ça sert.** La réponse directe à l'objectif du jalon : jouer des parties complètes, sans
+navigateur et sans appel IA, contre le **vrai** service applicatif, pour répondre en quelques
+secondes à « est-ce que ma modification a cassé une partie ? ».
 
 **Livrables**
 - `src/{cli,harness,scripted-narrator,scenario,report}.ts`,
@@ -1627,8 +1616,9 @@ répondre en quelques secondes à « est-ce que ma modification a cassé une par
 **Taille** : moyenne · **Dépend de** : M0-22, M0-24 · **Parallélisable** : oui
 
 **À quoi ça sert.** Tout ce qui, dans la couche IA, touche à la persistance, aux verrous et à la
-diffusion — donc tout ce qui n'a pas sa place dans `@for/ai`. C'est ici qu'on ferme l'invariant 1
-côté serveur : la liste des événements atteignables par une proposition du modèle est **close**.
+diffusion — donc tout ce qui n'a pas sa place dans `@for/ai`. C'est ici que se ferme
+l'invariant 1 côté serveur : la liste des événements atteignables par une proposition du modèle
+est **close**.
 
 **Livrables**
 - `src/ai/broadcast.ts` (diffusion en fragments, buffer, rattrapage en cours de génération),
@@ -1641,8 +1631,7 @@ côté serveur : la liste des événements atteignables par une proposition du m
 - `src/ai/refusal.ts` : applique un refus **prouvé** par `proveRefusal` en appelant
   `revertTurn()` de M0-24 — jamais un second mécanisme d'annulation —, tient le quota de §4.8.5
   et journalise les refus rejetés en `narration.proposal_rejected` (`02-mj-ia.md` §4.8).
-  *(Ces deux fichiers étaient testés par les critères ci-dessous sans figurer dans les
-  livrables.)*
+  *(Ces deux fichiers étaient testés par les critères ci-dessous sans figurer en livrables.)*
 - `src/ai/narrator.ts` est **livré par M0-24** et seulement **consommé** ici : le serveur ne
   connaît que `NarratorPort` et n'importe aucun SDK de fournisseur.
 - `tests/proposal-surface.test.ts` et `tests/ai/*.test.ts`.
@@ -1743,21 +1732,19 @@ qu'elle n'est pas mesurée, c'est une croyance. Cette tâche la mesure **contre 
 complet**, et elle le fait **avant** que le reste de la vague 8 ne se soit installé sur un
 fournisseur payant par défaut.
 
-> **Le signal précoce ne vient plus d'ici** (P23). Il vient de **M0-32**, la sonde de fumée de
-> la vague 7 : sept assertions écrites à la main, un verdict lisible, aucune dépendance au
-> corpus. Si un modèle gratuit ne tient même pas le prompt contraint, on le sait **une vague
-> avant** cette tâche-ci, c'est-à-dire avant que M0-26 à M0-29 ne soient écrites. M0-31 garde ce
-> que la fumée ne peut pas donner : les **16 assertions dures** de production, deux passerelles
-> et un modèle local comparés sur le même corpus, la matrice de capacités, et la recommandation
-> motivée d'un défaut et d'un repli. Les deux ne se remplacent pas — l'une dit *est-ce que ça
-> tient debout*, l'autre dit *lequel on prend*.
+> **Le signal précoce ne vient plus d'ici** (P23). Il vient de **M0-32**, la sonde de fumée de la
+> vague 7 : sept assertions écrites à la main, un verdict lisible, aucune dépendance au corpus.
+> Si un modèle gratuit ne tient même pas le prompt contraint, on le sait **une vague avant**
+> cette tâche-ci, avant que M0-26 à M0-29 ne soient écrites. M0-31 garde ce que la fumée ne peut
+> pas donner : les **16 assertions dures** de production, deux passerelles et un modèle local
+> comparés sur le même corpus, la matrice de capacités, et la recommandation motivée d'un défaut
+> et d'un repli. Les deux ne se remplacent pas — l'une dit *est-ce que ça tient debout*, l'autre
+> dit *lequel on prend*.
 
-**Pourquoi pas plus tôt.** Le corpus d'assertions est livré par M0-22, en vague 7 ; une mesure
-lancée avant lui n'aurait rien contre quoi noter — et c'est exactement pour cette raison que le
-signal précoce a été **scindé** dans M0-32, qui n'a besoin que du prompt et du port (P23). C'est
-la contrainte qui borne « tôt » pour cette tâche-ci, et c'est pour ça qu'elle ouvre la vague 8
-au lieu de la fermer : son rapport oriente le `NARRATOR_PROVIDER` par défaut du dépôt et le
-choix de repli de M0-29, qui se termine après elle.
+**Pourquoi pas plus tôt.** Le corpus d'assertions vient de M0-22, en vague 7 ; une mesure lancée
+avant lui n'aurait rien contre quoi noter. C'est ce qui borne « tôt » ici, et pourquoi cette
+tâche ouvre la vague 8 au lieu de la fermer : son rapport oriente le `NARRATOR_PROVIDER` par
+défaut du dépôt et le choix de repli de M0-29, qui se termine après elle.
 
 **Livrables**
 - `packages/ai-eval/probe/cases/*.case.json` : **6 cas au minimum**, repris de ceux de M0-27
@@ -1779,7 +1766,7 @@ choix de repli de M0-29, qui se termine après elle.
 
 **Périmètre mesuré** : au moins **deux** passerelles `openai-compatible` distinctes et **un**
 modèle `ollama` local. L'adaptateur `anthropic` sert de **référence haute**, pas de candidat :
-il est mesuré sur le même corpus pour que les taux des autres aient un point de comparaison.
+mesuré sur le même corpus, il donne aux taux des autres un point de comparaison.
 
 **Critères d'acceptation**
 - `pnpm eval:probe --provider=stub` sort en **0** sans réseau ni clé : le harnais lui-même est
@@ -1820,8 +1807,8 @@ Docker, CI verte. Et surtout valider le **critère qui justifie tout le reste** 
 constante de règle doit faire rougir, en moins de 30 secondes, un test unitaire, un corpus doré
 **et** un scénario de simulateur.
 
-C'est la seule tâche autorisée à faire de petites corrections de câblage dans n'importe quel
-paquet — à condition que chaque correction soit signalée dans le rapport final.
+Seule tâche autorisée à faire de petites corrections de câblage dans n'importe quel paquet — à
+condition que chaque correction soit signalée dans le rapport final.
 
 **Livrables**
 - `scripts/smoke-m0.sh` : depuis un dépôt propre, enchaîne installation, migrations, seed,

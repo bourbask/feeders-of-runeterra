@@ -1,15 +1,15 @@
 # 01 — Architecture du monorepo « Feeders of Runeterra »
 
-> Statut : **normatif sur la structure du monorepo**. Un agent developpeur qui cree un
-> fichier ne doit avoir aucune decision de structure a reprendre ici.
-> **Autorite superieure : `docs/ARCHITECTURE.md`.** En cas de divergence residuelle avec
-> `02-mj-ia.md` ou `03-donnees.md`, la table d'arbitrage de `docs/ARCHITECTURE.md` tranche.
+> Statut : **normatif sur la structure du monorepo**. Un agent developpeur qui cree un fichier
+> n'a aucune decision de structure a reprendre ici.
+> **Autorite superieure : `docs/ARCHITECTURE.md`**, dont la table d'arbitrage tranche toute
+> divergence avec `02-mj-ia.md` ou `03-donnees.md`.
 > Portee : jalon **M0** (fondations) et cadre des jalons suivants.
 > Toute deviation exige un ADR dans `docs/adr/` qui amende explicitement ce fichier.
 
-Langue : **interface et contenu en francais**, **code, identifiants, commentaires, messages de
-log et noms de commits en anglais**. Les chaines destinees a l'humain joueur vivent dans
-`@for/content` (libelles) ou dans les schemas d'erreur (`userMessage`), jamais en dur dans la logique.
+Langue : **interface et contenu en francais** ; **code, identifiants, commentaires, messages de
+log et noms de commits en anglais**. Les chaines destinees au joueur vivent dans `@for/content`
+(libelles) ou dans les schemas d'erreur (`userMessage`), jamais en dur dans la logique.
 
 ---
 
@@ -77,26 +77,26 @@ Outillage partage, **hors** `packages/` :
             @for/sim   @for/client*                             (couche 5)
 ```
 
-`@for/ai-eval` depend de `@for/ai` (jamais l'inverse) : les assertions de style vivent
-dans `@for/ai/src/assertions/`, parce qu'elles servent **aussi** de post-filtre
-d'execution. Un cycle `ai <-> ai-eval` est interdit par `dependency-cruiser`.
+`@for/ai-eval` depend de `@for/ai`, jamais l'inverse : les assertions de style vivent dans
+`@for/ai/src/assertions/` parce qu'elles servent **aussi** de post-filtre d'execution. Un cycle
+`ai <-> ai-eval` est interdit par `dependency-cruiser`.
 
 Regles d'arete, **verifiees en CI** par `dependency-cruiser` (`.dependency-cruiser.cjs`) :
 
-1. `@for/engine` : `dependencies` **doit etre `{}`**. Interdiction d'importer quoi que ce soit
-   hors de son propre `src/`. Interdiction des builtins Node (`node:*`, `fs`, `path`, `crypto`),
-   de `Math.random`, `Date.now`, `new Date()`, `performance.now`, `process`, `globalThis`.
-2. `@for/contracts` -> `@for/engine` : **type-only** (`import type`). Toute importation de valeur
-   depuis `engine` dans `contracts` est une erreur de lint. Rationnel : garder `contracts`
-   fidele aux types du moteur sans creer de dependance runtime inverse.
+1. `@for/engine` : `dependencies` **doit etre `{}`**. Aucun import hors de son propre `src/`.
+   Interdits : builtins Node (`node:*`, `fs`, `path`, `crypto`), `Math.random`, `Date.now`,
+   `new Date()`, `performance.now`, `process`, `globalThis`.
+2. `@for/contracts` -> `@for/engine` : **type-only** (`import type`). Importer une valeur depuis
+   `engine` est une erreur de lint. Rationnel : garder `contracts` fidele aux types du moteur
+   sans dependance runtime inverse.
 3. `@for/content` n'importe jamais `@for/db`, `@for/ai`, `@for/server`.
 4. `@for/ai` n'importe **jamais** `@for/db` : tout etat lui est injecte par le serveur.
    C'est ce qui rend l'eval IA executable hors base.
 5. `@for/client` n'importe **jamais** `@for/db`, `@for/ai`, `@for/server`, ni `@for/content`
    (entree principale). Il peut importer `@for/content/ui` (libelles) et `@for/engine`
    **pour affichage seulement** : calcul de cotes, formatage, previsualisation. Une regle ESLint
-   interdit dans `packages/client` l'import des symboles `decide`, `reduce`, `reduceAll`,
-   `rollChallenge`, `rollProgress`.
+   (§4.2) lui interdit d'importer `decide`, `reduce`, `reduceAll`, `rollChallenge`,
+   `rollProgress`.
 6. `@for/testkit` est une `devDependency` partout sauf dans `@for/sim`, ou elle est runtime.
 7. Aucun cycle. `dependency-cruiser` echoue sur `no-circular`.
 
@@ -233,14 +233,14 @@ pnpm eval:probe     # sonde un fournisseur candidat contre le corpus d'assertion
 
 **Cette liste est exhaustive et contractuelle.** Toute commande citee dans un critere
 d'acceptation de `docs/M0-TASKS.md` ou dans un job de CI doit y figurer ; `scripts/check-workspace.ts`
-echoue si le `package.json` racine perd l'une d'elles. Les commandes d'exploitation citees
-par `03-donnees.md` mais **hors M0** (`db:snapshot`, `db:gc`, `db:backfill`,
-`db:export-campaign`, `db:import-campaign`, `db:purge-player`, `hooks:install`) ne sont pas
-livrees en M0 et ne doivent apparaitre dans aucun critere d'acceptation de ce jalon.
+echoue si le `package.json` racine en perd une. Les commandes d'exploitation citees par
+`03-donnees.md` mais **hors M0** (`db:snapshot`, `db:gc`, `db:backfill`, `db:export-campaign`,
+`db:import-campaign`, `db:purge-player`, `hooks:install`) ne sont pas livrees en M0 et
+n'apparaissent dans aucun critere d'acceptation de ce jalon.
 
 `pnpm verify` = `format:check` + `lint` + `typecheck` + `depcruise` + `check:workspace` +
-`content:check` + `test` + `test:golden` + `eval:offline`. C'est exactement la porte de merge
-locale : si elle passe, les jobs 2 a 10 de la CI passent.
+`content:check` + `test` + `test:golden` + `eval:offline`. Porte de merge locale : si elle
+passe, les jobs 2 a 10 de la CI passent.
 
 ### 2.3 `packages/engine`
 
@@ -386,8 +386,8 @@ export function createInitialCampaignState(input: CreateCampaignInput): Campaign
 export const REDUCER_VERSION = 1;   // bump => les snapshots anciens ne sont plus lus
 ```
 
-Regle d'or : **`decide` tire les des, `reduce` n'en tire jamais.** `reduce` est totalement
-deterministe et sans `Rng`. C'est ce qui rend le rejeu du journal exact (invariant 4).
+Regle d'or : **`decide` tire les des, `reduce` n'en tire jamais.** `reduce` est deterministe et
+sans `Rng` : c'est ce qui rend le rejeu du journal exact (invariant 4).
 
 ### 2.4 `packages/contracts`
 
@@ -448,12 +448,12 @@ export const zCampaignState = z.object({ /* ... */ }) satisfies z.ZodType<Campai
 export type CampaignStateDto = z.output<typeof zCampaignState>;
 ```
 
-**Tous** les schemas Zod du projet vivent dans `@for/contracts` — y compris les schemas de
-contenu (§2.5) et les schemas d'E/S IA. `@for/content` et `@for/ai` les **importent**, ne les
-redeclarent jamais : c'est ce qui evite un cycle `content -> contracts -> content`.
+**Tous** les schemas Zod du projet vivent dans `@for/contracts`, y compris ceux du contenu (§2.5)
+et des E/S IA. `@for/content` et `@for/ai` les **importent** sans jamais les redeclarer : c'est ce
+qui evite un cycle `content -> contracts -> content`.
 
-`zTableState` (dans `src/dto/`) est l'exception assumee : ce n'est pas un miroir du moteur mais
-la **projection** envoyee a un joueur, amputee de tout ce qui porte `visibility: 'gm'`.
+`zTableState` (`src/dto/`) est l'exception assumee : pas un miroir du moteur, mais la
+**projection** envoyee a un joueur, amputee de tout ce qui porte `visibility: 'gm'`.
 
 `satisfies z.ZodType<T>` fait echouer `typecheck` des que le moteur evolue sans le schema.
 Il n'y a **aucune generation de code** : les types sont deduits (`z.output`) ou importes du
@@ -461,13 +461,12 @@ moteur. Interdiction d'ecrire a la main une interface qui duplique un `z.output`
 
 **Consommation.**
 - Back : `fastify-type-provider-zod`. Chaque route declare `schema: { body, querystring, params, response }`
-  avec des schemas de `@for/contracts/http`. Toute trame WS entrante passe par
-  `zC2SEnvelope.safeParse` **avant** toute autre chose.
+  avec des schemas de `@for/contracts/http`. Toute trame WS entrante passe **d'abord** par
+  `zC2SEnvelope.safeParse`.
 - Front : `@for/contracts` est importe directement (zod est dans le bundle client, assume).
-  Les reponses HTTP sont parsees par le client HTTP genere dans
-  `packages/client/src/api/http.ts`. Les trames WS entrantes sont parsees par
-  `zS2CEnvelope.safeParse` dans `packages/client/src/ws/socket.ts`. Les formulaires utilisent
-  les memes schemas (`@hookform/resolvers/zod`).
+  Reponses HTTP parsees par le client HTTP genere dans `packages/client/src/api/http.ts`,
+  trames WS entrantes par `zS2CEnvelope.safeParse` dans `packages/client/src/ws/socket.ts`,
+  formulaires par les memes schemas (`@hookform/resolvers/zod`).
 - Sortie IA : `zNarrationOutput`, `zForgedChampion` sont les **seuls** points d'entree du texte
   modele dans le systeme. Un `safeParse` en echec = retry borne puis repli deterministe.
 
@@ -546,10 +545,10 @@ uniquement, aucun `UPDATE`/`DELETE` (triggers SQLite `RAISE(ABORT)`), plus un tr
 
 ### 2.7 `packages/ai`
 
-L'arborescence qui fait autorite est celle de `02-mj-ia.md` §10 ; celle-ci en est le reflet.
+Arborescence faisant autorite : `02-mj-ia.md` §10 ; celle-ci en est le reflet.
 **Aucun fichier de ce paquet ne nomme un fournisseur en dehors de `narrator/adapters/`**, et
-aucun ne lit `process.env` : ce sont les deux frontieres qui rendent l'eval executable hors
-serveur et le conteur remplacable sans toucher a la couche de jeu.
+aucun ne lit `process.env`. Ces deux frontieres rendent l'eval executable hors serveur et le
+conteur remplacable sans toucher a la couche de jeu.
 
 ```
 packages/ai/
@@ -599,17 +598,16 @@ packages/ai/
     context-budget.test.ts  outputs.test.ts  scene-merge.test.ts  refusal-proof.test.ts
 ```
 
-**Il n'y a pas de dossier `eval/` ici.** Les corpus, les runners N0/N1/N2 et les graders vivent
-dans `@for/ai-eval`, qui depend de `@for/ai` et **jamais l'inverse** (§1) ; les assertions, elles,
-restent ici parce qu'elles servent aussi de post-filtre d'execution. Reintroduire un `eval/` dans
-ce paquet recreerait le cycle que `dependency-cruiser` interdit.
+**Il n'y a pas de dossier `eval/` ici.** Corpus, runners N0/N1/N2 et graders vivent dans
+`@for/ai-eval` (§1.2) ; les assertions restent ici parce qu'elles servent aussi de post-filtre
+d'execution. Reintroduire un `eval/` recreerait le cycle que `dependency-cruiser` interdit.
 
 `@for/ai` ne connait ni SQLite ni Fastify : il recoit un `NarrationBrief` deja hydrate.
 C'est ce qui permet aux runners de `@for/ai-eval` de tourner sur fixtures, sans base et sans cle.
 
-**Verrouillage de distribution.** `context/builder.ts` injecte toujours
-`reservedChampions` et `allowedNpcs`. L'assertion `no_reserved_champion` echoue si une sortie
-mentionne un champion reserve. Le serveur refait la verification a la reception (defense en profondeur) :
+**Verrouillage de distribution.** `context/builder.ts` injecte toujours `reservedChampions` et
+`allowedNpcs`. L'assertion `no_reserved_champion` echoue si une sortie mentionne un champion
+reserve. Le serveur refait la verification a la reception (defense en profondeur) :
 `packages/server/src/ai/lockout.ts`.
 
 ### 2.8 `packages/server`
@@ -778,8 +776,8 @@ d'identifiants de mouvement (`face-danger`, `probe-a-soul`) — est en **anglais
 
 Trois familles, jamais melangees :
 
-1. **`RuleViolation` (moteur).** Une intention invalide au regard des regles n'est pas une
-   exception : `decide()` retourne `err({ code, details })`. `code` appartient a une union
+1. **`RuleViolation` (moteur).** Une intention invalide n'est pas une exception :
+   `decide()` retourne `err({ code, details })`. `code` appartient a une union
    fermee (`'move_in_progress' | 'gauge_out_of_range' | 'unknown_move' | 'character_dead' | ...`).
    **Il n'y a pas de verrou de tour** : la table est libre, les ecritures sont serialisees par
    campagne (`write-queue.ts`). `move_in_progress` ne se declenche que si l'acteur a un jet en
@@ -796,9 +794,9 @@ export class AppError extends Error {
               options?: { cause?: unknown }) { super(code, options); }
 }
 ```
-   `AppErrorCode` est une union fermee declaree dans `@for/contracts/errors.ts`, partagee avec
-   le client qui peut donc reagir par code. La charge utile renvoyee est
-   `{ code, message, requestId }` ; `details` reste dans le log.
+   `AppErrorCode` est une union fermee declaree dans `@for/contracts/errors.ts`, partagee avec le
+   client, qui peut donc reagir par code. Charge utile renvoyee : `{ code, message, requestId }` ;
+   `details` reste dans le log.
 3. **Inattendu.** Tout le reste. Le `errorHandler` Fastify le log en `error` avec la stack,
    repond `500 / internal_error` avec un message francais generique et le `requestId`.
 
@@ -835,11 +833,11 @@ Cote client, aucune erreur n'est affichee brute : mapping `AppErrorCode -> texte
 - **Dores (golden)** : `packages/<pkg>/tests/golden/*.golden.json`, compares par le runner de
   `@for/testkit`. Regeneres par `GOLDEN_UPDATE=1 pnpm test:golden`. `.gitattributes` marque
   `*.golden.json` en `-diff` pour ne pas polluer les revues ; toute modification d'un fichier
-  dore doit etre justifiee dans le message de commit.
+  dore est justifiee dans le message de commit.
 - **Fixtures** : `packages/testkit/src/fixtures/`, jamais dupliquees dans un package consommateur.
-- Un test ne cree jamais de fichier hors `os.tmpdir()`, n'ouvre jamais le reseau, n'appelle
-  jamais un fournisseur de modele — quel qu'il soit (interdit par `packages/ai/tests/setup.ts`
-  qui stub `fetch` et fait echouer tout appel sortant ; en CI, `NARRATOR_PROVIDER=stub`).
+- Un test ne cree jamais de fichier hors `os.tmpdir()`, n'ouvre jamais le reseau, n'appelle aucun
+  fournisseur de modele (interdit par `packages/ai/tests/setup.ts`, qui stub `fetch` et fait
+  echouer tout appel sortant ; en CI, `NARRATOR_PROVIDER=stub`).
 
 ---
 
@@ -925,11 +923,10 @@ no-restricted-syntax                             error : NewExpression[callee.na
 `no-restricted-imports` (tous les `node:*`, tout paquet npm), `no-restricted-globals`
 (`process`, `window`, `document`, `fetch`, `globalThis`, `performance`, `crypto`, `setTimeout`).
 
-`eslint.config.js` racine : applique la config de base a tout, la config `react` a
-`packages/client/**`, la config `engine-purity` a `packages/engine/**`, et la regle
-« pas de mutation de jeu cote client » (`no-restricted-imports` sur les symboles `decide`,
-`reduce`, `reduceAll`, `rollChallenge`, `rollProgress` importes de `@for/engine`) a
-`packages/client/**`.
+`eslint.config.js` racine : config de base partout, `react` sur `packages/client/**`,
+`engine-purity` sur `packages/engine/**`, et sur `packages/client/**` la regle « pas de mutation
+de jeu cote client » (`no-restricted-imports` sur `decide`, `reduce`, `reduceAll`,
+`rollChallenge`, `rollProgress` importes de `@for/engine`).
 
 ### 4.3 Prettier
 
@@ -950,7 +947,7 @@ no-restricted-syntax                             error : NewExpression[callee.na
 
 Prettier ne gere **pas** la qualite (`eslint-config-prettier` desactive tout conflit).
 CI lance `prettier --check .`. Pas de hook de pre-commit obligatoire (les agents travaillent en
-lots) ; `lint-staged` + `simple-git-hooks` sont fournis mais optionnels via `pnpm hooks:install`.
+lots) ; `lint-staged` + `simple-git-hooks` sont fournis, optionnels via `pnpm hooks:install`.
 
 ---
 
@@ -989,16 +986,15 @@ serveur toutes les 25 s, fermeture si pas de `pong` en 60 s.
 | `c2s.resume` | `{ sinceSeq: number }` | Redemande les evenements manquants |
 | `c2s.pong` | `{}` | Reponse au heartbeat |
 | `c2s.resume_narration` | `{ narrationId: string, lastChunk: number }` | Redemande les fragments manquants du flux de narration en cours (apres reconnexion). Ne declenche **jamais** une seconde generation. |
-| `c2s.why` | `{ correlationId: string }` | Demande la **preuve** d'un tour : le detail mecanique replie derriere la commande « Pourquoi ? » (`02-mj-ia.md` §4.8.6). Message de **lecture** — comme `c2s.resume`, il ne transporte aucun resultat, ne mute rien et ne relance aucune generation. Reponse : `s2c.turn_proof` |
+| `c2s.why` | `{ correlationId: string }` | Demande la **preuve** d'un tour : le detail mecanique replie derriere la commande « Pourquoi ? » (`02-mj-ia.md` §4.8.6). Message de **lecture** : ne transporte aucun resultat, ne mute rien, ne relance aucune generation. Reponse : `s2c.turn_proof` |
 
-Les huit messages ci-dessus sont les seuls. Trois d'entre eux — `c2s.resume`,
-`c2s.resume_narration`, `c2s.why` — sont des **demandes de lecture** : ils ne mutent rien, et
-c'est ce qui les rend compatibles avec l'invariant 3. `c2s.intent` reste le seul message mutant.
+Ces huit messages sont les seuls. `c2s.resume`, `c2s.resume_narration` et `c2s.why` sont des
+**demandes de lecture** : elles ne mutent rien, d'ou leur compatibilite avec l'invariant 3.
+`c2s.intent` reste le seul message mutant.
 
-Il n'existe **aucun** message client contenant une jauge, un resultat de de, un `GameEvent`, un
-`CampaignState` ou un identifiant de PNJ a faire apparaitre. `zC2SMessage` est verifie par test
-(§0, invariant 3). Toute proposition de nouveau message c2s qui transporte un resultat est
-refusee en revue.
+**Aucun** message client ne porte de jauge, de resultat de de, de `GameEvent`, de `CampaignState`
+ni d'identifiant de PNJ a faire apparaitre. `zC2SMessage` est verifie par test (§0, invariant 3).
+Toute proposition de nouveau message c2s qui transporte un resultat est refusee en revue.
 
 ### 5.3 `Intent` — union discriminee (`@for/contracts/intents`)
 
@@ -1025,8 +1021,8 @@ refusee en revue.
 | `play_session.begin` / `play_session.end` | `{}` | bornes de seance (utilisees par la chronique) |
 
 Il n'existe **aucune** intention `gauge.set`, `clock.advance`, `price.apply` ni `narration.*` :
-ces effets ne sont produits que par le moteur, en consequence d'un mouvement resolu. Une
-proposition de nouvelle intention qui transporterait un resultat est refusee en revue.
+ces effets ne sont produits que par le moteur, en consequence d'un mouvement resolu. Toute
+proposition d'intention qui transporterait un resultat est refusee en revue.
 
 Le client **propose** ; le serveur peut refuser (`s2c.rejected`). Le client n'affiche jamais un
 resultat avant d'avoir recu le `s2c.event` correspondant (pas d'optimistic update sur le jeu ;
@@ -1045,20 +1041,20 @@ autorise uniquement pour `speech.say`, marque `pending`).
 | `s2c.narration_snapshot` | `{ narrationId, chunk, text, status }` — buffer complet : arrivant en cours de generation, rattrapage apres coupure |
 | `s2c.narration_done` | `{ narrationId, eventSeq, text, model, source: 'ai' \| 'engine' }` |
 | `s2c.narration_error` | `{ narrationId, code: 'rate_limited' \| 'refused' \| 'engine_fallback' \| 'aborted' \| 'action_impossible' }` — `action_impossible` est le **droit de refus du conteur** (`02-mj-ia.md` §4.8) : il est emis **apres** `s2c.narration_done`, parce que la prose est valide et doit s'afficher ; le `s2c.event` du `system.reverted` qui suit **marque** les lignes du tour comme annulees et **ne les retire pas** (`02-mj-ia.md` §4.8.6) |
-| `s2c.turn_proof` | `{ correlationId, proof: TurnProofDto, truncated: boolean }` — reponse a `c2s.why`. **Projection du journal** sur le groupe `correlation_id` du tour, construite a la demande par une fonction pure (§2.8), jamais une donnee fabriquee pour l'affichage. Projection par spectateur, comme `TableStateDto` : les lignes `visibility: 'gm'` en sont retirees. **Borne : 32 effets, 120 caracteres par libelle, 8 Kio de JSON serialise** ; au-dela, `truncated: true` et le client renvoie vers `GET /api/campaigns/:id/log` |
+| `s2c.turn_proof` | `{ correlationId, proof: TurnProofDto, truncated: boolean }` — reponse a `c2s.why`. **Projection du journal** sur le groupe `correlation_id` du tour, construite a la demande par une fonction pure (§2.8), jamais fabriquee pour l'affichage. Par spectateur, comme `TableStateDto` : les lignes `visibility: 'gm'` en sont retirees. **Borne : 32 effets, 120 caracteres par libelle, 8 Kio de JSON serialise** ; au-dela, `truncated: true` et le client renvoie vers `GET /api/campaigns/:id/log` |
 | `s2c.rejected` | `{ intentId, code: RuleViolationCode \| AppErrorCode, message }` |
 | `s2c.error` | `{ code, message, requestId, intentId? }` |
 | `s2c.presence` | `{ members: Array<{ playerId, characterId \| null, online, typing }> }` |
 | `s2c.ping` | `{}` |
 | `s2c.resync_required` | `{ reason }` — le client doit refaire `c2s.hello` |
 
-**La preuve d'un tour (`TurnProofDto`).** Elle est **derivee**, jamais stockee : le serveur lit
-les evenements du groupe `correlationId` et les projette. Le client sait quoi demander sans rien
+**La preuve d'un tour (`TurnProofDto`).** **Derivee, jamais stockee** : le serveur lit les
+evenements du groupe `correlationId` et les projette. Le client sait quoi demander sans rien
 inventer, parce que `correlationId` est un champ de l'**enveloppe d'evenement**
-(`EventEnvelopeSchema`, `03-donnees.md` §3.1) dont chaque variante de `GameEvent` herite — donc
-il voyage dans la charge utile `p.event` de `s2c.event`. Ce n'est **pas** un champ de l'enveloppe
-WebSocket de §5.1, qui reste `{ v, t, id, ts, seq?, p }` et ne bouge pas : les deux enveloppes
-sont a distinguer comme `seq` et `chunk`.
+(`EventEnvelopeSchema`, `03-donnees.md` §3.1) dont chaque variante de `GameEvent` herite : il
+voyage donc dans la charge utile `p.event` de `s2c.event`. Ce n'est **pas** un champ de
+l'enveloppe WebSocket de §5.1, qui reste `{ v, t, id, ts, seq?, p }` et ne bouge pas. Deux
+enveloppes a distinguer, comme `seq` et `chunk`.
 
 ```ts
 // packages/contracts/src/dto/turn-proof.ts — PROJECTION du journal, pas un miroir du moteur.
@@ -1083,15 +1079,14 @@ export const zTurnProof = z.object({
 export type TurnProofDto = z.output<typeof zTurnProof>;
 ```
 
-**Chaque entree porte son `eventSeq`** : c'est ce qui rend la preuve verifiable — on peut
-remonter du libelle a la ligne de journal qui l'etablit. Une entree sans `eventSeq` serait une
-donnee fabriquee pour l'affichage, et c'est precisement ce qu'on interdit. La preuve ne contient
-**rien** du modele : ni raisonnement, ni appel d'outil, ni proposition refusee
-(`02-mj-ia.md` §6.5).
+**Chaque entree porte son `eventSeq`** : c'est ce qui rend la preuve verifiable, puisqu'on
+remonte du libelle a la ligne de journal qui l'etablit. Une entree sans `eventSeq` serait une
+donnee fabriquee pour l'affichage — precisement ce qu'on interdit. La preuve ne contient **rien**
+du modele : ni raisonnement, ni appel d'outil, ni proposition refusee (`02-mj-ia.md` §6.5).
 
-**Vocabulaire des compteurs.** `seq` (enveloppe) est le **numero de journal**, present sur
-`s2c.event` uniquement. `chunk` (charge utile de narration) est le **numero de fragment** d'un
-flux de narration. Les deux n'ont pas la meme origine ; ne jamais les confondre.
+**Vocabulaire des compteurs.** Origines differentes, jamais a confondre.
+- `seq` (enveloppe) : **numero de journal**, present sur `s2c.event` uniquement.
+- `chunk` (charge utile de narration) : **numero de fragment** d'un flux de narration.
 
 **Ordre et livraison.** Les `s2c.event` d'une table arrivent dans l'ordre strict des `seq`, sans
 trou. Le client qui detecte un trou envoie `c2s.resume { sinceSeq }`. La narration est
@@ -1106,11 +1101,17 @@ l'invariant 1 — la partie avance meme si le modele est indisponible.
 
 ### 5.6 Limitation de debit
 
-Par connexion : 5 `c2s.intent` / 10 s (rafale 10), 20 `c2s.speak` / 60 s, 2 `c2s.resume` / 10 s,
-**10 `c2s.why` / 10 s** (deplier « Pourquoi ? » sur plusieurs scenes d'affilee est un usage
-normal ; boucler dessus n'en est pas un),
-`c2s.typing` echantillonne a 1/s cote client et ignore au-dela cote serveur. Depassement :
-`s2c.error { code: 'rate_limited' }`, puis fermeture `4008` au troisieme depassement.
+Par connexion :
+
+| Message | Limite |
+|---|---|
+| `c2s.intent` | 5 / 10 s (rafale 10) |
+| `c2s.speak` | 20 / 60 s |
+| `c2s.resume` | 2 / 10 s |
+| `c2s.why` | **10 / 10 s** — deplier « Pourquoi ? » sur plusieurs scenes d'affilee est un usage normal ; boucler dessus n'en est pas un |
+| `c2s.typing` | echantillonne a 1/s cote client, ignore au-dela cote serveur |
+
+Depassement : `s2c.error { code: 'rate_limited' }`, puis fermeture `4008` au troisieme.
 
 ---
 
@@ -1188,9 +1189,9 @@ Trois corpus obligatoires en M0 :
 1. `engine/tests/golden/challenge-matrix.golden.json` — **pas** un produit cartesien complet :
    uniquement les combinaisons qui portent une decision, soit environ 300 lignes — bornes du
    souffle (-6, -1, 0, +1, +2, +9, +10), egalite `|souffle| == de d'action`, franchissement du
-   plafond a 10, des de defi egaux, et les trois issues autour de chaque seuil. C'est l'oracle
-   de reference des regles : si quelqu'un modifie le calcul, la diff reste lisible.
-   Un corpus genere « large » produirait une diff illisible et ne serait plus relu.
+   plafond a 10, des de defi egaux, et les trois issues autour de chaque seuil. Oracle de
+   reference des regles : qui modifie le calcul obtient une diff lisible. Un corpus genere
+   « large » produirait une diff illisible, qui ne serait plus relue.
 2. `engine/tests/golden/replay-*.golden.json` — pour chaque scenario du simulateur, l'etat final
    serialise. Verifie invariants 1 et 4.
 3. `ai/eval/golden/context-*.golden.txt` — le prompt assemble pour des entrees figees. Un
@@ -1201,9 +1202,9 @@ Serialisation deterministe imposee : `packages/testkit/src/golden/stable-stringi
 
 ### 7.4 Le simulateur de table headless (`@for/sim`)
 
-**Objet.** Jouer des parties completes, sans navigateur, sans WebSocket reel et sans appel IA,
+**Objet.** Jouer des parties completes — sans navigateur, sans WebSocket reel, sans appel IA —
 contre **le vrai service applicatif** (`CampaignService` de `@for/server`), pour repondre en
-quelques secondes a la question : « est-ce que ma modification a casse une partie ? »
+quelques secondes : « est-ce que ma modification a casse une partie ? »
 
 ```
 packages/sim/
@@ -1234,21 +1235,20 @@ packages/sim/
 1. Cree une base SQLite dans un dossier temporaire et applique **les vraies migrations**.
 2. Construit l'application avec `buildApp()` et des dependances injectees :
    `createSeededRng(scenario.seed)`, `fixedClock(scenario.startedAt)`, `counterIds()`,
-   `ScriptedNarrator` (une implementation du port), contenu reel. Fastify n'ecoute pas ; le WS est court-circuite : le
-   harnais parle au `TableHub` en memoire via une paire de sockets factices, ce qui **teste le
-   vrai routage de messages** (`c2s.*` -> pipeline -> `s2c.*`).
-3. Cree les joueurs et leurs champions selon le scenario (auth stubee au niveau de la garde,
-   pas du pipeline de jeu).
-4. Deroule la liste d'`Intent` du scenario, joueur par joueur, en respectant les attentes
-   declarees (`waitFor: "s2c.event"`). **Il n'y a pas de verrou de tour** : l'ordre est celui du
-   scenario, la serialisation est celle de la file d'ecriture par campagne.
-5. Apres **chaque** evenement : `checkInvariants(state)` ; toute violation arrete le scenario
-   avec le `seq` fautif et le dernier intent.
-6. A la fin : rejoue tout le journal depuis l'etat initial et exige l'egalite stricte avec le
+   `ScriptedNarrator` (implementation du port), contenu reel. Fastify n'ecoute pas ; le WS est
+   court-circuite : le harnais parle au `TableHub` en memoire via une paire de sockets factices,
+   ce qui **teste le vrai routage de messages** (`c2s.*` -> pipeline -> `s2c.*`).
+3. Cree les joueurs et leurs champions selon le scenario (auth stubee au niveau de la garde, pas
+   du pipeline de jeu).
+4. Deroule les `Intent` du scenario, joueur par joueur, en respectant les attentes declarees
+   (`waitFor: "s2c.event"`). **Pas de verrou de tour** (§3.3) : l'ordre est celui du scenario, la
+   serialisation celle de la file d'ecriture par campagne.
+5. Apres **chaque** evenement : `checkInvariants(state)` ; toute violation arrete le scenario avec
+   le `seq` fautif et le dernier intent.
+6. A la fin : rejoue tout le journal depuis l'etat initial, egalite stricte exigee avec le
    snapshot (invariant 4) ; compare l'etat final et la trace du RNG au fichier dore ; verifie
-   qu'aucun champion reserve n'apparait ; verifie la contiguite des `seq` et la couverture
-   (chaque mouvement du registre doit etre exerce par au moins un scenario — sinon echec
-   `move_not_covered`).
+   qu'aucun champion reserve n'apparait, la contiguite des `seq` et la couverture (chaque
+   mouvement du registre exerce par au moins un scenario — sinon echec `move_not_covered`).
 7. Ecrit un rapport : `sim-report.json` (CI) + tableau lisible (`--format=pretty`).
 
 **Modes.**
@@ -1292,7 +1292,7 @@ Runner `ubuntu-latest`, Node 24, `pnpm/action-setup`, cache pnpm + cache Turbore
 | 8 | `migrations` | `pnpm db:check-schema` (aucune migration en attente, dump == `schema.expected.sql`) + migration a blanc + `pnpm db:seed` sur base jetable | **oui** |
 | 9 | `content` | `pnpm content:check` (chargeur 4 passes, code 1 en cas d'erreur) + `pnpm content:index && git diff --exit-code` | **oui** |
 | 10 | `ai-eval-offline` | `pnpm eval:offline` — niveau **N0**, zero appel API, zero cle (02-mj-ia.md §8.5) | **oui** |
-| 11 | `sim` | `pnpm sim run --format=json` (tous les scenarios). **`pnpm sim fuzz` n'est PAS dans la porte de PR en M0** : la trame malformee — le seul cas dangereux — est deja couverte par `packages/contracts/tests/envelope-fuzz.test.ts` (job 6), et fuzzer des intentions valides contre un moteur sans feature de jeu achete peu pour un risque d'instabilite reel sur une porte visee a 8 minutes. Le mode existe et tourne a la demande ; il devient bloquant en M1 (M0-28) | **oui** |
+| 11 | `sim` | `pnpm sim run --format=json` (tous les scenarios). **`pnpm sim fuzz` n'est PAS dans la porte de PR en M0** : la trame malformee — le seul cas dangereux — est deja couverte par `packages/contracts/tests/envelope-fuzz.test.ts` (job 6), et fuzzer des intentions valides contre un moteur sans feature de jeu achete peu pour un risque d'instabilite reel sur une porte visee a 8 minutes. Le mode tourne a la demande ; bloquant en M1 (M0-28) | **oui** |
 | 12 | `build` | `pnpm turbo run build` | **oui** |
 | — | `docker` | `docker build -f infra/Dockerfile .` | **non bloquant sur PR**, bloquant en post-merge sur `main` |
 | — | `e2e` | Playwright | **hors M0** (voir ci-dessous) |
@@ -1304,24 +1304,23 @@ Protection de branche sur `main` : PR obligatoire, 1 revue, checks 1-12 verts, h
 (squash merge uniquement), pas de push direct.
 
 **Budget de temps.** La porte de PR vise **moins de 8 minutes**. `docker build` (module natif
-`better-sqlite3`) est deplace en post-merge precisement pour tenir ce budget : une porte lente
-est une porte que les agents contournent. Si le build alpine devient instable, le repli est
-`node:24-bookworm-slim` — decide d'avance, pas a chaud.
+`better-sqlite3`) passe en post-merge pour tenir ce budget : une porte lente est une porte que
+les agents contournent. Si le build alpine devient instable, le repli est `node:24-bookworm-slim`
+— decide d'avance, pas a chaud.
 
-**Playwright est hors M0.** Le cout d'installation en CI n'est pas justifie tant qu'il n'y a
-aucune feature de jeu a piloter. Les tests de bout en bout de M0 sont ceux de `@for/sim`, qui
+**Playwright est hors M0.** Son cout d'installation en CI n'est pas justifie tant qu'aucune
+feature de jeu n'est a piloter. Les tests de bout en bout de M0 sont ceux de `@for/sim`, qui
 couvrent le vrai pipeline sans navigateur. Playwright revient en M1, non bloquant d'abord.
 
 `.github/workflows/ai-eval.yml` : nocturne (`cron`) + manuel + sur PR portant le label
-`run-ai-eval`. Consomme `NARRATOR_API_KEY` (secret de depot), lance `pnpm eval:live` puis `pnpm eval:judge`, publie le
-rapport en commentaire de PR et en artefact. Il n'est **pas** bloquant (cout et non-determinisme)
-mais une regression de score ouvre une issue automatiquement. Les graders `schema` et `lockout`
-sont, eux, deterministes : ils sont reproduits en test unitaire sur sorties enregistrees dans le
-job 6 (bloquant).
+`run-ai-eval`. Consomme `NARRATOR_API_KEY` (secret de depot), lance `pnpm eval:live` puis
+`pnpm eval:judge`, publie le rapport en commentaire de PR et en artefact. **Pas** bloquant (cout
+et non-determinisme), mais une regression de score ouvre une issue automatiquement. Les graders
+`schema` et `lockout`, deterministes, sont reproduits en test unitaire sur sorties enregistrees
+dans le job 6 (bloquant).
 
-**Definition de « rouge »** : un agent developpeur lance `pnpm verify` en local ; s'il passe, les
-jobs 2 a 10 passent (`verify` inclut `content:check`, `test:golden` et `eval:offline`). Seuls
-les jobs 11 (`sim`) et 12 (`build`) exigent un environnement complet.
+**Definition de « rouge »** : si `pnpm verify` passe en local (§2.2), les jobs 2 a 10 passent.
+Seuls les jobs 11 (`sim`) et 12 (`build`) exigent un environnement complet.
 
 ---
 
@@ -1356,9 +1355,10 @@ redemarre, l'ancien reste en place tant que le healthcheck n'est pas vert.
 
 > **SQLite WAL suppose un ecrivain unique.** Il n'existe aucune montee en charge horizontale :
 > deux instances de `app` sur le meme fichier corrompraient la serialisation par campagne et
-> feraient perdre les buffers de narration en memoire. C'est ecrit noir sur blanc dans
-> `docs/runbook/deploy.md`, et le compose ne declare qu'un replica. Passer a plusieurs
-> instances exige de changer de base — c'est une decision d'architecture, pas de deploiement.
+> feraient perdre les buffers de narration en memoire. Repete dans `docs/runbook/deploy.md` ;
+> le compose ne declare qu'un replica. Passer a plusieurs instances exige de changer de base —
+> decision d'architecture, pas de deploiement.
+
 `Caddyfile` : TLS automatique, reverse proxy vers `app:8787`, `header` HSTS, compression,
 et `@ws` pour l'upgrade WebSocket (pas de buffering, `flush_interval -1`).
 
@@ -1403,17 +1403,17 @@ LOG_LEVEL=info
 ```
 
 > L'exemple ci-dessus est un **deploiement**, pas le gabarit du depot : `.env.example` porte
-> `NARRATOR_PROVIDER=stub`, parce que la CI et le simulateur tournent sans reseau. Le defaut
-> recommande pour une vraie table sort de la mesure de M0-31
-> (`docs/runbook/conteur-fournisseurs.md`), et le produit doit rester jouable sur un
-> fournisseur gratuit ou un modele local : c'est une decision du tech lead, pas une commodite.
+> `NARRATOR_PROVIDER=stub`, la CI et le simulateur tournant sans reseau. Le defaut recommande
+> pour une vraie table sort de la mesure de M0-31 (`docs/runbook/conteur-fournisseurs.md`) ; le
+> produit doit rester jouable sur un fournisseur gratuit ou un modele local — decision du tech
+> lead, pas commodite.
 
-**Les trois variables d'appoint sont validees** : elles font partie de la configuration
+**Les trois variables d'appoint sont validees** : elles appartiennent a la configuration
 officielle du port, au meme titre que les cinq de base. Motif retenu par le tech lead : le
 support des outils depend du **modele** et non de la passerelle, et un modele local qui charge a
-froid depasse 60 s sans etre en panne. Toutes trois sont facultatives et propres a un
-adaptateur ; `buildNarrator` (§2.8) les lit **sans condition**, donc `zEnv` leur donne une
-valeur par defaut plutot que `undefined`.
+froid depasse 60 s sans etre en panne. Facultatives et propres a un adaptateur, elles sont lues
+**sans condition** par `buildNarrator` (§2.8) : `zEnv` leur donne donc une valeur par defaut
+plutot que `undefined`.
 
 | Variable | Defaut `zEnv` | Defaut par adaptateur | Ce qu'elle gouverne |
 |---|---|---|---|
@@ -1449,8 +1449,8 @@ Cron hote toutes les 6 h + appel pre-deploiement. `infra/scripts/restore.sh` doc
 `docs/runbook/backup-restore.md` ; la restauration est **testee** une fois en M0 (case de sortie).
 
 **Litestream n'est pas livre en M0** : pas de vrais joueurs, donc pas de minutes de partie a
-perdre. Le fichier `litestream.yml` et le service compose sont ecrits dans le runbook et
-actives au premier joueur reel — c'est une ligne a decommenter, pas un chantier.
+perdre. `litestream.yml` et le service compose sont ecrits dans le runbook et actives au premier
+joueur reel — une ligne a decommenter, pas un chantier.
 
 ---
 
@@ -1474,12 +1474,10 @@ M0 est termine quand, sur un poste neuf :
 
 ## 11. Ce qui est traite ailleurs
 
-- Decisions transverses, arbitrages entre documents, vocabulaire -> **`docs/ARCHITECTURE.md`**
-  (document de reference, a lire en premier).
-- Socle technique et son raisonnement -> `docs/adr/0001-socle-technique.md`.
-- Schema SQLite, catalogue des evenements, migrations, format du contenu, sauvegarde et
-  restauration -> `docs/design/03-donnees.md`.
-- Prompts, surface d'outils, construction du contexte, chronique, forge, harnais d'eval ->
-  `docs/design/02-mj-ia.md`.
-- Ecrans et ergonomie de la table : **non specifie**, hors M0. A ecrire en M1
-  (`docs/design/04-ux-table.md`), en respectant le protocole WS de la §5.
+| Sujet | Ou |
+|---|---|
+| Decisions transverses, arbitrages entre documents, vocabulaire | **`docs/ARCHITECTURE.md`** — document de reference, a lire en premier |
+| Socle technique et son raisonnement | `docs/adr/0001-socle-technique.md` |
+| Schema SQLite, catalogue des evenements, migrations, format du contenu, sauvegarde et restauration | `docs/design/03-donnees.md` |
+| Prompts, surface d'outils, construction du contexte, chronique, forge, harnais d'eval | `docs/design/02-mj-ia.md` |
+| Ecrans et ergonomie de la table | **non specifie**, hors M0 — a ecrire en M1 (`docs/design/04-ux-table.md`), en respectant le protocole WS de §5 |
