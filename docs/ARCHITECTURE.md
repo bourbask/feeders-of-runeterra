@@ -83,7 +83,9 @@ obligatoire par `event_seq` sur chaque fait, immuabilite textuelle des faits, re
 integrale depuis le journal toutes les 8 regenerations.
 
 *Test qui casse le build* : `packages/ai/tests/context-budget.test.ts` sur le corpus
-« campagne longue » (≈ 2000 evenements), budget cible **14 000 tokens** d'entree par tour.
+« campagne longue » (≈ 2000 evenements), budget cible
+**`min(14 000, capabilities.contextWindowTokens × 0,6)`** tokens d'entree par tour — 14 000 sur
+une fenetre large, ≈ 4 900 sur un modele local a 8 192 (`02-mj-ia.md` §4.3).
 
 ### Invariant 3 — Le serveur est l'autorite
 
@@ -101,6 +103,11 @@ jauge ; le client n'a pas le droit d'importer `decide`, `reduce`, `rollChallenge
 On persiste un journal d'evenements **append-only**, pas seulement l'etat final. Les
 projections et les instantanes sont des caches jetables. C'est ce qui donne le journal de
 campagne, le debogage et l'annulation.
+
+Depuis l'**ADR 0008**, chaque entree porte une **portee de visibilite** sur son enveloppe
+(`scope: 'table' | 'subset' | 'private'`, plus `recipients` quand la portee n'est pas la table) :
+rejouer le journal du point de vue d'un joueur doit redonner exactement ce qu'il a vu, ni plus
+ni moins. C'est le serveur seul qui renseigne ces deux champs.
 
 *Garanti par* : triggers SQLite `RAISE(ABORT)` sur `UPDATE`/`DELETE` de `events` ; trigger
 `events_seq_dense` ; `decide()` tire les des, `reduce()` n'en tire jamais ; upcasters de
@@ -146,7 +153,7 @@ Verrouillee par le commanditaire ; raisonnement dans `docs/adr/0001-socle-techni
 
 | Couche | Choix |
 |---|---|
-| Monorepo | pnpm 10 workspaces, Node 24, Turborepo, TypeScript strict, ESM partout |
+| Monorepo | pnpm 12 workspaces, Node 24, Turborepo, TypeScript strict, ESM partout |
 | Front | Vite + React + TypeScript, SPA (pas de SSR), TanStack Query + Zustand |
 | Back | Fastify + TypeScript, WebSocket pour la table live |
 | Base | SQLite en mode WAL + Drizzle ORM, un fichier, zero ops. Colonnes JSON pour les blobs souples |
@@ -223,7 +230,7 @@ les identifiants de mouvement (`face-danger`, `probe-a-soul`, `swear-a-vow`) —
 | Transition de scene proposee | **Un changement de LIEU, rien d'autre.** `propose_scene_transition` ne porte plus de `time_shift` : le temps ecoule et son cout eventuel decoulent du seul mouvement joue (ex. `endure-cold`), calcules par le moteur depuis sa table de mouvements. Aucune valeur de temps ne vient jamais du modele |
 | Appels d'outils par tour | 3 au maximum, 3 iterations de boucle, puis `tool_choice: none` |
 | Tables accessibles a `roll_oracle` | les oracles du contenu uniquement. « payer le prix » et « presages » sont **reserves au moteur** |
-| Consequence de « payer le prix » | **Le moteur tire un d12 sur la table `pay-the-price`, applique l'entree tiree, ecrit `roll.price_paid`, puis la transmet au conteur comme un FAIT IMPOSE**, a integrer telle quelle dans la narration. Personne ne choisit, ni modele ni joueur : **ni outil de prix, ni `optionId`, ni `kind: 'price_choice'`, ni `playerChoices`** — ces trois mecanismes sont supprimes de toutes les specs. La liste gelee de 12 outils (`02-mj-ia.md` §3.4) n'en contient aucun ; en ouvrir un exigerait un ADR plus une montee de `TOOLS_VERSION`. **Aucun `EngineEffect` ne transite jamais depuis le modele.** Plusieurs `suggestedEffects` sur l'entree tiree ⇒ c'est encore le moteur qui departage : **second tirage sur le flux RNG `price`**, index journalise dans `roll.price_paid.effectIndex`. Rejouable a l'identique (invariant 4), sans choix du modele ni du joueur |
+| Consequence de « payer le prix » | **Le moteur tire un d12 sur la table `pay-the-price`, applique l'entree tiree, ecrit `roll.price_paid`, puis la transmet au conteur comme un FAIT IMPOSE**, a integrer telle quelle dans la narration. Personne ne choisit, ni modele ni joueur : **ni outil de prix, ni `optionId`, ni `kind: 'price_choice'`, ni `playerChoices`** — ces quatre mecanismes sont supprimes de toutes les specs. La liste gelee de 12 outils (`02-mj-ia.md` §3.4) n'en contient aucun ; en ouvrir un exigerait un ADR plus une montee de `TOOLS_VERSION`. **Aucun `EngineEffect` ne transite jamais depuis le modele.** Plusieurs `suggestedEffects` sur l'entree tiree ⇒ c'est encore le moteur qui departage : **second tirage sur le flux RNG `price`**, index journalise dans `roll.price_paid.effectIndex`. Rejouable a l'identique (invariant 4), sans choix du modele ni du joueur |
 | Portee du verrouillage de distribution | **Par campagne.** Un champion reserve est celui d'un autre joueur de la meme table. Pas de reservation inter-campagnes : cela fuiterait le roster des autres tables |
 | Creation de personnage | **Meme** journal que la partie : c'est `character.created` qui pose le verrou |
 | Deux compteurs a ne jamais confondre | `seq` = numero de journal (enveloppe, sur `s2c.event` seulement). `chunk` = numero de fragment d'un flux de narration (charge utile) |
@@ -330,8 +337,8 @@ neuf :
 5. `pnpm eval:offline` produit un rapport **sans cle d'API** ; `pnpm eval:smoke` rend un verdict
    lisible sur un fournisseur candidat, sans bloquer la CI : un verdict informe une decision, il
    ne ferme pas une porte ;
-6. `pnpm db:check` passe les 12 oracles d'integrite (le controle 9 couvre `scene_state`,
-   projection comme les autres) ;
+6. `pnpm db:check` passe les 12 oracles d'integrite (le controle 9, reconstruction idempotente,
+   couvre `scene_state`, projection comme les autres) ;
 7. la CI est verte sur une PR de demonstration et un `push` sur `main` deploie sur le VPS ;
 8. **le critere qui justifie tout le reste** : modifier une constante de regle (par exemple le
    nombre de crans par jalon au rang *dangereux*) fait echouer, en local et en moins de

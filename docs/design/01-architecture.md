@@ -26,7 +26,9 @@ log et noms de commits en anglais**. Les chaines destinees au joueur vivent dans
 
 ## 1. Packages du monorepo
 
-Gestionnaire : **pnpm workspaces** (pnpm 10). Node **24 LTS** (`.nvmrc`, `engines` dans le
+Gestionnaire : **pnpm workspaces** (pnpm **12** — ADR 0002 §4 ; depuis pnpm 12, l'autorisation
+des scripts d'installation s'ecrit `allowBuilds` dans `pnpm-workspace.yaml`, l'ancien
+`onlyBuiltDependencies` etant ignore en silence). Node **24 LTS** (`.nvmrc`, `engines` dans le
 `package.json` racine, `packageManager` epingle). Tous les packages sont **ESM** (`"type": "module"`).
 Scope npm : `@for/*` (prive, jamais publie ; `"private": true` partout).
 
@@ -77,6 +79,10 @@ Outillage partage, **hors** `packages/` :
             @for/sim   @for/client*                             (couche 5)
 ```
 
+`*` : `@for/client` est dessine en couche 5 pour la lecture, **sans arete vers la couche 4**.
+Il n'importe ni `@for/server`, ni `@for/ai`, ni `@for/db` (regle 5 ci-dessous) : ses seules
+dependances sont `@for/contracts`, `@for/engine` en lecture seule et `@for/content/ui` (§1.1).
+
 `@for/ai-eval` depend de `@for/ai`, jamais l'inverse : les assertions de style vivent dans
 `@for/ai/src/assertions/` parce qu'elles servent **aussi** de post-filtre d'execution. Un cycle
 `ai <-> ai-eval` est interdit par `dependency-cruiser`.
@@ -98,7 +104,7 @@ Regles d'arete, **verifiees en CI** par `dependency-cruiser` (`.dependency-cruis
    (§4.2) lui interdit d'importer `decide`, `reduce`, `reduceAll`, `rollChallenge`,
    `rollProgress`.
 6. `@for/testkit` est une `devDependency` partout sauf dans `@for/sim`, ou elle est runtime.
-7. Aucun cycle. `dependency-cruiser` echoue sur `no-circular`.
+7. Aucun cycle. `dependency-cruiser` echoue sur la regle `pas-de-cycle`.
 
 ### 1.3 Purete de `@for/engine` — definition operationnelle
 
@@ -192,6 +198,7 @@ a l'identique dans **chaque** package (verifie par `scripts/check-workspace.ts`)
 |---|---|
 | `build` | emet `dist/` (tsup pour les libs, `tsc -b` pour les types, `vite build` pour le client) |
 | `typecheck` | `tsc -p tsconfig.json --noEmit` |
+| `typecheck:tests` | `tsc -p tsconfig.test.json --noEmit` — les tests sont hors du tsconfig de build ; sans cette passe, un fichier de test porte une erreur de type franche sans qu'aucune porte ne bronche |
 | `lint` | `eslint .` |
 | `test` | `vitest run` |
 | `test:watch` | `vitest` |
@@ -203,6 +210,8 @@ pnpm dev            # turbo run dev --parallel   (server tsx watch + client vite
 pnpm build
 pnpm verify         # voir la definition exacte ci-dessous  <- porte de merge locale
 pnpm test
+pnpm test:coverage  # vitest run --coverage a la racine — SEUL chemin qui evalue le seuil
+                    #   global de couverture (ADR 0002 §2 et §3) ; c'est le job 6 de la CI
 pnpm lint           # turbo run lint
 pnpm typecheck      # tsc -b --pretty false
 pnpm format:check   # prettier --check .
@@ -235,12 +244,16 @@ pnpm eval:probe     # sonde un fournisseur candidat contre le corpus d'assertion
 d'acceptation de `docs/M0-TASKS.md` ou dans un job de CI doit y figurer ; `scripts/check-workspace.ts`
 echoue si le `package.json` racine en perd une. Les commandes d'exploitation citees par
 `03-donnees.md` mais **hors M0** (`db:snapshot`, `db:gc`, `db:backfill`, `db:export-campaign`,
-`db:import-campaign`, `db:purge-player`, `hooks:install`) ne sont pas livrees en M0 et
-n'apparaissent dans aucun critere d'acceptation de ce jalon.
+`db:import-campaign`, `db:purge-player`), ainsi que `hooks:install` (§4.3), ne sont pas livrees
+en M0 et n'apparaissent dans aucun critere d'acceptation de ce jalon.
 
 `pnpm verify` = `format:check` + `lint` + `typecheck` + `depcruise` + `check:workspace` +
-`content:check` + `test` + `test:golden` + `eval:offline`. Porte de merge locale : si elle
-passe, les jobs 2 a 10 de la CI passent.
+`content:check` + `test` + `test:golden` + `eval:offline`. Porte de merge locale, **mais pas
+la CI entiere** : elle ne lance ni `db:check-schema`, ni `db:migrate`, ni `db:seed` — le job 8
+(`migrations`) n'est donc pas couvert du tout. Si elle passe, les jobs 2, 3, 4, 7 et 10 passent ;
+les jobs 5, 6 et 9 passent pour la part qu'elle en execute, a l'exception de
+`scripts/check-ci-jobs.sh` (job 5), du seuil global de couverture (`test:coverage`, job 6) et de
+`content:index && git diff --exit-code` (job 9).
 
 ### 2.3 `packages/engine`
 
@@ -892,7 +905,8 @@ Surcharges :
 - `@for/engine` : `library.json` **sans** `"types"` (aucun typage Node accessible — la purete
   devient une erreur de compilation, pas seulement de lint).
 - `tsconfig.json` racine : solution-style, `"files": []` + `"references"` vers chaque package.
-  `pnpm typecheck` = `tsc -b --pretty false`.
+  `pnpm typecheck` = `tsc -b --pretty false`, puis `tsc -p tsconfig.tools.json --noEmit`,
+  puis `turbo run typecheck:tests` : le graphe de projets, l'outillage, et les tests.
 - Chaque package a un `tsconfig.json` (build) et un `tsconfig.test.json` (tests inclus).
 
 ### 4.2 ESLint (flat config, ESLint 9)
@@ -911,13 +925,16 @@ Regles non negociables :
 @typescript-eslint/switch-exhaustiveness-check   error
 @typescript-eslint/no-unnecessary-condition      error
 @typescript-eslint/explicit-module-boundary-types error (packages engine, contracts)
-import-x/no-cycle                                error
 import-x/no-default-export                       error (sauf *.tsx, *.config.*)
 no-console                                       error (engine, contracts, content, client)
 no-restricted-syntax                             error : NewExpression[callee.name='Date'],
                                                  MemberExpression[object.name='Math'][property.name='random']
                                                  -> dans engine ET server/src/game (RNG et horloge injectes)
 ```
+
+`import-x/no-cycle` **ne figure pas** dans cette liste : mesuree, elle ne rapporte aucun cycle
+sur du TypeScript et a ete retiree de la configuration (ADR 0002 §1). L'invariant « aucun cycle »
+tient par `dependency-cruiser`, regle `pas-de-cycle` (§1.2 regle 7).
 
 `tooling/eslint-config/engine-purity.js`, applique a `packages/engine/**` :
 `no-restricted-imports` (tous les `node:*`, tout paquet npm), `no-restricted-globals`
@@ -947,7 +964,8 @@ de jeu cote client » (`no-restricted-imports` sur `decide`, `reduce`, `reduceAl
 
 Prettier ne gere **pas** la qualite (`eslint-config-prettier` desactive tout conflit).
 CI lance `prettier --check .`. Pas de hook de pre-commit obligatoire (les agents travaillent en
-lots) ; `lint-staged` + `simple-git-hooks` sont fournis, optionnels via `pnpm hooks:install`.
+lots) ; `lint-staged` + `simple-git-hooks` ne sont **pas livres en M0** (§2.2), et le jour ou ils
+le seront, ce sera derriere une commande `hooks:install` optionnelle.
 
 ---
 
@@ -1278,27 +1296,31 @@ Runner `ubuntu-latest`, Node 24, `pnpm/action-setup`, cache pnpm + cache Turbore
 | # | Job | Commande | Bloque le merge |
 |---|---|---|---|
 | 1 | `install` | `pnpm install --frozen-lockfile` | **oui** (lockfile desynchronise = rouge) |
-| 2 | `format` | `pnpm prettier --check .` | **oui** |
-| 3 | `lint` | `pnpm turbo run lint` | **oui** |
-| 4 | `typecheck` | `pnpm tsc -b` | **oui** |
-| 5 | `deps` | `pnpm depcruise` + `pnpm check:workspace` (graphe, cycles, purete du moteur, scripts obligatoires) | **oui** |
-| 6 | `test:unit` | `pnpm turbo run test` avec couverture ; seuils : `engine` 95 %/90 %, `contracts` 90 %, `db` 80 %, global 70 % | **oui** |
+| 2 | `format` | `pnpm format:check` | **oui** |
+| 3 | `lint` | `pnpm lint` | **oui** |
+| 4 | `typecheck` | `pnpm typecheck` | **oui** |
+| 5 | `deps` | `pnpm depcruise` + `pnpm check:workspace` + `bash scripts/check-ci-jobs.sh` (graphe, cycles, purete du moteur, scripts obligatoires, coherence de la chaine) | **oui** |
+| 6 | `test-unit` | `pnpm test:coverage` (seul chemin qui evalue le seuil global, ADR 0002 §3) ; seuils : `engine` 95 %/90 %, `contracts` 90 %, `db` 80 %, global 70 % | **oui** |
 
-> **Ou vivent ces seuils.** Dans `vitest.workspace.ts` a la racine et dans le
-> `vitest.config.ts` de chaque paquet concerne (`coverage.thresholds`), ecrits **une fois**
-> par la tache qui cree le squelette du monorepo. La CI ne fait que lancer `vitest` : un seuil
-> qui n'existe que dans un tableau de documentation n'est pas un seuil.
-| 7 | `test:golden` | `pnpm test:golden` ; echoue aussi si `GOLDEN_UPDATE` est present dans l'environnement | **oui** |
-| 8 | `migrations` | `pnpm db:check-schema` (aucune migration en attente, dump == `schema.expected.sql`) + migration a blanc + `pnpm db:seed` sur base jetable | **oui** |
+> **Ou vivent ces seuils.** Le seuil global vit dans le `vitest.config.ts` **racine** et les
+> seuils par paquet dans le `vitest.config.ts` de chaque paquet concerne (`coverage.thresholds`),
+> ecrits **une fois** par la tache qui cree le squelette du monorepo. Ils ne peuvent **pas** vivre
+> dans `vitest.workspace.ts` : `defineWorkspace()` n'offre aucun emplacement pour une option de
+> racine (ADR 0002 §2). La CI ne fait que lancer `vitest` : un seuil qui n'existe que dans un
+> tableau de documentation n'est pas un seuil.
+| 7 | `test-golden` | `pnpm test:golden` ; echoue aussi si `GOLDEN_UPDATE` est present dans l'environnement | **oui** |
+| 8 | `migrations` | `pnpm db:check-schema` (aucune migration en attente, dump == `schema.expected.sql`) + `pnpm db:migrate` + `pnpm db:seed` sur base jetable | **oui** |
 | 9 | `content` | `pnpm content:check` (chargeur 4 passes, code 1 en cas d'erreur) + `pnpm content:index && git diff --exit-code` | **oui** |
 | 10 | `ai-eval-offline` | `pnpm eval:offline` — niveau **N0**, zero appel API, zero cle (02-mj-ia.md §8.5) | **oui** |
 | 11 | `sim` | `pnpm sim run --format=json` (tous les scenarios). **`pnpm sim fuzz` n'est PAS dans la porte de PR en M0** : la trame malformee — le seul cas dangereux — est deja couverte par `packages/contracts/tests/envelope-fuzz.test.ts` (job 6), et fuzzer des intentions valides contre un moteur sans feature de jeu achete peu pour un risque d'instabilite reel sur une porte visee a 8 minutes. Le mode tourne a la demande ; bloquant en M1 (M0-28) | **oui** |
-| 12 | `build` | `pnpm turbo run build` | **oui** |
+| 12 | `build` | `pnpm build` | **oui** |
 | — | `docker` | `docker build -f infra/Dockerfile .` | **non bloquant sur PR**, bloquant en post-merge sur `main` |
 | — | `e2e` | Playwright | **hors M0** (voir ci-dessous) |
 | — | `ai-eval-live` | workflow separe `ai-eval.yml` | non (voir ci-dessous) |
 
-Les jobs 2 a 5 tournent en parallele apres 1 ; 6 a 11 apres 5 ; 12 apres 6.
+Les jobs 2, 3, 4 et 12 (`build`) tournent en parallele apres 1 ; le job 5 (`deps`) apres 12 ;
+les jobs 6 a 11 apres 5. **ADR 0003** a deplace cette arete : `deps` execute sur un arbre sans
+`dist/` rapportait « dependance orpheline » la ou une frontiere de paquet etait franchie.
 Concurrence : `group: ci-${{ github.ref }}`, `cancel-in-progress: true`.
 Protection de branche sur `main` : PR obligatoire, 1 revue, checks 1-12 verts, historique lineaire
 (squash merge uniquement), pas de push direct.
@@ -1319,8 +1341,10 @@ et non-determinisme), mais une regression de score ouvre une issue automatiqueme
 `schema` et `lockout`, deterministes, sont reproduits en test unitaire sur sorties enregistrees
 dans le job 6 (bloquant).
 
-**Definition de « rouge »** : si `pnpm verify` passe en local (§2.2), les jobs 2 a 10 passent.
-Seuls les jobs 11 (`sim`) et 12 (`build`) exigent un environnement complet.
+**Definition de « rouge »** : `pnpm verify` (§2.2) est la meilleure approximation locale de la
+porte, pas son equivalent. Elle ne couvre pas le job 8 (`migrations`), ni `check-ci-jobs.sh`
+(job 5), ni le seuil global de couverture (job 6), ni la regeneration de l'index de contenu
+(job 9) ; les jobs 11 (`sim`) et 12 (`build`) exigent en outre un environnement complet.
 
 ---
 

@@ -88,7 +88,7 @@ trace, et **plus aucun point n'est en attente d'arbitrage**.
 | P9 | `content/champions-index.json` (les ~170 champions et leurs alias) était cité par la forge (V2, V7) mais absent de l'arborescence de contenu et de toute tâche | Fichier et `ChampionIndexSchema` ajoutés à `03-donnees.md` §4.1/§4.7 ; livré par M0-16, limité en M0 aux champions cités par le contenu et le seed | corrigé dans la spec |
 | P10 | Trois documents décrivaient trois états du choix de conséquence de prix : un outil `propose-price.ts` (01 §2.7), un `optionId` transmis par le modèle (ARCHITECTURE §4.4), et une liste gelée de 12 outils qui n'en contient aucun (02 §3.4) | **Le moteur tire, point final.** Le moteur lance le d12 sur `pay-the-price`, applique l'entrée tirée, écrit `roll.price_paid`, puis transmet cette entrée au conteur comme un **fait imposé** à intégrer tel quel. **Personne ne choisit** : ni le modèle, ni le joueur. `propose-price.ts`, `kind: 'price_choice'`, `optionId` et `playerChoices` sont **supprimés partout**. Quand l'entrée porte plusieurs `suggestedEffects`, un second tirage sur le flux RNG `price` tranche, et l'index va dans `roll.price_paid.effectIndex` | **tranché par le tech lead** — appliqué dans ARCHITECTURE §4.4, 01 §2.7, 02 §3.4, 03 §3.4 et §4.6, et M0-29 |
 | P11 | `propose_scene_transition` laisse le modèle choisir un `time_shift` dont le moteur tire une perte de vivres : le modèle décide donc indirectement d'une mutation de jauge, et l'événement `character.gauge_changed` devient atteignable par un circuit de proposition, hors de la liste close | **`time_shift` est retiré de l'outil.** `propose_scene_transition` ne propose plus qu'un **changement de lieu** : plus de champ dans le schéma d'entrée, plus de mention dans la description, plus rien dans la chaîne de traitement. Le temps écoulé et son coût éventuel découlent **exclusivement du mouvement joué** (par exemple `endure-cold`), calculés par le moteur à partir de sa table de mouvements | **tranché par le tech lead** — appliqué dans `02-mj-ia.md` §3.3 et ARCHITECTURE §4.4 |
-| P12 | `roll_oracle` est classé « lecture » mais écrit au journal : c'était un troisième circuit d'écriture depuis le modèle, non couvert par `proposal-surface.test.ts` | `ReadOnlyTool.journalOnly`, vide partout sauf `roll_oracle` = `['roll.oracle_resolved','roll.yes_no_resolved']`, et le test vérifie **deux** listes closes | corrigé dans la spec |
+| P12 | `roll_oracle` est classé « lecture » mais écrit au journal : c'était un troisième circuit d'écriture depuis le modèle, non couvert par `proposal-surface.test.ts` | `ReadOnlyTool.journalOnly`, vide partout sauf `roll_oracle` = `['roll.oracle_resolved','roll.yes_no_resolved']`, et le test vérifie **trois** listes closes *(deux à l'époque ; la troisième — le droit de refus — est arrivée avec P22, voir M0-29)* | corrigé dans la spec |
 | P13 | `prompt-size.test.ts` devait mesurer par `countTokens` — un appel réseau — alors que toute la CI de M0 tourne sans clé | Estimateur local + référence commitée en PR ; rapprochement avec `countTokens` au nocturne | corrigé dans la spec |
 | P14 | `ai_calls` n'avait pas de colonne `trim_level`, que `02-mj-ia.md` §4.4 écrit à chaque tour | Colonnes `trim_level` et `context_hash` ajoutées au DDL | corrigé dans la spec |
 | P15 | **Prototype joué, enseignement 1** : le ton produit était « fade et trop flou, on a du mal à s'y plonger ». Un prompt qui demande un ton « âpre, sensoriel, concret » ne suffit pas — le modèle produit de la prose d'IA reconnaissable | `conteur/2.0.0` : ancrage de registre nommé (**la saga islandaise**), liste noire close, trois obligations, et surtout une **paire d'exemples bon/mauvais sur la même situation** avec l'explication de ce qui cloche. Le prompt passe de ≈ 1 250 à ≈ 2 200 tokens ; seuil de `prompt-size.test.ts` relevé à 1 900 ; huit assertions de registre ajoutées, dont cinq dures | corrigé dans la spec |
@@ -302,14 +302,16 @@ compile pas dans l'image.
 - `docker compose -f infra/docker-compose.yml config` sort en 0 et
   `docker compose -f infra/docker-compose.yml config | grep -c 'replicas: 1'` vaut 1.
 - `shellcheck infra/scripts/*.sh` sort en 0.
-- `actionlint .github/workflows/deploy.yml` sort en 0 (cette tâche fournit son propre
-  `.github/actionlint.yaml` **uniquement** si M0-03 ne l'a pas encore livré ; sinon elle ne le
-  touche pas — ce fichier appartient à M0-03).
+- `actionlint .github/workflows/deploy.yml` sort en 0 (cette tâche **ne fournit pas**
+  `.github/actionlint.yaml` : ce fichier appartient à M0-03, de la même vague — règles 2 et 3
+  du découpage).
 - `infra/scripts/backup.sh` exécuté sur une base SQLite jetable produit une archive et sort en
   0 ; la même commande sur une base corrompue sort en 1.
 
 **Fichiers touchés** : `infra/**`, `.dockerignore`, `.github/workflows/deploy.yml`,
-`docs/runbook/deploy.md`, `docs/runbook/backup-restore.md`
+`docs/runbook/deploy.md`, `docs/runbook/backup-restore.md`,
+`packages/client/{index.html,vite.config.ts}` *(les stubs minimaux de l'encadré « Ordre »
+ci-dessus ; le propriétaire du client reste M0-19, vague 6, qui les remplace)*
 
 ---
 
@@ -566,7 +568,7 @@ discipline, et un test doré vérifie qu'une migration ne les a pas perdus.
 
 **Livrables**
 - `drizzle.config.ts`, `src/client.ts` (les sept PRAGMA de §0.2, `foreign_keys` repassé à
-  chaque connexion), `src/schema/**` (les 19 tables, dont `scene_state` — `03-donnees.md` §1.4),
+  chaque connexion), `src/schema/**` (les 21 tables, dont `scene_state` — `03-donnees.md` §1.4),
   `src/migrate.ts`.
 - `migrations/0000_init.sql` + `migrations/meta/_journal.json`, écrits à la main là où
   drizzle-kit ne sait pas faire (triggers, index partiels), et `schema.expected.sql` normalisé.
@@ -694,8 +696,9 @@ le type : ajouter un événement sans le traiter dans le réducteur **ne compile
   rejeté.
 - Un test de fuzz passe 500 intentions valides syntaxiquement à `decide` : aucune exception, un
   `Result` dans tous les cas.
-- `grep -rInE '[éèêàçûôîï]' packages/engine/src | wc -l` affiche toujours `0` (les gabarits de
-  repli viennent du contenu).
+- `LC_ALL=C.UTF-8 grep -rlnP '[À-ÖØ-öø-ÿŒœ]' packages/engine/src | wc -l` affiche toujours `0`
+  (les gabarits de repli viennent du contenu) — **la même classe qu'en M0-02**, la seule qui
+  couvre les majuscules accentuées et `œ`.
 
 **Fichiers touchés** : `packages/engine/src/moves/**`,
 `packages/engine/src/{decide,reduce,invariants,narration-fallback,index}.ts`,
@@ -1047,7 +1050,7 @@ trois agents de travailler en parallèle sur le serveur.
 
 ---
 
-## Vague 7 — Champions, contexte IA, Discord, orchestration, sockets
+## Vague 7 — Contexte IA, Discord, orchestration, sockets, sonde de fumée
 
 ### M0-21 · ~~Contenu : les trois fiches de champion du seed~~ — **absorbée par M0-16**
 
@@ -1062,7 +1065,8 @@ M0-21 devait livrer une vague plus tard. Une tâche dont le critère dépend d'u
 après elle n'est pas une tâche.
 
 **Conséquence sur les dépendances** : M0-26 et M0-27 dépendaient de M0-21 ; elles dépendent
-désormais de **M0-16**. La vague 7 passe de cinq à quatre tâches.
+désormais de **M0-16**. La vague 7 est passée de cinq à quatre tâches, puis **revenue à cinq**
+avec l'ajout de M0-32 par P23 — c'est ce que portent §2 et §4.
 
 ---
 
@@ -1108,7 +1112,7 @@ ici servent deux fois — notation dans l'éval, post-filtre en production.
   malformée, elles renvoient l'état de scène précédent inchangé.
 - `src/outputs/refusal.ts` : `proveRefusal` (R1→R7). Fonction **pure** qui lit l'état à la
   déclaration et **jamais** l'issue du jet.
-- `tests/{context-budget,outputs,assertions,scene-merge,refusal-proof}.test.ts`.
+- `tests/{context-budget,outputs,assertions,degradation,scene-merge,refusal-proof}.test.ts`.
 
 **Critères d'acceptation**
 - `env -u NARRATOR_PROVIDER -u NARRATOR_API_KEY pnpm --filter @for/ai test` sort en 0 (aucun
@@ -1572,8 +1576,8 @@ sorties enregistrées.
 **Fichiers touchés** : `packages/ai-eval/cases/**`, `packages/ai-eval/chronicle/**`,
 `packages/ai-eval/forge/**`, `packages/ai-eval/src/**`, `packages/ai-eval/package.json`
 *(Ne touche pas `packages/ai-eval/probe/**`, qui appartient à M0-31, ni
-`packages/ai-eval/smoke/**`, qui appartient à M0-32. `package.json` a été créé par M0-32 en
-vague 7 : cette tâche le complète, elle ne le réécrit pas.)*
+`packages/ai-eval/smoke/**`, qui appartient à M0-32. `package.json` a été créé par M0-01 puis
+rempli par M0-32 en vague 7 : cette tâche le complète, elle ne le réécrit pas.)*
 
 ---
 

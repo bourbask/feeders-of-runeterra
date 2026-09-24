@@ -352,7 +352,7 @@ CREATE TABLE events (
   causation_id        TEXT,                               -- id de l'événement parent direct
 
   -- Déterminisme du RNG : tout événement issu d'un tirage porte sa dérivation.
-  rng_stream          TEXT,                               -- 'action','challenge','oracle','price'
+  rng_stream          TEXT,                               -- l'un des sept flux normalisés (§3.6)
   rng_draw_index      INTEGER,                            -- n-ième tirage de ce flux
 
   created_at          INTEGER NOT NULL,
@@ -383,10 +383,10 @@ Le trigger `events_seq_dense` est le garde-fou de l'invariant 4 : un événement
 passer par l'allocateur produirait un trou silencieux au rejeu. Ici, l'insertion échoue
 immédiatement, en test comme en production.
 
-`payload_json` est du JSON **par construction** : union discriminée d'environ soixante-dix
-formes (§3.4). Une table par type serait ingérable ; des colonnes communes seraient à 90 %
-nulles. Le typage vient de `packages/contracts` (`GameEventSchema`, discriminé sur `type`),
-appliqué à l'écriture et à la lecture.
+`payload_json` est du JSON **par construction** : union discriminée de 71 formes (§3.4). Une
+table par type serait ingérable ; des colonnes communes seraient à 90 % nulles. Le typage
+vient de `packages/contracts` (`GameEventSchema`, discriminé sur `type`), appliqué à
+l'écriture et à la lecture.
 
 **Indexer un champ de payload, si besoin** : colonne générée, jamais de `LIKE` sur le JSON.
 
@@ -442,9 +442,9 @@ CREATE TABLE characters (
   attr_esprit       INTEGER NOT NULL CHECK (attr_esprit BETWEEN 1 AND 3),
 
   -- Jauges 0-5.
-  vigueur             INTEGER NOT NULL DEFAULT 5 CHECK (vigueur    BETWEEN 0 AND 5),
-  ame              INTEGER NOT NULL DEFAULT 5 CHECK (ame     BETWEEN 0 AND 5),
-  vivres          INTEGER NOT NULL DEFAULT 5 CHECK (vivres BETWEEN 0 AND 5),
+  vigueur           INTEGER NOT NULL DEFAULT 5 CHECK (vigueur BETWEEN 0 AND 5),
+  ame               INTEGER NOT NULL DEFAULT 5 CHECK (ame     BETWEEN 0 AND 5),
+  vivres            INTEGER NOT NULL DEFAULT 5 CHECK (vivres  BETWEEN 0 AND 5),
 
   -- Souffle (momentum) -6..+10, départ +2.
   momentum          INTEGER NOT NULL DEFAULT 2  CHECK (momentum BETWEEN -6 AND 10),
@@ -2003,7 +2003,7 @@ export const ManifestSchema = z.object({
     moves: z.number().int().positive(),
     champions: z.number().int().positive(),
     regions: z.number().int().positive(),
-    oracles: z.number().int().positive(),   -- 9 en V1 (dont yes-no)
+    oracles: z.number().int().positive(),   // 9 en V1 (dont yes-no)
     tables: z.number().int().positive(),
     assets: z.number().int().positive(),
   }),
@@ -2332,7 +2332,7 @@ Planification (`/etc/cron.d/feeders`) :
 ```
 
 La clé privée `age` n'est **pas** sur le VPS. Elle est dans le gestionnaire de mots de
-passe de l'équipe. Une sauvegarde chiffrée avec une clé qui ne survit pas à la
+passe de l'équipe. Une sauvegarde chiffrée avec une clé qui survit à la
 compromission du serveur est la seule qui vaille quelque chose.
 
 ### 6.4 Réplication continue — **pas en M0**

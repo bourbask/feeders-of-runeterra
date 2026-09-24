@@ -17,12 +17,14 @@
 > **Trois passes de revue, une passe d'arbitrage.** §0–§10 : première passe, avant les trois
 > arbitrages du tech lead. **§11** : seconde passe, qui a relu les six documents après application
 > de ces arbitrages et l'entrée des trois enseignements du prototype ; elle porte le verdict de
-> revue. **§12** : les **cinq
+> la seconde passe (§11.1). **§12** : les **cinq
 > arbitrages** rendus ensuite, qui closent les quatre points ouverts en §11.7. **§13** : recette
 > de cette application, et verdict courant. Quand deux sections divergent, **la plus récente fait
 > foi** : §13 > §12 > §11 > §0-§10.
 
-**Non, pas en l'état — mais il s'en faut de peu.**
+**Verdict de la première passe — non, pas en l'état, mais il s'en faut de peu.**
+*(État trouvé par cette passe, avant les corrections qui suivent ; le verdict courant est en
+§13.7.)*
 
 Points forts : invariants portés par des frontières de paquets et des tests nommés, pas par de la
 discipline ; découpage en vagues respectant presque partout la règle « deux tâches d'une même
@@ -115,7 +117,7 @@ retiré ferme la porte de derrière au lieu de la surveiller.
 
 ---
 
-## 1bis · Le conteur devient un port (P15) — **TRANCHÉ, postérieur à cette revue**
+## 1bis · Le conteur devient un port (P18) — **TRANCHÉ, postérieur à cette revue**
 
 Point non relevé ici : `02-mj-ia.md` était cohérent avec lui-même, mais écrit en supposant un
 fournisseur unique — identifiants de modèle, `stop_reason`, seuils de mise en cache, format
@@ -150,7 +152,8 @@ partage, tous deux corrigés.
 Vagues différentes, donc pas de collision stricte. Mais partage de `content/manifest.json` **et**
 de `packages/content/src/generated/index.ts`, et M0-16 ne pouvait pas satisfaire son propre
 critère principal. **Corrigé** : M0-21 absorbée par M0-16, seule tâche autorisée à écrire dans
-`content/**`. Vague 7 de cinq à quatre tâches ; M0-26 et M0-27 dépendent de M0-16.
+`content/**`. Vague 7 de cinq à quatre tâches — *cinq à nouveau depuis l'arrivée de M0-32
+(§12 A7)* ; M0-26 et M0-27 dépendent de M0-16.
 
 ### C2 · Trois tâches d'une même vague jugées sur la suite de tests d'un paquet partagé
 
@@ -212,7 +215,7 @@ prévoyait déjà ainsi.
 | T4 | **Les seuils de couverture** (engine 95/90, contracts 90, db 80, global 70) n'appartenaient à aucune tâche, alors que quatre tâches en dépendent pour leur critère | Attribués à M0-01 (`vitest.workspace.ts` + configs de paquet), avec un critère qui prouve qu'ils sont appliqués par le runner |
 | T5 | **`packages/ai/src/index.ts` absent des fichiers de M0-22** : rien de ce que la tâche livre (contexte, assertions, validateurs) n'aurait été importable par M0-27 ni M0-29 | Ajouté |
 | T6 | **Quatre commandes citées dans des critères ou la CI n'existent nulle part** : `pnpm db:generate --check` (drizzle-kit n'a pas ce drapeau), `pnpm ai:eval` (workflow nocturne), `pnpm eval:record`, `pnpm db:check-schema`. La liste de scripts de `01-architecture.md` §2.2 omettait aussi `lint`, `typecheck`, `format:check`, `depcruise`, `check:workspace`, tous utilisés par la CI et par `pnpm verify` | Liste rendue exhaustive et contractuelle ; commandes corrigées dans la CI et dans M0-11 ; règle 8 ajoutée au découpage ; `scripts/check-ci-jobs.sh` (M0-03) vérifie que **toute commande d'un `run:` existe dans le `package.json` racine** |
-| T7 | **`roll_oracle`, troisième circuit d'écriture depuis le modèle**, non couvert par le garde-fou : classé « lecture », il écrit au journal, et `proposal-surface.test.ts` ne surveillait que les `propose_*` | `ReadOnlyTool.journalOnly`, vide partout sauf `roll_oracle` ; le test vérifie désormais **deux** listes closes. `ARCHITECTURE.md` §1 amendé |
+| T7 | **`roll_oracle`, troisième circuit d'écriture depuis le modèle**, non couvert par le garde-fou : classé « lecture », il écrit au journal, et `proposal-surface.test.ts` ne surveillait que les `propose_*` | `ReadOnlyTool.journalOnly`, vide partout sauf `roll_oracle` ; le test vérifie désormais **deux** listes closes — **trois depuis le droit de refus** (§11.5, §13.5). `ARCHITECTURE.md` §1 amendé |
 | T8 | **M0-16 et M0-21 sans aucun fichier de test** dans leurs fichiers touchés, alors que cinq de leurs critères commençaient par « un test vérifie que… » | `packages/content/tests/game-content.test.ts` ajouté aux livrables de M0-16 |
 | T9 | **`propose_vow_hook` n'écrivait rien en base** (`03-donnees.md` §0.5) tout en étant soumis à la règle « toute proposition produit un `narration.proposal_accepted` ou `_rejected` — une proposition qui disparaît sans trace est un bug » | Ligne réécrite : aucun événement **d'état**, mais bien les deux événements de proposition |
 | T10 | ~~**`.env.example` du dépôt décrivait un conteur agnostique**~~ — **CONSTAT RENVERSÉ, voir §12.** À la date de la première passe, la stack verrouillée ne connaissait qu'un fournisseur ; le lead a depuis tranché l'inverse, et le conteur *est* un port agnostique. Ce que la première passe prenait pour une contradiction du dépôt était la bonne intuition | `.env.example` est agnostique et le reste, réécrit sur `01-architecture.md` §9.4 et `02-mj-ia.md` §0.6. Seul `.nvmrc` remis à `24` survit de cette ligne |
@@ -379,7 +382,7 @@ méritent une relecture avant de démarrer, parce qu'ils vont mordre tôt :
 
 | | |
 |---|---|
-| **Corrigé directement dans les fichiers** | 10 trous, 11 critères mous, 2 collisions, 4 ordres irréalistes, 4 coupes de périmètre, 9 divergences inter-documents |
+| **Corrigé directement dans les fichiers** | 9 trous (T10 renversé — §12 A4), 11 critères mous, 2 collisions, 4 ordres irréalistes, 4 coupes de périmètre, 9 divergences inter-documents |
 | **Reste à arbitrer** | **Rien sur l'architecture.** A1 et A2 tranchés (§1), un troisième arbitrage a transformé le conteur en port (§1bis), et les quatre points laissés ouverts par la seconde passe (§11.7) ont été tranchés à leur tour, avec un cinquième soulevé par le lead lui-même (**§12**). **Un point de découpage reste ouvert** : la sonde de fumée M0-32 est placée en vague 7, le lead la voulait en vague 4 ; coût réel du redécoupage chiffré en **§12 A7** et en **§13** (voir aussi le tableau de §13.4) |
 | **Tâches** | 31 (M0-21 absorbée par M0-16 ; M0-31 pour le corpus complet en vague 8 ; **M0-32** pour le signal précoce en vague 7) |
 | **Verdict** | Exécutable. Le seul inconnu restant est **éditorial, pas architectural** : quel fournisseur gratuit produit une prose acceptable. **M0-32** en donne le signal dès la vague 7, **M0-31** la mesure complète au début de la vague 8 |
@@ -726,7 +729,8 @@ dit maintenant.
 
 ## 13.3 La sonde de fumée — indépendante, oui ; en vague 4, non
 
-**Indépendance : vérifiée.** M0-32 ne dépend que de M0-18 : elle n'importe que
+**Indépendance : vérifiée.** M0-32 ne dépend directement que de M0-18 — et, **par transitivité**,
+de M0-12 (vague 5), qui bloque M0-18 et livre `SceneBlockSchema` : elle n'importe que
 `CONTEUR_SYSTEM_PROMPT` et le port depuis `@for/ai`, plus `SceneBlockSchema` depuis
 `@for/contracts` ; elle n'utilise ni le constructeur de contexte de M0-22 (même vague) ni le
 harnais N0 de M0-27 (vague suivante), et deux `grep` le tranchent. Ses trois cas et ses sept

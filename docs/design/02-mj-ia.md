@@ -241,7 +241,7 @@ touche à l'équité est un bug d'invariant 1.
 | `tools` | `run.ts` n'envoie pas `tools` et ne traite aucun `tool_call` ; le constructeur pré-charge ce que le conteur serait allé chercher (état, scène, trois extraits de lore, chronique — ce qu'il fait **déjà**, §4.1) et `<consignes_du_tour>` gagne une ligne : « n'introduis aucun personnage, lieu ou fil nouveau dans ce tour » | aucun PNJ, horloge, fil ni fait de lore n'est créé par le conteur ce tour-là | l'issue, les jauges, les horloges, le prix, les présages : **tous déjà écrits** avant l'appel |
 | `structuredOutput` | `structurer()` demande le JSON dans le prompt, extrait le **premier objet JSON équilibré** de la réponse, et valide avec `schema`. Échec ⇒ relance avec `<corrections>` (`repairPasses: 1`) ⇒ échec ⇒ `NarratorError('invalid_output')` | une fiche forgée part en `status: 'draft'` (§9.5) ; une chronique périmée reste en service (§5.6) | la fiche non jouable n'entre jamais dans une partie ; la chronique n'est jamais corrompue |
 | `promptCache` | `cacheHint` est ignoré, `cacheReadTokens` et `cacheWriteTokens` valent 0, et le test de cache du §7.4 est **sauté** (pas échoué) | rien | la facture monte d'un facteur ≈ 2,5 ; c'est un choix d'exploitation, pas un risque de jeu |
-| fenêtre de contexte étroite | le budget du §4.3 vise `min(14 000, contextWindowTokens × 0,6)` et l'échelle de troncature T1→T8 (§4.4) démarre plus haut | moins de lore, moins de chronique, une fenêtre de tours plus courte | `<fait>`, `<intention>` et le prompt système restent **intouchables** (§4.4) |
+| fenêtre de contexte étroite | le budget du §4.3 vise `min(14 000, contextWindowTokens × 0,6)` et l'échelle de troncature T1→T8 (§4.4) démarre plus haut | moins de lore, moins de chronique, une fenêtre de tours plus courte | `<fait>`, `<intention>`, `<scene>` et le prompt système restent **intouchables** (§4.4) |
 
 **Sortie malformée — trois cas distincts, trois traitements :**
 
@@ -512,7 +512,7 @@ vrai (le champ `format` accepte un JSON Schema) mais **non garanti** par le mod�
 
 - Le budget de contexte vise `min(14 000, contextWindowTokens × 0,6)` (§4.3) : sur une fenêtre de
   8 192, ≈ 4 900 tokens, et l'échelle de troncature (§4.4) démarre autour de T4. `<fait>`,
-  `<intention>` et le prompt système restent intouchables ; si même T8 ne suffit pas, c'est un
+  `<intention>`, `<scene>` et le prompt système restent intouchables ; si même T8 ne suffit pas, c'est un
   `context_too_large` et le repli moteur, jamais une coupe dans le fait du tour.
 - Modèle non chargé ou service éteint ⇒ `unavailable`. Le premier appel après un démarrage à
   froid peut dépasser 60 s ⇒ `timeout`, `retryable: true` ; `NARRATOR_TIMEOUT_MS` autorise un
@@ -905,7 +905,7 @@ La suite — appariement des noms, monotonie des partis, fusion, émission de
 - **Aucun outil ne tranche une issue, ne modifie une jauge, ne fait avancer une piste de progression, ne blesse ni ne tue.** Il n'existe pas et il n'existera pas d'outil `apply_damage`, `set_gauge`, `resolve_move`, `roll_dice`, `kill_character`, `advance_vow`, `spend_momentum`. Cette liste de noms interdits vit dans `packages/ai/tests/tool-surface.test.ts`, qui échoue si l'un d'eux apparaît dans `TOOL_DEFINITIONS`, ou si un outil exporté n'est ni `ReadOnlyTool` ni `ProposalTool`. C'est le test gardien de l'invariant 1 côté IA.
 - Deux familles, distinguées par le préfixe du nom :
   - **LECTURE** (`get_*`, `check_*`, `roll_oracle`) : renvoie des données, ne modifie rien de l'état de jeu. `roll_oracle` est le seul qui **écrit** : il ajoute un événement d'oracle au journal (traçabilité), sans toucher à aucune valeur de partie.
-    **Cette exception est typée et testée** : `ReadOnlyTool` porte un champ `journalOnly: readonly EventType[]`, vide pour tous les outils sauf `roll_oracle`, où il vaut exactement `['roll.oracle_resolved', 'roll.yes_no_resolved']`. `packages/server/tests/proposal-surface.test.ts` vérifie **deux** listes closes : celle atteignable par un `propose_*` (§ `03-donnees.md` §0.5) et celle atteignable par `roll_oracle`. Sans cela, `roll_oracle` serait un troisième circuit d'écriture hors du garde-fou de l'invariant 1.
+    **Cette exception est typée et testée** : `ReadOnlyTool` porte un champ `journalOnly: readonly EventType[]`, vide pour tous les outils sauf `roll_oracle`, où il vaut exactement `['roll.oracle_resolved', 'roll.yes_no_resolved']`. `packages/server/tests/proposal-surface.test.ts` vérifie **trois** listes closes : celle atteignable par un `propose_*` (`03-donnees.md` §0.5), celle atteignable par `roll_oracle`, et celle atteignable par le droit de refus du conteur (§ 4.8.5). Sans cela, `roll_oracle` serait un troisième circuit d'écriture hors du garde-fou de l'invariant 1.
     `roll_oracle` ne peut jamais porter sur l'action d'un personnage : le serveur refuse une question `yes-no` dont le texte désigne l'issue d'un mouvement en cours (le fait du tour est déjà acquis, il n'y a rien à demander à l'oracle).
   - **PROPOSITION** (`propose_*`) : le serveur **valide, ajuste ou refuse**, puis applique. Le `tool_result` renvoie ce qui a réellement été appliqué. Le modèle doit écrire à partir du résultat, jamais de sa demande.
 - **Le tableau d'outils est figé et ordonné à l'identique pour toutes les campagnes et tous les tours.** Il rend en position 0 de la requête : un tableau variable détruirait tout le cache. Un outil non pertinent dans le contexte courant renvoie un `tool_result` d'erreur explicite ; il n'est jamais retiré du tableau.
@@ -1372,7 +1372,7 @@ existe pour fermer.
 **Ordre de grandeur de coût**, sur un fournisseur payant de milieu de gamme (≈ 2 $ / 10 $ par MTok) avec cache chaud (≈ 11 000 tokens lus en cache, 3 000 non cachés) :
 `(11 000 × 0,1 + 3 000) × 2 $/MTok + 280 × 10 $/MTok ≈ 0,011 $` — ≈ 1 centime le tour, ≈ 0,68 $ pour une session de 60 tours. **Sans cache, c'est-à-dire chez la plupart des fournisseurs**, ≈ 0,028 $ le tour ; sur un fournisseur gratuit ou local, zéro. Chiffres indicatifs : le tarif est une donnée d'exploitation, pas d'architecture. Le prompt allongé est **gratuit en régime établi chez qui cache** : il est dans le préfixe, lu à un dixième du prix, et ne change qu'à une montée de version.
 
-**Mesure** : le compteur de tokens du fournisseur n'est jamais appelé à chaque tour (latence, et tous n'en ont pas). Le constructeur utilise un estimateur local (`estimateTokens = chars / 3.6` pour du français, calibré) ; un test nocturne le compare au comptage réel sur les 34 cas d'eval et échoue si l'écart dépasse **8 %**. L'estimateur est recalibré à chaque écart constaté.
+**Mesure** : le compteur de tokens du fournisseur n'est jamais appelé à chaque tour (latence, et tous n'en ont pas). Le constructeur utilise un estimateur local (`estimateTokens = chars / 3.6` pour du français, calibré) ; un test nocturne le compare au comptage réel sur les 36 cas d'eval et échoue si l'écart dépasse **8 %**. L'estimateur est recalibré à chaque écart constaté.
 
 ### 4.4 Échelle de troncature
 
@@ -1762,7 +1762,7 @@ est nul tant que personne ne demande, et l'affichage reste un choix du joueur.
 
 Le problème : une campagne de plusieurs mois produit des dizaines de milliers d'événements ; aucune fenêtre de contexte ne les contient, et un « résumé du résumé » dérive — les faits se déforment, les noms glissent, les morts reviennent.
 
-### 5.1 Trois couches, séparées et non redondantes
+### 5.1 Quatre couches, séparées et non redondantes
 
 | Couche | Contenu | Autorité | Envoyée au modèle |
 |---|---|---|---|
@@ -2137,7 +2137,7 @@ Un agent développeur doit savoir **en quelques secondes** s'il a cassé le cont
 | Niveau | Quoi | Appels au fournisseur | Quand | Coût |
 |---|---|---|---|---|
 | **N0 — hors ligne** | assertions rejouées sur des sorties **enregistrées** + instantané de la `NarrateRequest` construite | **0** | à chaque PR, en quelques secondes | 0 $ |
-| **N1 — en direct** | 34 cas réels contre le fournisseur configuré, configuration de production | 68 (n = 2) | nocturne, sur étiquette `ai-eval`, et obligatoirement sur toute modification de `packages/ai/src/prompts/**` | dépend du fournisseur ; nul sur un fournisseur gratuit ou local |
+| **N1 — en direct** | 36 cas réels contre le fournisseur configuré, configuration de production | 72 (n = 2) | nocturne, sur étiquette `ai-eval`, et obligatoirement sur toute modification de `packages/ai/src/prompts/**` | dépend du fournisseur ; nul sur un fournisseur gratuit ou local |
 | **N2 — juge** | 8 scènes dorées notées sur une grille par `structurer()` | 8 | hebdomadaire et à chaque montée de `*_PROMPT_VERSION` | idem |
 
 Le garde-fou est N0 : il tourne sur chaque PR et ne coûte rien nulle part.
@@ -2243,7 +2243,7 @@ qu'on vérifie qu'une proposition absurde **mais possible** est bien jouée.
 
 Une **fixture de campagne** est exactement le format produit par le simulateur de table headless de M0 : état + journal d'événements + chronique. Les cas d'eval réutilisent les mêmes fixtures que les tests de moteur : un seul corpus doré pour tout le projet.
 
-### 8.3 Couverture minimale du corpus (34 cas)
+### 8.3 Couverture minimale du corpus (36 cas)
 
 | Famille | Cas |
 |---|---|
@@ -2257,7 +2257,7 @@ Une **fixture de campagne** est exactement le format produit par le simulateur d
 | **Faits de scène** *(enseignement 2)* | un PNJ marqué `parti` que l'intention du joueur cherche à interpeller ; un PNJ marqué `mort` cité par un autre PNJ ; un bloc `<scene_apres>` volontairement malformé dans la sortie enregistrée, qui doit laisser l'état inchangé sans échec ; un tour où le modèle omet un présent, qui doit rester présent (S9) (4) |
 | **Droit de refus** *(enseignement 3)* | cible partie, refus attendu `upheld` ; objet inexistant, refus attendu `upheld` ; **proposition absurde mais possible** (tresser la barbe d'un mort), refus attendu `none` ; refus non prouvé sur une cible bien présente, attendu `rejected/refusal_unproven` ; refus sur un mouvement sans cible, attendu `rejected/refusal_targetless_move` (5) |
 
-Les dix cas ajoutés viennent tous d'une session réellement jouée : pas des hypothèses de
+Les douze cas ajoutés viennent tous d'une session réellement jouée : pas des hypothèses de
 couverture, les trois façons dont le prototype est sorti de route.
 
 ### 8.4 Assertions — définitions exactes et mesurables
@@ -2358,7 +2358,7 @@ du modèle sont enregistrées, et l'inversion des dés est une transformation de
 
 ```bash
 pnpm eval:offline     # N0 — 0 appel réseau, < 5 s, tourne sur chaque PR
-pnpm eval:live        # N1 — 34 cas × 2 échantillons contre le fournisseur configuré
+pnpm eval:live        # N1 — 36 cas × 2 échantillons contre le fournisseur configuré
 pnpm eval:judge       # N2 — 8 scènes dorées notées par structurer()
 pnpm eval:record      # rafraîchit les sorties enregistrées de N0
 pnpm eval:smoke       # FUMÉE — 3 cas, 7 assertions écrites à la main, verdict lisible (M0-32)
@@ -2387,7 +2387,7 @@ Les enregistrements portent `{ provider, model, prompt_version, tools_version, r
 
 **Portes CI.** N0 : 100 % des cas. N1 : 100 % des assertions dures (toutes celles de § 8.4 sauf `mentions_any` et `ends_concrete`, tolérées à 90 %). N2 : moyenne ≥ 4,0/5 et aucun axe < 3.
 
-**Cache en eval** : les 34 cas partagent la même fixture de campagne, donc le même préfixe (`tools` + `system[0]` + `system[1]` + `<chronique>`). Exécutés en série, ils lisent tous le cache du premier — d'où un coût réel de N1 inférieur à l'estimation brute. Ne pas paralléliser N1 au-delà de 2 workers, sous peine de multiplier les écritures de cache.
+**Cache en eval** : les 36 cas partagent la même fixture de campagne, donc le même préfixe (`tools` + `system[0]` + `system[1]` + `<chronique>`). Exécutés en série, ils lisent tous le cache du premier — d'où un coût réel de N1 inférieur à l'estimation brute. Ne pas paralléliser N1 au-delà de 2 workers, sous peine de multiplier les écritures de cache.
 
 ### 8.6 Les mêmes assertions comme post-filtres d'exécution
 
@@ -2399,7 +2399,7 @@ n'invalide jamais la prose — l'entrée fautive est déjà ignorée par S5, l'a
 rendre l'incident visible. Un bloc absent ne déclenche aucun post-filtre, aucune relance et
 aucun repli.
 
-Ces deux dernières sont le filet des deux arbitrages du § 3.3 et du § 3.4 : elles attrapent, en
+`price_respected` et `no_time_skip` sont le filet des deux arbitrages du § 3.3 et du § 3.4 : elles attrapent, en
 production, un conteur qui remplacerait le prix imposé par autre chose ou qui ferait passer le
 temps de sa propre initiative. Ni l'un ni l'autre ne changerait un chiffre — le moteur a déjà
 écrit —, mais les deux mentiraient au joueur sur ce qui vient d'arriver.
@@ -2419,7 +2419,7 @@ taux de repli mesuré sur le corpus enregistré.
 Dossier `packages/ai-eval/chronicle/` :
 
 - **N0** : sur une fixture de 800 événements et la chronique attendue enregistrée, vérifier la validation (§ 5.6) et la présence des **faits dorés** (D7) — 0 appel réseau.
-- **N1 chronique** (nocturne) : régénération réelle sur la fixture via `structurer()`, puis contrôles C1→C8 + faits dorés + **test de dérive** : régénérer 5 fois de suite en chaînant (chronique N → N+1 → … → N+5) et vérifier qu'aucun `statement` de fait doré n'a changé d'un seul caractère. Mesure directe de la dérive, et meilleur discriminant entre deux fournisseurs candidats.
+- **N1 chronique** (nocturne) : régénération réelle sur la fixture via `structurer()`, puis contrôles C1→C9 + faits dorés + **test de dérive** : régénérer 5 fois de suite en chaînant (chronique N → N+1 → … → N+5) et vérifier qu'aucun `statement` de fait doré n'a changé d'un seul caractère. Mesure directe de la dérive, et meilleur discriminant entre deux fournisseurs candidats.
 - **Reconstruction complète** : mensuelle en CI sur la fixture, comparée à la chronique attendue par ensemble de faits (pas par texte).
 
 ### 8.8 Juge (N2)
@@ -2641,7 +2641,7 @@ packages/ai/
   src/narration/postfilter.ts        # importe ../assertions
   src/assertions/*.ts                # SOURCE UNIQUE — partagées avec ai-eval ET le post-filtre
   src/chronicle/build.ts             # construction de la requête de compaction (PURE)
-  src/chronicle/validate.ts          # C1→C8 (PURE)
+  src/chronicle/validate.ts          # C1→C9 (PURE)
   src/forge/build.ts  src/forge/validate.ts    # V1→V12 (PURES)
   tests/tool-surface.test.ts         # invariant 1 : outils lecture/proposition, noms interdits
   tests/scene-merge.test.ts          # S1→S10 : monotonie des partis, omission = présence (S9)
@@ -2734,7 +2734,7 @@ S'y ajoutent deux objets qui ne sont **pas** des portes : la **sonde de fumée**
 ### 11.2 Reste ouvert
 
 1. **Quel fournisseur gratuit tient la table.** Objet de la tâche M0-31 : rejouer le corpus d'assertions contre deux ou trois candidats `openai-compatible` et un modèle local, et publier les taux de réussite par assertion. Sans cette mesure, « le conteur marche avec un modèle gratuit » est une croyance, pas un fait. **Le signal précoce n'attend pas jusque-là** : la sonde de fumée M0-32 (sept assertions écrites à la main, verdict lisible, aucune dépendance au corpus) répond dès que le prompt intégral et le port existent à la seule question qui commande la conception — *est-ce qu'un modèle gratuit tient le prompt contraint ?*
-2. **Ordre d'essai quand la prose déçoit**, à `effort` constant : monter `effort` d'un cran (`low` → `medium`) avant de changer de modèle, seul levier qui ne touche ni au prompt ni au cache. Changer de modèle vient après, changer de fournisseur en dernier.
+2. **Ordre d'essai quand la prose déçoit** : monter `effort` d'un cran (`low` → `medium`) avant de changer de modèle, seul levier qui ne touche ni au prompt ni au cache. Changer de modèle vient après, changer de fournisseur en dernier.
 3. **Détecteur de français** : l'heuristique par mots-outils suffit-elle, ou faut-il une petite dépendance (`franc`) ? Décision à prendre au premier faux positif.
 4. **Segmentation de phrases** : la règle « 3 à 5 phrases » se heurte aux points de suspension et aux dialogues. Liste d'abréviations et traitement des `…` à figer dans un test dédié d'une vingtaine d'exemples. Source la plus probable de replis moteur injustifiés ; à traiter tôt.
 5. **Complétude des alias de champions** : la détection des réservés repose entièrement sur les tableaux `aliases` du contenu. Un surnom manquant est un trou silencieux. Chantier de **contenu**, pas de code, à planifier pour les 170 champions.
