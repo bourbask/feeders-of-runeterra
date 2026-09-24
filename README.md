@@ -20,6 +20,8 @@ Trois autres règles d'architecture, non négociables :
 
 ## Documentation
 
+- `docs/GLOSSAIRE.md` — **commence ici si un mot t'arrête.** Les jauges, le Souffle, les serments, mais aussi `c2s.intent`, « miroir », « garde-fou », « corpus doré ». Écrit pour être lu sans connaître le code.
+
 - `docs/ARCHITECTURE.md` — le document de référence, à lire en premier
 - `docs/design/` — les spécifications de détail
 - `docs/M0-TASKS.md` — le découpage du jalon en cours

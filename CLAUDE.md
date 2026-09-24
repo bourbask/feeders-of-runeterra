@@ -3,6 +3,8 @@
 Une table de jeu de rôle multijoueur au Freljord, avec un maître de jeu tenu par une IA.
 Le vocal reste sur Discord.
 
+**Un terme t'arrête ?** `docs/GLOSSAIRE.md` — les mots du jeu et les mots du code, expliqués sans rien supposer. Si un terme manque, c'est un défaut du glossaire.
+
 **À lire en premier :** `docs/ARCHITECTURE.md`. Puis la spec de détail qui concerne ta tâche,
 et ta fiche dans `docs/M0-TASKS.md`.
 
@@ -19,7 +21,9 @@ par de la discipline.
 2. **La mémoire vit dans la base**, jamais dans la fenêtre de contexte. État structuré plus une
    chronique compactée.
 3. **Le serveur est l'autorité.** Le client n'envoie que des intentions.
-4. **Tout état de partie est rejouable** depuis un journal d'événements en ajout seul.
+4. **Tout état de partie est rejouable** depuis un journal d'événements en ajout seul. Depuis
+   l'ADR 0008, les entrées portent une **portée de visibilité** : rejouer le journal du point de
+   vue d'un joueur doit redonner exactement ce qu'il a vu, ni plus ni moins.
 
 ## Frontières mécaniques
 
@@ -31,6 +35,11 @@ par de la discipline.
   `Math.random()` sont interdits par le lint, dans le moteur comme dans `server/src/game`.
   Ce dont tu as besoin arrive par un paramètre.
 - Le graphe de dépendances entre paquets est vérifié par `pnpm depcruise`, pas par la bonne volonté.
+- **`satisfies z.ZodType<T>` ne garde pas le miroir.** Il attrape un champ manquant, et c'est
+  tout : ni un champ en trop, ni une variante d'union absente ou inventée, ni un enum rétréci
+  côté schéma — `ZodType` est covariant en sortie. Un miroir n'est garanti que par un test
+  d'exécution qui compare les deux listes membre à membre (`exhaustive-union.test.ts`).
+  Mesuré, pas supposé : ADR 0007.
 - Les assertions de style du conteur vivent dans `@for/ai`, jamais dans `@for/ai-eval` : elles
   servent à la fois d'eval et de post-filtre de production.
 
@@ -51,6 +60,15 @@ pnpm sim run <scénario>
 tâche après tâche, et c'est M0-30 qui la referme entièrement. Ne cherche pas à rendre vertes des
 commandes dont la cible n'est pas encore livrée — elles t'annoncent d'elles-mêmes quelle tâche
 les remplira.
+
+## Écrire la documentation
+
+- Des **tableaux et des listes**, pas des paragraphes. Une définition tient en une ligne.
+- Le **mot simple d'abord**, le terme technique seulement s'il apporte quelque chose. `id` est
+  un identifiant ; ce qu'on en fait se dit après, en français.
+- Pas de préambule, pas de phrase qui annonce ce que le document va faire.
+- Une référence au code (`c2s.intent`, `zGameEvent`) se montre avec un exemple réel plutôt
+  qu'elle ne se décrit.
 
 ## Écrire un commit ou une PR
 
@@ -75,6 +93,18 @@ Format : **symptôme, cause, correctif, preuve**. Une ligne chacun quand c'est p
 
 Une tâche, une branche, une PR vers `develop`. `main` est la branche déployée.
 Nommage : `feat/M0-07-moteur-des`, `fix/...`, `docs/...`.
+
+## Mesurer sans se faire mentir
+
+Deux façons d'obtenir un vert qui ne veut rien dire, toutes deux rencontrées en recette :
+
+- **Une sonde qui touche `@for/engine` exige un `tsc -b --force` avant de relancer les tests.**
+  Sans ça, les paquets en aval lisent un `dist/` périmé : tu élargis une constante du moteur,
+  tout reste vert, et tu conclus que le garde-fou est inerte — ou pire, qu'il mord alors qu'il
+  ne mord pas.
+- **Le cache turbo rejoue les journaux d'un autre worktree.** Une mesure faite sans `--force`
+  peut t'afficher la sortie de quelqu'un d'autre. Toute mesure de recette se fait avec
+  `--force`, ou en invoquant `vitest run` directement.
 
 ## Deux pièges de l'environnement, déjà payés
 
