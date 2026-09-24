@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "truths": [
+    {
+      "id": "que-reste-t-il-d-avarosa",
+      "question": "Que reste-t-il d'Avarosa ?",
+      "options": [
+        {
+          "id": "une-tombe-gardee",
+          "text": "Une tombe, gardée par ceux qui n'ont jamais cessé d'attendre.",
+          "questHint": "Trouver la tombe avant ceux qui la cherchent aussi.",
+          "entitySeeds": [
+            {
+              "kind": "place",
+              "name": "La Tombe Basse",
+              "summary": "Sous trois mètres de glace, et personne ne creuse."
+            }
+          ]
+        },
+        {
+          "id": "un-nom-qu-on-reprend",
+          "text": "Un nom, que chaque clan s'attribue à son tour.",
+          "questHint": "Décider qui a le droit de le porter.",
+          "entitySeeds": []
+        }
+      ]
+    }
+  ]
+}

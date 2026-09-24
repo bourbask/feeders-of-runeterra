@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "yes-no",
+  "kind": "yes-no",
+  "die": 100,
+  "likelihoods": {
+    "quasi-certain": 90,
+    "probable": 75,
+    "incertain": 50,
+    "peu-probable": 25,
+    "improbable": 10
+  },
+  "extremeRule": "Un double (11, 22, …) retourne la réponse : « oui, mais » ou « non, et ».",
+  "extremeTableId": "presages"
+}

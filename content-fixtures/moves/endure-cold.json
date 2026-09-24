@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "endure-cold",
+  "name": "Endurer le froid",
+  "category": "survie",
+  "trigger": "Quand la nuit tombe loin d'un abri, ou que la marche dure plus que les vivres.",
+  "rollKind": "action",
+  "attributeOptions": ["fer", "esprit"],
+  "allowsMomentumBurn": false,
+  "outcomes": {
+    "franche": {
+      "text": "Tu tiens. Le froid te laisse passer sans rien prendre.",
+      "effects": []
+    },
+    "partielle": {
+      "text": "Tu tiens, mais tu brûles tes réserves.",
+      "effects": [{ "op": "gauge", "gauge": "vivres", "delta": -1 }]
+    },
+    "echec": {
+      "text": "Le froid entre. Il ne ressortira pas de sitôt.",
+      "effects": [
+        { "op": "gauge", "gauge": "vigueur", "delta": -1 },
+        { "op": "condition_add", "conditionId": "transi" }
+      ]
+    }
+  },
+  "tags": ["froid", "survie"]
+}

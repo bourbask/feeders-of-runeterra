@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "conditions": [
+    {
+      "id": "transi",
+      "name": "Transi",
+      "kind": "physique",
+      "text": "Le froid est entré. Tes doigts obéissent avec un temps de retard.",
+      "blocksMomentumReset": false,
+      "momentumMaxPenalty": 1,
+      "clearMoveHint": "Un feu, un abri, et une nuit entière."
+    },
+    {
+      "id": "blesse",
+      "name": "Blessé",
+      "kind": "physique",
+      "text": "Une plaie qui se rouvre chaque fois que tu forces.",
+      "blocksMomentumReset": true,
+      "momentumMaxPenalty": 2,
+      "clearMoveHint": "Des soins, du repos, et quelqu'un qui sait faire."
+    }
+  ]
+}

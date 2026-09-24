@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "freljord",
+  "name": "Le Freljord",
+  "parentId": null,
+  "kind": "royaume",
+  "summary": "Trois peuples, un seul hiver, et une paix que personne ne sait tenir.",
+  "description": "Un nord de glace et de rancunes, où les clans se disputent des vallées que le gel reprendra de toute façon. On y meurt de froid plus souvent que d'une lame, et les deux arrivent la même nuit.",
+  "dangerRank": "dangereux",
+  "climate": "Hiver permanent, tempêtes soudaines, nuits de vingt heures.",
+  "factions": [
+    { "id": "avarosans", "name": "Avarosans", "stance": "Rassemblent les clans par le grain." },
+    { "id": "gardiens-du-givre", "name": "Gardiens du Givre", "stance": "Gardent ce qui dort." }
+  ],
+  "landmarks": ["La Faille Hurlante", "Les Pierres Dressées"],
+  "hooks": ["Un convoi de vivres n'est jamais arrivé.", "Quelque chose remonte de sous la glace."],
+  "oracleRefs": ["complication"],
+  "neighborIds": [],
+  "tags": ["froid"]
+}

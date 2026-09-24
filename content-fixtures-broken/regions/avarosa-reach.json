@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "avarosa-reach",
+  "name": "La Marche d'Avarosa",
+  "parentId": "freljord",
+  "kind": "territoire",
+  "summary": "Des vallées basses où l'on sème encore, et où l'on compte les sacs avant la neige.",
+  "description": "La seule terre du nord qui nourrit plus d'une bouche par foyer. Les greniers y valent des armées, et tout le monde le sait.",
+  "dangerRank": "genant",
+  "climate": "Froid sec, vents de vallée, neige tardive.",
+  "factions": [],
+  "landmarks": ["Le Grenier de Pierre"],
+  "hooks": ["Le grenier a été ouvert de l'intérieur."],
+  "oracleRefs": [],
+  "neighborIds": ["freljord"],
+  "tags": []
+}

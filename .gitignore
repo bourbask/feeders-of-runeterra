@@ -15,6 +15,11 @@ coverage/
 *.db-wal
 *.db-shm
 data/
+# EXCEPTION, et elle a failli coûter un livrable : `data/` sans ancre attrape
+# AUSSI `packages/content/data/labels/`, qui est du code relu en PR (M0-14,
+# 01-architecture.md §2.5). Les fichiers existaient en local, tout était vert,
+# et ils ne seraient jamais entrés dans un commit.
+!packages/content/data/
 
 # outils
 .turbo/

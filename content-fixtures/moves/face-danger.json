@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "face-danger",
+  "name": "Affronter le danger",
+  "category": "aventure",
+  "trigger": "Quand tu agis malgré la menace, ou que tu encaisses un péril immédiat.",
+  "rollKind": "action",
+  "attributeOptions": ["vif", "coeur", "fer", "ombre", "esprit"],
+  "allowsMomentumBurn": true,
+  "outcomes": {
+    "franche": {
+      "text": "Tu passes. La voie est ouverte et tu gardes la main.",
+      "gmGuidance": "Donne du terrain, pas du répit : le froid attend.",
+      "effects": [{ "op": "momentum", "delta": 1 }]
+    },
+    "partielle": {
+      "text": "Tu passes, mais le Freljord prélève sa part.",
+      "effects": [{ "op": "gauge", "gauge": "vivres", "delta": -1 }]
+    },
+    "echec": {
+      "text": "Le danger te prend de vitesse.",
+      "effects": [{ "op": "pay_price", "mode": "roll" }]
+    }
+  },
+  "presage": {
+    "text": "Le vent tourne avant que tu aies fini ton geste.",
+    "tableId": "presages"
+  },
+  "tags": ["peril", "survie"]
+}

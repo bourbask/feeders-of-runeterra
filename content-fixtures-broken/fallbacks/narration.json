@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "templates": {
+    "face-danger": {
+      "franche": ["Le passage s'ouvre, et rien ne se referme derrière."],
+      "partielle": ["Tu passes, et le froid prend sa part."],
+      "echec": ["Le danger arrive le premier."]
+    }
+  }
+}

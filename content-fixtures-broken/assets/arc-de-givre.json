@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "arc-de-givre",
+  "name": "Arc de givre",
+  "category": "equipement",
+  "text": "Un arc dont la corde ne gèle pas, et dont personne n'explique pourquoi.",
+  "abilities": [
+    {
+      "text": "Quand tu frappes de loin, la cible ne sait pas d'où.",
+      "xpCost": 1,
+      "effects": [{ "op": "momentum", "delta": 1 }]
+    }
+  ],
+  "track": { "label": "Flèches de givre", "max": 3 },
+  "tags": ["distance"]
+}
