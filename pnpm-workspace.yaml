@@ -10,5 +10,6 @@ packages:
 # L'ancien `onlyBuiltDependencies` est ignoré en silence — l'installation
 # échoue alors sur ERR_PNPM_IGNORED_BUILDS sans dire pourquoi.
 allowBuilds:
+  better-sqlite3: true # binaire natif : le pilote SQLite de @for/db (M0-11)
   esbuild: true # binaire natif, utilisé par Vite et par tsx
   unrs-resolver: true # résolveur natif d'eslint-plugin-import-x

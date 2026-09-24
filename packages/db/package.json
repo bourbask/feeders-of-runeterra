@@ -21,9 +21,14 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@for/contracts": "workspace:*"
+    "@for/contracts": "workspace:*",
+    "better-sqlite3": "^13.0.3",
+    "drizzle-orm": "^0.45.3"
   },
   "devDependencies": {
-    "@for/tsconfig": "workspace:*"
+    "@for/engine": "workspace:*",
+    "@for/tsconfig": "workspace:*",
+    "@types/better-sqlite3": "^9.6.0",
+    "drizzle-kit": "^0.31.11"
   }
 }
