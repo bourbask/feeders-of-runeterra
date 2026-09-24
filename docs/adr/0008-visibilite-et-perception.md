@@ -89,3 +89,72 @@ carnet de notes libre sont des fonctionnalités de M1. Elles reposent toutes sur
 primitive de transfert — consultable, divisible, indivisible — et sur une liste de
 destinataires, c'est-à-dire exactement sur la décision 1. Elles seront spécifiées en leur temps ;
 rien de ce qui est décidé ici ne les contraint autrement que par cette liste.
+
+---
+
+## Décision 4 — une seule chronologie à trois rails, pas trois conversations
+
+Ajoutée le 24 septembre, après la séance de conception d'interface.
+
+Le découpage proposé — commun, groupe, personnel — **correspond exactement aux trois portées
+de la décision 1**. L'intuition d'interface et le modèle de données sont la même chose, ce qui
+est le signe qu'aucun des deux n'est arbitraire.
+
+Mais ce ne sont pas trois conversations : c'est **une chronologie unique à trois niveaux de
+visibilité**. Une histoire se lit dans l'ordre. Donc un seul fil, où la portée se lit à
+l'indentation et à la couleur du rail :
+
+```
+  LE COL BATTU PAR LA TEMPÊTE
+
+  La corde tient. En bas, les chiens de la Griffe d'Hiver ont cessé de japper.
+
+    ┃ Vous trois, sur la corniche
+    ┃ Katla vous attend près d'un feu mort. Elle ne se lève pas.
+
+       ╏ Toi seul
+       ╏ Tu reconnais la broche à son col : c'est celle de ton frère.
+
+  Le vent tombe d'un coup.
+
+  ─────────────────────────────────────────────
+  [ visible par : la table ▾ ]   Ce que tu fais…
+```
+
+Ce que cette forme achète :
+
+- **rien n'est jamais caché.** Les onglets ont été écartés pour cette raison, et elle est
+  disqualifiante : masquer un canal où une information peut arriver.
+- **un niveau vide ne s'affiche pas.** « Le tchat perso ne dit rien s'il n'y a rien à dire »
+  devient une propriété du rendu, pas une règle à coder.
+- **un quatrième groupe n'ajoute rien à l'interface.** Trois zones à hauteur fixe se disputent
+  l'écran dès qu'il se passe quelque chose partout ; un fil indenté encaisse.
+- **la chronologie de l'histoire est préservée**, ce qui est la seule chose qu'on ne peut pas
+  rattraper après coup.
+
+### Le sélecteur de destinataire est le composant le plus important de l'écran
+
+Un joueur ne doit **jamais** être surpris de qui a lu son message. La destination est affichée
+en permanence dans la zone de saisie — « visible par : la table », « visible par : Théo et toi » —
+jamais dans un mode caché, jamais déduite du contexte sans le dire. Par défaut, elle reprend la
+portée de ce à quoi on répond.
+
+C'est un principe de confiance avant d'être un principe d'ergonomie : dire tout haut ce qu'on
+voulait dire tout bas est le genre d'incident qui gâche une soirée et qu'aucune annulation ne
+répare.
+
+### La déclassification appartient au joueur
+
+Règle retenue telle quelle : **répondre dans le commun à ce qui t'a été dit en privé rend cette
+information publique.** Le joueur est celui qui déclassifie, ce qui est juste fictionnellement
+et trivial mécaniquement — l'intention porte une portée, et répondre en public promeut ce à quoi
+elle répond.
+
+### Reste ouvert
+
+Les mimiques d'écriture du conteur — l'énumération à trois termes, l'antithèse « ce n'est pas X,
+c'est Y », la phrase finale qui résume le sens, les paires d'adjectifs, la régularité anormale de
+la longueur des phrases — sont toutes mesurables, donc toutes transformables en assertions dures.
+Elles seront arrêtées avec le corpus de référence, dont la source est en cours de choix : ce
+corpus sera du texte **écrit par des humains dans un cadre de jeu de rôle**, et non rédigé pour
+l'occasion, précisément pour ne pas apprendre au conteur à imiter de la prose d'IA.
