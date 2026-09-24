@@ -21,6 +21,21 @@ import { SCENE_NAME_MAX } from '../../src/core/scene-state.js';
 
 const present = (nom: string) => ({ nom, etat: '' });
 
+/**
+ * Les QUATRE causes de refus, recopiées de `02-mj-ia.md` ligne 855 — le
+ * `z.enum` du bloc `<scene_apres>` — et de l'invite système elle-même, jamais
+ * de `scene.ts`. Le critère d'acceptation de M0-12 les vise et le tableau R4
+ * de la §4.8 attache à CHAQUE NOM une règle de preuve distincte : un nom qui
+ * dérive fait diverger le contrat de l'invite et de la table de preuve, en
+ * silence.
+ */
+const REFUSAL_CAUSES_PER_SPEC: readonly string[] = [
+  'cible_absente',
+  'cible_morte',
+  'hors_de_portee',
+  'objet_inexistant',
+];
+
 describe('SceneBlockSchema', () => {
   // ÉPINGLÉ EN TOUTES LETTRES. Les bornes viennent de `core/scene-state.ts`,
   // qui les mirroite du moteur — mais un test qui borne avec la constante
@@ -53,6 +68,12 @@ describe('SceneBlockSchema', () => {
   });
 
   it('refuse une cause de refus hors des quatre valeurs closes', () => {
+    // ÉPINGLÉ EN TOUTES LETTRES D'ABORD. La boucle ci-dessous garde le lien
+    // entre la constante et le schéma, mais elle compare la liste à celle
+    // dont elle dérive : les quatre causes réécrites en
+    // `cible_partie / cible_decedee / trop_loin / objet_absent` laissaient
+    // 113/113 verts — mesuré (ADR 0007).
+    expect([...SCENE_REFUSAL_CAUSES]).toStrictEqual(REFUSAL_CAUSES_PER_SPEC);
     for (const cause of SCENE_REFUSAL_CAUSES) {
       expect(SceneBlockSchema.safeParse({ refus: { cause, cible: 'Katla' } }).success).toBe(true);
     }

@@ -7,6 +7,10 @@
  *      `additionalProperties: false` on every object, `required` covering
  *      every property. "It looks strict" is not a measurement, and half the
  *      providers silently accept whatever a loose schema lets through.
+ *      EVERY `z.toJSONSchema` CALL IN THIS FILE PASSES `io: 'input'`, with no
+ *      exception: the default mode writes `additionalProperties: false` even
+ *      on a non-strict object, so two modes cohabiting here would invite the
+ *      next task to copy the one that cannot fail (CLAUDE.md, ADR 0007).
  *   2. THE FROZEN LIST. Twelve names, in the order of section 3.4, with no
  *      price tool and no thirteenth. `TOOL_JOURNAL_ONLY` empty everywhere but
  *      `roll_oracle` (P12).
@@ -26,7 +30,6 @@ import { CLOCK_SEGMENT_COUNTS, LIKELIHOODS, PROGRESS_RANKS } from '@for/engine';
 import { describe, expect, it } from 'vitest';
 
 import { z } from 'zod';
-import { ORACLE_JOURNAL_ONLY_EVENT_TYPES } from '../../src/ai/narrator-port.js';
 import {
   CLOCK_PROPOSAL_KINDS,
   FORBIDDEN_TOOL_NAMES,
@@ -64,6 +67,18 @@ const FROZEN_ORDER = [
   'propose_lore_fact',
   'propose_scene_transition',
   'propose_vow_hook',
+];
+
+/**
+ * Circuit 2 of the section 0.5 table, as arbitration P12 of `M0-TASKS.md`
+ * writes it in full. PINNED TO THE SPEC, not to
+ * `ORACLE_JOURNAL_ONLY_EVENT_TYPES`: `tools.ts` defines
+ * `roll_oracle: ORACLE_JOURNAL_ONLY_EVENT_TYPES`, so comparing the two was
+ * comparing one object to itself — green whatever either side said (ADR 0007).
+ */
+const ORACLE_JOURNAL_ONLY_PER_SPEC: readonly string[] = [
+  'roll.oracle_resolved',
+  'roll.yes_no_resolved',
 ];
 
 interface JsonNode {
@@ -184,7 +199,7 @@ describe('roll_oracle — P12', () => {
       if (name === 'roll_oracle') continue;
       expect(TOOL_JOURNAL_ONLY[name], `${name} écrit au journal`).toStrictEqual([]);
     }
-    expect([...TOOL_JOURNAL_ONLY.roll_oracle]).toStrictEqual([...ORACLE_JOURNAL_ONLY_EVENT_TYPES]);
+    expect([...TOOL_JOURNAL_ONLY.roll_oracle]).toStrictEqual(ORACLE_JOURNAL_ONLY_PER_SPEC);
   });
 
   it('les tables « payer le prix » et « présages » ne sont PAS consultables', () => {
@@ -289,12 +304,14 @@ describe('les énumérations dérivées du moteur (ADR 0007)', () => {
   });
 
   it('propose_clock_create.segments = CLOCK_SEGMENT_COUNTS', () => {
-    const json = z.toJSONSchema(TOOL_INPUT_SCHEMAS.propose_clock_create) as JsonNode;
+    const json = z.toJSONSchema(TOOL_INPUT_SCHEMAS.propose_clock_create, {
+      io: 'input',
+    }) as JsonNode;
     expect(json.properties?.['segments']?.enum).toStrictEqual([...CLOCK_SEGMENT_COUNTS]);
   });
 
   it('propose_vow_hook.rank = PROGRESS_RANKS', () => {
-    const json = z.toJSONSchema(TOOL_INPUT_SCHEMAS.propose_vow_hook) as JsonNode;
+    const json = z.toJSONSchema(TOOL_INPUT_SCHEMAS.propose_vow_hook, { io: 'input' }) as JsonNode;
     expect(json.properties?.['rank']?.enum).toStrictEqual([...PROGRESS_RANKS]);
   });
 });
@@ -304,7 +321,7 @@ describe('aucun outil n’accepte une valeur de jeu', () => {
     // La liste de noms interdits de la §3.1, appliquée aux CLÉS D'ENTRÉE.
     // Un outil qui prendrait une jauge, une issue, un dé ou un effet
     // remettrait le conteur sur le chemin de décision.
-    const json = JSON.stringify(z.toJSONSchema(TOOL_INPUT_SCHEMAS[name]));
+    const json = JSON.stringify(z.toJSONSchema(TOOL_INPUT_SCHEMAS[name], { io: 'input' }));
     for (const forbidden of [
       'gauge',
       'vigueur',
