@@ -722,20 +722,33 @@ packages/client/
     App.tsx             # routes
     env.ts              # import.meta.env valide par zod
     api/http.ts  api/queries.ts       # TanStack Query
-    ws/socket.ts        # connexion, reconnexion exponentielle, resume via lastSeq
-    ws/store.ts         # reduce local des s2c.event -> etat affiche (miroir, jamais autorite)
+    ws/socket.ts        # connexion, reconnexion exponentielle, reprise via deliverySeq
+    ws/store.ts         # miroir de ce que le serveur a dit, jamais une autorite
+    ws/journal.ts       # un evenement recu -> une ligne de fil, sans aucun chiffre
     routes/{Login,CampaignList,TableRoom,CharacterPicker}.tsx
     features/table/{Log,Sheet,Gauges,MoveBar,Clocks,Vows}/
     features/table/Proof/   # « Pourquoi ? » : replie par defaut, rend un s2c.turn_proof,
                             #   et marque un tour annule au lieu de le retirer (02 §4.8.6)
     components/ui/*     # primitives sans logique metier
     styles/
-  tests/  e2e/          # Playwright (hors CI bloquante en M0)
 ```
 
+Pas de dossier `tests/` ni de dossier `e2e/` dans ce paquet : l'unitaire est colocalise en
+`*.test.ts` / `*.test.tsx` a cote de ce qu'il teste (§3.5). Les parcours Playwright arrivent
+apres M0, et leur emplacement sera decide a ce moment-la.
+
 Etat client : **TanStack Query** pour le distant HTTP, **Zustand** pour l'etat de session WS.
-Aucun `useState` ne detient d'etat de jeu autoritaire. Le store WS applique `reduce()` du moteur
-sur les evenements recus **uniquement pour l'affichage** ; a chaque `s2c.snapshot` il est ecrase.
+Aucun `useState` ne detient d'etat de jeu autoritaire.
+
+**Le store WS n'applique pas `reduce()`.** Il tient un miroir de ce que le serveur a envoye :
+un evenement recu devient une ligne de fil, un `s2c.snapshot` ecrase tout. Faire tourner le
+reducteur du moteur dans le client rendrait au client une autorite que l'invariant 3 de
+`ARCHITECTURE.md` lui refuse ; `tooling/eslint-config/react.js` l'interdit a l'import.
+
+**La reprise se fait sur `deliverySeq`, jamais sur `seq`** (ADR 0010 decision 1). Depuis
+l'ADR 0008 la diffusion est adressee : un trou de `seq` est legitime chez un joueur qui n'etait
+pas destinataire, et le surveiller ferait redemander sans fin des evenements auxquels il n'a
+pas droit. `c2s.resume` porte `sinceDeliverySeq`, `c2s.hello` porte `lastDeliverySeq`.
 
 ### 2.10 `packages/sim` — voir §7.4.
 

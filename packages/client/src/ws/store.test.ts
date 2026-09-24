@@ -162,6 +162,53 @@ describe('la reprise', () => {
     expect(store.getState().lines).toHaveLength(2);
   });
 
+  it('un lot dont la première entrée saute le curseur déclenche un c2s.resume', () => {
+    store.getState().receive(eventFrame(1, 1, gm(1, 'une')));
+    envoyes.length = 0;
+
+    store.getState().receive(
+      batchFrame([
+        { seq: 5, deliverySeq: 5, event: gm(5, 'cinq') },
+        { seq: 6, deliverySeq: 6, event: gm(6, 'six') },
+      ]),
+    );
+
+    const reprises = envoyes.filter((frame) => frame.t === 'c2s.resume');
+    expect(reprises).toHaveLength(1);
+    expect(reprises[0]).toMatchObject({ t: 'c2s.resume', p: { sinceDeliverySeq: 1 } });
+  });
+
+  it('un lot qui prend la suite du curseur ne déclenche rien', () => {
+    store.getState().receive(eventFrame(1, 1, gm(1, 'une')));
+    envoyes.length = 0;
+
+    store.getState().receive(
+      batchFrame([
+        { seq: 2, deliverySeq: 2, event: gm(2, 'deux') },
+        { seq: 3, deliverySeq: 3, event: gm(3, 'trois') },
+      ]),
+    );
+
+    expect(envoyes.filter((frame) => frame.t === 'c2s.resume')).toEqual([]);
+  });
+
+  it('le même lot à trou reçu deux fois ne redemande qu’une seule reprise', () => {
+    // Pas de boucle : les entrées sont appliquées, donc le curseur a bougé
+    // quand le serveur répète le même lot.
+    store.getState().receive(eventFrame(1, 1, gm(1, 'une')));
+    envoyes.length = 0;
+
+    const lot = () =>
+      batchFrame([
+        { seq: 5, deliverySeq: 5, event: gm(5, 'cinq') },
+        { seq: 6, deliverySeq: 6, event: gm(6, 'six') },
+      ]);
+    store.getState().receive(lot());
+    store.getState().receive(lot());
+
+    expect(envoyes.filter((frame) => frame.t === 'c2s.resume')).toHaveLength(1);
+  });
+
   it('un rattrapage par lot ne duplique pas ce qui est déjà appliqué', () => {
     store.getState().receive(eventFrame(1, 1, gm(1, 'une')));
     store.getState().receive(
@@ -172,6 +219,50 @@ describe('la reprise', () => {
     );
 
     expect(store.getState().lines.map((ligne) => ligne.deliverySeq)).toEqual([1, 2]);
+  });
+});
+
+// ------------------------------------------------------- l'ordre du fil
+
+describe('l’ordre du journal', () => {
+  it('trois événements livrés 3, 1, 2 se lisent [1, 2, 3]', () => {
+    store.getState().receive(eventFrame(30, 3, gm(30, 'trois')));
+    store.getState().receive(eventFrame(10, 1, gm(10, 'une')));
+    store.getState().receive(eventFrame(20, 2, gm(20, 'deux')));
+
+    const lignes = journalLines(store.getState());
+    expect(lignes.map((ligne) => ligne.deliverySeq)).toEqual([1, 2, 3]);
+    expect(lignes.map((ligne) => ligne.text)).toEqual(['une', 'deux', 'trois']);
+  });
+
+  it('un lot de rattrapage arrivé après un événement vivant plus récent se lit trié', () => {
+    // Le cas réel : le vivant 3 est déjà à l'écran quand le rattrapage 1 et 2
+    // arrive. Sans tri, le fil afficherait 3, 1, 2.
+    store.getState().receive(eventFrame(30, 3, gm(30, 'trois')));
+    store.getState().receive(
+      batchFrame([
+        { seq: 10, deliverySeq: 1, event: gm(10, 'une') },
+        { seq: 20, deliverySeq: 2, event: gm(20, 'deux') },
+      ]),
+    );
+
+    expect(journalLines(store.getState()).map((ligne) => ligne.text)).toEqual([
+      'une',
+      'deux',
+      'trois',
+    ]);
+  });
+
+  it('un lot livré à l’envers se lit dans l’ordre des livraisons', () => {
+    store.getState().receive(
+      batchFrame([
+        { seq: 30, deliverySeq: 3, event: gm(30, 'trois') },
+        { seq: 10, deliverySeq: 1, event: gm(10, 'une') },
+        { seq: 20, deliverySeq: 2, event: gm(20, 'deux') },
+      ]),
+    );
+
+    expect(journalLines(store.getState()).map((ligne) => ligne.deliverySeq)).toEqual([1, 2, 3]);
   });
 });
 
