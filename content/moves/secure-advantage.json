@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "secure-advantage",
+  "name": "Assurer un avantage",
+  "category": "aventure",
+  "trigger": "Quand tu prépares le terrain, prends de la hauteur, ou t'arranges pour que la suite soit moins mauvaise.",
+  "rollKind": "action",
+  "attributeOptions": ["vif", "coeur", "fer", "ombre", "esprit"],
+  "allowsMomentumBurn": true,
+  "outcomes": {
+    "franche": {
+      "text": "L'avantage est pris, et il tiendra le temps qu'il faut.",
+      "gmGuidance": "Dis ce que l'avantage ouvre concrètement, en une chose vérifiable.",
+      "effects": [{ "op": "momentum", "delta": 2 }]
+    },
+    "partielle": {
+      "text": "Tu gagnes quelque chose, et c'est moins que prévu.",
+      "gmGuidance": "L'avantage est réel mais étroit : montre son bord.",
+      "effects": [{ "op": "momentum", "delta": 1 }]
+    },
+    "echec": {
+      "text": "Ta préparation se retourne contre toi.",
+      "gmGuidance": "Le prix tiré remplace l'avantage espéré.",
+      "effects": [{ "op": "pay_price", "mode": "roll" }]
+    }
+  },
+  "presage": {
+    "text": "Ce que tu avais préparé servira à quelqu'un d'autre.",
+    "tableId": "presages"
+  },
+  "tags": ["preparation", "aventure"]
+}

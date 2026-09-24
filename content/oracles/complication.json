@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "id": "complication",
+  "name": "Complications du nord",
+  "kind": "table",
+  "die": 12,
+  "usage": "Quand une scène a besoin d'un ennui qui ne vienne pas du conteur.",
+  "entries": [
+    {
+      "id": "le-vent-efface-la-piste",
+      "min": 1,
+      "max": 2,
+      "text": "Le vent se lève et efface la piste en une heure.",
+      "tags": ["froid"],
+      "chain": []
+    },
+    {
+      "id": "un-temoin-s-en-va",
+      "min": 3,
+      "max": 3,
+      "text": "Quelqu'un regardait, et s'en va sans courir.",
+      "tags": [],
+      "chain": ["npc-roles"]
+    },
+    {
+      "id": "la-glace-cede",
+      "min": 4,
+      "max": 5,
+      "text": "La glace cède sous un pied, et le bruit porte loin.",
+      "tags": ["froid"],
+      "chain": []
+    },
+    {
+      "id": "un-vieux-serment",
+      "min": 6,
+      "max": 6,
+      "text": "Un vieux serment refait surface au pire moment.",
+      "tags": ["serment"],
+      "chain": []
+    },
+    {
+      "id": "les-vivres-ont-tourne",
+      "min": 7,
+      "max": 8,
+      "text": "Les vivres ont tourné : il faudra choisir qui mange.",
+      "tags": ["survie"],
+      "chain": []
+    },
+    {
+      "id": "une-bete-suit",
+      "min": 9,
+      "max": 9,
+      "text": "Une bête suit le groupe depuis un moment et ne se montre pas.",
+      "tags": ["bete"],
+      "chain": []
+    },
+    {
+      "id": "un-clan-revendique",
+      "min": 10,
+      "max": 11,
+      "text": "Un clan revendique le lieu et arrive en nombre.",
+      "tags": ["clan"],
+      "chain": ["npc-goals"]
+    },
+    {
+      "id": "le-terrain-ment",
+      "min": 12,
+      "max": 12,
+      "text": "Le terrain ne correspond pas à ce qu'on vous avait dit.",
+      "tags": [],
+      "chain": []
+    }
+  ],
+  "tags": ["scene"]
+}

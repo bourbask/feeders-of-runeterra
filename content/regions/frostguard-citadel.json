@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "frostguard-citadel",
+  "name": "La Citadelle du Givre",
+  "parentId": "freljord",
+  "kind": "etablissement",
+  "summary": "Une forteresse creusée dans la glace, dont les gardiens ne gardent rien qu'ils veuillent nommer.",
+  "description": "Elle est là depuis plus longtemps que les clans qui la contournent. Ceux qui l'habitent se disent gardiens, et personne n'a jamais obtenu d'eux ce qu'ils gardent. Les couloirs descendent plus bas que la roche ne le permet, la température y baisse au lieu de monter, et les visiteurs repartent en général — en général. On y vient pour demander, jamais pour prendre, et on y repart avec moins de questions qu'à l'arrivée.",
+  "dangerRank": "redoutable",
+  "climate": "Froid stable et sans vent, qui s'accentue à mesure qu'on descend.",
+  "factions": [
+    {
+      "id": "gardiens-du-givre",
+      "name": "Gardiens du Givre",
+      "stance": "Accueillants, patients, et parfaitement fermés."
+    }
+  ],
+  "landmarks": ["La Porte Sans Gond", "Les Escaliers Descendants"],
+  "hooks": [
+    "Une délégation est entrée l'automne dernier et n'est jamais ressortie, sans que personne s'en inquiète.",
+    "Des marques récentes sont apparues sur la porte, et les gardiens disent ne pas les avoir faites."
+  ],
+  "oracleRefs": ["place-features"],
+  "neighborIds": ["freljord", "ice-reaches"],
+  "tags": ["glace", "secret"]
+}

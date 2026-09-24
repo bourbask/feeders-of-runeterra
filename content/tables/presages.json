@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "id": "presages",
+  "name": "Présages",
+  "kind": "table",
+  "die": 12,
+  "usage": "Quand les deux dés de défi tombent sur le même chiffre : le retournement est imposé.",
+  "entries": [
+    {
+      "id": "le-froid-repond-avant-les-hommes",
+      "min": 1,
+      "max": 2,
+      "text": "Le froid répond avant les hommes.",
+      "tags": ["froid"],
+      "chain": []
+    },
+    {
+      "id": "une-dette-ancienne-se-rappelle",
+      "min": 3,
+      "max": 4,
+      "text": "Une dette ancienne se rappelle à toi, et elle a un porteur.",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "le-ciel-se-fend",
+      "min": 5,
+      "max": 6,
+      "text": "Le ciel se fend d'un bleu qui n'annonce rien de bon.",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "la-glace-rend-quelque-chose",
+      "min": 7,
+      "max": 8,
+      "text": "La glace rend quelque chose qu'elle gardait depuis longtemps.",
+      "tags": ["glace"],
+      "chain": []
+    },
+    {
+      "id": "un-serment-oublie-revient",
+      "min": 9,
+      "max": 10,
+      "text": "Un serment que personne ne citait plus redevient exigible.",
+      "tags": ["serment"],
+      "chain": []
+    },
+    {
+      "id": "quelqu-un-arrive-trop-tot",
+      "min": 11,
+      "max": 12,
+      "text": "Quelqu'un arrive bien plus tôt qu'il ne le devrait.",
+      "tags": [],
+      "chain": ["npc-roles"]
+    }
+  ],
+  "tags": ["retournement"]
+}

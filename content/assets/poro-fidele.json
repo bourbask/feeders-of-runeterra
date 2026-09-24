@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "poro-fidele",
+  "name": "Poro fidèle",
+  "category": "compagnon",
+  "text": "Il vous a suivis depuis le pont et n'a plus jamais été semé. Il mange peu et voit loin.",
+  "abilities": [
+    {
+      "text": "Quand il s'arrête net et refuse d'avancer, quelque chose est devant.",
+      "xpCost": 1,
+      "effects": []
+    },
+    {
+      "text": "Quand la veillée est mauvaise, sa présence vaut une heure de sommeil en plus pour tout le monde.",
+      "xpCost": 2,
+      "effects": [{ "op": "gauge", "gauge": "ame", "delta": 1, "target": "all-allies" }]
+    }
+  ],
+  "tags": ["compagnon"]
+}

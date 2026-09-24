@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "id": "settlement-troubles",
+  "name": "Ennuis d'un établissement",
+  "kind": "table",
+  "die": 12,
+  "usage": "Quand la bande arrive quelque part et qu'il faut savoir ce qui y va mal.",
+  "entries": [
+    {
+      "id": "le-grenier-a-ete-ouvert",
+      "min": 1,
+      "max": 1,
+      "text": "Le grenier a été ouvert de l'intérieur, et personne n'accuse personne.",
+      "tags": ["survie"],
+      "chain": []
+    },
+    {
+      "id": "deux-familles-en-guerre",
+      "min": 2,
+      "max": 2,
+      "text": "Deux familles ne se parlent plus, et les autres choisissent leur camp.",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "un-mort-sans-tombe",
+      "min": 3,
+      "max": 3,
+      "text": "Un mort attend depuis trois semaines : la terre est trop dure.",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "un-tribut-impossible",
+      "min": 4,
+      "max": 4,
+      "text": "Un tribut est exigé, et il dépasse ce que le hameau possède.",
+      "tags": ["clan"],
+      "chain": []
+    },
+    {
+      "id": "le-puits-a-un-gout",
+      "min": 5,
+      "max": 5,
+      "text": "L'eau du puits a pris un goût que les anciens reconnaissent.",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "une-bete-dans-les-parcs",
+      "min": 6,
+      "max": 6,
+      "text": "Quelque chose entre dans les parcs la nuit et ne mange pas tout.",
+      "tags": ["bete"],
+      "chain": []
+    },
+    {
+      "id": "des-etrangers-installes",
+      "min": 7,
+      "max": 7,
+      "text": "Des étrangers se sont installés et ne comptent pas repartir.",
+      "tags": [],
+      "chain": ["npc-goals"]
+    },
+    {
+      "id": "un-enfant-manque",
+      "min": 8,
+      "max": 8,
+      "text": "Un enfant manque depuis l'avant-veille, et on a cessé de chercher.",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "le-feu-commun-s-est-eteint",
+      "min": 9,
+      "max": 9,
+      "text": "Le feu commun s'est éteint, et plus personne n'ose le rallumer.",
+      "tags": ["rite"],
+      "chain": []
+    },
+    {
+      "id": "une-promesse-non-tenue",
+      "min": 10,
+      "max": 10,
+      "text": "Une promesse faite l'été dernier n'a pas été tenue.",
+      "tags": ["serment"],
+      "chain": []
+    },
+    {
+      "id": "la-route-est-coupee",
+      "min": 11,
+      "max": 11,
+      "text": "La route est coupée, et ceux qui l'ont coupée sont d'ici.",
+      "tags": ["voyage"],
+      "chain": []
+    },
+    {
+      "id": "on-attend-quelqu-un",
+      "min": 12,
+      "max": 12,
+      "text": "Tout le monde attend quelqu'un, et personne ne dit qui.",
+      "tags": [],
+      "chain": ["npc-roles"]
+    }
+  ],
+  "tags": ["lieu"]
+}

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "fulfill-your-vow",
+  "name": "Accomplir son serment",
+  "category": "serment",
+  "trigger": "Quand tu arrives au bout de ce que tu avais juré, et que tu en réclames la fin.",
+  "rollKind": "progress",
+  "attributeOptions": [],
+  "allowsMomentumBurn": false,
+  "outcomes": {
+    "franche": {
+      "text": "C'est fait, et c'est fait proprement.",
+      "gmGuidance": "Montre le monde changé par cette fin, pas la satisfaction du personnage.",
+      "effects": [{ "op": "xp", "amount": 3 }]
+    },
+    "partielle": {
+      "text": "C'est fait, et il reste une ombre au tableau.",
+      "gmGuidance": "L'ombre est concrète : quelqu'un, quelque part, n'est pas satisfait.",
+      "effects": [{ "op": "xp", "amount": 2 }]
+    },
+    "echec": {
+      "text": "Tu réclames la fin, et le monde te répond que non.",
+      "gmGuidance": "Le serment est clos en échec : ne laisse aucune porte entrouverte.",
+      "effects": [{ "op": "xp", "amount": 1 }, { "op": "momentum_reset" }]
+    }
+  },
+  "tags": ["serment", "resolution"],
+  "notes": "Le seul mouvement à jet de progression : l'élan n'y touche jamais."
+}

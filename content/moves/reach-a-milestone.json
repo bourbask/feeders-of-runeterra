@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "reach-a-milestone",
+  "name": "Atteindre un jalon",
+  "category": "meta",
+  "trigger": "Quand une étape réelle de ton serment est franchie, et que la table le reconnaît.",
+  "rollKind": "none",
+  "attributeOptions": [],
+  "allowsMomentumBurn": false,
+  "outcomes": {
+    "franche": {
+      "text": "Le serment avance d'un cran, au rythme de son rang.",
+      "gmGuidance": "Rappelle ce qui a été franchi, en une phrase, sans résumé de séance.",
+      "effects": [{ "op": "track_tick", "trackKind": "vow", "ticks": 1, "useRank": true }]
+    },
+    "partielle": {
+      "text": "Un jalon ne se rate pas à moitié : cette issue n'est jamais atteinte.",
+      "effects": []
+    },
+    "echec": {
+      "text": "Un jalon ne se rate pas : ce mouvement ne tire aucun dé.",
+      "effects": []
+    }
+  },
+  "tags": ["progression", "meta"],
+  "notes": "Sans jet : le moteur prend toujours la branche franche."
+}

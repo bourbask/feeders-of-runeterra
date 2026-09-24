@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "rakelstake",
+  "name": "Rakelstake",
+  "parentId": "avarosa-reach",
+  "kind": "etablissement",
+  "summary": "Un hameau de quarante feux, accroché sous les pics, qui n'a qu'une porte.",
+  "description": "Quarante foyers, un grenier, une porte. Rakelstake ne tient pas parce qu'elle est forte, mais parce que quelqu'un se met toujours devant la porte quand il faut. Les enfants y apprennent à compter le bois avant de savoir compter les moutons, et les anciens y racontent l'hiver où l'on a mangé les chiens comme on raconterait une blague. On y accueille l'étranger pour une nuit, sans question ; la deuxième nuit se paie en travail.",
+  "dangerRank": "genant",
+  "climate": "Abrité du vent d'ouest, écrasé par la neige de novembre à avril.",
+  "factions": [],
+  "landmarks": ["La Porte Basse", "Le Feu Commun"],
+  "hooks": [
+    "Le feu commun s'est éteint une nuit, et plus personne n'ose le rallumer.",
+    "Un tribut est exigé, et il dépasse ce que le hameau possède."
+  ],
+  "oracleRefs": ["settlement-troubles"],
+  "neighborIds": ["avarosa-reach"],
+  "tags": ["hameau"]
+}

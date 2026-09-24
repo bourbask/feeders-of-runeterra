@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "id": "freljord-weather",
+  "name": "Le temps qu'il fait",
+  "kind": "table",
+  "die": 12,
+  "usage": "Quand une journée de voyage commence et que le ciel doit trancher.",
+  "entries": [
+    {
+      "id": "ciel-bleu-et-mordant",
+      "min": 1,
+      "max": 2,
+      "text": "Ciel bleu, air immobile, et un froid qui brûle la peau nue.",
+      "tags": ["froid"],
+      "chain": []
+    },
+    {
+      "id": "neige-lente",
+      "min": 3,
+      "max": 4,
+      "text": "Neige lente et continue : dans deux heures, plus aucune trace.",
+      "tags": ["froid"],
+      "chain": []
+    },
+    {
+      "id": "vent-de-travers",
+      "min": 5,
+      "max": 6,
+      "text": "Vent de travers qui empêche de s'entendre à trois pas.",
+      "tags": [],
+      "chain": []
+    },
+    {
+      "id": "redoux-trompeur",
+      "min": 7,
+      "max": 7,
+      "text": "Redoux trompeur : la glace tient moins bien qu'elle en a l'air.",
+      "tags": ["glace"],
+      "chain": []
+    },
+    {
+      "id": "brouillard-de-glace",
+      "min": 8,
+      "max": 9,
+      "text": "Brouillard de glace : on voit ses mains, pas ses pieds.",
+      "tags": ["glace"],
+      "chain": []
+    },
+    {
+      "id": "blizzard",
+      "min": 10,
+      "max": 11,
+      "text": "Blizzard. On s'arrête, ou on paie.",
+      "tags": ["froid"],
+      "chain": []
+    },
+    {
+      "id": "nuit-de-vingt-heures",
+      "min": 12,
+      "max": 12,
+      "text": "La nuit tombe à midi et ne remonte pas.",
+      "tags": ["froid"],
+      "chain": []
+    }
+  ],
+  "tags": ["voyage"]
+}

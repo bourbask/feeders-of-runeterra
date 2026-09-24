@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "ice-reaches",
+  "name": "Les Étendues Gelées",
+  "parentId": "freljord",
+  "kind": "etendue",
+  "summary": "Du blanc jusqu'à l'horizon, sans repère, où les bandes de guerre se déplacent plus vite que les nouvelles.",
+  "description": "Rien n'y pousse et rien n'y reste. C'est le domaine de ceux qui ne s'installent pas : on y suit les troupeaux, on y frappe les convois, on y disparaît avant les représailles. La carte n'y sert à rien, parce que la glace bouge ; on s'y repère aux pierres dressées, quand la neige les laisse dépasser. Une bande qui traverse les Étendues arrive toujours d'un côté que personne ne surveillait.",
+  "dangerRank": "redoutable",
+  "climate": "Vent constant, blizzards sans préavis, aucune protection sur des jours de marche.",
+  "factions": [
+    {
+      "id": "griffe-d-hiver",
+      "name": "La Griffe d'Hiver",
+      "stance": "Y vivent, et n'appellent pas ça survivre."
+    }
+  ],
+  "landmarks": ["Les Pierres Dressées", "Le Champ de Crevasses"],
+  "hooks": [
+    "Une bande a laissé un convoi intact et n'a emporté que les bêtes de trait.",
+    "Des traces tournent en rond depuis deux jours autour du même point."
+  ],
+  "oracleRefs": ["freljord-weather", "complication"],
+  "neighborIds": ["freljord", "avarosa-reach", "frostguard-citadel"],
+  "tags": ["froid", "voyage"]
+}

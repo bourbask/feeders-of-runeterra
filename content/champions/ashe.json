@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "id": "ashe",
+  "name": "Ashe",
+  "title": "L'Archère de Givre",
+  "aliases": ["L'Archère de Givre", "the Frost Archer", "La Reine Guerrière", "the Warmother"],
+  "origin": {
+    "regionId": "avarosa-reach",
+    "homeText": "Un camp qu'on déplace chaque printemps, et qui n'a jamais eu de mur."
+  },
+  "pitch": "Une couronne qu'elle n'a pas demandée, un arc qui ne rate pas, et des comptes de grain à jour.",
+  "description": "Elle tient les clans ensemble par le grenier plus que par la lame, et elle sait exactement combien de temps ça peut durer. On lui prête une autorité qu'elle n'a jamais réclamée ; elle s'en sert, parce que refuser coûterait des vies qu'elle a déjà comptées. Elle parle peu, décide vite, et n'explique presque jamais — non par mépris, mais parce qu'expliquer donne à discuter. Ceux qui la croient douce se trompent de personne ; ceux qui la croient dure n'ont jamais vu ce qu'elle refuse de faire, même quand ce serait plus simple.",
+  "attributes": { "vif": 3, "coeur": 2, "fer": 1, "ombre": 1, "esprit": 2 },
+  "startingGauges": { "vigueur": 5, "ame": 5, "vivres": 5 },
+  "startingMomentum": 2,
+  "startingAssets": ["arc-de-givre", "voie-du-marcheur-de-glace"],
+  "signatureAsset": {
+    "id": "oeil-de-l-archere",
+    "name": "Œil de l'archère",
+    "text": "Elle voit la trajectoire avant de bander la corde, et elle voit aussi ce qu'il y a derrière la cible.",
+    "effects": []
+  },
+  "startingVow": {
+    "title": "Un seul nord",
+    "rank": "extreme",
+    "description": "Réunir des clans qui se sont entretués pendant trois générations, et le faire sans en écraser un seul."
+  },
+  "startingBonds": [
+    {
+      "with": "Le grenier commun",
+      "text": "Elle en tient les comptes elle-même, et personne ne les conteste plus."
+    },
+    {
+      "with": "Les exilés accueillis",
+      "text": "Chacun lui doit un hiver, et elle n'a jamais réclamé le remboursement."
+    }
+  ],
+  "perceptionTraits": [
+    {
+      "id": "lit-le-terrain",
+      "domain": "traque",
+      "trigger": {
+        "text": "Une présence désignée se tient à portée de trait, et n'a pas encore été identifiée.",
+        "presentEntity": { "kinds": ["npc", "beast"], "dispositions": ["hostile", "inconnu"] },
+        "moveIds": []
+      },
+      "strength": 45,
+      "frequency": "scene",
+      "effect": {
+        "kind": "reveal",
+        "text": "Elle sait par où la chose est arrivée, et par où elle repartira si on la laisse."
+      }
+    },
+    {
+      "id": "pese-les-mots",
+      "domain": "mensonge",
+      "trigger": {
+        "text": "Elle écoute quelqu'un négocier, promettre ou se justifier.",
+        "moveIds": ["probe-a-soul", "gather-information"]
+      },
+      "strength": 30,
+      "frequency": "session",
+      "effect": {
+        "kind": "reveal",
+        "text": "Elle repère la phrase préparée à l'avance, et ce qu'elle sert à couvrir."
+      }
+    }
+  ],
+  "voice": {
+    "register": "mesuré, direct, sans emphase ; elle finit ses phrases et ne les répète pas",
+    "speechTics": [
+      "Chiffre ce qu'elle avance : des jours, des sacs, des bouches",
+      "Répond à la question posée, jamais à celle qu'on aurait dû poser"
+    ],
+    "forbidden": [
+      "la grandiloquence",
+      "les serments improvisés",
+      "toute menace qu'elle ne pourrait pas tenir le lendemain"
+    ],
+    "sampleLines": [
+      "On mangera ce soir. Le reste attendra demain.",
+      "Quatre jours de marche, deux sacs. Décide maintenant.",
+      "Je ne te demande pas de m'aimer. Je te demande de tenir jusqu'au dégel."
+    ]
+  },
+  "loreHooks": [
+    "Sa mère est morte d'un choix qu'elle refait, seule, chaque hiver.",
+    "Un clan de l'est attend toujours une réponse qu'elle repousse depuis deux ans.",
+    "Elle a promis une place au grenier à quelqu'un qui ne mérite pas d'en avoir une."
+  ],
+  "relations": [
+    {
+      "championId": "braum",
+      "kind": "allie",
+      "text": "Elle lui confie ce qu'elle ne dit pas au conseil, parce qu'il ne le répétera pas et ne s'en servira pas."
+    },
+    {
+      "championId": "sejuani",
+      "kind": "parent",
+      "text": "Elles ont partagé un feu, enfants. Aucune des deux n'a jamais raconté comment ça s'est terminé."
+    }
+  ],
+  "source": "handwritten",
+  "contentWarnings": [],
+  "tags": ["commandement", "distance"]
+}

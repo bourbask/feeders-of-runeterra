@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 1,
+  "truths": [
+    {
+      "id": "truth-avarosa",
+      "question": "Que reste-t-il d'Avarosa ?",
+      "options": [
+        {
+          "id": "une-tombe-gardee",
+          "text": "Une tombe, gardée par ceux qui n'ont jamais cessé d'attendre.",
+          "questHint": "Trouver la tombe avant ceux qui la cherchent aussi.",
+          "entitySeeds": [
+            {
+              "kind": "place",
+              "name": "La Tombe Basse",
+              "summary": "Sous trois mètres de glace, et personne ne creuse."
+            },
+            {
+              "kind": "faction",
+              "name": "Les Veilleurs de la Tombe",
+              "summary": "Ils attendent depuis si longtemps qu'ils ont oublié quoi."
+            }
+          ]
+        },
+        {
+          "id": "un-nom-qu-on-reprend",
+          "text": "Un nom, que chaque clan s'attribue à son tour selon ce qui l'arrange.",
+          "questHint": "Décider, une fois pour toutes, qui a le droit de le porter.",
+          "entitySeeds": []
+        },
+        {
+          "id": "une-lignee-qui-s-ignore",
+          "text": "Une lignée qui court encore, et qui ne sait pas ce qu'elle porte.",
+          "questHint": "Prévenir l'héritier avant ceux qui veulent l'éteindre.",
+          "entitySeeds": [
+            {
+              "kind": "npc",
+              "name": "Yrsa du Gué Bas",
+              "summary": "Elle compte le grain et n'a jamais entendu parler de tout ça."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "truth-sous-la-glace",
+      "question": "Qu'y a-t-il sous la glace ?",
+      "options": [
+        {
+          "id": "rien-que-de-la-glace",
+          "text": "De la glace, et des histoires que les anciens racontent pour tenir les enfants au chaud.",
+          "questHint": "Prouver que la peur a une cause ordinaire, avant qu'elle coûte une vie.",
+          "entitySeeds": []
+        },
+        {
+          "id": "quelque-chose-qui-dort",
+          "text": "Quelque chose qui dort, et qui remue depuis trois hivers.",
+          "questHint": "Trouver ce qui l'a réveillé, et si ça peut être défait.",
+          "entitySeeds": [
+            {
+              "kind": "place",
+              "name": "Le Champ de Crevasses",
+              "summary": "Il n'était pas là sur les relevés d'il y a dix ans."
+            }
+          ]
+        },
+        {
+          "id": "une-prison",
+          "text": "Une prison, et des geôliers qui n'ont jamais dit à personne ce qu'ils gardaient.",
+          "questHint": "Obtenir des gardiens ce qu'ils n'ont dit à personne.",
+          "entitySeeds": [
+            {
+              "kind": "faction",
+              "name": "Les Porteurs de Clé",
+              "summary": "Ils se relaient depuis assez de générations pour avoir perdu le pourquoi."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "truth-le-grain",
+      "question": "Comment passe-t-on l'hiver, dans votre vallée ?",
+      "options": [
+        {
+          "id": "par-le-grenier-commun",
+          "text": "Par le grenier commun : chacun y met, chacun y prend, et l'aîné tient les comptes.",
+          "questHint": "Découvrir qui a pris plus que sa part, et décider ce qu'on en fait.",
+          "entitySeeds": [
+            {
+              "kind": "place",
+              "name": "Le Grenier de Pierre",
+              "summary": "Une seule serrure, et trois personnes en ont la clé."
+            }
+          ]
+        },
+        {
+          "id": "par-le-tribut",
+          "text": "En payant un tribut à plus fort que soi, et en espérant que le prix ne monte pas.",
+          "questHint": "Arrêter la montée du tribut sans déclencher ce qu'elle retient.",
+          "entitySeeds": [
+            {
+              "kind": "npc",
+              "name": "Halvar le Compteur",
+              "summary": "Il vient deux fois l'an, et il note tout."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "truth-les-serments",
+      "question": "Que vaut une parole donnée, ici ?",
+      "options": [
+        {
+          "id": "plus-que-le-sang",
+          "text": "Plus que le sang : on renie un frère, jamais un serment.",
+          "questHint": "Tenir un serment devenu impossible, ou en payer publiquement le prix.",
+          "entitySeeds": []
+        },
+        {
+          "id": "le-temps-d-un-hiver",
+          "text": "Le temps d'un hiver. Au printemps, on rediscute.",
+          "questHint": "Faire durer un serment au-delà du dégel, pour une fois.",
+          "entitySeeds": [
+            {
+              "kind": "npc",
+              "name": "Torvald des Pics",
+              "summary": "Il a rediscuté chaque printemps depuis vingt ans."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
