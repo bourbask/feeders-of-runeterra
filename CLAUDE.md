@@ -52,6 +52,16 @@ tâche après tâche, et c'est M0-30 qui la referme entièrement. Ne cherche pas
 commandes dont la cible n'est pas encore livrée — elles t'annoncent d'elles-mêmes quelle tâche
 les remplira.
 
+## Écrire un commit ou une PR
+
+Format : **symptôme, cause, correctif, preuve**. Une ligne chacun quand c'est possible.
+
+- Pas de récit, pas de « ce qui est intéressant ici ».
+- La preuve est une commande et son code de sortie, pas une affirmation.
+- Une PR tient en dix lignes. Si elle en fait trente, c'est un ADR qui se cache : écris l'ADR
+  et renvoie-y.
+- Le raisonnement long va dans `docs/adr/`. La PR dit ce qui change et comment le vérifier.
+
 ## Conventions
 
 - Interface, contenu de jeu et documentation : **en français**. Code, identifiants et
