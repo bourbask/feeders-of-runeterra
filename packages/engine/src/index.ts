@@ -14,6 +14,16 @@ export * from './result.js';
 export { RNG_STREAMS, createCampaignRng, createSeededRng } from './rng.js';
 export type { Rng, RngDraw, RngStream, TracingRng } from './rng.js';
 
+export * from './dice/challenge.js';
+export * from './dice/oracle.js';
+export * from './dice/presage.js';
+export * from './dice/price.js';
+export * from './dice/progress.js';
+
+export * from './gauges.js';
+export * from './momentum.js';
+export * from './progress-track.js';
+
 export * from './types/attributes.js';
 export * from './types/brief.js';
 export * from './types/campaign.js';

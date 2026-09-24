@@ -349,6 +349,9 @@ importers:
 
   packages/engine:
     devDependencies:
+      '@for/testkit':
+        specifier: workspace:*
+        version: link:../testkit
       '@for/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/tsconfig

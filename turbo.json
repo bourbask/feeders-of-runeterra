@@ -6,6 +6,10 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
+    "@for/engine#build": {
+      "dependsOn": [],
+      "outputs": ["dist/**"]
+    },
     "typecheck": {
       "dependsOn": ["^build"]
     },
