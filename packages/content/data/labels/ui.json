@@ -1,0 +1,18 @@
+{
+  "table.titre": "La table",
+  "table.pourquoi": "Pourquoi ?",
+  "table.tour-annule": "Tour annulé",
+  "personnage.fiche": "Fiche de personnage",
+  "personnage.souffle": "Souffle",
+  "personnage.marques": "Marques",
+  "personnage.atouts": "Atouts",
+  "personnage.serment": "Serment",
+  "jet.presage": "Présage",
+  "jet.prix": "Le prix à payer",
+  "progression.rang": "Rang",
+  "progression.jalon": "Jalon",
+  "oracle.oui": "Oui",
+  "oracle.non": "Non",
+  "action.envoyer": "Envoyer",
+  "action.annuler": "Annuler"
+}

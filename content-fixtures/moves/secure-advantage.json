@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "secure-advantage",
+  "name": "Prendre l'avantage",
+  "category": "aventure",
+  "trigger": "Quand tu prépares ton coup, étudies la situation ou soignes ton élan.",
+  "rollKind": "action",
+  "attributeOptions": ["vif", "coeur", "fer", "esprit"],
+  "allowsMomentumBurn": true,
+  "outcomes": {
+    "franche": {
+      "text": "Tu prends deux longueurs d'avance.",
+      "effects": [{ "op": "momentum", "delta": 2 }]
+    },
+    "partielle": {
+      "text": "Tu prends une longueur, et pas davantage.",
+      "effects": [{ "op": "momentum", "delta": 1 }]
+    },
+    "echec": {
+      "text": "Ta préparation se retourne contre toi.",
+      "gmGuidance": "L'avantage cherché révèle un ennui que personne n'avait vu.",
+      "effects": [{ "op": "oracle", "tableId": "complication" }]
+    }
+  },
+  "tags": ["preparation"]
+}

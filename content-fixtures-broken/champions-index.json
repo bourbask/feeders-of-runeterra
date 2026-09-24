@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "champions": [
+    {
+      "id": "braum",
+      "displayName": "Braum",
+      "canonicalRegionId": "freljord",
+      "aliases": ["Le Cœur du Freljord", "Heart of the Freljord", "L'homme à la porte"],
+      "playable": true
+    },
+    {
+      "id": "ashe",
+      "displayName": "Ashe",
+      "canonicalRegionId": "freljord",
+      "aliases": ["L'Archère de Givre", "The Frost Archer", "La Reine Guerrière"],
+      "playable": true
+    },
+    {
+      "id": "sejuani",
+      "displayName": "Sejuani",
+      "canonicalRegionId": "freljord",
+      "aliases": ["La Furie du Nord", "Fury of the North"],
+      "playable": false
+    }
+  ]
+}

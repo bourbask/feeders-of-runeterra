@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "id": "braum",
+  "name": "Braum",
+  "title": "Le Cœur du Freljord",
+  "aliases": ["Le Cœur du Freljord", "Heart of the Freljord", "L'homme à la porte"],
+  "origin": { "regionId": "freljord", "homeText": "Un hameau accroché sous les pics." },
+  "pitch": "Un bouclier de porte, et un rire plus large que la vallée.",
+  "description": "Le plus grand cœur du nord, porté par les plus grands bras. Il se met devant, toujours, et il trouve ça normal.",
+  "attributes": { "vif": 1, "coeur": 3, "fer": 2, "ombre": 1, "esprit": 2 },
+  "startingGauges": { "vigueur": 5, "ame": 5, "vivres": 5 },
+  "startingMomentum": 2,
+  "startingAssets": ["bouclier-de-porte"],
+  "signatureAsset": {
+    "id": "poigne-de-braum",
+    "name": "Poigne de Braum",
+    "text": "Ce qu'il retient ne tombe pas.",
+    "effects": [{ "op": "momentum", "delta": 1 }]
+  },
+  "startingVow": {
+    "title": "Protéger le hameau",
+    "rank": "dangereux",
+    "description": "Nul ne passe la porte tant qu'il tient debout."
+  },
+  "startingBonds": [
+    { "with": "Le hameau des pics", "text": "Ils lui ont appris à tenir une porte." }
+  ],
+  "perceptionTraits": [
+    {
+      "id": "pressent-le-danger",
+      "domain": "danger",
+      "trigger": {
+        "text": "Une menace non perçue approche des siens.",
+        "presentEntity": { "kinds": ["npc", "beast"], "dispositions": ["hostile"] },
+        "moveIds": ["face-danger"]
+      },
+      "strength": 65,
+      "frequency": "scene",
+      "effect": { "kind": "reveal", "text": "Braum sait d'où ça vient avant de le voir." }
+    }
+  ],
+  "voice": {
+    "register": "chaleureux, bourru, protecteur",
+    "speechTics": ["Appelle les gens « petit »"],
+    "forbidden": ["ironie froide"],
+    "sampleLines": ["Approche, petit. Le bouclier tient."]
+  },
+  "loreHooks": ["Le bouclier a une histoire que Braum ne raconte jamais."],
+  "relations": [
+    {
+      "championId": "ashe",
+      "kind": "allie",
+      "text": "Il la suit sans jamais lui obéir tout à fait."
+    }
+  ],
+  "source": "handwritten",
+  "contentWarnings": [],
+  "tags": ["defense"]
+}

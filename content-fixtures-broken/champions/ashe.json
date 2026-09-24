@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "id": "ashe",
+  "name": "Ashe",
+  "title": "L'Archère de Givre",
+  "aliases": ["L'Archère de Givre", "The Frost Archer", "La Reine Guerrière"],
+  "origin": { "regionId": "freljord", "homeText": "Le camp avarosan, déplacé chaque printemps." },
+  "pitch": "Une couronne qu'elle n'a pas demandée, et un arc qui ne rate pas.",
+  "description": "Elle tient les clans ensemble par le grain plus que par la lame, et elle sait que ça ne durera pas éternellement.",
+  "attributes": { "vif": 3, "coeur": 3, "fer": 2, "ombre": 1, "esprit": 1 },
+  "startingGauges": { "vigueur": 5, "ame": 5, "vivres": 5 },
+  "startingMomentum": 2,
+  "startingAssets": ["arc-du-givre"],
+  "signatureAsset": {
+    "id": "oeil-de-l-archere",
+    "name": "Œil de l'archère",
+    "text": "Elle voit la trajectoire avant de bander la corde.",
+    "effects": []
+  },
+  "startingVow": {
+    "title": "Unir les clans",
+    "rank": "extreme",
+    "description": "Un seul Freljord, même s'il faut y passer sa vie."
+  },
+  "startingBonds": [],
+  "perceptionTraits": [],
+  "voice": {
+    "register": "mesuré, direct, sans emphase",
+    "speechTics": [],
+    "forbidden": ["grandiloquence"],
+    "sampleLines": ["On mangera ce soir. Le reste attendra demain."]
+  },
+  "loreHooks": ["Sa mère est morte d'un choix qu'Ashe refait chaque hiver."],
+  "relations": [
+    {
+      "championId": "braum",
+      "kind": "allie",
+      "text": "Elle lui confie ce qu'elle ne dit pas au conseil."
+    }
+  ],
+  "source": "handwritten",
+  "contentWarnings": [],
+  "tags": ["commandement"]
+}
