@@ -13,6 +13,7 @@ import type { SqliteConnection } from '../src/client.js';
 import { addMember, campaignSeq, listMemberPlayerIds } from '../src/repositories/campaigns.js';
 import type { AppendableEvent } from '../src/repositories/events.js';
 import {
+  UnaddressableEventError,
   UnknownCampaignError,
   appendEvents,
   lastSeq,
@@ -21,9 +22,13 @@ import {
   readSinceForPlayer,
 } from '../src/repositories/events.js';
 import type { IntentDecision } from '../src/repositories/intents.js';
-import { getIntentStatus, settleIntentOnce } from '../src/repositories/intents.js';
+import {
+  IntentIdentityConflictError,
+  getIntentStatus,
+  settleIntentOnce,
+} from '../src/repositories/intents.js';
 import type { TempDb } from '../src/testing.js';
-import { migratedTempDb, seedCampaign } from '../src/testing.js';
+import { allocateSeq, appendEvent, migratedTempDb, seedCampaign } from '../src/testing.js';
 
 const NOW = 1_700_000_000_000;
 
@@ -282,6 +287,65 @@ describe('invariant 4, durci par l’ADR 0008 : chacun retrouve son fil', () => 
     expect(readSinceForPlayer(connection, 'c1', 'p1', 0)).toHaveLength(0);
   });
 
+  /**
+   * L'AUTRE BOUT DE LA PORTÉE : une liste de destinataires VIDE.
+   *
+   * ROUGE AVEC le garde-fou : `appendEvents` refuse, rien n'est écrit, aucun
+   * seq n'est consommé. VERT SANS le garde-fou — c'est-à-dire par le chemin
+   * SQL direct, celui que le CHECK DDL laisse passer : la ligne s'écrit, la
+   * lecture globale en rend une, et la lecture filtrée n'en rend AUCUNE, pour
+   * personne. C'est cette asymétrie qui montre que le garde-fou mord : sans
+   * lui, le journal contient une entrée qu'aucun rejeu ne peut restituer.
+   */
+  it('un subset sans destinataire est refusé, et rien n’est écrit', () => {
+    const connection = seeded(['p2']);
+    expect(() =>
+      appendEvents(connection, {
+        campaignId: 'c1',
+        events: [tableEvent('avant'), narrowEvent('vide', 'subset', [])],
+        now: NOW,
+      }),
+    ).toThrow(UnaddressableEventError);
+    expect(eventCount(connection)).toBe(0);
+    expect(campaignSeq(connection, 'c1')).toBe(0);
+
+    // Le même refus pour `private`.
+    expect(() =>
+      appendEvents(connection, {
+        campaignId: 'c1',
+        events: [narrowEvent('vide2', 'private', [])],
+        now: NOW,
+      }),
+    ).toThrow(UnaddressableEventError);
+
+    // VERT SANS : la même ligne, écrite hors du dépôt, passe le CHECK DDL et
+    // n'atteint personne.
+    const seq = allocateSeq(connection, 'c1');
+    appendEvent(connection, {
+      id: 'vide3',
+      campaignId: 'c1',
+      seq,
+      type: 'narration.gm_message',
+      scope: 'subset',
+      recipientsJson: '[]',
+    });
+    expect(readSince(connection, 'c1', 0)).toHaveLength(1);
+    expect(readSinceForPlayer(connection, 'c1', 'p1', 0)).toHaveLength(0);
+    expect(readSinceForPlayer(connection, 'c1', 'p2', 0)).toHaveLength(0);
+  });
+
+  /** VERT SANS, côté nominal : un destinataire suffit à rendre la ligne lisible. */
+  it('un subset à un seul destinataire, lui, est accepté et livré', () => {
+    const connection = seeded(['p2']);
+    appendEvents(connection, {
+      campaignId: 'c1',
+      events: [narrowEvent('plein', 'subset', ['p2'])],
+      now: NOW,
+    });
+    expect(readSinceForPlayer(connection, 'c1', 'p2', 0).map((e) => e.id)).toEqual(['plein']);
+    expect(readSinceForPlayer(connection, 'c1', 'p1', 0)).toHaveLength(0);
+  });
+
   it('la reprise par seq global rend la suite du fil du joueur', () => {
     const connection = twoPlayerJournal();
     expect(readSinceForPlayer(connection, 'c1', 'p1', 3).map((e) => e.seq)).toEqual([5]);
@@ -341,7 +405,17 @@ describe('idempotence par identifiant d’intention', () => {
     const connection = seeded();
     const decide = vi.fn<() => IntentDecision>(() => ({
       kind: 'apply',
-      events: [tableEvent('e1', 'roll.made'), tableEvent('e2', 'move.resolved')],
+      events: [
+        tableEvent('e1', 'roll.made'),
+        // Une portée étroite et une charge imbriquée dans le même lot : sans
+        // elles, l'égalité complète ci-dessous ne traverserait ni `scope`, ni
+        // `recipients`, ni l'aller-retour JSON.
+        {
+          ...narrowEvent('e2', 'private', ['p1']),
+          type: 'move.resolved',
+          payload: { degats: { valeur: 3, source: 'griffe' }, mots: ['froid', 'nuit'] },
+        },
+      ],
     }));
 
     const first = settleIntentOnce(connection, intent, decide);
@@ -352,9 +426,11 @@ describe('idempotence par identifiant d’intention', () => {
     // Le moteur n'a été consulté qu'une fois : les dés n'ont pas reroulé.
     expect(decide).toHaveBeenCalledTimes(1);
     expect(eventCount(connection)).toBe(2);
-    expect(second.events.map((e) => [e.seq, e.id, e.type])).toEqual(
-      first.events.map((e) => [e.seq, e.id, e.type]),
-    );
+    // « Le résultat renvoyé est identique », au sens plein : le rejeu relit et
+    // reparse les colonnes JSON là où le premier appel rendait l'objet en
+    // mémoire. Une projection sur [seq, id, type] laisserait justement
+    // `payload`, `scope` et `recipients` hors de la mesure.
+    expect(second.events).toEqual(first.events);
     expect(second.status).toBe('applied');
   });
 
@@ -388,6 +464,71 @@ describe('idempotence par identifiant d’intention', () => {
     expect(eventCount(connection)).toBe(0);
     expect(getIntentStatus(connection, intent.id)).toBe('rejected');
     expect(getIntentStatus(connection, 'jamais-vue')).toBeUndefined();
+  });
+
+  /**
+   * INVARIANT 4, CÔTÉ REJEU : le fil rendu est celui du joueur qui demande.
+   *
+   * `intents.id` est une PRIMARY KEY sur toute la table et c'est le CLIENT qui
+   * la forge. Mesuré avant correction : le même identifiant rejoué depuis une
+   * autre campagne et un autre joueur rendait `replayed: true` et l'événement
+   * `private` de la première campagne, destinataires compris. Il n'y a rien
+   * au-dessus de cette lecture pour rattraper la fuite.
+   *
+   * ROUGE AVEC : le rejeu croisé est refusé et ne rend aucun événement.
+   * VERT SANS : le même identifiant, même campagne, même joueur, rejoue.
+   */
+  it('le même identifiant depuis une autre table est refusé, pas rejoué', () => {
+    const connection = seeded(['p2']);
+    connection
+      .prepare(
+        `INSERT INTO campaigns
+           (id, slug, name, owner_player_id, content_pack_version, content_pack_hash,
+            rules_version, reducer_version, rng_seed, seq, created_at, updated_at)
+         VALUES ('c2', 'slug-c2', 'Autre table', 'p2', '1.0.0', 'sha256-x', 1, 1, 'seed', 0, ?, ?)`,
+      )
+      .run(NOW, NOW);
+
+    const confidentiel = settleIntentOnce(connection, intent, () => ({
+      kind: 'apply',
+      events: [narrowEvent('secret', 'private', ['p1'])],
+    }));
+    expect(confidentiel.events).toHaveLength(1);
+
+    let capture: unknown;
+    expect(() => {
+      capture = settleIntentOnce(
+        connection,
+        { ...intent, campaignId: 'c2', playerId: 'p2' },
+        () => ({ kind: 'apply', events: [] }),
+      );
+    }).toThrow(IntentIdentityConflictError);
+    expect(capture).toBeUndefined();
+    // La table d'en face n'a rien reçu, et rien ne s'est écrit chez elle.
+    expect(readSinceForPlayer(connection, 'c2', 'p2', 0)).toHaveLength(0);
+    expect(getIntentStatus(connection, intent.id)).toBe('applied');
+    expect(eventCount(connection)).toBe(1);
+
+    // VERT SANS le croisement : le même identifiant, du même joueur et de la
+    // même table, rejoue comme avant.
+    const rejeu = settleIntentOnce(connection, intent, () => ({ kind: 'apply', events: [] }));
+    expect(rejeu.replayed).toBe(true);
+    expect(rejeu.events).toEqual(confidentiel.events);
+  });
+
+  /** Le joueur seul suffit à faire diverger : même table, autre demandeur. */
+  it('le même identifiant depuis un autre joueur de la même table est refusé', () => {
+    const connection = seeded(['p2']);
+    settleIntentOnce(connection, intent, () => ({
+      kind: 'apply',
+      events: [narrowEvent('secret', 'private', ['p1'])],
+    }));
+    expect(() =>
+      settleIntentOnce(connection, { ...intent, playerId: 'p2' }, () => ({
+        kind: 'apply',
+        events: [],
+      })),
+    ).toThrow(IntentIdentityConflictError);
   });
 
   it('une intention qui échoue en écriture ne laisse ni ligne ni seq consommé', () => {

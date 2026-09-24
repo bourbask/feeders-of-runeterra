@@ -1,12 +1,22 @@
 /**
  * Idempotence on the client's intent identifier (03-donnees.md section 1.6).
  *
- * A SEVENTH FILE, where the task sheet prints six. The six named files are the
- * six tables of the write path; idempotent intent insertion is listed under
- * the same bullet but belongs to neither `events.ts` nor `campaigns.ts`. It
- * gets its own file for exactly the reason `schema/intents.ts` did. Declared
- * as a deviation from the printed layout rather than filed under a heading it
- * does not belong to.
+ * THREE FILES BEYOND THE SIX THE TASK SHEET NAMES, and `repositories/` holds
+ * nine in all. The six named ones are the six tables of the write path; the
+ * three others are:
+ *
+ *   - this file: idempotent intent settlement is listed under the same bullet
+ *     but belongs to neither `events.ts` nor `campaigns.ts`, for exactly the
+ *     reason `schema/intents.ts` got its own file;
+ *   - `rows.ts`, which is not plumbing: it carries the journal's read types
+ *     (`JournalEvent`, `DeliveredEvent`), `toJournalEvent`, `EVENT_COLUMNS`,
+ *     and the claim that `JournalEvent` mirrors `EventEnvelopeDto` — a claim
+ *     `tests/journal-mirror.test.ts` now measures instead of asserting;
+ *   - `index.ts`, the barrel.
+ *
+ * The sheet's "Fichiers touchés" glob is `packages/db/src/repositories/**`, so
+ * none of this is out of scope; an earlier version of this header under-counted
+ * them, and a declaration reads as a commitment.
  *
  * WHAT IDEMPOTENCE BUYS, and it is the only serious protection there is: a
  * WebSocket reconnection replays an unacknowledged intent. Without this, the
@@ -60,11 +70,34 @@ export interface IntentOutcome {
 interface IntentRow {
   readonly id: string;
   readonly campaign_id: string;
+  readonly player_id: string;
   readonly status: string;
   readonly rejection_code: string | null;
   readonly rejection_detail: string | null;
   readonly first_event_seq: number | null;
   readonly last_event_seq: number | null;
+}
+
+/**
+ * Raised when a known intent identifier comes back under another owner.
+ *
+ * `intents.id` is a PRIMARY KEY over the WHOLE table, and it is minted by the
+ * client. Matching on the identifier ALONE therefore let a replay from
+ * campaign B read the settlement of campaign A — and `storedOutcome` re-reads
+ * the events with the STORED campaign, so the caller got another table's
+ * journal, `private` events included. Measured before the fix: a second
+ * `settleIntentOnce` with the same identifier, another campaign and another
+ * player returned the first campaign's `private` event.
+ *
+ * So the match is on (identifier, campaign, player) and a mismatch is refused
+ * rather than settled. The message names the identifier and nothing else: what
+ * the other campaign holds is exactly what must not cross.
+ */
+export class IntentIdentityConflictError extends Error {
+  constructor(readonly intentId: string) {
+    super(`intention ${intentId} déjà enregistrée pour une autre table`);
+    this.name = 'IntentIdentityConflictError';
+  }
 }
 
 function storedOutcome(connection: SqliteConnection, row: IntentRow): IntentOutcome {
@@ -103,6 +136,9 @@ export function settleIntentOnce(
     const known = connection.prepare(`SELECT * FROM intents WHERE id = ?`).get(input.id) as
       IntentRow | undefined;
     if (known !== undefined) {
+      if (known.campaign_id !== input.campaignId || known.player_id !== input.playerId) {
+        throw new IntentIdentityConflictError(input.id);
+      }
       return storedOutcome(connection, known);
     }
 
