@@ -61,6 +61,15 @@ tâche après tâche, et c'est M0-30 qui la referme entièrement. Ne cherche pas
 commandes dont la cible n'est pas encore livrée — elles t'annoncent d'elles-mêmes quelle tâche
 les remplira.
 
+## Écrire la documentation
+
+- Des **tableaux et des listes**, pas des paragraphes. Une définition tient en une ligne.
+- Le **mot simple d'abord**, le terme technique seulement s'il apporte quelque chose. `id` est
+  un identifiant ; ce qu'on en fait se dit après, en français.
+- Pas de préambule, pas de phrase qui annonce ce que le document va faire.
+- Une référence au code (`c2s.intent`, `zGameEvent`) se montre avec un exemple réel plutôt
+  qu'elle ne se décrit.
+
 ## Conventions
 
 - Interface, contenu de jeu et documentation : **en français**. Code, identifiants et
