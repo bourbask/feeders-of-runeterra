@@ -1,0 +1,185 @@
+/*
+ * Le Freljord : peu de couleurs, beaucoup de contraste, rien qui clignote.
+ * Aucune animation de dés (ADR 0009) — et aucune animation tout court sur les
+ * lignes du journal : ce qui apparaît doit être lisible tout de suite.
+ */
+
+:root {
+  --fond: #0d1117;
+  --fond-panneau: #151b23;
+  --trait: #2a3441;
+  --texte: #e6edf3;
+  --texte-discret: #9aa7b4;
+  --accent: #6fb3d2;
+  --annule: #b06a6a;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--fond);
+  color: var(--texte);
+  font-family: 'Iowan Old Style', Georgia, serif;
+  line-height: 1.55;
+}
+
+.fr-ecran {
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.fr-panneau {
+  background: var(--fond-panneau);
+  border: 1px solid var(--trait);
+  border-radius: 4px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.fr-panneau__titre {
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texte-discret);
+  margin: 0 0 0.75rem;
+}
+
+.fr-table__corps {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 60rem) {
+  .fr-table__corps {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fr-journal {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fr-journal__ligne {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--trait);
+}
+
+.fr-journal__qui {
+  display: block;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--texte-discret);
+}
+
+.fr-journal__ligne--annulee {
+  color: var(--texte-discret);
+}
+
+.fr-annule {
+  color: var(--annule);
+  font-size: 0.85rem;
+}
+
+.fr-bouton {
+  font: inherit;
+  border: 1px solid var(--trait);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--texte);
+  padding: 0.35rem 0.8rem;
+  cursor: pointer;
+}
+
+.fr-bouton--principal {
+  border-color: var(--accent);
+  color: var(--accent);
+  display: inline-block;
+  text-decoration: none;
+}
+
+.fr-bouton--discret {
+  font-size: 0.8rem;
+  color: var(--texte-discret);
+}
+
+.fr-pourquoi {
+  margin-top: 0.4rem;
+}
+
+.fr-preuve {
+  margin-top: 0.5rem;
+  border-left: 2px solid var(--accent);
+  padding-left: 0.8rem;
+  font-size: 0.9rem;
+}
+
+.fr-preuve__ligne {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.fr-preuve__ligne dt {
+  min-width: 8rem;
+  color: var(--texte-discret);
+}
+
+.fr-preuve__ligne dd {
+  margin: 0;
+}
+
+.fr-preuve__source {
+  color: var(--texte-discret);
+  font-size: 0.8rem;
+}
+
+.fr-preuve__annule,
+.fr-preuve__tronque {
+  color: var(--annule);
+}
+
+.fr-vide {
+  color: var(--texte-discret);
+  font-style: italic;
+}
+
+.fr-erreur {
+  color: var(--annule);
+  padding: 1.5rem;
+}
+
+.fr-presence,
+.fr-campagnes,
+.fr-personnages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fr-presence__pastille,
+.fr-presence__pastille--en-ligne {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  margin-right: 0.4rem;
+  background: var(--trait);
+}
+
+.fr-presence__pastille--en-ligne {
+  background: var(--accent);
+}
+
+.fr-campagnes__pitch {
+  display: block;
+  color: var(--texte-discret);
+  font-size: 0.9rem;
+}

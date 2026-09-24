@@ -1,15 +1,14 @@
+import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
-// Minimal on purpose. This file exists so that `infra/Dockerfile` has a client
-// bundle to copy into `/app/public`; the real client configuration (React
-// plugin, dev proxy to the API, the "table" page) belongs to M0-19.
-//
-// It is NOT wired into `pnpm build` yet: the `build` script of this package
-// still runs `tsc --noEmit`, because a `dist/` produced by a client with no
-// page in it would only give a false sense of completeness. M0-19 flips the
-// script to `vite build`; until then, `pnpm --filter @for/client exec vite build`
-// is the way to exercise this file.
+// Le proxy de developpement envoie l'API et la socket sur le serveur Fastify
+// (M0-20) : le navigateur ne voit qu'une seule origine, donc le cookie de
+// session `fr_session` (`SameSite=Lax`) part avec la requete comme en
+// production, ou Caddy sert les deux depuis la meme origine.
+const API_TARGET = process.env['VITE_DEV_API_TARGET'] ?? 'http://localhost:3000';
+
 export default defineConfig({
+  plugins: [react()],
   build: {
     outDir: 'dist',
     emptyOutDir: true,
@@ -18,5 +17,11 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    proxy: {
+      '/api': { target: API_TARGET, changeOrigin: false },
+      '/healthz': { target: API_TARGET, changeOrigin: false },
+      '/readyz': { target: API_TARGET, changeOrigin: false },
+      '/ws': { target: API_TARGET, changeOrigin: false, ws: true },
+    },
   },
 });
