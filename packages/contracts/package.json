@@ -22,5 +22,9 @@
   },
   "devDependencies": {
     "@for/tsconfig": "workspace:*"
+  },
+  "dependencies": {
+    "@for/engine": "workspace:*",
+    "zod": "^4.6.5"
   }
 }

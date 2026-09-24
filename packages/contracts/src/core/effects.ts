@@ -1,0 +1,139 @@
+/**
+ * `zEngineEffect` — the core contract, mirrored from `EngineEffect`
+ * (03-donnees.md section 4.3).
+ *
+ * Content NEVER holds logic. It declares effects the engine knows how to run.
+ * That is what keeps a JSON file from working around invariant 1, and it is
+ * why no `EngineEffect` ever travels FROM the model.
+ *
+ * ADR 0006 — `pay_price` HAS EXACTLY ONE MODE, `roll`. The engine rolls the
+ * d12 on the price table and hands the drawn entry to the storyteller as an
+ * imposed fact. `gm_choice` and `player_choice` are gone: they reopened
+ * invariant 1 through the back door. `PAY_PRICE_MODE` below is a literal, not
+ * an enum.
+ *
+ * WHERE THAT RULE IS ACTUALLY HELD — ADR 0007, and read this before trusting
+ * anything in this file. `effects.test.ts` reads the literal RECOPIED here; it
+ * says nothing about `PAY_PRICE_MODES` in the engine, which is the tuple that
+ * DEFINES `PayPriceMode`. And the `z.ZodType<EngineEffect>` annotation below
+ * cannot see the difference either: `ZodType` is covariant in its output, so a
+ * schema accepting only 'roll' stays assignable to an `EngineEffect` whose mode
+ * is 'roll' | 'gm_choice'. Measured, not assumed — widening the engine tuple
+ * left all four repository gates green.
+ *
+ * The rule the ADR asks for is therefore held in ONE place, and it is a runtime
+ * comparison of the two lists, member by member:
+ * `packages/contracts/tests/exhaustive-union.test.ts`. Same for the VARIANT
+ * LIST of this union, via `effectOpsOfSchema()` below against `EFFECT_OPS`.
+ *
+ * ADR 0006 — `choice` SURVIVES, and is not a back door. It is ordinary PLAYER
+ * agency ("lose supplies or take the hit"), never the model's. Three bounds
+ * separate it from one, and they do not negotiate:
+ *
+ *   1. `choice` is never reachable FROM `pay_price`. A drawn price does not
+ *      become a menu. The `pay_price` variant carries `op` and `mode` and
+ *      nothing else — an `options` key handed to it is stripped, never kept
+ *      (proven in `effects.test.ts`).
+ *   2. Options come from versioned content or from the engine, never from the
+ *      model. Enforced by the content loader (M0-13) and by the fact that no
+ *      tool exposed to the model accepts an `EngineEffect`.
+ *   3. The player's selection is an ordinary intent, validated by the server
+ *      like any other (invariant 3).
+ */
+
+import { z } from 'zod';
+
+import type { EngineEffect } from '@for/engine';
+
+import { zNonEmptyText, zSlug } from '../primitives.js';
+import {
+  zCreatableTrackKind,
+  zEffectTarget,
+  zGaugeId,
+  zProgressRank,
+  zProgressTrackKind,
+} from './enums.js';
+
+/**
+ * ADR 0006. A literal, so "how many modes are there" has a single answer that
+ * a test can read. An enum here would make a second mode a one-word change.
+ */
+export const PAY_PRICE_MODE = 'roll';
+
+export const zPayPriceMode = z.literal(PAY_PRICE_MODE);
+
+/**
+ * Recursive: `choice` options carry their own effects. The explicit
+ * `z.ZodType<EngineEffect>` annotation is what breaks the cycle for TypeScript.
+ * It catches a MISSING FIELD inside a variant, and nothing else (ADR 0007).
+ *
+ * The union is held in its own binding, ahead of the annotated export, so that
+ * `.unwrap()` stays TYPED and the variant list can be read at runtime without a
+ * cast. `zEngineEffect` erases that shape on purpose — a cast here would rot in
+ * silence the day the union stops being a `z.lazy`.
+ */
+const zEngineEffectUnion = z.lazy(() =>
+  z.discriminatedUnion('op', [
+    z.object({
+      op: z.literal('gauge'),
+      gauge: zGaugeId,
+      delta: z.number().int().min(-5).max(5),
+      target: zEffectTarget.default('self'),
+    }),
+    z.object({ op: z.literal('momentum'), delta: z.number().int().min(-6).max(6) }),
+    z.object({ op: z.literal('momentum_reset') }),
+    z.object({ op: z.literal('condition_add'), conditionId: zSlug }),
+    z.object({ op: z.literal('condition_remove'), conditionId: zSlug }),
+    z.object({
+      op: z.literal('track_tick'),
+      trackKind: zProgressTrackKind,
+      ticks: z.number().int().min(-40).max(40),
+      useRank: z.boolean().default(false),
+    }),
+    z.object({
+      op: z.literal('track_create'),
+      trackKind: zCreatableTrackKind,
+      rankFrom: z.enum(['player', 'fixed']),
+      rank: zProgressRank.optional(),
+    }),
+    z.object({ op: z.literal('clock_advance'), segments: z.number().int().min(1).max(3) }),
+    z.object({ op: z.literal('xp'), amount: z.number().int().min(-10).max(10) }),
+    z.object({ op: z.literal('pay_price'), mode: zPayPriceMode }),
+    z.object({ op: z.literal('oracle'), tableId: zSlug }),
+    z.object({ op: z.literal('narrative'), prompt: zNonEmptyText }),
+    z.object({
+      op: z.literal('choice'),
+      label: zNonEmptyText,
+      pick: z.number().int().min(1).max(3).default(1),
+      options: z
+        .array(
+          z.object({
+            id: zSlug,
+            label: zNonEmptyText,
+            effects: z.array(zEngineEffect).max(6),
+          }),
+        )
+        .min(2)
+        .max(6),
+    }),
+  ]),
+);
+
+export const zEngineEffect: z.ZodType<EngineEffect> = zEngineEffectUnion;
+
+/**
+ * The `op` discriminants this union actually carries, in declaration order.
+ *
+ * DERIVED, never hand-written, exactly like `gameEventTypesOfSchema()`. It
+ * exists so `exhaustive-union.test.ts` can compare the mirror to `EFFECT_OPS`
+ * member by member: that comparison is the ONLY thing that fails when a variant
+ * is dropped from this union or invented in it.
+ */
+export function effectOpsOfSchema(): readonly string[] {
+  return zEngineEffectUnion.unwrap().options.map((option) => option.shape.op.value);
+}
+
+/** The name 03-donnees.md section 4.3 uses. Same schema, single owner. */
+export const EffectSchema = zEngineEffect;
+
+export type EngineEffectDto = z.output<typeof zEngineEffect>;

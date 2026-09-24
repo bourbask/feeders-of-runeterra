@@ -24,9 +24,22 @@ module.exports = {
     {
       name: 'contracts-ne-depend-que-de-zod',
       severity: 'error',
+      comment:
+        '@for/contracts valide les bords du système. Il ne connaît que zod à l’exécution ; ' +
+        'les types canoniques du moteur lui arrivent en `import type`, ce qui ne crée aucune ' +
+        'arête d’exécution `contracts -> engine` et préserve la pureté du moteur. ' +
+        'Conséquence à connaître AVANT d’écrire un schéma : les tuples `as const` du moteur ' +
+        '(ATTRIBUTES, RNG_STREAMS, EFFECT_OPS…) sont des VALEURS et ne peuvent pas être ' +
+        'importés ici. Ils sont recopiés dans src/core/enums.ts, gardés dans les deux sens.',
       from: { path: '^packages/contracts/src' },
+      // `node_modules/zod` sans ancre : pnpm résout zod sous
+      // `node_modules/.pnpm/zod@<version>/node_modules/zod/`, et la version
+      // ancrée de cette expression ne matchait donc AUCUNE arête réelle. La
+      // règle refusait les 26 imports légitimes de zod le jour où le premier
+      // schéma est arrivé — elle n'avait jamais été mesurée avant, faute de
+      // paquet qui importe zod.
       to: {
-        pathNot: '^(packages/contracts/src|node_modules/zod)',
+        pathNot: '(^packages/contracts/src|node_modules/zod/)',
         dependencyTypesNot: ['type-only', 'core'],
       },
     },

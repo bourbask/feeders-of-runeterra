@@ -51,7 +51,13 @@ export type EngineEffect =
       readonly op: 'track_create';
       readonly trackKind: CreatableTrackKind;
       readonly rankFrom: 'player' | 'fixed';
-      readonly rank?: ProgressRank;
+      /**
+       * `| undefined` is not decoration. `exactOptionalPropertyTypes` is on,
+       * so `rank?: ProgressRank` would REFUSE the shape a `z.optional()`
+       * produces, and `zEngineEffect satisfies z.ZodType<EngineEffect>` would
+       * not compile. Every optional field of this package is written this way.
+       */
+      readonly rank?: ProgressRank | undefined;
     }
   | { readonly op: 'clock_advance'; readonly segments: number }
   | { readonly op: 'xp'; readonly amount: number }
@@ -67,17 +73,20 @@ export type EngineEffect =
     };
 
 /**
- * NOTE FOR REVIEW, mirrored verbatim from `EffectSchema` (03-donnees.md
- * section 4.3) and NOT corrected here.
+ * ONE MODE, AND ONLY ONE — ADR 0006.
  *
- * `gm_choice` and `player_choice` contradict the arbitration recorded in
- * ARCHITECTURE.md section 4.4 and 03-donnees.md section 3.4 ("the engine rolls,
- * full stop; nobody chooses, not the model, not the player"). The mirror rule
- * forbids this type from drifting from the schema, and a silent spec fix is
- * the worst possible defect here, so the contradiction is reported rather than
- * patched. See the M0-02 report.
+ * M0-02 mirrored `EffectSchema` verbatim, contradiction included, and reported
+ * it instead of correcting it silently. That report is what made the hole
+ * visible, and ADR 0006 closed it: the engine rolls the d12 on the price table
+ * and hands the drawn entry over as an imposed fact. Nobody chooses — not the
+ * model, not the player. `gm_choice` and `player_choice` are removed here by
+ * M0-05, which is the follow-up the ADR assigns under "ce qui reste a faire".
+ *
+ * Keeping this tuple at one member is what stops the effect executor from
+ * growing a second state-writing path: `switch (effect.mode)` has one branch
+ * to write, because there is one mode to write it for.
  */
-export const PAY_PRICE_MODES = ['roll', 'gm_choice', 'player_choice'] as const;
+export const PAY_PRICE_MODES = ['roll'] as const;
 
 export type PayPriceMode = (typeof PAY_PRICE_MODES)[number];
 
