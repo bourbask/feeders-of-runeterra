@@ -32,6 +32,7 @@ import type {
   EntityDisposition,
   EntityKind,
   EntityStatus,
+  EventScope,
   GaugeId,
   GmProposalKind,
   Likelihood,
@@ -54,6 +55,16 @@ import type { AssertNever } from '../primitives.js';
 
 const ACTOR_KINDS = ['player', 'engine', 'gm_ai', 'system'] as const satisfies readonly ActorKind[];
 export type ActorKindsAreComplete = AssertNever<Exclude<ActorKind, (typeof ACTOR_KINDS)[number]>>;
+/**
+ * ADR 0008 — qui reçoit un événement. À ne pas confondre avec `zVisibility`,
+ * qui dit si une jauge de progression est montrée : deux questions, deux noms.
+ */
+const EVENT_SCOPES = ['table', 'subset', 'private'] as const satisfies readonly EventScope[];
+export type EventScopesAreComplete = AssertNever<
+  Exclude<EventScope, (typeof EVENT_SCOPES)[number]>
+>;
+export const zEventScope = z.enum(EVENT_SCOPES);
+
 export const zActorKind = z.enum(ACTOR_KINDS);
 
 /**

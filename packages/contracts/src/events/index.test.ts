@@ -19,6 +19,8 @@ const envelope = (over: Record<string, unknown> = {}) => ({
   rngStream: null,
   rngDrawIndex: null,
   createdAt: 1_758_000_000_000,
+  scope: 'table',
+  recipients: null,
   ...over,
 });
 

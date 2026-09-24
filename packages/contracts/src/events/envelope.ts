@@ -23,7 +23,7 @@ import { z } from 'zod';
 
 import type { EventEnvelope } from '@for/engine';
 
-import { zActorKind, zRngStream } from '../core/enums.js';
+import { zActorKind, zEventScope, zRngStream } from '../core/enums.js';
 import {
   zCampaignId,
   zCharacterId,
@@ -51,6 +51,9 @@ export const eventEnvelopeShape = {
   rngStream: zRngStream.nullable(),
   rngDrawIndex: z.number().int().nonnegative().nullable(),
   createdAt: zEpochMillis,
+  // ADR 0008 : qui recoit cet evenement. Le serveur seul le renseigne.
+  scope: zEventScope,
+  recipients: z.array(zPlayerId).nullable(),
 };
 
 export const zEventEnvelope = z.object(eventEnvelopeShape) satisfies z.ZodType<EventEnvelope>;
