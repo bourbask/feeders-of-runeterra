@@ -1,12 +1,15 @@
 /**
- * WebSocket protocol schemas — EMPTY ON PURPOSE.
+ * The WebSocket protocol, frozen by M0-08 (01-architecture.md section 5,
+ * ADR 0008, ADR 0010 decision 1).
  *
- * M0-08 fills this folder (`envelope.ts`, `c2s.ts`, `s2c.ts`, `codes.ts`) and
- * re-exports them from here. The barrel exists already so that M0-08 never has
- * to touch `src/index.ts`, which M0-09 and M0-12 are editing in parallel.
+ * Read `envelope.ts` first: it explains the three counters (`seq`,
+ * `deliverySeq`, `chunk`) that everything else here depends on not confusing.
  *
- * `export {}` rather than nothing: an empty file is not a module, and
- * `isolatedModules` would refuse it.
+ * This barrel exists so that filling `ws/` never touches `src/index.ts`, which
+ * M0-09 and M0-12 are editing in parallel.
  */
 
-export {};
+export * from './c2s.js';
+export * from './codes.js';
+export * from './envelope.js';
+export * from './s2c.js';
