@@ -3,6 +3,8 @@
 Une table de jeu de rôle multijoueur au Freljord, avec un maître de jeu tenu par une IA.
 Le vocal reste sur Discord.
 
+**Un terme t'arrête ?** `docs/GLOSSAIRE.md` — les mots du jeu et les mots du code, expliqués sans rien supposer. Si un terme manque, c'est un défaut du glossaire.
+
 **À lire en premier :** `docs/ARCHITECTURE.md`. Puis la spec de détail qui concerne ta tâche,
 et ta fiche dans `docs/M0-TASKS.md`.
 
