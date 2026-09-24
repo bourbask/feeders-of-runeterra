@@ -106,6 +106,13 @@ Deux façons d'obtenir un vert qui ne veut rien dire, toutes deux rencontrées e
   peut t'afficher la sortie de quelqu'un d'autre. Toute mesure de recette se fait avec
   `--force`, ou en invoquant `vitest run` directement.
 
+- **Aucun chiffre ne se compare à lui-même.** Un test qui borne avec la constante qu'il vérifie
+  passe toujours et ne prouve rien. Un chiffre qui vient d'un critère d'acceptation s'écrit en
+  toutes lettres dans le test ; un chiffre qui vient du moteur se compare au moteur. ADR 0007.
+- **`z.toJSONSchema` écrit `additionalProperties: false` même sur un objet non strict**, en mode
+  par défaut. Toute vérification de strictness par le JSON Schema doit passer `io: 'input'`, et
+  doubler d'un test d'exécution — sinon elle est verte pour la mauvaise raison.
+
 ## Deux pièges de l'environnement, déjà payés
 
 - **pnpm 12 nomme le réglage `allowBuilds`**, une table paquet → booléen dans
