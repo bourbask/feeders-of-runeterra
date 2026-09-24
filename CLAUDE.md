@@ -105,7 +105,6 @@ Deux façons d'obtenir un vert qui ne veut rien dire, toutes deux rencontrées e
 - **Le cache turbo rejoue les journaux d'un autre worktree.** Une mesure faite sans `--force`
   peut t'afficher la sortie de quelqu'un d'autre. Toute mesure de recette se fait avec
   `--force`, ou en invoquant `vitest run` directement.
-
 - **Aucun chiffre ne se compare à lui-même.** Un test qui borne avec la constante qu'il vérifie
   passe toujours et ne prouve rien. Un chiffre qui vient d'un critère d'acceptation s'écrit en
   toutes lettres dans le test ; un chiffre qui vient du moteur se compare au moteur. ADR 0007.
@@ -113,7 +112,7 @@ Deux façons d'obtenir un vert qui ne veut rien dire, toutes deux rencontrées e
   par défaut. Toute vérification de strictness par le JSON Schema doit passer `io: 'input'`, et
   doubler d'un test d'exécution — sinon elle est verte pour la mauvaise raison.
 
-## Deux pièges de l'environnement, déjà payés
+## Trois pièges de l'environnement, déjà payés
 
 - **pnpm 12 nomme le réglage `allowBuilds`**, une table paquet → booléen dans
   `pnpm-workspace.yaml`. L'ancien `onlyBuiltDependencies` est ignoré en silence et l'installation
@@ -122,3 +121,12 @@ Deux façons d'obtenir un vert qui ne veut rien dire, toutes deux rencontrées e
 - **zsh ne découpe pas les variables non quotées.** Une boucle `for c in "install --frozen-lockfile"`
   puis `pnpm $c` passe la chaîne entière comme un seul argument. Ça ne casse que les scripts de
   recette, mais ça les casse en silence.
+- **`git checkout <branche> && git reset --hard` est un piège dans ce dépôt.** Les agents
+  travaillent en worktrees, et une branche déjà prise par un worktree fait **échouer** le
+  `checkout`. Si la sortie passe par un `| tail`, le code de retour devient celui du `tail` —
+  donc 0 — et le `reset --hard` s'exécute **sur la branche courante**, qui n'est pas celle
+  qu'on visait. Déjà payé une fois : le pointeur de `lead/regle-du-chiffre-qui-se-compare-a-lui-meme`
+  a été perdu, récupéré au reflog. Deux règles : un `reset --hard` se fait toujours avec
+  `git -C <worktree>` et un chemin explicite, jamais enchaîné derrière un `checkout` ; et le
+  worktree principal reste sur `develop`, pour que la victime d'un accident soit une branche
+  qu'on peut retrouver sur `origin`.
