@@ -112,6 +112,31 @@ describe('a state that does not', () => {
     expect(isConsistent(state)).toBe(false);
   });
 
+  it('says nothing about two lists that ARE sorted, entry by entry', () => {
+    // The other half of the proof: the test above shows the detection bites
+    // on a reversed list, this one shows it stays quiet on a sorted one. With
+    // a single entry per list neither direction is measurable, since a list
+    // of length one is sorted whatever the comparison does.
+    const state = aTableState({
+      scene: aScene({
+        present: [
+          aScenePresence({ ref: { kind: 'entity', id: anId('entity', 1) } }),
+          aScenePresence({ ref: { kind: 'entity', id: anId('entity', 2) } }),
+        ],
+        absent: [
+          aSceneAbsence({ ref: { kind: 'entity', id: anId('entity', 3) } }),
+          aSceneAbsence({ ref: { kind: 'entity', id: anId('entity', 4) } }),
+        ],
+      }),
+    });
+    expect(state.scene?.present.map((entry) => entry.ref.id)).toEqual([
+      anId('entity', 1),
+      anId('entity', 2),
+    ]);
+    expect(checkInvariants(state)).toEqual([]);
+    expect(isConsistent(state)).toBe(true);
+  });
+
   it('says nothing about the order of a list with one entry, or none', () => {
     expect(checkInvariants(aTableState({ scene: aScene({ present: [], absent: [] }) }))).toEqual(
       [],

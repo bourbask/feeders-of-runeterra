@@ -462,6 +462,46 @@ describe('paying the price: one mode, and nobody chooses', () => {
     );
   });
 
+  /**
+   * The INSTANCE contract of `DecisionRng.stream()`, measured.
+   *
+   * A nested price calls `ctx.rng.stream('price')` a second time. The contract
+   * is that the second call hands back THE SAME generator, so the nested draw
+   * is the second draw of the stream. An implementation that builds a fresh
+   * generator per call — and `createCampaignRng(seed, turnSeq, stream)`, which
+   * the interface comment calls canonical, is exactly that if it is called
+   * again — restarts at draw 0 and serves the first value twice.
+   *
+   * The two tests below are the same journal under the two implementations.
+   * Scripting the stream `[12, 12]` cannot tell them apart; `[12, 4]` can.
+   */
+  function priceValuesOf(events: readonly GameEvent[]): readonly number[] {
+    return events.flatMap((event) =>
+      event.type === 'roll.price_paid' ? [event.payload.value] : [],
+    );
+  }
+
+  const nestedPrice: Intent = { type: 'move.face_danger', attribute: 'fer', description: '' };
+
+  it('draws the nested price from the SAME generator: second draw, not a replay', () => {
+    const result = decide(state, nestedPrice, aCtx(MISS, { price: [12, 4] }));
+    if (isErr(result)) throw new Error(result.error.code);
+    expect(priceValuesOf(result.value.events)).toEqual([12, 4]);
+  });
+
+  it('would serve 12 twice if stream() handed back a fresh generator', () => {
+    // The counter-implementation, written down rather than argued about: only
+    // the `price` stream is made fresh-each-call, so the action roll is the
+    // one above and the sole difference is the nested draw.
+    const action = scriptedRng([...MISS]);
+    const freshPricePerCall = {
+      stream: (name: RngStream): Rng => (name === 'price' ? scriptedRng([12, 4]) : action),
+    };
+    const result = decide(state, nestedPrice, aCtx(MISS, {}, { rng: freshPricePerCall }));
+    if (isErr(result)) throw new Error(result.error.code);
+    expect(priceValuesOf(result.value.events)).toEqual([12, 12]);
+  });
+
   it('writes nothing when the bundle hands over a table that is not the price table', () => {
     const content = aContent({ priceTable: { ...aContent().priceTable, id: 'complication' } });
     const result = decide(

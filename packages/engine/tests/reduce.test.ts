@@ -165,6 +165,8 @@ describe('the reducer never writes into what it is handed', () => {
 
 describe('the scene: started, then two fact updates', () => {
   const guard = anId('entity', 2);
+  const crow = anId('entity', 3);
+  const wolf = anId('entity', 4);
 
   function presence(id: string, name: string): ScenePresence {
     return { ref: { kind: 'entity', id }, name, state: 'debout', sinceSeq: 1 };
@@ -172,6 +174,10 @@ describe('the scene: started, then two fact updates', () => {
 
   function absence(id: string, name: string): SceneAbsence {
     return { ref: { kind: 'entity', id }, name, cause: 'parti', sinceSeq: 2 };
+  }
+
+  function ids(entries: readonly { readonly ref: { readonly id: string } }[]): readonly string[] {
+    return entries.map((entry) => entry.ref.id);
   }
 
   const started = anEvent({
@@ -186,13 +192,29 @@ describe('the scene: started, then two fact updates', () => {
     },
   });
 
+  /**
+   * TWO entries per list, handed over in DESCENDING order.
+   *
+   * One entry per list would be sorted whatever the comparator does, and a
+   * natural order would be sorted by a comparator that does nothing: the
+   * criterion is only measurable when the input disagrees with the output.
+   */
+  const presentAsGiven: readonly ScenePresence[] = [
+    presence(crow, 'Le corbeau'),
+    presence(guard, 'Le garde'),
+  ];
+  const absentAsGiven: readonly SceneAbsence[] = [
+    absence(wolf, 'Le loup'),
+    absence(ENTITY, 'Katla'),
+  ];
+
   const leaves = anEvent({
     seq: 2,
     type: 'scene.facts_updated',
     payload: {
       sceneId: SCENE,
-      present: [presence(guard, 'Le garde')],
-      absent: [absence(ENTITY, 'Katla')],
+      present: presentAsGiven,
+      absent: absentAsGiven,
       source: 'gm_ai',
     },
   });
@@ -202,8 +224,8 @@ describe('the scene: started, then two fact updates', () => {
     type: 'scene.facts_updated',
     payload: {
       sceneId: SCENE,
-      present: [presence(guard, 'Le garde')],
-      absent: [absence(ENTITY, 'Katla')],
+      present: presentAsGiven,
+      absent: absentAsGiven,
       source: 'gm_ai',
     },
   });
@@ -219,18 +241,19 @@ describe('the scene: started, then two fact updates', () => {
   });
 
   it('sorts both lists by ref.id', () => {
-    const ids = (entries: readonly { readonly ref: { readonly id: string } }[]): string[] =>
-      entries.map((entry) => entry.ref.id);
-    expect(ids(state.scene?.present ?? [])).toEqual([...ids(state.scene?.present ?? [])].sort());
-    expect(ids(state.scene?.absent ?? [])).toEqual([...ids(state.scene?.absent ?? [])].sort());
+    // THE EXACT ARRAY, written out. Comparing a list with its own `.sort()`
+    // sorts both sides of the equality and is blind to the comparator.
+    expect(ids(presentAsGiven)).toEqual([crow, guard]);
+    expect(ids(absentAsGiven)).toEqual([wolf, ENTITY]);
+    expect(ids(state.scene?.present ?? [])).toEqual([guard, crow]);
+    expect(ids(state.scene?.absent ?? [])).toEqual([ENTITY, wolf]);
   });
 
   it('empties absent when a scene starts, and rebuilds present', () => {
     const restarted = reduce(state, { ...started, seq: 4 });
     expect(restarted.scene?.absent).toEqual([]);
-    expect(restarted.scene?.present.map((entry) => entry.ref.id).sort()).toEqual(
-      [HERO as string, guard as string, ENTITY as string].sort(),
-    );
+    // Given as [guard, ENTITY] plus HERO, read back sorted by identifier.
+    expect(ids(restarted.scene?.present ?? [])).toEqual([HERO, ENTITY, guard]);
   });
 
   it('keeps the place when a fact update names none', () => {
@@ -370,7 +393,9 @@ describe('a reverted turn comes back exactly, and the dice do not', () => {
         isPresage: false,
         momentumBefore: 2,
         momentumNegated: false,
-        burnWindow: false,
+        // TRUE on purpose: with `false` both sides of the restoration
+        // assertion below are `null`, and it measures nothing.
+        burnWindow: true,
         rngStream: 'action',
         rngDrawIndex: 0,
       },
@@ -433,7 +458,17 @@ describe('a reverted turn comes back exactly, and the dice do not', () => {
   });
 
   it('restores the burn window, derived from the journal', () => {
-    expect(openBurnWindowSeq([...setup, ...turn, revert].filter((e) => e.seq !== 12))).toBe(
+    const journal = [...setup, ...turn, revert];
+    const reverted = collectRevertedSeqs(journal);
+
+    // The turn DID open a window: without this line the assertion below
+    // compares null with null and measures nothing. Same self-check as
+    // 'moved something in the first place' carries for the state hash.
+    expect(openBurnWindowSeq([...setup, ...turn])).not.toBeNull();
+
+    // What the cancellation leaves readable is the journal MINUS the
+    // cancelled sequences (5 to 11), not minus the cancellation line.
+    expect(openBurnWindowSeq(journal.filter((event) => !reverted.has(event.seq)))).toBe(
       openBurnWindowSeq(setup),
     );
   });
