@@ -315,7 +315,18 @@ const isRefKind = (candidate: string): candidate is RefKind => Object.hasOwn(REF
  */
 export function collectRefs(schema: unknown, value: unknown): FoundRef[] {
   const found: FoundRef[] = [];
-  const openLazies = new Set<unknown>();
+  /**
+   * The open `z.lazy` frames, as (getter, VALUE) pairs — not getters alone.
+   *
+   * Re-entering the same `z.lazy` is NORMAL content: `choice.options[].effects[]`
+   * points straight back at `zEngineEffectUnion` (ADR 0006 keeps `choice`). A
+   * guard on the getter alone made the walk stop at the first `choice` and
+   * report NOTHING nested under it. What must never repeat is the same getter
+   * over the SAME value: that, and only that, is a walk going nowhere. The
+   * value shrinks at every array or object step and a JSON document is finite,
+   * so the walk terminates on its own.
+   */
+  const openFrames: { getter: unknown; value: unknown }[] = [];
 
   const walk = (node: SchemaNode | undefined, current: unknown, path: JsonPath): void => {
     if (node === undefined || current === undefined || current === null) return;
@@ -328,10 +339,11 @@ export function collectRefs(schema: unknown, value: unknown): FoundRef[] {
     switch (def.type) {
       case 'lazy': {
         const getter = def.getter;
-        if (getter === undefined || openLazies.has(getter)) return;
-        openLazies.add(getter);
+        if (getter === undefined) return;
+        if (openFrames.some((frame) => frame.getter === getter && frame.value === current)) return;
+        openFrames.push({ getter, value: current });
         walk(asNode(getter()), current, path);
-        openLazies.delete(getter);
+        openFrames.pop();
         return;
       }
       case 'optional':
@@ -528,13 +540,22 @@ export function validateContent(files: ContentFiles, options: ValidateOptions = 
   }
 
   // ── Pass 1 : syntax ──────────────────────────────────────────────────
+  //
+  // NO SCHEMA IS NOT NO CHECK. `fallbacks/narration.json` has no shape in
+  // `@for/contracts`, and the previous version skipped it entirely: a file
+  // holding `{ ceci n est pas du JSON` left `content:check` at 0. "Listed, not
+  // loaded" has to mean listed AND readable, or the summary line announces a
+  // file the server will choke on. Its syntax is checked here; its SHAPE is
+  // still nobody's business, and the summary still says so.
   const parsed: ParsedFile[] = [];
   for (const file of present) {
     const schema = schemaFor(file);
+    const unschemad = (UNVALIDATED_PATHS as readonly string[]).includes(file);
     const raw = files.get(file);
-    if (schema === undefined || raw === undefined) continue;
+    if ((schema === undefined && !unschemad) || raw === undefined) continue;
     try {
-      parsed.push({ file, source: parseJsonSource(raw), schema });
+      const source = parseJsonSource(raw);
+      if (schema !== undefined) parsed.push({ file, source, schema });
     } catch (error) {
       if (!(error instanceof JsonSyntaxError)) throw error;
       add({
@@ -650,8 +671,58 @@ function indexRawIds(parsed: readonly ParsedFile[]): Readonly<Record<RefKind, re
   };
 }
 
+/**
+ * Section 4.8 asks for a bundle FROZEN, recursively.
+ *
+ * `Object.freeze` alone is shallow, and `ReadonlyMap` is a TYPE, not a lock.
+ * Measured on the previous version of this file: `Object.isFrozen(bundle)` was
+ * true while `Object.isFrozen(bundle.moves)` was false,
+ * `bundle.moves.set('invente-par-le-mj', …)` carried the size from 3 to 4, and
+ * `bundle.moves.get('endure-cold').name = 'Nom réécrit à chaud'` took effect —
+ * on the ONE bundle `staticContent()` memoises for the whole process. Any
+ * caller could rewrite a rule of the game for every campaign at once. Both
+ * halves are shut below.
+ */
+const deepFreeze = <T>(value: T, seen: WeakSet<object> = new WeakSet()): T => {
+  if (value === null || typeof value !== 'object') return value;
+  const object = value as object;
+  if (seen.has(object)) return value;
+  seen.add(object);
+  Object.freeze(object);
+  for (const child of Object.values(object as Record<string, unknown>)) deepFreeze(child, seen);
+  return value;
+};
+
+/**
+ * A `Map` whose mutators have no working path. `Object.freeze` does not reach
+ * a `Map`'s entries — they live in an internal slot — so the only way to make
+ * one refuse a write at RUNTIME is to take the write away.
+ *
+ * The constructor fills the map through `super.set`, on purpose: the override
+ * is unconditional, with no "sealed" flag anyone could turn back off.
+ */
+class FrozenMap<V> extends Map<string, V> {
+  public constructor(entries: Iterable<readonly [string, V]>) {
+    super();
+    for (const [key, value] of entries) super.set(key, value);
+    Object.freeze(this);
+  }
+
+  public override set(key: string): never {
+    throw new TypeError(`contenu gelé : « ${key} » ne s’ajoute pas au bundle chargé`);
+  }
+
+  public override delete(key: string): never {
+    throw new TypeError(`contenu gelé : « ${key} » ne se retire pas du bundle chargé`);
+  }
+
+  public override clear(): never {
+    throw new TypeError('contenu gelé : le bundle chargé ne se vide pas');
+  }
+}
+
 const mapOf = <T extends { id: string }>(values: readonly T[]): ReadonlyMap<string, T> =>
-  new Map(values.map((value) => [value.id, value]));
+  new FrozenMap(values.map((value) => [value.id, deepFreeze(value)] as const));
 
 function assemble(
   values: ReadonlyMap<string, unknown>,
@@ -668,6 +739,9 @@ function assemble(
   const conditionsFile = values.get('conditions.json') as ConditionsFileContent;
   const championIndex = values.get('champions-index.json') as ChampionIndexFileContent;
 
+  // `deepFreeze` on the bundle object would stop at each map — a `Map` has no
+  // own enumerable entries to walk — so the documents are frozen in `mapOf`
+  // and the three single documents here, one by one.
   return Object.freeze({
     version: manifest.version,
     hash,
@@ -677,13 +751,13 @@ function assemble(
     championIndex: mapOf(championIndex.champions),
     regions: mapOf(pick<RegionContent>('regions')),
     oracles: mapOf(pick<OracleTableContent>('oracles', ['oracles/yes-no.json'])),
-    yesNo: values.get('oracles/yes-no.json') as YesNoOracleContent,
-    priceTable: values.get('tables/pay-the-price.json') as PriceTableContent,
-    presages: values.get('tables/presages.json') as PresageTableContent,
+    yesNo: deepFreeze(values.get('oracles/yes-no.json') as YesNoOracleContent),
+    priceTable: deepFreeze(values.get('tables/pay-the-price.json') as PriceTableContent),
+    presages: deepFreeze(values.get('tables/presages.json') as PresageTableContent),
     assets: mapOf(pick<AssetContent>('assets')),
     conditions: mapOf(conditionsFile.conditions),
-    truths: pick<TruthsFileContent>('truths').flatMap((file) => file.truths),
-    unvalidated,
+    truths: deepFreeze(pick<TruthsFileContent>('truths').flatMap((file) => file.truths)),
+    unvalidated: deepFreeze([...unvalidated]),
   });
 }
 
@@ -728,6 +802,7 @@ function checkCounts(
     oracles: bundle.oracles.size + 1,
     tables: present.filter((file) => directoryOf(file) === 'tables').length,
     assets: bundle.assets.size,
+    championIndex: bundle.championIndex.size,
   };
   for (const [key, expected] of Object.entries(manifest.expectedCounts)) {
     const got = actual[key as keyof typeof actual];
@@ -814,7 +889,17 @@ function checkRegionForest(bundle: ContentBundle, add: Add): void {
   }
 }
 
-/** Section 4.8: same id, same alias set, same canonical region. */
+/**
+ * Section 4.8: same id, same alias set, same canonical region — plus the
+ * DISPLAYED NAME.
+ *
+ * Section 4.8 names only the first three, and on that letter the previous
+ * version was conformant: renaming the « Ashe » entry to « Quelqu un d autre »
+ * in `champions-index.json` left `content:check` at 0. But section 4.7 makes
+ * the directory the table of truth FOR NAMES, and the guard-rail this function
+ * announces is « sheet and directory never diverge in silence ». On that one
+ * field they did. Added, and declared in the PR as a proposed ADR.
+ */
 function checkChampionIndexAgreement(bundle: ContentBundle, add: Add): void {
   for (const champion of bundle.champions.values()) {
     const file = `champions/${champion.id}.json`;
@@ -827,6 +912,14 @@ function checkChampionIndexAgreement(bundle: ContentBundle, add: Add): void {
         pass: 4,
       });
       continue;
+    }
+    if (entry.displayName !== champion.name) {
+      add({
+        file,
+        path: 'name',
+        message: `nom « ${champion.name} » ≠ displayName « ${entry.displayName} » de champions-index.json : l'écran de choix et la fiche afficheraient deux noms`,
+        pass: 4,
+      });
     }
     const sheet = [...champion.aliases].sort().join(' · ');
     const index = [...entry.aliases].sort().join(' · ');

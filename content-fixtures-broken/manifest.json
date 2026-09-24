@@ -8,6 +8,7 @@
     "regions": 2,
     "oracles": 2,
     "tables": 2,
-    "assets": 2
+    "assets": 2,
+    "championIndex": 3
   }
 }

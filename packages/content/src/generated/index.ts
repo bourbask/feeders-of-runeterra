@@ -5,7 +5,7 @@
 
 export const GENERATED_FROM = 'content-fixtures';
 
-export const GENERATED_HASH = '2cdd5ec416c109f67d203c83e24346e2b2c4d27b6417ebd2c04af55770c033d8';
+export const GENERATED_HASH = '88ec942273547b551e0549637e8ebcae440f5254decff3aef20f3ad77e103363';
 
 export const GENERATED_FILES: Readonly<Record<string, string>> = {
   'assets/arc-de-givre.json':
@@ -23,7 +23,7 @@ export const GENERATED_FILES: Readonly<Record<string, string>> = {
   'fallbacks/narration.json':
     '{"schemaVersion":1,"templates":{"face-danger":{"echec":["Le danger arrive le premier."],"franche":["Le passage s\'ouvre, et rien ne se referme derrière."],"partielle":["Tu passes, et le froid prend sa part."]}}}',
   'manifest.json':
-    '{"expectedCounts":{"assets":2,"champions":2,"moves":3,"oracles":2,"regions":2,"tables":2},"rulesVersion":1,"schemaVersion":1,"version":"0.1.0"}',
+    '{"expectedCounts":{"assets":2,"championIndex":3,"champions":2,"moves":3,"oracles":2,"regions":2,"tables":2},"rulesVersion":1,"schemaVersion":1,"version":"0.1.0"}',
   'moves/endure-cold.json':
     '{"allowsMomentumBurn":false,"attributeOptions":["fer","esprit"],"category":"survie","id":"endure-cold","name":"Endurer le froid","outcomes":{"echec":{"effects":[{"delta":-1,"gauge":"vigueur","op":"gauge"},{"conditionId":"transi","op":"condition_add"}],"text":"Le froid entre. Il ne ressortira pas de sitôt."},"franche":{"effects":[],"text":"Tu tiens. Le froid te laisse passer sans rien prendre."},"partielle":{"effects":[{"delta":-1,"gauge":"vivres","op":"gauge"}],"text":"Tu tiens, mais tu brûles tes réserves."}},"rollKind":"action","schemaVersion":1,"tags":["froid","survie"],"trigger":"Quand la nuit tombe loin d\'un abri, ou que la marche dure plus que les vivres."}',
   'moves/face-danger.json':
