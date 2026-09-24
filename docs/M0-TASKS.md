@@ -1111,6 +1111,12 @@ trois agents de travailler en parallèle sur le serveur.
 - Lancer `node dist/main.js` sans `SESSION_SECRET` sort en code 1 et écrit le nom de la
   variable manquante sur la sortie d'erreur.
 - Un test vérifie qu'un journal contenant un cookie ou `NARRATOR_API_KEY` ressort rédigé.
+- **Le verdict `healthy` d'`/api/admin/health` est exercé conjonction par conjonction.** Ses six
+  conditions ne sont observées par aucun test aujourd'hui : mesuré en recette, la comparaison du
+  WAL à son plafond **inversée** laisse `tsc -b --force` à 0 et les 33 tests du paquet verts — un
+  WAL plus gros que le plafond devient une raison d'être sain sans qu'une ligne rougisse. Sortir
+  le verdict en fonction pure des six champs déjà calculés, et l'exercer dans les deux sens : une
+  lecture saine sauf ce champ rend `false`, le même champ dans les clous rend `true`.
 - `grep -rn "process.env" packages/server/src | grep -v "src/env.ts" | wc -l` affiche `0`.
 - Un test vérifie que `zEnv` applique la validation **conditionnelle** du conteur
   (`02-mj-ia.md` §0.6) : `NARRATOR_PROVIDER=openai-compatible` sans `NARRATOR_BASE_URL` échoue
