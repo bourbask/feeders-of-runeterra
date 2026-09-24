@@ -73,6 +73,18 @@ les remplira.
 Une tâche, une branche, une PR vers `develop`. `main` est la branche déployée.
 Nommage : `feat/M0-07-moteur-des`, `fix/...`, `docs/...`.
 
+## Mesurer sans se faire mentir
+
+Deux façons d'obtenir un vert qui ne veut rien dire, toutes deux rencontrées en recette :
+
+- **Une sonde qui touche `@for/engine` exige un `tsc -b --force` avant de relancer les tests.**
+  Sans ça, les paquets en aval lisent un `dist/` périmé : tu élargis une constante du moteur,
+  tout reste vert, et tu conclus que le garde-fou est inerte — ou pire, qu'il mord alors qu'il
+  ne mord pas.
+- **Le cache turbo rejoue les journaux d'un autre worktree.** Une mesure faite sans `--force`
+  peut t'afficher la sortie de quelqu'un d'autre. Toute mesure de recette se fait avec
+  `--force`, ou en invoquant `vitest run` directement.
+
 ## Deux pièges de l'environnement, déjà payés
 
 - **pnpm 12 nomme le réglage `allowBuilds`**, une table paquet → booléen dans

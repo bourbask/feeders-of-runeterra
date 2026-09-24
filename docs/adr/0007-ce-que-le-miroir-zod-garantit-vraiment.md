@@ -45,6 +45,18 @@ sur trois.
 membre.** Le `satisfies` reste utile — il attrape les champs manquants, ce qui n'est pas rien —
 mais il ne se substitue jamais à ce test.
 
+**Précision ajoutée le 24 septembre**, parce que la première formulation a été lue trop
+étroitement et a coûté une passe : « toute constante » veut dire **les tuples `as const`, les
+scalaires ET les Records**. Un nombre recopié est *pire* qu'un enum recopié — un enum garde au
+moins la paire `satisfies` + `AssertNever` à la compilation, alors que le compilateur ne voit
+dans un nombre qu'un `number`. Mesuré : `ATTRIBUTE_MAX` porté de 3 à 4 dans le moteur, plus
+`CLOCK_ADVANCE_MAX` et `ACTION_SCORE_CAP`, reconstruction complète — les quatre portes restent
+vertes et les recopies des contrats disent toujours les anciennes valeurs.
+
+La règle opératoire, pour ne pas avoir à juger au cas par cas : **énumérer le barrel de
+`@for/engine` en entier**, et justifier par écrit chaque constante exportée qu'on décide de ne
+pas comparer. Le tri « les importantes » n'est pas un critère.
+
 Concrètement : toute constante du moteur qui porte un invariant figure dans le `it.each` de
 `packages/contracts/tests/exhaustive-union.test.ts`, qui porte déjà ce motif pour neuf enums.
 Ce fichier importe des **valeurs** du moteur, et il en a le droit : il est hors du `from` de la
