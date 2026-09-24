@@ -37,4 +37,15 @@ export type { GoldenOptions } from './golden/runner.js';
 
 export { GoldenSerialisationError, stableStringify } from './golden/stable-stringify.js';
 
+export {
+  InvalidTableState,
+  ReservedChampionMentioned,
+  SeqNotContiguous,
+  expectNoReservedChampion,
+  expectSeqContiguous,
+  expectValidState,
+  normaliseChampionName,
+} from './assertions.js';
+export type { HasSeq, SeqContiguousOptions } from './assertions.js';
+
 export * from './fixtures/index.js';
