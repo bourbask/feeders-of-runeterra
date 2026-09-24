@@ -7,24 +7,44 @@
  *      `additionalProperties: false` on every object, `required` covering
  *      every property. "It looks strict" is not a measurement, and half the
  *      providers silently accept whatever a loose schema lets through.
+ *      EVERY `z.toJSONSchema` CALL IN THIS FILE PASSES `io: 'input'`, with no
+ *      exception: the default mode writes `additionalProperties: false` even
+ *      on a non-strict object, so two modes cohabiting here would invite the
+ *      next task to copy the one that cannot fail (CLAUDE.md, ADR 0007).
  *   2. THE FROZEN LIST. Twelve names, in the order of section 3.4, with no
  *      price tool and no thirteenth. `TOOL_JOURNAL_ONLY` empty everywhere but
  *      `roll_oracle` (P12).
  *   3. `propose_scene_transition` has EXACTLY two keys, and `time_shift` is
  *      not one of them (P11).
+ *   4. THE VOCABULARY TUPLES THAT HAVE NO ENGINE MIRROR, pinned value by
+ *      value against sections 3.2 and 3.3. This block is new, and it exists
+ *      because the file header of `tools.ts` claimed these tuples were
+ *      "compared by the tests" while NOTHING looked at them: rewriting
+ *      `NPC_PROPOSAL_DISPOSITIONS` to the engine's four values left 98/98
+ *      green, and renaming an oracle table id left 98/98 green — measured.
+ *      What has an engine mirror is compared to the mirror (`likelihood`,
+ *      `segments`, `rank`, below); what has none is written out in full.
+ *      Neither is ever compared to itself (ADR 0007).
  */
 import { CLOCK_SEGMENT_COUNTS, LIKELIHOODS, PROGRESS_RANKS } from '@for/engine';
 import { describe, expect, it } from 'vitest';
 
 import { z } from 'zod';
-import { ORACLE_JOURNAL_ONLY_EVENT_TYPES } from '../../src/ai/narrator-port.js';
 import {
+  CLOCK_PROPOSAL_KINDS,
   FORBIDDEN_TOOL_NAMES,
+  GET_CHRONICLE_SECTIONS,
+  GET_LORE_KINDS,
+  GET_STATE_SCOPES,
+  LORE_FACT_TIE_KINDS,
+  NPC_PROPOSAL_DISPOSITIONS,
   ORACLE_LIKELIHOODS,
   ORACLE_TABLE_IDS,
+  PROPOSAL_STATUSES,
   PROPOSAL_TOOL_NAMES,
   ProposeSceneTransitionInputSchema,
   READ_ONLY_TOOL_NAMES,
+  THREAD_TIE_KINDS,
   TOOL_DESCRIPTORS,
   TOOL_INPUT_SCHEMAS,
   TOOL_JOURNAL_ONLY,
@@ -47,6 +67,18 @@ const FROZEN_ORDER = [
   'propose_lore_fact',
   'propose_scene_transition',
   'propose_vow_hook',
+];
+
+/**
+ * Circuit 2 of the section 0.5 table, as arbitration P12 of `M0-TASKS.md`
+ * writes it in full. PINNED TO THE SPEC, not to
+ * `ORACLE_JOURNAL_ONLY_EVENT_TYPES`: `tools.ts` defines
+ * `roll_oracle: ORACLE_JOURNAL_ONLY_EVENT_TYPES`, so comparing the two was
+ * comparing one object to itself — green whatever either side said (ADR 0007).
+ */
+const ORACLE_JOURNAL_ONLY_PER_SPEC: readonly string[] = [
+  'roll.oracle_resolved',
+  'roll.yes_no_resolved',
 ];
 
 interface JsonNode {
@@ -167,7 +199,7 @@ describe('roll_oracle — P12', () => {
       if (name === 'roll_oracle') continue;
       expect(TOOL_JOURNAL_ONLY[name], `${name} écrit au journal`).toStrictEqual([]);
     }
-    expect([...TOOL_JOURNAL_ONLY.roll_oracle]).toStrictEqual([...ORACLE_JOURNAL_ONLY_EVENT_TYPES]);
+    expect([...TOOL_JOURNAL_ONLY.roll_oracle]).toStrictEqual(ORACLE_JOURNAL_ONLY_PER_SPEC);
   });
 
   it('les tables « payer le prix » et « présages » ne sont PAS consultables', () => {
@@ -179,18 +211,107 @@ describe('roll_oracle — P12', () => {
   });
 });
 
+describe('les vocabulaires SANS contrepartie moteur, épinglés en toutes lettres', () => {
+  // Ces tuples ne dérivent de rien : ils sont la §3.2 et la §3.3 recopiées.
+  // Rien d'autre dans le dépôt ne peut les contredire, donc rien d'autre ne
+  // peut les garder. C'est le seul cas où une liste littérale dans un test
+  // est la bonne réponse, et c'est ce que l'ADR 0007 demande.
+  it.each([
+    [
+      'get_state.scope',
+      GET_STATE_SCOPES,
+      ['table', 'character', 'clocks', 'vows', 'inventory', 'scene'],
+    ],
+    [
+      'get_lore.kind',
+      GET_LORE_KINDS,
+      ['any', 'region', 'place', 'faction', 'custom', 'champion', 'creature'],
+    ],
+    [
+      'get_chronicle.section',
+      GET_CHRONICLE_SECTIONS,
+      ['arcs', 'npcs', 'places', 'facts', 'open_threads', 'archived_facts', 'character'],
+    ],
+    [
+      'roll_oracle.table_id',
+      ORACLE_TABLE_IDS,
+      [
+        'yes-no',
+        'action-theme',
+        'place-features',
+        'npc-names-freljord',
+        'npc-roles',
+        'npc-goals',
+        'settlement-troubles',
+        'freljord-weather',
+        'complication',
+      ],
+    ],
+    [
+      'propose_npc_introduce.disposition',
+      NPC_PROPOSAL_DISPOSITIONS,
+      ['hostile', 'mefiant', 'neutre', 'curieux', 'allie'],
+    ],
+    ['propose_clock_create.kind', CLOCK_PROPOSAL_KINDS, ['scene', 'menace', 'campagne']],
+    [
+      'propose_thread_open.tied_to_kind',
+      THREAD_TIE_KINDS,
+      ['npc', 'place', 'vow', 'character', 'none'],
+    ],
+    [
+      'propose_lore_fact.tied_to_kind',
+      LORE_FACT_TIE_KINDS,
+      ['npc', 'place', 'region', 'faction', 'character', 'none'],
+    ],
+    ['propose_*.status', PROPOSAL_STATUSES, ['applied', 'adjusted', 'rejected']],
+  ] as const)('%s vaut EXACTEMENT la liste de la spéc, dans son ordre', (_name, actual, spec) => {
+    expect([...actual]).toStrictEqual([...spec]);
+  });
+
+  it('chaque tuple est bien celui que le schéma d’entrée fait respecter', () => {
+    // L'épinglage ci-dessus garde la CONSTANTE ; celui-ci garde le lien entre
+    // la constante et le refus à l'exécution, faute de quoi on prouverait une
+    // liste que plus aucun schéma n'utilise.
+    expect(
+      TOOL_INPUT_SCHEMAS.propose_npc_introduce.safeParse({
+        name: 'Hrafn',
+        role: 'eclaireur',
+        one_line: 'Il lit le vent.',
+        place_id: 'plc_col',
+        disposition: 'inconnu',
+      }).success,
+    ).toBe(false);
+    expect(
+      TOOL_INPUT_SCHEMAS.roll_oracle.safeParse({
+        table_id: 'presages',
+        question: '',
+        likelihood: 'sans-objet',
+      }).success,
+    ).toBe(false);
+    expect(
+      TOOL_INPUT_SCHEMAS.roll_oracle.safeParse({
+        table_id: 'yes-no',
+        question: 'Le col est-il gardé ?',
+        likelihood: 'incertain',
+      }).success,
+    ).toBe(true);
+  });
+});
+
 describe('les énumérations dérivées du moteur (ADR 0007)', () => {
   it('likelihood = les cinq vraisemblances du moteur + sans-objet', () => {
     expect([...ORACLE_LIKELIHOODS]).toStrictEqual([...LIKELIHOODS, 'sans-objet']);
   });
 
   it('propose_clock_create.segments = CLOCK_SEGMENT_COUNTS', () => {
-    const json = z.toJSONSchema(TOOL_INPUT_SCHEMAS.propose_clock_create) as JsonNode;
+    const json = z.toJSONSchema(TOOL_INPUT_SCHEMAS.propose_clock_create, {
+      io: 'input',
+    }) as JsonNode;
     expect(json.properties?.['segments']?.enum).toStrictEqual([...CLOCK_SEGMENT_COUNTS]);
   });
 
   it('propose_vow_hook.rank = PROGRESS_RANKS', () => {
-    const json = z.toJSONSchema(TOOL_INPUT_SCHEMAS.propose_vow_hook) as JsonNode;
+    const json = z.toJSONSchema(TOOL_INPUT_SCHEMAS.propose_vow_hook, { io: 'input' }) as JsonNode;
     expect(json.properties?.['rank']?.enum).toStrictEqual([...PROGRESS_RANKS]);
   });
 });
@@ -200,7 +321,7 @@ describe('aucun outil n’accepte une valeur de jeu', () => {
     // La liste de noms interdits de la §3.1, appliquée aux CLÉS D'ENTRÉE.
     // Un outil qui prendrait une jauge, une issue, un dé ou un effet
     // remettrait le conteur sur le chemin de décision.
-    const json = JSON.stringify(z.toJSONSchema(TOOL_INPUT_SCHEMAS[name]));
+    const json = JSON.stringify(z.toJSONSchema(TOOL_INPUT_SCHEMAS[name], { io: 'input' }));
     for (const forbidden of [
       'gauge',
       'vigueur',

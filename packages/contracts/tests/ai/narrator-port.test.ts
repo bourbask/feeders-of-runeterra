@@ -8,13 +8,29 @@
  *      the same four strings in the same order. Two lists in two languages:
  *      nothing but a runtime comparison catches a fifth provider added on one
  *      side. Same for the purposes and the finish reasons.
+ *
+ *      BOTH SIDES ARE PINNED TO THE LITERAL VALUES, never to each other. The
+ *      acceptance criterion NAMES the four providers, so they are written out
+ *      in full here (ADR 0007). Comparing the tuple to the `CHECK` alone
+ *      tested their COINCIDENCE and never their value: renaming `ollama` into
+ *      `llama-cpp` on both sides left 98/98 green, measured.
  *   2. NEUTRALITY. The two `grep` commands of the M0-12 sheet, run as tests so
  *      the CI carries them and not only a reviewer's shell history.
  *   3. `NarratorError.retryable` cannot lie: it is computed from the code, and
  *      there is no constructor parameter that could make `quota_exhausted`
  *      retryable.
- *   4. The three closed lists of invariant 1 hold real event types, and not
- *      one `character.*` or `roll.*` is reachable from a proposal.
+ *   4. The three closed lists of invariant 1 ARE the eleven event types of the
+ *      section 0.5 table of `03-donnees.md`, value by value and in written
+ *      order, pinned to the LITERALS the spec names and never to the tuples
+ *      they check. The derived controls stay on top of that — membership in
+ *      `GAME_EVENT_TYPES`, the forbidden `character.*` / `roll.*` families in
+ *      circuit 1, the disjunction of the three circuits, the 8/2/1 lengths.
+ *      They are useful; they are simply not enough, and that is measured:
+ *      with them alone, `ORACLE_JOURNAL_ONLY_EVENT_TYPES` rewritten to
+ *      `['roll.price_paid','roll.presage_drawn']`, `entity.status_changed`
+ *      swapped for `clock.filled` in circuit 1, and
+ *      `REFUSAL_REACHABLE_EVENT_TYPES` rewritten to `['system.correction']`
+ *      each left 113/113 green.
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -58,17 +74,61 @@ function checkValues(constraint: string): readonly string[] {
   return (clause?.[1] ?? '').split(',').map((value) => value.trim().replaceAll("'", ''));
 }
 
+// ─── LES VALEURS DU CRITÈRE, EN TOUTES LETTRES ────────────────────────────
+// Aucune de ces trois listes n'est relue depuis le code qu'elle vérifie. Un
+// chiffre — ou un nom — qui vient d'un critère d'acceptation s'écrit en
+// toutes lettres dans le test ; comparer une liste à celle dont elle dérive
+// ne garde que l'ordre (ADR 0007).
+const PROVIDERS_PER_SPEC: readonly string[] = ['stub', 'anthropic', 'openai-compatible', 'ollama'];
+const PURPOSES_PER_SPEC: readonly string[] = ['narration', 'forge', 'chronicle', 'judge'];
+const FINISHES_PER_SPEC: readonly string[] = [
+  'complete',
+  'truncated',
+  'tool_call',
+  'refused',
+  'aborted',
+];
+/** Les trois codes que la §7.1 autorise à relancer À L'IDENTIQUE. */
+const RETRYABLE_PER_SPEC: readonly string[] = ['rate_limited', 'unavailable', 'timeout'];
+
+// Les ONZE types d'événement du tableau §0.5 de `docs/design/03-donnees.md`,
+// circuit par circuit et dans l'ordre où la spéc les écrit. Recopiés DE LA
+// SPÉC : les relire depuis `narrator-port.ts` referait exactement le défaut.
+// Le circuit 2 est aussi écrit en toutes lettres par l'arbitrage P12 de
+// `docs/M0-TASKS.md`.
+/** Circuit 1 — une proposition du modèle validée par le serveur. */
+const PROPOSAL_REACHABLE_PER_SPEC: readonly string[] = [
+  'entity.introduced',
+  'entity.updated',
+  'entity.status_changed',
+  'clock.created',
+  'clock.advanced',
+  'scene.started',
+  'scene.ended',
+  'scene.facts_updated',
+];
+/** Circuit 2 — `roll_oracle`, seul outil de lecture qui écrive. */
+const ORACLE_JOURNAL_ONLY_PER_SPEC: readonly string[] = [
+  'roll.oracle_resolved',
+  'roll.yes_no_resolved',
+];
+/** Circuit 3 — le droit de refus du conteur. */
+const REFUSAL_REACHABLE_PER_SPEC: readonly string[] = ['system.reverted'];
+
 describe('le port du conteur — les listes qui doivent coïncider', () => {
-  it('NarratorProviderId vaut le CHECK de ai_calls.provider, dans le même ordre', () => {
-    expect([...NARRATOR_PROVIDER_IDS]).toStrictEqual(checkValues('ai_calls_provider_enum'));
+  it('NarratorProviderId vaut EXACTEMENT les quatre du critère, et le CHECK aussi', () => {
+    expect([...NARRATOR_PROVIDER_IDS]).toStrictEqual(PROVIDERS_PER_SPEC);
+    expect(checkValues('ai_calls_provider_enum')).toStrictEqual(PROVIDERS_PER_SPEC);
   });
 
   it('les quatre usages du port valent le CHECK de ai_calls.purpose', () => {
-    expect([...NARRATOR_PURPOSES]).toStrictEqual(checkValues('ai_calls_purpose_enum'));
+    expect([...NARRATOR_PURPOSES]).toStrictEqual(PURPOSES_PER_SPEC);
+    expect(checkValues('ai_calls_purpose_enum')).toStrictEqual(PURPOSES_PER_SPEC);
   });
 
   it('NarrateFinish vaut le CHECK de ai_calls.finish_reason', () => {
-    expect([...NARRATE_FINISHES]).toStrictEqual(checkValues('ai_calls_finish_reason_enum'));
+    expect([...NARRATE_FINISHES]).toStrictEqual(FINISHES_PER_SPEC);
+    expect(checkValues('ai_calls_finish_reason_enum')).toStrictEqual(FINISHES_PER_SPEC);
   });
 });
 
@@ -96,8 +156,21 @@ describe('neutralité du port (P18)', () => {
 
 describe('NarratorError', () => {
   it('retryable est CALCULÉ, pas fourni : les trois codes de la §7.1 et eux seuls', () => {
-    const retryable = NARRATOR_ERROR_CODES.filter((code) => isRetryableNarratorErrorCode(code));
-    expect(retryable).toStrictEqual([...NARRATOR_RETRYABLE_ERROR_CODES]);
+    // ÉPINGLÉS EN TOUTES LETTRES. La version précédente comparait
+    // `NARRATOR_ERROR_CODES.filter(isRetryable)` à la liste DONT `isRetryable`
+    // dérive : elle ne mordait que sur l'ORDRE, et ajouter `internal` à
+    // `NARRATOR_RETRYABLE_ERROR_CODES` laissait 98/98 verts — mesuré.
+    expect([...NARRATOR_RETRYABLE_ERROR_CODES]).toStrictEqual(RETRYABLE_PER_SPEC);
+    expect(NARRATOR_ERROR_CODES.filter((code) => isRetryableNarratorErrorCode(code))).toStrictEqual(
+      RETRYABLE_PER_SPEC,
+    );
+    // Et les ONZE autres ne le sont pas, un par un : un code retiré de la
+    // liste des quatorze ne doit pas pouvoir éteindre la vérification.
+    for (const code of NARRATOR_ERROR_CODES) {
+      if (RETRYABLE_PER_SPEC.includes(code)) continue;
+      expect(isRetryableNarratorErrorCode(code), `${code} ne doit pas être relançable`).toBe(false);
+    }
+    expect(NARRATOR_ERROR_CODES).toHaveLength(14);
   });
 
   it('quota_exhausted n’est jamais relançable, même si l’adaptateur le voulait', () => {
@@ -150,6 +223,19 @@ describe('NarratorError', () => {
 
 describe('les trois listes closes de l’invariant 1 (03-donnees.md §0.5)', () => {
   const known = new Set<string>(GAME_EVENT_TYPES);
+
+  // ÉPINGLÉ EN TOUTES LETTRES, ET C'EST LE SEUL CONTRÔLE QUI GARDE LES NOMS.
+  // Les quatre contrôles dérivés qui suivent — appartenance, préfixes,
+  // disjonction, longueurs — laissaient passer trois substitutions mesurées :
+  // le circuit 2 réécrit en `['roll.price_paid','roll.presage_drawn']`,
+  // `entity.status_changed` remplacé par `clock.filled` dans le circuit 1, et
+  // le circuit 3 réécrit en `['system.correction']`. Chacune brise
+  // l'invariant 1, chacune laissait 113/113 verts (ADR 0007).
+  it('les onze types sont EXACTEMENT ceux du tableau §0.5, valeur par valeur', () => {
+    expect([...PROPOSAL_REACHABLE_EVENT_TYPES]).toStrictEqual(PROPOSAL_REACHABLE_PER_SPEC);
+    expect([...ORACLE_JOURNAL_ONLY_EVENT_TYPES]).toStrictEqual(ORACLE_JOURNAL_ONLY_PER_SPEC);
+    expect([...REFUSAL_REACHABLE_EVENT_TYPES]).toStrictEqual(REFUSAL_REACHABLE_PER_SPEC);
+  });
 
   it.each([
     ['proposition', PROPOSAL_REACHABLE_EVENT_TYPES],
