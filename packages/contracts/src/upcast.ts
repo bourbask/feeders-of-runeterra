@@ -21,6 +21,26 @@
  * first person who needs it should find a working chain, not a TODO. The
  * example the spec gives — `roll.action_resolved` version 1 gaining
  * `cappedAtTen` and `rawTotal` — is the shape a future entry takes.
+ *
+ * DECLARED DIVERGENCE FROM 03-donnees.md §3.7, read this before writing the
+ * replay loop. The spec sketches the loop as:
+ *
+ *     state = reduce(state, GameEventSchema.parse(upcast(ev)));
+ *
+ * — that is, `upcast()` returning an EVENT, parsable as it stands. This
+ * implementation returns an `UpcastResult { payload, payloadVersion, steps }`
+ * instead, so `zGameEvent.parse(upcast(ev))` WOULD FAIL if written to the
+ * letter. The real call is:
+ *
+ *     const { payload, payloadVersion } = upcast(ev);
+ *     state = reduce(state, zGameEvent.parse({ ...ev, payload, payloadVersion }));
+ *
+ * The shape was chosen because `steps` is what a migration log needs and
+ * because a gap must stop the loader loudly (`UpcastGapError`) rather than
+ * arrive as an unparsable event — §3.8 gives only pseudo-code, so nothing is
+ * contradicted. M0-11 and M0-12 carry the cost of the adaptation, which is
+ * why it is written here rather than left to be discovered. The spec is NOT
+ * edited by this task: an ADR is proposed to the lead instead.
  */
 
 import type { GameEventType } from '@for/engine';

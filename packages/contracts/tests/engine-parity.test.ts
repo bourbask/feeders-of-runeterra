@@ -14,6 +14,16 @@
  *
  * The values themselves are literal here rather than built by `@for/testkit`:
  * the fixtures arrive with M0-10, and this test must not wait for them.
+ *
+ * KNOW THE SCOPE BEFORE YOU RELY ON IT. The key comparison runs on FOUR shapes
+ * — `CampaignState`, `CharacterState`, `SceneState`, and ONE event payload out
+ * of 71 (`character.gauge_changed`). The MISSING-field direction is covered
+ * everywhere by the `satisfies` clauses; the too-wide and silently-dropped
+ * directions are covered only on those four.
+ *
+ * FOR M0-10: once `@for/testkit` ships one exemplar per payload, widen this
+ * loop to all 71 instead of the single one below. The comparison itself needs
+ * no change — only the corpus it runs on.
  */
 import type {
   CampaignId,

@@ -10,7 +10,21 @@
  * d12 on the price table and hands the drawn entry to the storyteller as an
  * imposed fact. `gm_choice` and `player_choice` are gone: they reopened
  * invariant 1 through the back door. `PAY_PRICE_MODE` below is a literal, not
- * an enum, and `effects.test.ts` fails if a second mode ever reappears.
+ * an enum.
+ *
+ * WHERE THAT RULE IS ACTUALLY HELD — ADR 0007, and read this before trusting
+ * anything in this file. `effects.test.ts` reads the literal RECOPIED here; it
+ * says nothing about `PAY_PRICE_MODES` in the engine, which is the tuple that
+ * DEFINES `PayPriceMode`. And the `z.ZodType<EngineEffect>` annotation below
+ * cannot see the difference either: `ZodType` is covariant in its output, so a
+ * schema accepting only 'roll' stays assignable to an `EngineEffect` whose mode
+ * is 'roll' | 'gm_choice'. Measured, not assumed — widening the engine tuple
+ * left all four repository gates green.
+ *
+ * The rule the ADR asks for is therefore held in ONE place, and it is a runtime
+ * comparison of the two lists, member by member:
+ * `packages/contracts/tests/exhaustive-union.test.ts`. Same for the VARIANT
+ * LIST of this union, via `effectOpsOfSchema()` below against `EFFECT_OPS`.
  *
  * ADR 0006 — `choice` SURVIVES, and is not a back door. It is ordinary PLAYER
  * agency ("lose supplies or take the hit"), never the model's. Three bounds
@@ -50,10 +64,15 @@ export const zPayPriceMode = z.literal(PAY_PRICE_MODE);
 
 /**
  * Recursive: `choice` options carry their own effects. The explicit
- * `z.ZodType<EngineEffect>` annotation is what breaks the cycle for TypeScript,
- * and it checks the mirror exactly as a `satisfies` would.
+ * `z.ZodType<EngineEffect>` annotation is what breaks the cycle for TypeScript.
+ * It catches a MISSING FIELD inside a variant, and nothing else (ADR 0007).
+ *
+ * The union is held in its own binding, ahead of the annotated export, so that
+ * `.unwrap()` stays TYPED and the variant list can be read at runtime without a
+ * cast. `zEngineEffect` erases that shape on purpose — a cast here would rot in
+ * silence the day the union stops being a `z.lazy`.
  */
-export const zEngineEffect: z.ZodType<EngineEffect> = z.lazy(() =>
+const zEngineEffectUnion = z.lazy(() =>
   z.discriminatedUnion('op', [
     z.object({
       op: z.literal('gauge'),
@@ -99,6 +118,20 @@ export const zEngineEffect: z.ZodType<EngineEffect> = z.lazy(() =>
     }),
   ]),
 );
+
+export const zEngineEffect: z.ZodType<EngineEffect> = zEngineEffectUnion;
+
+/**
+ * The `op` discriminants this union actually carries, in declaration order.
+ *
+ * DERIVED, never hand-written, exactly like `gameEventTypesOfSchema()`. It
+ * exists so `exhaustive-union.test.ts` can compare the mirror to `EFFECT_OPS`
+ * member by member: that comparison is the ONLY thing that fails when a variant
+ * is dropped from this union or invented in it.
+ */
+export function effectOpsOfSchema(): readonly string[] {
+  return zEngineEffectUnion.unwrap().options.map((option) => option.shape.op.value);
+}
 
 /** The name 03-donnees.md section 4.3 uses. Same schema, single owner. */
 export const EffectSchema = zEngineEffect;
