@@ -52,6 +52,7 @@ import {
   GAUGES,
   GM_PROPOSAL_KINDS,
   INTENT_TYPES,
+  LIKELIHOOD_THRESHOLDS,
   LIKELIHOODS,
   MAX_PROGRESS_BOXES,
   MAX_PROGRESS_TICKS,
@@ -68,9 +69,12 @@ import {
   SCENE_PRESENCE_MAX,
   SHEET_SOURCES,
   TICKS_PER_BOX,
+  TICKS_PER_MILESTONE,
 } from '@for/engine';
 import { describe, expect, it } from 'vitest';
 
+import { RANK_TICKS } from '../src/content/common.js';
+import { likelihoodKeysOfSchema, YESNO_THRESHOLDS } from '../src/content/oracle.js';
 import {
   ATTRIBUTE_SPREAD_SIGNATURE,
   ATTRIBUTE_MAX as contractsAttributeMax,
@@ -154,8 +158,10 @@ describe('exhaustivité des unions', () => {
   // LE BARREL DE @for/engine, ÉNUMÉRÉ EN ENTIER — ce que la règle opératoire
   // d'ADR 0007 exige, pour que « les importantes » cesse d'être un critère.
   //
-  // 47 exports. 36 sont comparés ici ou ailleurs. Les 11 autres ne le sont pas,
-  // et voici pourquoi, un par un :
+  // 47 constantes (plus 6 fonctions : createCampaignRng, createSeededRng, ok,
+  // err, isOk, isErr, qui ne sont pas des miroirs et n'ont rien à comparer).
+  // 38 constantes sont comparées ici ou ailleurs. Les 9 autres ne le sont pas,
+  // et voici pourquoi, une par une :
   //
   //   EFFECT_OPS ............... comparé par effectOpsOfSchema(), effects.test.ts
   //   GAME_EVENT_TYPES ......... comparé par gameEventTypesOfSchema(), et croisé
@@ -167,12 +173,20 @@ describe('exhaustivité des unions', () => {
   //                              c'est ATTRIBUTE_SPREAD_SIGNATURE qui est comparé,
   //                              et la comparaison de la chaîne suffit puisque
   //                              la chaîne est dérivée du tuple.
-  //   CLOCK_SEGMENT_COUNTS ..... PAS recopié dans les contrats : rien à mirroiter.
-  //   DEFAULT_MOMENTUM_BOUNDS .. idem, et épinglé côté moteur par index.test.ts
-  //   LIKELIHOOD_THRESHOLDS .... idem
-  //   TICKS_PER_MILESTONE ...... idem
+  //   CLOCK_SEGMENT_COUNTS ..... recopié et comparé, plus bas, par son propre `it`.
+  //   DEFAULT_MOMENTUM_BOUNDS .. PAS recopié dans les contrats : rien à miroiter,
+  //                              et épinglé côté moteur par index.test.ts
   //   VOW_RESOLUTION_MOVES ..... idem
   //   RNG_STREAMS .............. comparé, première ligne du tableau ci-dessous
+  //
+  // DEUX LIGNES ONT CHANGÉ DE CAMP AVEC M0-09 (schémas de contenu) :
+  //   TICKS_PER_MILESTONE ...... désormais RECOPIÉ, en `RANK_TICKS`
+  //                              (03-donnees.md §4.2) → comparé ci-dessous.
+  //   LIKELIHOOD_THRESHOLDS .... désormais RECOPIÉ, en `YESNO_THRESHOLDS`
+  //                              (§4.6, seuils du d100) → comparé ci-dessous.
+  // Les deux portaient la justification « pas recopié, rien à miroiter ». Elle
+  // est devenue fausse le jour où le contenu en a eu besoin, et une
+  // justification périmée est exactement ce que cette liste doit empêcher.
   //
   // La règle : une constante non recopiée n'a pas de miroir à garder. Une
   // constante recopiée en a un, et il figure ici. Si un export apparaît dans
@@ -270,6 +284,26 @@ describe('exhaustivité des unions', () => {
     ]);
     expect(zClockSegmentCount.safeParse(5).success).toBe(false);
     expect(zClockSegmentCount.safeParse(10).success).toBe(true);
+  });
+
+  // ────────────────────────────────────────────────────────────────────────
+  // LES TABLES RECOPIÉES PAR M0-09. Même raisonnement que les scalaires, en
+  // pire : une table est cinq nombres, et le compilateur n'en voit aucun. Une
+  // valeur retouchée côté moteur laisserait le contenu annoncer l'ancienne
+  // sans qu'aucune porte ne bronche.
+  it('TICKS_PER_MILESTONE : RANK_TICKS vaut la table du moteur, rang par rang', () => {
+    expect(RANK_TICKS).toStrictEqual({ ...TICKS_PER_MILESTONE });
+  });
+
+  it('LIKELIHOOD_THRESHOLDS : YESNO_THRESHOLDS vaut la table du moteur, seuil par seuil', () => {
+    expect({ ...YESNO_THRESHOLDS }).toStrictEqual({ ...LIKELIHOOD_THRESHOLDS });
+  });
+
+  it('YesNoOracleSchema porte exactement les cinq vraisemblances du moteur', () => {
+    // Les clés sont lues SUR LE SCHÉMA, pas retapées : c'est ce qui attrape une
+    // vraisemblance oubliée dans le schéma de l'oracle oui/non, que
+    // `z.literal` ne garde pas.
+    expect([...likelihoodKeysOfSchema()].sort()).toStrictEqual([...LIKELIHOODS].sort());
   });
 
   it('ATTRIBUTE_SPREAD : la signature recopiée suit le tuple du moteur', () => {
