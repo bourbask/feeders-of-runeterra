@@ -855,6 +855,14 @@ hors du réducteur — sinon, un bug silencieux découvert trois mois plus tard.
   (la reconstruction est idempotente).
 - Un test vérifie qu'une campagne en cours de reconstruction refuse les intentions et que les
   autres campagnes ne sont pas touchées.
+- **Trancher le tri de `truths`, et l'écrire.** `withTruth` (`packages/engine/src/reduce.ts`)
+  termine par un `.sort()` sur `truthId` que **rien ne garde** : comparateur inversé ou tri
+  retiré entièrement, 563/563 verts. Mesuré en recette de M0-13. La seule fixture qui touche
+  `truths` n'en pose qu'une, et une liste d'un élément est triée quoi qu'il arrive. Ce tri n'est
+  justifié par aucun commentaire et n'est visé par aucun critère — la propriété de préfixe de
+  cache de `03-donnees.md` §3.5 porte sur le bloc `<scene>`, pas sur les vérités. Deux issues
+  recevables : deux vérités dans la fixture et un `toEqual` de tableau exact, **ou** retirer le
+  tri. Pas de troisième.
 
 **Fichiers touchés** : `packages/db/src/{rebuild,check}.ts`, `packages/db/src/index.ts`
 (ré-exports uniquement — le fichier a été créé par M0-15, vague précédente),
