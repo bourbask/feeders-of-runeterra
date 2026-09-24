@@ -45,6 +45,7 @@ import {
   ENTITY_DISPOSITIONS,
   ENTITY_KINDS,
   ENTITY_STATUSES,
+  EVENT_SCOPES,
   GAME_EVENT_TYPES,
   GAUGE_MAX,
   GAUGE_MIN,
@@ -93,6 +94,7 @@ import {
   zEntityDisposition,
   zEntityKind,
   zEntityStatus,
+  zEventScope,
   zGaugeId,
   zGmProposalKind,
   zLikelihood,
@@ -228,6 +230,7 @@ describe('exhaustivité des unions', () => {
     // lignes étaient celles que M0-05 avait jugées « importantes » ; le trou de
     // PAY_PRICE_MODES a montré que ce tri n'était pas le bon critère, parce
     // qu'une recopie non comparée est inerte quelle que soit son importance.
+    ['EVENT_SCOPES', [...EVENT_SCOPES], zEventScope.options],
     ['ACTOR_KINDS', [...ACTOR_KINDS], zActorKind.options],
     ['CAMPAIGN_STATUSES', [...CAMPAIGN_STATUSES], zCampaignStatus.options],
     ['CHARACTER_STATUSES', [...CHARACTER_STATUSES], zCharacterStatus.options],

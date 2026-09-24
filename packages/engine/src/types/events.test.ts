@@ -84,6 +84,8 @@ describe('the event catalogue', () => {
       seq: 1,
       playSessionId: null,
       payloadVersion: 1,
+      scope: 'table',
+      recipients: null,
       actorKind: 'engine',
       actorPlayerId: null,
       subjectCharacterId: null,

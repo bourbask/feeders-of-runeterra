@@ -173,6 +173,8 @@ const GAUGE_EVENT: GameEvent = {
   seq: 12,
   playSessionId: null,
   payloadVersion: 1,
+  scope: 'table',
+  recipients: null,
   actorKind: 'engine',
   actorPlayerId: null,
   subjectCharacterId: CHARACTER_ID,

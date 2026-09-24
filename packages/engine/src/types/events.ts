@@ -44,6 +44,22 @@ import type { SceneAbsence, ScenePresence } from './scene.js';
 
 // ---------------------------------------------------------------- envelope
 
+/**
+ * Who an event is addressed to (ADR 0008).
+ *
+ * NOT to be confused with `Visibility` on progress tracks, which answers a
+ * different question ('public' | 'gm'). Two concepts, two names, on purpose:
+ * `EventScope` is about RECIPIENTS, `Visibility` about whether a track is shown.
+ *
+ * `table` is the default and covers a party that stays together. `subset` and
+ * `private` exist because a scouting group must not read the camp's journal,
+ * and because replaying the log from one player's point of view has to return
+ * exactly what they saw — invariant 4.
+ */
+export const EVENT_SCOPES = ['table', 'subset', 'private'] as const;
+
+export type EventScope = (typeof EVENT_SCOPES)[number];
+
 export const ACTOR_KINDS = ['player', 'engine', 'gm_ai', 'system'] as const;
 
 export type ActorKind = (typeof ACTOR_KINDS)[number];
@@ -64,6 +80,10 @@ export interface EventEnvelope {
   readonly rngStream: RngStream | null;
   readonly rngDrawIndex: number | null;
   readonly createdAt: number;
+  /** ADR 0008. `table` unless the party has split or the fact is one player's alone. */
+  readonly scope: EventScope;
+  /** Non-empty only when `scope` is `subset` or `private`. Never trusted from a client. */
+  readonly recipients: readonly PlayerId[] | null;
 }
 
 /**
