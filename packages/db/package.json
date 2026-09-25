@@ -20,7 +20,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:rebuild": "tsx src/cli/rebuild.ts",
-    "db:check": "tsx src/cli/check.ts"
+    "db:check": "tsx src/cli/check.ts",
+    "db:seed": "tsx src/seed/cli-seed.ts",
+    "db:reset": "tsx src/seed/cli-reset.ts"
   },
   "dependencies": {
     "@for/contracts": "workspace:*",
@@ -29,6 +31,7 @@
     "drizzle-orm": "^0.45.3"
   },
   "devDependencies": {
+    "@for/content": "workspace:*",
     "@for/testkit": "workspace:*",
     "@for/tsconfig": "workspace:*",
     "@types/better-sqlite3": "^9.6.0",
