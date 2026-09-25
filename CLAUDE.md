@@ -67,6 +67,34 @@ tâche après tâche, et c'est M0-30 qui la referme entièrement. Ne cherche pas
 commandes dont la cible n'est pas encore livrée — elles t'annoncent d'elles-mêmes quelle tâche
 les remplira.
 
+## Une promesse nomme le test qui la tient
+
+Un en-tête de fichier qui affirme une propriété — surtout en capitales, surtout une propriété de
+sécurité — **nomme le test qui la tient**, ou ne l'affirme pas.
+
+C'est le défaut le plus fréquent trouvé en recette, et il revient à chaque passe :
+
+| Promesse écrite | Ce que mesurait le test |
+|---|---|
+| « la portée est `identify` seule : une portée qu'on ne demande pas ne peut pas fuiter » | rien — l'élargir à `email` laissait 117 tests verts |
+| « les deux cookies sont effacés à **chaque** sortie » | la moitié du titre du test, pas les cookies |
+| « `deleted_at IS NULL` est dans le SQL : un joueur anonymisé ne doit pas se reconnecter » | rien |
+| « `SESSION_SECRET` sert de poivre pour que la colonne ne devienne pas la liste des adresses » | rien |
+| « rejouer du point de vue d'un joueur redonne exactement ce qu'il a vu » | rien — le destinataire était absent du double de test |
+
+**Pourquoi c'est pire qu'une absence de commentaire** : le lecteur suivant fait confiance et ne
+vérifie pas. Une garantie annoncée et non tenue se propage — trois tâches ont construit dessus.
+
+La forme qui marche, appliquée spontanément par un développeur en vague 7 :
+
+```ts
+// THE SCOPE IS `identify` ALONE — held by
+// tests/http/oauth.test.ts « redirige vers discord.com … »
+```
+
+Et la réciproque vaut aussi : si aucun test ne peut la tenir, la phrase descend d'un cran et dit ce
+que le code **fait**, pas ce qu'on **aimerait** qu'il garantisse.
+
 ## Écrire la documentation
 
 - Des **tableaux et des listes**, pas des paragraphes. Une définition tient en une ligne.

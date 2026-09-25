@@ -1924,6 +1924,12 @@ condition que chaque correction soit signalée dans le rapport final.
   commandes du quotidien.
 
 **Critères d'acceptation**
+- **Aucune promesse orpheline.** Balayage du dépôt : tout en-tête de fichier qui affirme une
+  propriété en capitales nomme le test qui la tient, ou cesse de l'affirmer. Cinq promesses non
+  tenues ont été trouvées en vague 7, dont deux propriétés de sécurité sur un dépôt public
+  (la portée OAuth, l'effacement des cookies du tour) et une qui portait l'ADR 0008
+  (« rejouer du point de vue d'un joueur redonne exactement ce qu'il a vu »). Le testeur en
+  choisit trois au hasard et vérifie que le test nommé rougit quand on casse la propriété.
 - Sur un clone neuf : `pnpm install && pnpm verify` sort en 0 en **moins de 3 minutes**.
 - `pnpm db:reset && pnpm db:check` sortent en 0 (les 12 oracles).
 - `bash scripts/smoke-m0.sh` sort en 0.
