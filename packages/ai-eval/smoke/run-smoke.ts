@@ -28,8 +28,10 @@
  * `system[0]` is `CONTEUR_SYSTEM_PROMPT`, IMPORTED, never recopied, and the
  * report carries its version and a fingerprint computed on the bytes of the
  * built request — so changing one character of the prompt changes the report.
- * Held by `run-smoke.test.ts` « system[0] est le prompt importé, à l'octet
- * près » and « l'empreinte suit le prompt ».
+ * Held by `run-smoke.test.ts` « porte le prompt de production en system[0], à
+ * l'octet près », « arrive telle quelle jusqu'au port, pas seulement jusqu'au
+ * constructeur » and « est celle du prompt réellement envoyé, et le rapport
+ * porte la version ».
  *
  * ── EXIT CODES ──────────────────────────────────────────────────────────────
  * 0 = the probe ran and produced a verdict, FAVOURABLE OR NOT. A verdict is
@@ -66,6 +68,7 @@ import {
   SMOKE_ASSERTIONS,
   SMOKE_ASSERTIONS_MAX,
   SMOKE_ASSERTIONS_MIN,
+  type SmokeCheck,
   type SmokeCheckResult,
 } from './assertions.js';
 import { loadCases, SmokeCaseError, type SmokeCase } from './cases.js';
@@ -179,6 +182,12 @@ export const fingerprint = (text: string): string =>
 export interface SmokeRunOptions {
   readonly port: NarratorPort;
   readonly cases: readonly SmokeCase[];
+  /**
+   * The table to score with. Defaults to the frozen seven. `main` passes the
+   * SAME table it bounds-checked, so the count printed, the count bounded and
+   * the count scored can never be three different numbers.
+   */
+  readonly checks?: readonly SmokeCheck[];
   readonly samplesPerCase?: number;
   readonly timeoutMs?: number;
 }
@@ -217,10 +226,15 @@ async function collect(
  *
  * A check counts as PASSED only when it passed on EVERY sample: the question
  * is whether a provider holds the prompt, and one sample out of six that drops
- * the `<scene_apres>` block is a provider that does not hold it.
+ * the `<scene_apres>` block is a provider that does not hold it. Held by
+ * `run-smoke.test.ts` « ne compte une règle passée que si elle passe sur TOUS
+ * les échantillons », which hands a port whose FIRST sample fails and whose
+ * second one passes: a double answering one constant text cannot tell "every"
+ * from "at least one".
  */
 export async function runSmoke(options: SmokeRunOptions): Promise<SmokeSummary> {
   const samplesPerCase = options.samplesPerCase ?? SAMPLES_PER_CASE;
+  const checks = options.checks ?? SMOKE_ASSERTIONS;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   if (options.cases.length === 0) {
     throw new SmokeRunError('aucun cas chargé : le répertoire cases/ est vide');
@@ -248,7 +262,7 @@ export async function runSmoke(options: SmokeRunOptions): Promise<SmokeSummary> 
       calls += 1;
       if (answer.providerModel.length > 0) providerModel = answer.providerModel;
       if (answer.inputTokens > 0) measured.push(answer.inputTokens);
-      for (const check of SMOKE_ASSERTIONS) {
+      for (const check of checks) {
         const result: SmokeCheckResult = check.run(answer.text, smokeCase);
         if (result.passed) continue;
         const previous = failures.get(check.id);
@@ -260,12 +274,12 @@ export async function runSmoke(options: SmokeRunOptions): Promise<SmokeSummary> 
     }
   }
 
-  const fallen: SmokeFallenCheck[] = SMOKE_ASSERTIONS.filter((check) => failures.has(check.id)).map(
-    (check) => {
+  const fallen: SmokeFallenCheck[] = checks
+    .filter((check) => failures.has(check.id))
+    .map((check) => {
       const entry = failures.get(check.id);
       return { id: check.id, failedSamples: entry?.count ?? 0, detail: entry?.detail ?? '' };
-    },
-  );
+    });
 
   return {
     promptVersion: CONTEUR_PROMPT_VERSION,
@@ -276,7 +290,7 @@ export async function runSmoke(options: SmokeRunOptions): Promise<SmokeSummary> 
     caseCount: options.cases.length,
     samplesPerCase,
     callCount: calls,
-    checkTotal: SMOKE_ASSERTIONS.length,
+    checkTotal: checks.length,
     fallen,
     estimatedInputTokens: median(estimates),
     measuredInputTokens: measured.length === 0 ? null : median(measured),
@@ -327,8 +341,21 @@ export interface SmokeCliIo {
 }
 
 export interface SmokeCliDeps {
-  /** Same signature as `selectNarrator`, so a double cannot be laxer than it. */
-  readonly selectPort?: (config: NarratorConfig) => NarratorPort;
+  /**
+   * `typeof selectNarrator`, WRITTEN AS SUCH and not recopied: the real one
+   * takes `(config, deps)`, and a hand-written `(config) => NarratorPort` would
+   * have been accepted by TypeScript while silently dropping the second
+   * parameter — mode 8 of `docs/RECETTE.md`. Held by `run-smoke.test.ts`
+   * « le double du sélecteur reçoit tout ce que le vrai reçoit ».
+   */
+  readonly selectPort?: typeof selectNarrator;
+  /**
+   * The check table. Production never passes it; a test passes an out-of-bounds
+   * one to prove that the bound is WIRED INTO `main`, not merely testable as a
+   * pure function. Held by `run-smoke.test.ts` « le compte hors bornes fait
+   * sortir en 1 ».
+   */
+  readonly checks?: readonly SmokeCheck[];
 }
 
 /**
@@ -337,6 +364,9 @@ export interface SmokeCliDeps {
  *
  * Out of bounds is a HARNESS CONFIGURATION ERROR, not a verdict, which is why
  * it is the one non-network reason for exit 1 alongside the missing variables.
+ * The function alone proves nothing: what proves the bound is
+ * `run-smoke.test.ts` « le compte hors bornes fait sortir en 1 », which calls
+ * `main` with a nine-check table and requires the code 1.
  */
 export function assertCountWithinBounds(count: number): string | null {
   if (count >= SMOKE_ASSERTIONS_MIN && count <= SMOKE_ASSERTIONS_MAX) return null;
@@ -364,12 +394,18 @@ export async function main(
         `--provider=<${NARRATOR_PROVIDER_IDS.join('|')}> est requis${requested === null ? '' : ` (reçu « ${requested} »)`}`,
       );
     }
-    io.out(`assertions: ${String(SMOKE_ASSERTIONS.length)}`);
-    const outOfBounds = assertCountWithinBounds(SMOKE_ASSERTIONS.length);
+    const checks = deps.checks ?? SMOKE_ASSERTIONS;
+    io.out(`assertions: ${String(checks.length)}`);
+    const outOfBounds = assertCountWithinBounds(checks.length);
     if (outOfBounds !== null) throw new SmokeRunError(outOfBounds);
     const config = buildConfig(requested, env);
     const port = (deps.selectPort ?? selectNarrator)(config);
-    const summary = await runSmoke({ port, cases: loadCases(), timeoutMs: config.timeoutMs });
+    const summary = await runSmoke({
+      port,
+      cases: loadCases(),
+      checks,
+      timeoutMs: config.timeoutMs,
+    });
     io.out(formatReport(summary));
     return 0;
   } catch (cause) {

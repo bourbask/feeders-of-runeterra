@@ -61,6 +61,9 @@ ce qui tombe **6/6 dans les trois exécutions**.
 > deuxième personne, pas de chiffre. Ce qui ne tient jamais, c'est la seule partie du prompt qui
 > demande une sortie **structurée**.
 
+Reproduit indépendamment par la recette : six échantillons de plus sur `qwen2.5:3b-instruct`,
+`scene_block_present` tombée **6/6**. Soit **vingt-quatre échantillons sans un seul bloc**.
+
 C'est le même défaut qui a fait déclarer `tools: false` par défaut en M0-18. `<scene_apres>` est
 du balisage et non un appel d'outil, et il tombe quand même : **la conclusion de M0-18 vaut aussi
 pour le bloc de fin**.
@@ -75,8 +78,8 @@ d'invariant observée de toute la campagne de mesure.
 
 | | `qwen2.5:3b` | `mistral:7b` |
 | --- | ---: | ---: |
-| entrée par tour, **comptée par le fournisseur** (médiane) | 5 054 | 5 767 |
-| entrée par tour, estimateur local `chars / 3,6` | 4 838 | 4 838 |
+| entrée par tour, **comptée par le fournisseur** (médiane des six échantillons) | 5 054 | 5 767 |
+| entrée par tour, estimateur local `chars / 3,6` (médiane) | 4 838 | 4 838 |
 | écart estimateur / réel | −4,3 % | **−16,1 %** |
 | premier tour, préfixe **froid** | 204 s | **921 s** |
 | tours suivants, préfixe **en cache** | ≈ 22 s | ≈ 420 s |
@@ -113,7 +116,8 @@ Pour obtenir la ligne « tant de tours par jour » d'une offre hébergée :
 
 `fetch` de Node porte un délai d'en-têtes par défaut de **300 s** (undici, `headersTimeout`).
 Un serveur Ollama en `stream: true` n'envoie ses en-têtes qu'**après** avoir évalué le prompt.
-Sur `mistral:7b-instruct`, l'évaluation de 5 737 tokens a pris **520 s** : la requête est coupée
+Sur `mistral:7b-instruct`, l'évaluation des **5 737 tokens du cas 1** — le plus court des trois,
+pas la médiane, qui vaut 5 767 — a pris **520 s** : la requête est coupée
 par le client, et `wrapUnknown` la classe `unavailable`. Un fournisseur qui marche, déclaré en
 panne. C'est exactement ce qui est arrivé à la première tentative de mesure.
 
@@ -138,8 +142,10 @@ c'est signalé, pas contourné.
 ## 4. Si le prompt ne tient pas, que couper
 
 Poids **mesuré** de chaque section de `conteur/2.0.0`, section par section, avec l'estimateur
-local (`packages/ai-eval/kb-m032-sections` n'est pas livré : la commande est reproduite ci-dessous).
-Total : **4 279** tokens pour 15 404 caractères.
+local (la commande est reproduite ci-dessous ; aucun script n'est livré pour ça).
+Prompt entier : **4 279** tokens pour 15 404 caractères — c'est ce chiffre-là qui sert aux coupes.
+La colonne ci-dessous, elle, somme à **4 285** : l'estimateur arrondit chaque section séparément,
+et treize arrondis coûtent six tokens. Les deux sont justes, ils ne mesurent pas la même chose.
 
 | Section | Tokens | Coupable en mode prose seule ? |
 | --- | ---: | --- |
@@ -155,7 +161,8 @@ Total : **4 279** tokens pour 15 404 caractères.
 | `# Forme de ta réponse` | 183 | non |
 | `# Comment tu finis` | 193 | non |
 | `# Règles absolues` | 920 | non — c'est l'invariant 1 écrit en français |
-| `# Ce que tu es` + préambule | 150 | non |
+| `# Ce que tu es` | 107 | non |
+| préambule, avant le premier `#` | 49 | non |
 
 **Les quatre coupes sans regret** — outils, liste noire, continuité, obligations — valent
 `281 + 342 + 187 + 179 =` **989 tokens**, et mènent le prompt à **3 290**.
@@ -165,10 +172,12 @@ le droit de refus** : `4 279 − 989 − 562 − 375 =` **2 353**. C'est le seul
 passe sous la cible, et il supprime le levier de registre que la session sur `conteur/1.0.0`
 avait justement fait ajouter. **C'est un arbitrage de lead, pas une simplification.**
 
-Reproduire la mesure :
+Reproduire la mesure, **depuis la racine du dépôt** (la racine ne dépend pas de `@for/ai` : sans
+le `--filter`, la commande sort en **1** sur `ERR_MODULE_NOT_FOUND`) :
 
 ```bash
-node --import tsx -e "import('@for/ai').then(m=>{const p=m.CONTEUR_SYSTEM_PROMPT;
+pnpm turbo run build --filter @for/ai
+pnpm --filter @for/ai-eval exec node --import tsx -e "import('@for/ai').then(m=>{const p=m.CONTEUR_SYSTEM_PROMPT;
 for(const s of p.split(/^(?=# )/m)) console.log(String(m.estimateTokens(s)).padStart(5), s.split('\n')[0]);});"
 ```
 
@@ -180,9 +189,23 @@ L'ADR 0011 raisonne en tokens de l'estimateur local. La sonde mesure les deux :
 
 | | `qwen2.5:3b` | `mistral:7b` |
 | --- | ---: | ---: |
-| entrée estimée (`chars / 3,6`) | 4 838 | 4 838 |
-| entrée **comptée par le fournisseur** | 5 054 | 5 737 |
-| écart | −4,3 % | **−15,7 %** |
+| entrée estimée (`chars / 3,6`), médiane | 4 838 | 4 838 |
+| entrée **comptée par le fournisseur**, médiane | 5 054 | 5 767 |
+| écart | −4,3 % | **−16,1 %** |
+
+Les six échantillons de `mistral:7b-instruct`, re-mesurés le 25 septembre au soir, un par un :
+`issue-franche` **5 737** ×2 · `issue-echec` **5 767** ×2 · `prix-impose` **5 786** ×2, médiane
+**5 767**. Une première rédaction portait 5 737 ici et 5 767 au § 2.2 : c'était la valeur du
+**cas 1** écrite à la place de la médiane. Un seul chiffre par mesure, et c'est la médiane.
+
+**Comment ces six-là ont été comptés**, parce que la méthode change le crédit qu'on leur accorde :
+la sonde elle-même ne peut pas les rendre sur ce poste — le défaut du § 3 la coupe à 300 s sur
+`mistral`, `unavailable`, exit **1**. Ils ont donc été demandés à `curl` (qui n'a pas ce plafond)
+sur le **corps que l'adaptateur construit**, `CONTEUR_SYSTEM_PROMPT` en `system` et
+`buildUserMessage(cas)` en `user`, et lus dans le `prompt_eval_count` d'ollama — le champ même que
+l'adaptateur recopie dans `usage.inputTokens`. Seul `num_predict` diffère, ramené de 800 à 1 :
+il ne touche pas au compte d'**entrée**. Contrôle, à 800 pour de bon : `issue-echec`,
+`prompt_eval_count` = **5 767**, identique, en 451 s.
 
 Le § 4.3 de `02-mj-ia.md` tolère **8 %** de dérive et fait échouer un test nocturne au-delà. Sur
 `mistral:7b`, l'estimateur est déjà hors tolérance **sur le seul prompt système**. Conséquence

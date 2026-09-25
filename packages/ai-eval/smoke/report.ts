@@ -8,8 +8,8 @@
  * `<loaded>` IS READ FROM THE SUMMARY, never written here. A constant in the
  * report would go on printing `/ 7` after somebody deleted a check — the
  * report would then be the last thing still claiming seven.
- * `report.test.ts` « le total vient du sommaire, pas du rapport » passes a
- * summary whose total is six and expects `/ 6`.
+ * `report.test.ts` « lit le total dans le sommaire, il ne l'écrit pas » passes
+ * a summary whose total is six and expects `/ 6`.
  *
  * NO DURATION, NO TIMESTAMP. Two runs of the deterministic stub must give the
  * same verdict character for character; a millisecond count would make that

@@ -13,6 +13,7 @@ import {
   CONTEUR_SYSTEM_PROMPT,
   SCENE_BLOCK_ABSENT_HEADER,
   SCENE_BLOCK_NONE,
+  type selectNarrator,
 } from '@for/ai';
 import {
   NarratorError,
@@ -25,7 +26,7 @@ import {
 } from '@for/contracts';
 import { describe, expect, it } from 'vitest';
 
-import { SMOKE_ASSERTIONS } from './assertions.js';
+import { SMOKE_ASSERTIONS, type SmokeCheck } from './assertions.js';
 import { loadCases } from './cases.js';
 import {
   assertCountWithinBounds,
@@ -39,6 +40,7 @@ import {
   SAMPLES_PER_CASE,
   SMOKE_REQUIRED_ENV,
   SmokeRunError,
+  type SmokeCliDeps,
 } from './run-smoke.js';
 
 const RACINE = join(import.meta.dirname, '..', '..', '..');
@@ -98,6 +100,57 @@ class PortEnregistreur implements NarratorPort {
   }
 }
 
+/**
+ * A double at TWO INSTANTS: it answers a DIFFERENT text on each call, cycling
+ * through the list it was given.
+ *
+ * Why it has to exist. `PortEnregistreur` answers one constant text, so every
+ * rule falls on every sample or on none, and a test built on it cannot tell
+ * « passée sur TOUS les échantillons » from « passée sur au moins un ». That
+ * is the whole semantics of the verdict: at n = 2, a model that forgets
+ * `<scene_apres>` one time out of two must be reported as NOT holding the
+ * prompt.
+ *
+ * The failing sample comes FIRST on purpose: a lenient fold that erases an
+ * earlier failure when a later sample passes is exactly the mutation this
+ * double has to catch, and it only erases when the pass comes last.
+ */
+class PortAlternant implements NarratorPort {
+  readonly providerId = 'ollama' as const;
+  readonly capabilities = CAPACITES;
+  readonly recues: NarrateRequest[] = [];
+
+  constructor(private readonly textes: readonly string[]) {}
+
+  narrer(req: NarrateRequest): AsyncIterable<NarrateEvent> {
+    const texte = this.textes[this.recues.length % this.textes.length] ?? '';
+    this.recues.push(req);
+    return {
+      async *[Symbol.asyncIterator](): AsyncGenerator<NarrateEvent> {
+        await Promise.resolve();
+        yield { type: 'delta', text: texte };
+        yield {
+          type: 'end',
+          result: {
+            text: texte,
+            finish: 'complete',
+            toolCalls: [],
+            usage: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 },
+            providerModel: 'faux-modele-v1',
+            latencyMs: 0,
+          },
+        };
+      },
+    };
+  }
+
+  structurer<T>(req: StructureRequest<T>): Promise<StructureResult<T>> {
+    return Promise.reject(
+      new NarratorError({ code: 'unsupported', providerId: 'ollama', message: req.schemaName }),
+    );
+  }
+}
+
 /** A port that cannot be reached, the way an adapter says it (`unavailable`). */
 class PortInjoignable implements NarratorPort {
   readonly providerId = 'ollama' as const;
@@ -126,6 +179,18 @@ class PortInjoignable implements NarratorPort {
 const BLOC =
   '<scene_apres>{"lieu":"col_des_hurleurs","presents":[{"nom":"Sejuani","etat":"debout"}],"partis":[{"nom":"Keld","cause":"mort"}],"refus":null}</scene_apres>';
 const CONFORME = `Tu passes. La corniche cède sous ton pied gauche et la glace t’ouvre la paume. Ulrun ne bouge pas. En contrebas, la neige s’affaisse d’un coup et s’arrête.\n${BLOC}`;
+/** La MÊME prose, sans le bloc de fin : seule `scene_block_*` sépare les deux. */
+const SANS_BLOC =
+  'Tu passes. La corniche cède sous ton pied gauche et la glace t’ouvre la paume. Ulrun ne bouge pas. En contrebas, la neige s’affaisse d’un coup et s’arrête.';
+
+/**
+ * Deux règles de plus, écrites ici et nulle part ailleurs : elles servent à
+ * porter la table de sept à neuf, pas à noter quoi que ce soit.
+ */
+const SUPPLEMENTAIRES: readonly SmokeCheck[] = [
+  { id: 'huitieme', run: () => ({ id: 'huitieme', passed: true, detail: '' }) },
+  { id: 'neuvieme', run: () => ({ id: 'neuvieme', passed: true, detail: '' }) },
+];
 
 const io = (): {
   out: string[];
@@ -249,12 +314,35 @@ describe('runSmoke', () => {
   });
 
   it('ne compte une règle passée que si elle passe sur TOUS les échantillons', async () => {
-    const port = new PortEnregistreur('Tu passes. Que fais-tu ?');
+    // DEUX INSTANTS, pas un. Échantillon 1 sans bloc, échantillon 2 conforme :
+    // la règle doit RESTER tombée, avec un seul échantillon en échec. Un double
+    // à texte constant ne distingue pas « tous » de « au moins un ».
+    const port = new PortAlternant([SANS_BLOC, CONFORME]);
     const sommaire = await runSmoke({ port, cases: loadCases().slice(0, 1), samplesPerCase: 2 });
-    const tombees = sommaire.fallen.map((f) => f.id);
-    expect(tombees).toContain('no_final_question');
-    expect(tombees).toContain('scene_block_present');
-    expect(sommaire.fallen.every((f) => f.failedSamples === 2)).toBe(true);
+    expect(port.recues).toHaveLength(2);
+
+    const tombee = sommaire.fallen.find((f) => f.id === 'scene_block_present');
+    expect(tombee).toBeDefined();
+    expect(tombee?.failedSamples).toBe(1);
+
+    // Et la réciproque, sinon « tombée » voudrait dire « tombée toujours » :
+    // une règle que les DEUX échantillons passent ne figure pas dans la liste.
+    expect(sommaire.fallen.map((f) => f.id)).not.toContain('no_locked_champion');
+  });
+
+  it('garde une règle tombée même si l’échantillon EN ÉCHEC est le dernier', async () => {
+    // L'ordre inverse du test précédent : un repli indulgent effacerait l'échec
+    // dans un sens et pas dans l'autre, et un seul ordre ne le verrait pas.
+    const port = new PortAlternant([CONFORME, SANS_BLOC]);
+    const sommaire = await runSmoke({ port, cases: loadCases().slice(0, 1), samplesPerCase: 2 });
+    const tombee = sommaire.fallen.find((f) => f.id === 'scene_block_present');
+    expect(tombee?.failedSamples).toBe(1);
+  });
+
+  it('compte deux échantillons en échec quand les deux échouent', async () => {
+    const port = new PortAlternant([SANS_BLOC, SANS_BLOC]);
+    const sommaire = await runSmoke({ port, cases: loadCases().slice(0, 1), samplesPerCase: 2 });
+    expect(sommaire.fallen.find((f) => f.id === 'scene_block_present')?.failedSamples).toBe(2);
   });
 
   it('remonte le total réellement chargé, pas une constante', async () => {
@@ -301,6 +389,55 @@ describe('la borne du compte d’assertions', () => {
   it('la table livrée est dans la borne', () => {
     expect(assertCountWithinBounds(SMOKE_ASSERTIONS.length)).toBeNull();
   });
+
+  // Les deux tests ci-dessus ne mesurent qu'une FONCTION PURE. Ceux d'en
+  // dessous mesurent le CÂBLAGE : mesuré, débrancher l'appel à
+  // `assertCountWithinBounds` dans `main` laissait 87/87 verts.
+  it('le compte hors bornes fait sortir en 1', async () => {
+    const t = io();
+    const neuf = [...SMOKE_ASSERTIONS, ...SUPPLEMENTAIRES];
+    expect(neuf).toHaveLength(9);
+    const code = await main(['--provider=stub'], {}, t.io, {
+      checks: neuf,
+      selectPort: () => new PortEnregistreur(CONFORME),
+    });
+    expect(code).toBe(1);
+    expect(t.err.join('\n')).toContain('6–8');
+    expect(t.err.join('\n')).toContain('9');
+    // Elle a dit ce qu'elle avait chargé, puis elle s'est arrêtée : aucun
+    // rapport commencé, donc aucun appel au fournisseur.
+    expect(t.out).toEqual(['assertions: 9']);
+    expect(t.err.join('\n')).not.toContain('    at ');
+  });
+
+  it('une table dans la borne laisse la sonde rendre son verdict en 0', async () => {
+    // L'autre sens de la même violation. Le compte écrit, le compte borné et
+    // le compte noté sortent tous les trois de la table passée : six ici, donc
+    // « assertions : 6 / 6 » et pas « / 7 ».
+    const t = io();
+    const code = await main(['--provider=stub'], {}, t.io, {
+      checks: SMOKE_ASSERTIONS.slice(0, 6),
+      selectPort: () => new PortEnregistreur(CONFORME),
+    });
+    expect(code).toBe(0);
+    expect(t.out[0]).toBe('assertions: 6');
+    expect(t.out.join('\n')).toContain('assertions  : 6 / 6');
+  });
+});
+
+describe('le double du sélecteur de fournisseur', () => {
+  it('le double du sélecteur reçoit tout ce que le vrai reçoit', () => {
+    // MODE 8 de `docs/RECETTE.md`, et il se joue au niveau des TYPES : le
+    // compilateur accepte une fonction qui prend MOINS de paramètres, donc le
+    // `(config: NarratorConfig) => NarratorPort` écrit ici auparavant passait
+    // pour « la même signature que selectNarrator » alors que le vrai en prend
+    // deux. L'assignabilité ne les sépare pas ; le TUPLE de paramètres, si.
+    //
+    // Cette garantie est tenue par le compilateur, pas par `vitest` :
+    // la violation se lit avec `pnpm typecheck:tests` (job 4 de la CI), qui
+    // sort en 2. Mesuré dans les deux sens, c'est écrit dans le compte rendu.
+    expect(SIGNATURE_DU_DOUBLE_EST_CELLE_DU_VRAI).toBe(true);
+  });
 });
 
 describe('buildConfig', () => {
@@ -327,6 +464,23 @@ describe('buildConfig', () => {
     expect(buildConfig('stub', { NARRATOR_TIMEOUT_MS: '900000' }).timeoutMs).toBe(900_000);
   });
 });
+
+/**
+ * `true` only when the two parameter TUPLES are identical in both directions.
+ * `[config]` is assignable to `[config, deps?]`, but not the other way round,
+ * which is exactly what tells a narrowed double from a faithful one.
+ */
+type MemeTuple<A extends (...args: never[]) => unknown, B extends (...args: never[]) => unknown> =
+  Parameters<A> extends Parameters<B>
+    ? Parameters<B> extends Parameters<A>
+      ? true
+      : false
+    : false;
+
+const SIGNATURE_DU_DOUBLE_EST_CELLE_DU_VRAI: MemeTuple<
+  NonNullable<SmokeCliDeps['selectPort']>,
+  typeof selectNarrator
+> = true;
 
 // ------------------------------------------------------------------- la CLI
 

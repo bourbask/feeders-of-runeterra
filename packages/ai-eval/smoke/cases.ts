@@ -4,8 +4,11 @@
  * WHY THE DIRECTORY IS WALKED AND NOT A LIST OF IMPORTS. A hard-coded list of
  * three imports is its own loop source: emptying `cases/` would leave the run
  * green on nothing at all. Reading the directory makes the fixture the source,
- * and `runSmoke` refuses to run on zero cases — `cases.test.ts` empties a
- * temporary directory and asserts the refusal.
+ * and `runSmoke` refuses to run on zero cases. Two files, two tests:
+ * `cases.test.ts` « rend un tableau vide sur un répertoire vide — c'est
+ * runSmoke qui refuse » on an emptied temporary directory, and
+ * `run-smoke.test.ts` « refuse de tourner sur zéro cas » for the refusal
+ * itself. The refusal is NOT in `cases.test.ts`.
  *
  * WHY THE SHAPE IS CHECKED BY HAND. This package depends on `@for/ai` and
  * `@for/contracts` and on nothing else (M0-32's file list). Pulling `zod` in
@@ -143,13 +146,32 @@ function parseCase(raw: unknown, where: string): SmokeCase {
 export const SMOKE_CASES_DIR = join(import.meta.dirname, 'cases');
 
 /**
+ * Lists the raw entries of a directory. Injected ONLY so the sort below can be
+ * proved, and typed with the single parameter `loadCases` actually passes, so
+ * that a double cannot be laxer than the call site (mode 8 of `docs/RECETTE.md`).
+ */
+export type SmokeDirLister = (dir: string) => readonly string[];
+
+const listDir: SmokeDirLister = (dir) => readdirSync(dir);
+
+/**
  * Read every `*.case.json` of `dir`, sorted by file name so two runs give the
  * same order — and therefore the same verdict, character for character.
+ *
+ * THE SORT IS NOT PROVABLE AGAINST THE REAL FILE SYSTEM. On ext4 `readdirSync`
+ * already hands back the names in order, so writing `02-` before `01-` and
+ * reading the directory back proves nothing: removing `names.sort()` leaves
+ * that test green. Hence `lister`, which lets a test hand in the reversed
+ * listing the file system refuses to produce. Held by `cases.test.ts`
+ * « trie par nom de fichier, même quand le répertoire les rend à l'envers ».
  */
-export function loadCases(dir: string = SMOKE_CASES_DIR): readonly SmokeCase[] {
+export function loadCases(
+  dir: string = SMOKE_CASES_DIR,
+  lister: SmokeDirLister = listDir,
+): readonly SmokeCase[] {
   let names: string[];
   try {
-    names = readdirSync(dir).filter((name) => name.endsWith('.case.json'));
+    names = lister(dir).filter((name) => name.endsWith('.case.json'));
   } catch {
     throw new SmokeCaseError(`répertoire de cas introuvable : ${dir}`);
   }

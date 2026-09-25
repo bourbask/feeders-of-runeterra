@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -44,13 +44,27 @@ describe('loadCases', () => {
     expect(SMOKE_CASES_DIR.endsWith('cases')).toBe(true);
   });
 
-  it('trie par nom de fichier, pas par ordre d’écriture', () => {
-    // Deux entrées, écrites dans l'ordre INVERSE du tri attendu, et le tableau
+  it('trie par nom de fichier, même quand le répertoire les rend à l’envers', () => {
+    // Deux entrées, rendues dans l'ordre INVERSE du tri attendu, et le tableau
     // complet est comparé : avec une seule fixture l'ordre ne voudrait rien dire.
+    //
+    // L'ordre vient du LISTEUR INJECTÉ, pas de l'ordre d'écriture : sur ext4,
+    // `readdirSync` rend déjà les noms triés, donc écrire `02-` avant `01-`
+    // laisse ce test vert même sans `names.sort()`. Mesuré : sort commenté,
+    // 87/87 verts. Avec le listeur, le même sort commenté le fait rougir.
     const dir = repertoire();
     ecrire(dir, '02-second.case.json', { ...VALIDE, id: 'second' });
     ecrire(dir, '01-premier.case.json', { ...VALIDE, id: 'premier' });
-    expect(loadCases(dir).map((c) => c.id)).toEqual(['premier', 'second']);
+    const alEnvers = ['02-second.case.json', '01-premier.case.json'];
+    expect(loadCases(dir, () => alEnvers).map((c) => c.id)).toEqual(['premier', 'second']);
+  });
+
+  it('le listeur par défaut est bien celui du système de fichiers', () => {
+    // Sans ça, le paramètre injecté pourrait ne jamais être câblé sur
+    // `readdirSync` et les trois cas livrés viendraient d'ailleurs.
+    expect(loadCases(SMOKE_CASES_DIR).map((c) => c.id)).toEqual(
+      loadCases(SMOKE_CASES_DIR, (d) => readdirSync(d)).map((c) => c.id),
+    );
   });
 
   it('ignore ce qui ne porte pas le suffixe de cas', () => {

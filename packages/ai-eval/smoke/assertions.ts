@@ -12,9 +12,15 @@
  * answers "does the constrained prompt stand up", not "is the prose good".
  *
  * THE BOUNDS ARE HERE AND THE CHECK IS IN `run-smoke.ts`. Six to eight, from
- * the M0-32 sheet. A ninth check added below makes `pnpm eval:smoke` exit 1 —
- * proved by adding one, not by reading this sentence:
- * `run-smoke.test.ts` « le compte hors bornes fait sortir en 1 ».
+ * the M0-32 sheet. A ninth check added below makes `pnpm eval:smoke` exit 1,
+ * and the command's exit code IS what `main` returns.
+ *
+ * Proved by adding one, not by reading this sentence: `run-smoke.test.ts`
+ * « le compte hors bornes fait sortir en 1 » hands `main` a nine-check table
+ * and requires the code 1, and « une table dans la borne laisse la sonde
+ * rendre son verdict en 0 » is the same violation the other way round. The two
+ * tests above them only exercise `assertCountWithinBounds` as a pure function:
+ * measured, unwiring its call from `main` left them all green.
  */
 
 import { SceneBlockSchema } from '@for/contracts';
