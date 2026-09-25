@@ -29,7 +29,16 @@ import { createCampaignRng } from '@for/engine';
 import type { ContentRegistry } from '@for/content';
 import type { DrizzleDb, SqliteConnection } from '@for/db';
 import type { IdFactory, RngStream, TracingRng } from '@for/engine';
-import type { FastifyReply, FastifyRequest } from 'fastify';
+// NO `import type { FastifyRequest, FastifyReply } from 'fastify'` HERE, and it
+// must not come back. Inside `declare module 'fastify'` below, those two names
+// already resolve to the AUGMENTED module's own scope; an import of them at the
+// top of this file is therefore unused by construction. It compiled while
+// nothing else augmented `fastify` — the moment M0-23 registered
+// `@fastify/cookie`, which declares `interface FastifyInstance extends
+// SignerMethods`, `tsc -b` started answering TS6192 on this very line and the
+// whole package stopped building. Removed by M0-23 and reported. Held by the
+// `typecheck` gate itself — putting the import back makes `tsc -b` exit 1 —
+// and not by a unit test, which is said here rather than dressed up as one.
 import type { Logger } from 'pino';
 import type { Env } from './env.js';
 
