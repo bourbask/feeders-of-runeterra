@@ -11,9 +11,10 @@
  * BOTH LISTS ARE ORDERED, AND THE ORDER IS ASSERTED. Most recently touched
  * first, for the same reason in both cases: this answer draws a home page, and
  * a home page that reshuffles between two reloads is a bug nobody can
- * reproduce. `tests/http/me.test.ts` measures it on TWO rows inserted in the
- * wrong order and compares the whole array, because a fixture of one element,
- * or one already sorted, says nothing about an `ORDER BY`.
+ * reproduce. `tests/http/campaigns.test.ts`, `describe('GET /api/me — les
+ * deux listes')`, measures it on TWO rows inserted in the wrong order and
+ * compares the whole array, because a fixture of one element, or one already
+ * sorted, says nothing about an `ORDER BY`.
  */
 
 import { zMeResponse } from '@for/contracts';

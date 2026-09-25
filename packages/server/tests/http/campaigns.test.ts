@@ -160,6 +160,19 @@ describe('POST /api/campaigns', () => {
   });
 });
 
+describe('l’adresse dérivée du nom', () => {
+  it('plie les accents au lieu de les laisser tomber, et ne rend jamais une adresse vide', () => {
+    // « Accents are folded, not dropped » : la différence se voit sur la
+    // PREMIÈRE lettre. Une suppression des caractères accentués rendrait
+    // `te-a-la-griffe`, ce que l'égalité exacte ci-dessous refuse.
+    expect(slugify('Été à la Griffe')).toBe('ete-a-la-griffe');
+    // Les séparations s'effondrent, et les tirets de bord disparaissent.
+    expect(slugify('  Le  Pacte — 2 !  ')).toBe('le-pacte-2');
+    // Et un nom dont il ne reste rien en ASCII a quand même une adresse.
+    expect(slugify('⚔ 🜂 ⚔')).toBe('table');
+  });
+});
+
 describe('GET /api/campaigns', () => {
   it('ne rend que les tables du joueur, la plus récemment touchée en tête', async () => {
     const b = await bed();
@@ -406,6 +419,74 @@ describe('GET /api/campaigns/:id/log', () => {
     const empty = zCampaignLogResponse.parse(third.json());
     expect(empty.entries).toEqual([]);
     expect(empty.nextSinceSeq).toBeNull();
+  });
+
+  it('ferme le curseur quand la page finit SUR la tête, pas seulement quand elle est vide', async () => {
+    const b = await bed();
+    const me = await signIn(b);
+    insertCampaign(b, ALPHA, 'La table', me.playerId, 1_000);
+
+    // Deux événements de table, donc la dernière ligne VISIBLE par ce joueur
+    // est aussi la tête de l'allocateur. C'est le seul cas où la condition
+    // `last.seq < campaigns.seq` décide quelque chose : avec une page qui
+    // s'arrête sous la tête, elle est vraie, et la retirer ne se voit pas.
+    const note = (text: string) => ({ text, byPlayerId: me.playerId });
+    appendEvents(b.connection, {
+      campaignId: ALPHA,
+      now: b.clock.now(),
+      events: ['première', 'seconde'].map((text) => ({
+        id: b.deps.ids.next(),
+        type: 'system.note' as const,
+        payload: note(text),
+        actorKind: 'system' as const,
+        scope: 'table' as const,
+        createdAt: b.clock.now(),
+      })),
+    });
+
+    const first = zCampaignLogResponse.parse(
+      (
+        await b.app.inject({
+          method: 'GET',
+          url: `/api/campaigns/${ALPHA}/log?limit=1`,
+          cookies: { fr_session: me.secret },
+        })
+      ).json(),
+    );
+    // Page pleine, sous la tête : il reste à demander.
+    expect(first.entries.map((e) => e.seq)).toEqual([1]);
+    expect(first.nextSinceSeq).toBe(1);
+
+    const second = zCampaignLogResponse.parse(
+      (
+        await b.app.inject({
+          method: 'GET',
+          url: `/api/campaigns/${ALPHA}/log?limit=1&sinceSeq=1`,
+          cookies: { fr_session: me.secret },
+        })
+      ).json(),
+    );
+    // Page pleine ELLE AUSSI, mais elle finit sur la tête : le curseur ferme,
+    // et le client n'a pas de page vide à aller chercher.
+    expect(second.entries.map((e) => e.seq)).toEqual([2]);
+    expect(second.lastSeq).toBe(2);
+    expect(second.nextSinceSeq).toBeNull();
+  });
+
+  it('répond 404 sur une table inconnue, avant même de parler d’appartenance', async () => {
+    const b = await bed();
+    const me = await signIn(b);
+
+    const response = await b.app.inject({
+      method: 'GET',
+      url: `/api/campaigns/01${'E'.repeat(24)}/log`,
+      cookies: { fr_session: me.secret },
+    });
+
+    // 404 et non 403 : on ne dit pas « tu n'es pas à cette table » d'une table
+    // qui n'existe pas, sinon la réponse devient un oracle d'existence inversé.
+    expect(response.statusCode).toBe(404);
+    expect(zAppErrorPayload.parse(response.json()).code).toBe('campaign_not_found');
   });
 
   it('répond 403 à quelqu’un qui n’est pas à la table', async () => {

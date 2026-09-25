@@ -61,12 +61,32 @@ function playerWithSession(bed: Bench, isAdmin: boolean): string {
 }
 
 describe('ce que buildApp enregistre vraiment', () => {
-  it('expose les routes de la surface HTTP', async () => {
+  it('expose une route de CHACUN des quatre modules de la surface HTTP', async () => {
     const { app } = await realApp();
 
-    const response = await app.inject({ method: 'GET', url: '/api/content/manifest' });
+    // UNE ROUTE PAR MODULE, et jamais 404 : le nom de ce test promet la
+    // surface, donc il la parcourt. Une seule route mesurée laisserait trois
+    // `register` oubliés passer — et un 404 est exactement ce qu'on verrait.
+    const observed: Record<string, number> = {};
+    for (const url of [
+      '/api/content/manifest',
+      '/api/auth/discord/start',
+      '/api/me',
+      '/api/campaigns',
+    ]) {
+      observed[url] = (await app.inject({ method: 'GET', url })).statusCode;
+    }
 
-    expect(response.statusCode).toBe(200);
+    expect(observed).toEqual({
+      // Public.
+      '/api/content/manifest': 200,
+      // Public, et il redirige vers Discord sans rien appeler.
+      '/api/auth/discord/start': 302,
+      // Montées, et fermées : 401 et non 404, ce qui distingue « la route
+      // existe et refuse » de « la route n'existe pas ».
+      '/api/me': 401,
+      '/api/campaigns': 401,
+    });
   });
 
   it('applique le garde de session : 401 sans cookie, 200 avec', async () => {

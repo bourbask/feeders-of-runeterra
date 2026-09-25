@@ -39,10 +39,11 @@ import type { DiscordClient } from './discord.js';
  * The methods the CSRF header is demanded on.
  *
  * WRITTEN OUT, NOT DERIVED, and the test that checks it is written out too:
- * `tests/http/csrf.test.ts` lists the four verbs literally and compares its
- * own list to this one. A test that looped over this constant would go green
- * the day somebody empties it — the sixth failure mode of `docs/RECETTE.md`,
- * and this repository has already paid for it once.
+ * `tests/http/session.test.ts`, `describe('la règle CSRF')`, lists the four
+ * verbs literally and compares its own list to this one. A test that looped
+ * over this constant would go green the day somebody empties it — the sixth
+ * failure mode of `docs/RECETTE.md`, and this repository has already paid for
+ * it once.
  */
 export const MUTATING_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'] as const;
 

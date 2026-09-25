@@ -278,6 +278,34 @@ describe('GET /api/auth/discord/callback — les refus', () => {
     expect(b.discord.calls).toEqual({ exchange: 0, user: 0 });
   });
 
+  it('avec un cookie d’état présent mais DIFFÉRENT de la ligne : 400, aucun joueur, aucun appel réseau', async () => {
+    const b = await bed();
+    const start = await b.app.inject({ method: 'GET', url: '/api/auth/discord/start' });
+    const state = cookieValue(start.headers, 'fr_oauth_state')!;
+    const verifier = cookieValue(start.headers, 'fr_oauth_verifier')!;
+
+    // LA LIAISON 2, ET PAS SA PRÉSENCE. Le test « sans le cookie d'état » ne
+    // mesure que l'absence : la condition dégradée en simple test de présence
+    // le laisse vert. Ici le cookie est là, de la MÊME LONGUEUR, et ne vaut pas
+    // la ligne — c'est la fixation de session que l'en-tête du fichier décrit :
+    // quelqu'un qui détient un `state` volé terminerait la connexion d'un autre.
+    const vole = `${state.startsWith('a') ? 'b' : 'a'}${state.slice(1)}`;
+    expect(vole).not.toBe(state);
+    expect(vole).toHaveLength(state.length);
+
+    await expectRefused(b, `/api/auth/discord/callback?code=c&state=${encodeURIComponent(state)}`, {
+      fr_oauth_state: vole,
+      fr_oauth_verifier: verifier,
+    });
+
+    expect(b.discord.calls).toEqual({ exchange: 0, user: 0 });
+    // Et aucune session non plus : le refus est total, pas partiel.
+    const sessions = b.connection.prepare(`SELECT COUNT(*) AS n FROM auth_sessions`).get() as {
+      n: number;
+    };
+    expect(sessions.n).toBe(0);
+  });
+
   it('avec un vérificateur PKCE qui n’est pas celui de la ligne : 400', async () => {
     const b = await bed();
     const start = await b.app.inject({ method: 'GET', url: '/api/auth/discord/start' });
@@ -329,6 +357,38 @@ describe('GET /api/auth/discord/callback — les refus', () => {
     expect(sessions.n).toBe(0);
     // And the body carries no trace of what Discord answered.
     expect(response.body).not.toContain('indisponible');
+  });
+
+  it('une panne qui n’est PAS un DiscordCallError n’est pas maquillée en 502', async () => {
+    // L'AUTRE SENS DU CATCH. Le 502 dit « la faute est en amont » ; une panne
+    // locale — une base verrouillée, un bogue de ce serveur — qui sortirait
+    // avec ce même code enverrait l'exploitant chercher chez Discord. Le
+    // `throw error` qui rend la main au gestionnaire par défaut n'était mesuré
+    // par rien.
+    const modele = fakeDiscord({ id: '1', username: 'x', globalName: null, avatar: null });
+    const b = await bench({
+      discord: {
+        ...modele,
+        exchangeCode: () => Promise.reject(new TypeError('un bogue bien à nous')),
+      },
+    });
+    open.push(b);
+
+    const start = await b.app.inject({ method: 'GET', url: '/api/auth/discord/start' });
+    const state = cookieValue(start.headers, 'fr_oauth_state')!;
+    const verifier = cookieValue(start.headers, 'fr_oauth_verifier')!;
+
+    const response = await b.app.inject({
+      method: 'GET',
+      url: `/api/auth/discord/callback?code=c&state=${encodeURIComponent(state)}`,
+      cookies: { fr_oauth_state: state, fr_oauth_verifier: verifier },
+    });
+
+    expect(response.statusCode).toBe(500);
+    expect(zAppErrorPayload.parse(response.json()).code).toBe('internal_error');
+    // Et le message interne ne fuit pas sur le fil.
+    expect(response.body).not.toContain('un bogue bien à nous');
+    expect(countPlayers(b)).toBe(0);
   });
 
   it('avec une chaîne de requête que le contrat ne décrit pas : 400', async () => {

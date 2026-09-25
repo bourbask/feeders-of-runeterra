@@ -85,10 +85,11 @@ const CAMPAIGN_COLUMNS = `campaigns.id, campaigns.slug, campaigns.name, campaign
  * The tables one player may open, most recently touched first.
  *
  * ORDER IS PART OF THE ANSWER, so it is written here once and asserted on an
- * out-of-order fixture: `tests/http/me.test.ts` inserts two campaigns whose
- * `updated_at` disagrees with their identifiers and compares the WHOLE array.
- * A single-row fixture, or one already in the right order, would leave this
- * clause unmeasured.
+ * out-of-order fixture: `tests/http/campaigns.test.ts`, `describe('GET
+ * /api/me — les deux listes')`, inserts two campaigns whose `updated_at`
+ * disagrees with their identifiers and compares the WHOLE array. A single-row
+ * fixture, or one already in the right order, would leave this clause
+ * unmeasured.
  */
 export function listCampaignsForPlayer(
   connection: SqliteConnection,
