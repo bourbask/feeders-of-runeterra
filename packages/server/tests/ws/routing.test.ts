@@ -18,6 +18,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { c2sMessageTypesOfSchema } from '@for/contracts';
+import type { Intent } from '@for/engine';
 import { describe, expect, it } from 'vitest';
 
 import { ROUTES } from '../../src/ws/handlers.js';
@@ -104,7 +105,7 @@ describe('le routage', () => {
 
   it('`c2s.speak` devient une intention `speech.say`, jamais un chemin d’écriture à part', async () => {
     const table = new Table();
-    const seen: { type: string }[] = [];
+    const seen: Intent[] = [];
     const original = table.service.submitIntent.bind(table.service);
     table.service.submitIntent = (input) => {
       seen.push(input.intent);
@@ -112,11 +113,22 @@ describe('le routage', () => {
     };
 
     const alice = await table.join(ALICE);
+    // DEUX TRAMES, ET LE HORS-JEU D'ABORD. Une seule, ou l'en-jeu en premier,
+    // et un serveur qui écrirait `channel: 'ic'` en dur passerait la moitié du
+    // temps — c'est exactement ce que le canal transporte : ce qui est dit à
+    // la table plutôt que dans la fiction.
     await alice.connection.receive(
       c2s('c2s.speak', { channel: 'ooc', text: 'On fait une pause ?' }, table.nextFrameId()),
     );
+    await alice.connection.receive(
+      c2s('c2s.speak', { channel: 'ic', text: 'Le vent tombe.' }, table.nextFrameId()),
+    );
 
-    expect(seen.map((intent) => intent.type)).toStrictEqual(['speech.say']);
+    // Les trois champs, sur les deux trames : rien n'est traduit au passage.
+    expect(seen).toStrictEqual([
+      { type: 'speech.say', channel: 'ooc', text: 'On fait une pause ?' },
+      { type: 'speech.say', channel: 'ic', text: 'Le vent tombe.' },
+    ]);
   });
 
   it('un refus du service devient `s2c.rejected`, jamais un événement', async () => {

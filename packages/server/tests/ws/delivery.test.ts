@@ -19,7 +19,15 @@ import { Buffer } from 'node:buffer';
 import { describe, expect, it } from 'vitest';
 
 import { WS_DELIVERY_TAIL_MAX } from '../../src/ws/hub.js';
-import { ALICE, BOB, CAMPAIGN, Table, anEvent, c2s } from './support/harness.test.js';
+import {
+  ALICE,
+  BOB,
+  CAMPAIGN,
+  OTHER_CAMPAIGN,
+  Table,
+  anEvent,
+  c2s,
+} from './support/harness.test.js';
 
 /** Le critère d'acceptation, en toutes lettres. */
 const INJECTED = 50;
@@ -198,6 +206,124 @@ describe('la livraison', () => {
     table.hub.broadcast(CAMPAIGN, [event]);
 
     expect(counters(alice.socket).deliverySeqs).toStrictEqual([1]);
+  });
+});
+
+describe('le hub sur une table que personne n’a ouverte', () => {
+  /**
+   * LES QUATRE SORTIES PAR DÉFAUT, mesurées plutôt que supposées. Elles sont
+   * atteintes en production dès qu'une diffusion arrive après le départ du
+   * dernier joueur — `detach` supprime alors la salle — et aucune suite n'y
+   * passait : le rapport de couverture les nommait une à une.
+   */
+  it('ne connaît ni salle, ni flux, ni curseur, et ne se plaint pas', () => {
+    const table = new Table();
+
+    expect(table.hub.connectionsOf(OTHER_CAMPAIGN)).toStrictEqual([]);
+    expect(table.hub.presence(OTHER_CAMPAIGN)).toStrictEqual([]);
+    expect(table.hub.deliveryHead(OTHER_CAMPAIGN, ALICE)).toBe(0);
+    expect(table.hub.catchUpFrom(OTHER_CAMPAIGN, ALICE, 0)).toStrictEqual({
+      kind: 'snapshot',
+      reason: 'flux inconnu',
+    });
+    expect(table.hub.deliveredSince(OTHER_CAMPAIGN, ALICE, 0)).toStrictEqual([]);
+  });
+
+  it('jette une diffusion adressée à une salle vide, sans rien compter', async () => {
+    const table = new Table();
+    const alice = await table.join(ALICE);
+    alice.socket.clear();
+
+    // Alice part : la dernière socket sortie emporte la salle et ses flux.
+    alice.connection.markClosed();
+    table.hub.tick(table.clock.now());
+    expect(table.hub.connectionsOf(CAMPAIGN)).toStrictEqual([]);
+
+    table.hub.broadcast(CAMPAIGN, [anEvent({ seq: 1, scope: 'table' })]);
+    table.hub.broadcastPresence(CAMPAIGN);
+
+    expect(alice.socket.sent).toStrictEqual([]);
+    expect(table.hub.deliveryHead(CAMPAIGN, ALICE)).toBe(0);
+  });
+
+  it('un détachement de socket sur une salle déjà partie ne casse rien', async () => {
+    const table = new Table();
+    const alice = await table.join(ALICE);
+
+    table.hub.detach(alice.connection);
+    // La salle a disparu avec sa dernière socket ; le second détachement
+    // tombe sur rien, ce qui doit rester une non-opération.
+    table.hub.detach(alice.connection);
+
+    expect(table.hub.connectionsOf(CAMPAIGN)).toStrictEqual([]);
+  });
+});
+
+describe("le curseur porté par l'instantané (ADR 0010 décision 1)", () => {
+  /**
+   * TROIS ÉVÉNEMENTS AU JOURNAL, DEUX POUR ALICE. Le `seq` global vaut 3, le
+   * curseur de livraison d'Alice vaut 2 : deux nombres qui ne peuvent pas être
+   * confondus, ce qui est tout l'intérêt de la fixture. Avec un journal
+   * entièrement visible, `lastSeq` et `lastDeliverySeq` seraient égaux et
+   * remplacer l'un par l'autre ne ferait rien tomber.
+   */
+  function aJournalAliceOnlyHalfSees(table: Table): void {
+    table.service.commit([
+      anEvent({ seq: 1, scope: 'table' }),
+      anEvent({ seq: 2, scope: 'private', recipients: [BOB] }),
+      anEvent({ seq: 3, scope: 'table' }),
+    ]);
+  }
+
+  it('`s2c.snapshot` porte le numéro de LIVRAISON, jamais le `seq` global — accueil', async () => {
+    const table = new Table();
+    aJournalAliceOnlyHalfSees(table);
+
+    // Curseur absent : l'accueil retombe sur un instantané.
+    const alice = await table.join(ALICE, null);
+    const snapshot = alice.socket.of('s2c.snapshot')[0];
+
+    expect(snapshot?.p['lastSeq']).toBe(3);
+    expect(snapshot?.p['lastDeliverySeq']).toBe(2);
+  });
+
+  it('`s2c.snapshot` porte le numéro de LIVRAISON, jamais le `seq` global — reprise', async () => {
+    const table = new Table();
+    aJournalAliceOnlyHalfSees(table);
+    const alice = await table.join(ALICE, null);
+    alice.socket.clear();
+
+    // Curseur en avance sur le serveur : la reprise retombe sur un instantané.
+    await alice.connection.receive(
+      c2s('c2s.resume', { sinceDeliverySeq: 9_999 }, table.nextFrameId()),
+    );
+    const snapshot = alice.socket.of('s2c.snapshot')[0];
+
+    expect(snapshot?.p['lastSeq']).toBe(3);
+    expect(snapshot?.p['lastDeliverySeq']).toBe(2);
+  });
+
+  it("le curseur de l'instantané est celui que le client renverra, et il suffit à reprendre", async () => {
+    const table = new Table();
+    aJournalAliceOnlyHalfSees(table);
+    const alice = await table.join(ALICE, null);
+    const snapshot = alice.socket.of('s2c.snapshot')[0];
+    alice.socket.clear();
+
+    // Le client fait ce que `client/src/ws/store.ts` fait : il mémorise
+    // `lastDeliverySeq` et le renvoie tel quel. Avec le `seq` global (3), ce
+    // curseur serait EN AVANCE et la reprise repartirait sur un instantané
+    // au lieu du rattrapage — la contradiction que l'ADR 0010 lève.
+    table.hub.broadcast(CAMPAIGN, [anEvent({ seq: 4, scope: 'table' })]);
+    alice.socket.clear();
+    await alice.connection.receive(
+      c2s('c2s.resume', { sinceDeliverySeq: snapshot?.p['lastDeliverySeq'] }, table.nextFrameId()),
+    );
+
+    expect(alice.socket.types()).toStrictEqual(['s2c.events_batch']);
+    const batch = alice.socket.of('s2c.events_batch')[0]?.p['events'] as WireEvent[];
+    expect(batch.map((entry) => entry.deliverySeq)).toStrictEqual([3]);
+    expect(batch.map((entry) => entry.seq)).toStrictEqual([4]);
   });
 });
 

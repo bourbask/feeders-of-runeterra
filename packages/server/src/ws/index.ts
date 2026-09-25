@@ -100,7 +100,10 @@ export interface AttachInput {
  * The two identifiers are PARSED, not cast. `zPlayerId` and `zCampaignId`
  * carry the engine's brand and the ULID shape; a cast would hand the brand to
  * whatever the auth layer happened to produce, which is how a nominal type
- * stops meaning anything.
+ * stops meaning anything. MEASURED, not announced: `tests/ws/handshake.test.ts`
+ * hands the auth layer a `playerId` of `p1` and a `campaignId` of
+ * `campagne-2`, and requires this function to reject rather than to mint a
+ * session — replace either `parse` with a cast and that test goes red.
  */
 export async function attachSocket(input: AttachInput): Promise<TableConnection | null> {
   const outcome = await authorizeHandshake(input.access, input.request);

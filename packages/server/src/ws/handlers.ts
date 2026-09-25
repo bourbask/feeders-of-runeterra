@@ -137,6 +137,34 @@ export interface HandlerContext {
 
 // ───────────────────────────────────────────────────────────── the routines
 
+/**
+ * Writes whatever was delivered to this player past `since`.
+ *
+ * ══ THE WINDOW THIS CLOSES, AND WHY A SNAPSHOT ALONE LOSES EVENTS ═════════
+ *
+ * A snapshot answer is built from two readings taken at two instants: the
+ * STATE comes from `getSnapshot`, which is awaited, and the CURSOR comes from
+ * the hub, which keeps counting during that await. An event committed and
+ * broadcast in between is then counted by the cursor and absent from the
+ * state — and on `c2s.hello` the socket is not in the broadcast set yet, so it
+ * is never written either. The client overwrites its state on the snapshot,
+ * stores that cursor, and its gap detector can never fire: the next event
+ * carries exactly the number it expects. Silent and final, and it breaks
+ * invariant 4 as ADR 0008 hardens it — replaying that player's thread from the
+ * journal would give back an event they never saw.
+ *
+ * So the cursor is read BEFORE the await, the snapshot is sent carrying THAT
+ * number, and everything the stream gained since is written here, before the
+ * socket joins the broadcast set. A duplicate is caught up — the snapshot has
+ * just wiped the client's state, so re-applying is exact — a loss is not.
+ */
+function flushAfterSnapshot(ctx: HandlerContext, since: number): void {
+  const { campaignId, playerId } = ctx.connection.session;
+  for (const entry of ctx.deps.hub.deliveredSince(campaignId, playerId, since)) {
+    ctx.connection.sendEvent(entry);
+  }
+}
+
 async function handleHello(
   ctx: HandlerContext,
   message: Extract<C2SMessage, { t: 'c2s.hello' }>,
@@ -145,6 +173,10 @@ async function handleHello(
   const { campaignId, playerId } = ctx.connection.session;
 
   await hub.openStream(campaignId, playerId);
+
+  // READ BEFORE THE AWAIT. See `flushAfterSnapshot` — this line and the next
+  // one are the whole race, and their order is the fix.
+  const head = hub.deliveryHead(campaignId, playerId);
   const snapshot = await service.getSnapshot(campaignId, playerId);
 
   let mine: CharacterId | null = null;
@@ -153,7 +185,6 @@ async function handleHello(
   }
   ctx.connection.setCharacter(mine);
 
-  const head = hub.deliveryHead(campaignId, playerId);
   ctx.connection.sendWelcome({
     characterId: mine,
     contentVersion: contentVersion(content.bundle.version, content.bundle.hash),
@@ -163,9 +194,12 @@ async function handleHello(
 
   const catchup = hub.catchUpFrom(campaignId, playerId, message.p.lastDeliverySeq);
   if (catchup.kind === 'batch') {
+    // The catch-up is computed after the await, so it already carries whatever
+    // landed during it. Nothing to flush.
     ctx.connection.sendBatch(catchup.entries);
   } else {
     ctx.connection.sendSnapshot(snapshot.state, snapshot.lastSeq, head);
+    flushAfterSnapshot(ctx, head);
   }
 
   ctx.connection.markGreeted();
@@ -234,12 +268,15 @@ async function handleResume(
     ctx.connection.sendBatch(catchup.entries);
     return;
   }
+
+  // READ BEFORE THE AWAIT, same race as `handleHello` and worse on this path:
+  // the socket IS attached, so an event of the window is written live and
+  // would then be OVERWRITTEN by a snapshot older than itself. The flush puts
+  // it back after the snapshot, which costs one duplicate frame.
+  const head = hub.deliveryHead(campaignId, playerId);
   const snapshot = await service.getSnapshot(campaignId, playerId);
-  ctx.connection.sendSnapshot(
-    snapshot.state,
-    snapshot.lastSeq,
-    hub.deliveryHead(campaignId, playerId),
-  );
+  ctx.connection.sendSnapshot(snapshot.state, snapshot.lastSeq, head);
+  flushAfterSnapshot(ctx, head);
 }
 
 function handlePong(ctx: HandlerContext): Promise<void> {

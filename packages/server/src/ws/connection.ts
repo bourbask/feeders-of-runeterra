@@ -22,6 +22,11 @@
  * is worth. A frame this server builds wrongly must die here, on the server,
  * rather than reach a browser as something the client's own schema will
  * reject. It costs one parse per frame; M0 is a foundation, not a benchmark.
+ * MEASURED, not announced: `tests/ws/outgoing.test.ts` hands `send` a frame
+ * the protocol does not declare and one whose payload is wrongly typed, and
+ * requires a throw with NOTHING written to the transport. The same suite holds
+ * the three other guarantees this file used to claim without proof — the
+ * 256 KiB wire bound, the single close, and the queue collapse that must rearm.
  *
  * THE ORDER OF THE ENTRY CHECKS IS PART OF THE CONTRACT, because two of them
  * answer with a close code rather than with a message:

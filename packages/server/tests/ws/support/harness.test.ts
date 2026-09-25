@@ -23,6 +23,8 @@
  * from a write.
  */
 
+import { setImmediate } from 'node:timers';
+
 import { describe, expect, it } from 'vitest';
 
 import { staticContent } from '@for/content';
@@ -100,9 +102,28 @@ export class FakeSocket implements WsSocket {
   /** While true the transport never acknowledges: the queue never drains. */
   stalled = false;
 
+  /** The acknowledgements held back while `stalled`. `drain()` runs them. */
+  private readonly held: (() => void)[] = [];
+
   send(data: string, onFlushed?: () => void): void {
     this.sent.push(data);
-    if (!this.stalled) onFlushed?.();
+    if (this.stalled) {
+      if (onFlushed !== undefined) this.held.push(onFlushed);
+      return;
+    }
+    onFlushed?.();
+  }
+
+  /**
+   * The transport catches up: every held acknowledgement fires.
+   *
+   * A REAL TRANSPORT DOES THIS, and nothing measured the server's behaviour
+   * afterwards. It is how the socket's collapsed flag gets a chance to rearm.
+   */
+  drain(): void {
+    this.stalled = false;
+    const pending = this.held.splice(0, this.held.length);
+    for (const ack of pending) ack();
   }
 
   close(code: number, reason?: string): void {
@@ -164,6 +185,44 @@ export class CountingIds {
 
 export const SILENT_LOGGER: WsLogger = { warn: () => undefined };
 
+/** A logger that KEEPS what it was told. Used where the drop is the point. */
+export class RecordingLogger implements WsLogger {
+  readonly warnings: { context: object; message: string }[] = [];
+
+  warn(context: object, message: string): void {
+    this.warnings.push({ context, message });
+  }
+}
+
+// ──────────────────────────────────────────────────────────── the scheduler
+
+/** A promise a probe opens by hand, to hold an `await` exactly where it is. */
+export class Gate {
+  private release: (() => void) | null = null;
+
+  readonly closed = new Promise<void>((resolve) => {
+    this.release = resolve;
+  });
+
+  open(): void {
+    this.release?.();
+  }
+}
+
+/**
+ * Lets every pending microtask run, so a routine suspended on an `await`
+ * really is suspended when the probe looks at it.
+ *
+ * A macrotask, on purpose: the microtask queue is drained before it fires,
+ * whatever its depth, so a probe never has to guess how many `await`s stand
+ * between the call and the suspension point.
+ */
+export function letAwaitsRun(): Promise<void> {
+  return new Promise<void>((resolve) => {
+    setImmediate(resolve);
+  });
+}
+
 // ────────────────────────────────────────────────────────────── the events
 
 export interface EventInput {
@@ -201,6 +260,41 @@ export function anEvent(input: EventInput): PersistedEvent {
     createdAt: 1_700_000_000_000,
   };
 }
+
+// ─────────────────────────────────────────────────────────── the characters
+
+/**
+ * One character of the table state, valid against `zCharacterState`.
+ *
+ * WRITTEN OUT HERE AND NOT IMPORTED FROM `@for/testkit`: that package is not a
+ * dependency of `@for/server`, and adding it means editing
+ * `packages/server/package.json`, which M0-25's file list does not carry. The
+ * fixture holds up on its own — `zTableState` parses it at the foot of this
+ * file, and the connection parses it again on every frame that carries it.
+ */
+export function aCharacter(id: string, playerId: PlayerId): TableStateDto['characters'][number] {
+  return {
+    id,
+    playerId,
+    championId: 'ashe',
+    displayName: 'Ashe des glaces',
+    sheet: { championId: 'ashe', source: 'handwritten', ref: 'content:champions/ashe@1.0.0' },
+    attributes: { vif: 2, coeur: 3, fer: 2, ombre: 1, esprit: 1 },
+    gauges: { vigueur: 5, ame: 5, vivres: 5 },
+    momentum: 2,
+    momentumBounds: { min: -6, max: 10, reset: 2 },
+    xpEarned: 0,
+    xpSpent: 0,
+    conditions: [],
+    assets: [],
+    status: 'active',
+    createdSeq: 1,
+    updatedSeq: 1,
+  } as unknown as TableStateDto['characters'][number];
+}
+
+/** Alice's character, and the identifier her `s2c.welcome` must carry. */
+export const ALICE_CHARACTER = anId(20);
 
 // ───────────────────────────────────────────────────────────── the service
 
@@ -272,12 +366,24 @@ export class FakeCampaignService implements CampaignService {
     return Promise.resolve(ok({ accepted: true, events: [event] }));
   }
 
-  getSnapshot(campaignId: CampaignId): Promise<{ state: TableStateDto; lastSeq: number }> {
+  /**
+   * Set by a probe to suspend `getSnapshot` AFTER its state has been frozen.
+   *
+   * That is the shape of the real thing: a read that has already decided what
+   * it will answer, and has not answered yet. Anything committed while it is
+   * suspended belongs to neither the state it returns nor — without the flush
+   * — to anything the player is sent.
+   */
+  suspendSnapshot: (() => Promise<void>) | null = null;
+
+  async getSnapshot(campaignId: CampaignId): Promise<{ state: TableStateDto; lastSeq: number }> {
     this.snapshotCalls += 1;
-    return Promise.resolve({
+    const frozen = {
       state: EMPTY_STATE(campaignId, this.characters),
       lastSeq: this.journal.length,
-    });
+    };
+    if (this.suspendSnapshot !== null) await this.suspendSnapshot();
+    return frozen;
   }
 
   readEventsSince(campaignId: CampaignId, seq: number): Promise<readonly PersistedEvent[]> {
@@ -352,6 +458,9 @@ export class Table {
 
   readonly hub: TableHub;
 
+  /** Swapped for a `RecordingLogger` where what was dropped is the point. */
+  logger: WsLogger = SILENT_LOGGER;
+
   private frames = 0;
 
   constructor(readonly narration?: NarrationReplay) {
@@ -384,7 +493,7 @@ export class Table {
       clock: this.clock,
       ids: new CountingIds(),
       frameIds: new CountingFrameIds(),
-      logger: SILENT_LOGGER,
+      logger: this.logger,
       ...(this.narration === undefined ? {} : { narration: this.narration }),
     });
     return { connection, socket };
@@ -422,6 +531,48 @@ describe('le harnais des suites WebSocket', () => {
 
   it('produit un état de table que zTableState accepte', () => {
     expect(zTableState.safeParse(EMPTY_STATE(CAMPAIGN, [])).success).toBe(true);
+  });
+
+  it('produit un personnage que zTableState accepte, rattaché à son joueur', () => {
+    const state = EMPTY_STATE(CAMPAIGN, [aCharacter(ALICE_CHARACTER, ALICE)]);
+    const parsed = zTableState.safeParse(state);
+    expect(parsed.success).toBe(true);
+    // Sans ce rattachement, le test de `s2c.welcome.you` mesurerait un `null`
+    // qui vient de la fixture et non du serveur.
+    expect(state.characters[0]?.playerId).toBe(ALICE);
+    expect(state.characters[0]?.id).toBe(ALICE_CHARACTER);
+  });
+
+  it('retient les acquittements pendant que le transport est bloqué, et les rend au drain', () => {
+    const socket = new FakeSocket();
+    let flushed = 0;
+    socket.stalled = true;
+    socket.send('a', () => {
+      flushed += 1;
+    });
+    socket.send('b', () => {
+      flushed += 1;
+    });
+    expect(flushed).toBe(0);
+
+    socket.drain();
+    expect(flushed).toBe(2);
+    expect(socket.sent).toStrictEqual(['a', 'b']);
+  });
+
+  it('suspend `getSnapshot` après avoir figé son état, et le rend au déverrouillage', async () => {
+    const service = new FakeCampaignService();
+    const gate = new Gate();
+    service.suspendSnapshot = () => gate.closed;
+
+    const inFlight = service.getSnapshot(CAMPAIGN);
+    await letAwaitsRun();
+    // L'état est figé — `lastSeq` vaut 0 — mais rien n'est rendu encore.
+    expect(service.snapshotCalls).toBe(1);
+    service.commit([anEvent({ seq: 1, scope: 'table' })]);
+
+    gate.open();
+    expect((await inFlight).lastSeq).toBe(0);
   });
 
   it('compte les écritures et les lectures séparément', async () => {

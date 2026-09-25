@@ -8,9 +8,18 @@
  * fermeture, le seuil d'entrée — sont lus dans `@for/contracts`.
  *
  * LA DEUXIÈME DIRECTION EST TESTÉE PARTOUT : le cinquième `c2s.intent` passe,
- * le sixième non ; 64 Kio passent, 65 Kio ferment ; 59 s ne ferment pas, 60 s
- * ferment. Une suite qui ne montrerait que le refus resterait verte sur un
- * serveur qui refuse tout.
+ * le sixième non ; 65 536 octets ne ferment pas, 65 537 ferment ; 59 s ne
+ * ferment pas, 60 s ferment. Une suite qui ne montrerait que le refus
+ * resterait verte sur un serveur qui refuse tout.
+ *
+ * LA BORNE D'ENTRÉE SE MESURE SUR LES OCTETS, PAS SUR UNE TRAME VALIDE, et
+ * c'est une conséquence du protocole gelé, pas un raccourci :
+ * `zSpeechSayIntent.text` plafonne à 2 000 caractères, donc aucune des huit
+ * trames `c2s.*` ne peut peser 64 Kio en étant valide. Le contrôle de taille
+ * court de toute façon AVANT l'analyse (§5.5), et c'est là qu'on le prend :
+ * au seuil la socket reste ouverte et répond `validation_failed`, au seuil + 1
+ * elle ferme en 4009. Une version antérieure de cette suite rembourrait à
+ * `Math.min(room, 2000)` et mesurait donc 2 Kio en annonçant 64.
  */
 
 import { Buffer } from 'node:buffer';
@@ -141,23 +150,81 @@ describe('la limitation de débit', () => {
 });
 
 describe('la taille des trames', () => {
-  it('accepte 64 Kio entrants et ferme en 4009 à 65 Kio', async () => {
+  /**
+   * LE SEUIL DE LA FICHE, ÉCRIT EN TOUTES LETTRES — « trames 64 Kio
+   * entrantes ». Le constant du protocole gelé est comparé à ce nombre-là, et
+   * les trames des tests sont bâties sur ce nombre-là, jamais sur le constant :
+   * deux chemins, sinon la borne se comparerait à elle-même.
+   */
+  const SHEET_MAX_INCOMING = 64 * 1024;
+
+  it('le seuil du protocole gelé est celui que la fiche écrit', () => {
+    expect(WS_MAX_INCOMING_FRAME_BYTES).toBe(SHEET_MAX_INCOMING);
+  });
+
+  it('accepte une trame valide de bout en bout, sous le seuil', async () => {
     const table = new Table();
     const alice = await table.join(ALICE);
     alice.socket.clear();
 
-    // Une trame valide, rembourrée jusqu'à tenir exactement sous le seuil.
-    const skeleton = c2s('c2s.speak', { channel: 'ic', text: '' }, table.nextFrameId());
-    const room = WS_MAX_INCOMING_FRAME_BYTES - Buffer.byteLength(skeleton);
-    const atLimit = c2s(
+    // AUCUNE TRAME VALIDE NE PEUT ATTEINDRE 64 Kio, et c'est mesuré ici plutôt
+    // qu'affirmé : `zSpeechSayIntent.text` est borné à 2 000 caractères, donc
+    // la plus grosse trame `c2s.speak` acceptable pèse quelques kilo-octets.
+    // La borne d'entrée, elle, se mesure sur les OCTETS et avant toute
+    // analyse — c'est le test suivant qui la prend exactement.
+    const largestValid = c2s(
       'c2s.speak',
-      { channel: 'ic', text: 'a'.repeat(Math.min(room, 2000)) },
+      { channel: 'ic', text: 'a'.repeat(2_000) },
       table.nextFrameId(),
     );
-    expect(Buffer.byteLength(atLimit)).toBeLessThanOrEqual(WS_MAX_INCOMING_FRAME_BYTES);
+    expect(Buffer.byteLength(largestValid)).toBeLessThan(SHEET_MAX_INCOMING);
 
-    await alice.connection.receive(atLimit);
+    await alice.connection.receive(largestValid);
     expect(alice.socket.closes).toStrictEqual([]);
+    expect(table.service.submitCalls).toBe(1);
+
+    const tooLongForTheSchema = c2s(
+      'c2s.speak',
+      { channel: 'ic', text: 'a'.repeat(2_001) },
+      table.nextFrameId(),
+    );
+    await alice.connection.receive(tooLongForTheSchema);
+    expect(alice.socket.closes).toStrictEqual([]);
+    expect(alice.socket.of('s2c.error').at(-1)?.p['code']).toBe('validation_failed');
+  });
+
+  it('prend la borne des octets exactement : le seuil passe, le seuil + 1 ferme', async () => {
+    const table = new Table();
+    const atLimit = await table.join(ALICE);
+    atLimit.socket.clear();
+
+    // Exactement 65 536 octets. Ce n'est pas du JSON : le contrôle de taille
+    // court AVANT l'analyse, donc une trame au seuil est refusée par le
+    // protocole (`validation_failed`) et surtout PAS fermée.
+    const exactly = 'x'.repeat(SHEET_MAX_INCOMING);
+    expect(Buffer.byteLength(exactly)).toBe(65_536);
+    await atLimit.connection.receive(exactly);
+
+    expect(atLimit.socket.closes).toStrictEqual([]);
+    expect(atLimit.socket.of('s2c.error')[0]?.p['code']).toBe('validation_failed');
+
+    // Un octet de plus, sur une socket neuve : la fermeture.
+    const overLimit = await table.join(ALICE);
+    overLimit.socket.clear();
+    const oneMore = 'x'.repeat(SHEET_MAX_INCOMING + 1);
+    expect(Buffer.byteLength(oneMore)).toBe(65_537);
+    await overLimit.connection.receive(oneMore);
+
+    expect(overLimit.socket.of('s2c.error')).toStrictEqual([]);
+    expect(overLimit.socket.closes.map((close) => close.code)).toStrictEqual([
+      WS_CLOSE_CODES.payload_too_large,
+    ]);
+  });
+
+  it('ferme en 4009 à 65 Kio — le chiffre du critère', async () => {
+    const table = new Table();
+    const alice = await table.join(ALICE);
+    alice.socket.clear();
 
     const oversized = 'x'.repeat(65 * 1024);
     expect(Buffer.byteLength(oversized)).toBe(66_560);

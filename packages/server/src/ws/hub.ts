@@ -46,6 +46,16 @@
  * journal read. The hub may not reach past the service to the database — it
  * routes, it does not read — so the cost is paid here and named here.
  *
+ * AND IT COSTS MORE THAN ONE READ. Because `getSnapshot` returns no
+ * `lastDeliverySeq`, a snapshot answer has to take its state from the service
+ * and its cursor from here, at two different instants — and an event committed
+ * between the two is counted by the cursor, absent from the state, and, on
+ * `c2s.hello`, never written at all. `handlers.ts` closes that window by
+ * reading the cursor first and draining `deliveredSince` afterwards, which
+ * costs a duplicate frame. A `getSnapshot` that returned its OWN
+ * `lastDeliverySeq` would make both the full read and the drain unnecessary:
+ * one reading, one instant. That is the same report, and it is why it matters.
+ *
  * ══ WHAT THIS FILE IS NOT ══════════════════════════════════════════════════
  *
  * It rolls no die, applies no event to any state, and builds no proof. It
@@ -150,8 +160,12 @@ export class TableHub {
   /**
    * A connection joins the broadcast set. Called AFTER its `c2s.hello` has
    * been answered, so that the catch-up and the live stream cannot interleave.
-   * Nothing is lost in between: the stream keeps counting during the handshake
-   * and the catch-up reads from it.
+   *
+   * THE STREAM COUNTING IS NOT ENOUGH ON ITS OWN, and saying otherwise was
+   * wrong: the stream does keep counting during the handshake, but a snapshot
+   * answer carries a cursor read BEFORE the service call, so what the stream
+   * gained in between reaches nobody unless it is written out. That is
+   * `handlers.ts`, `flushAfterSnapshot`, which runs just before this call.
    */
   attach(connection: TableConnection): void {
     this.room(connection.session.campaignId).connections.add(connection);
@@ -232,6 +246,30 @@ export class TableHub {
     }
 
     return { kind: 'batch', entries: missing };
+  }
+
+  /**
+   * What this player's stream gained past `since`, straight from the tail.
+   *
+   * NOT `catchUpFrom`, AND THE DIFFERENCE MATTERS. `catchUpFrom` answers a
+   * client's cursor and may refuse it — too old, ahead of the server — which
+   * is right for a resume and wrong here: the caller has just sent a snapshot
+   * built BEFORE `since` was read, and needs whatever arrived since, with no
+   * second opinion. See `handlers.ts`, `flushAfterSnapshot`.
+   *
+   * When the tail has rolled past `since`, this returns what it still holds
+   * and the entries come back with a hole in `deliverySeq` — which the client
+   * sees and answers with a `c2s.resume` (`client/src/ws/store.ts`). A visible
+   * hole is recoverable; a silent one is not.
+   */
+  deliveredSince(
+    campaignId: CampaignId,
+    playerId: PlayerId,
+    since: number,
+  ): readonly DeliveredEntry[] {
+    const stream = this.rooms.get(campaignId)?.streams.get(playerId);
+    if (stream === undefined) return [];
+    return stream.tail.filter((entry) => entry.deliverySeq > since);
   }
 
   // --------------------------------------------------------- the delivery

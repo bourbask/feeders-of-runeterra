@@ -9,10 +9,22 @@
  * criterion states and it exists nowhere else in machine-readable form.
  */
 
-import { WS_CLOSE_CODES } from '@for/contracts';
+import { WS_CLOSE_CODES, zMessageId, zPlayerId } from '@for/contracts';
+import type { CampaignId, PlayerId } from '@for/engine';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { ALICE, BOB, Table, anEvent, c2s } from './support/harness.test.js';
+import { randomFrameIds } from '../../src/ws/index.js';
+
+import {
+  ALICE,
+  ALICE_CHARACTER,
+  BOB,
+  CAMPAIGN,
+  Table,
+  aCharacter,
+  anEvent,
+  c2s,
+} from './support/harness.test.js';
 
 describe('la poignée de main', () => {
   let table: Table;
@@ -88,6 +100,25 @@ describe('la poignée de main', () => {
     expect(socket.of('s2c.error')[0]?.p['code']).toBe('validation_failed');
   });
 
+  it('lit une trame binaire comme une trame texte — le transport réel en livre', async () => {
+    const { connection, socket } = await table.join(ALICE);
+    socket.clear();
+
+    // `WsSocket` accepte `string | Uint8Array` parce qu'un WebSocket livre les
+    // deux. Ce chemin-là n'était exercé par rien : une trame binaire parfaitement
+    // valide aurait pu être refusée sans que la suite bronche.
+    const frame = c2s(
+      'c2s.intent',
+      { intent: { type: 'play_session.begin' } },
+      table.nextFrameId(),
+    );
+    await connection.receive(new TextEncoder().encode(frame));
+
+    expect(table.service.submitCalls).toBe(1);
+    expect(socket.of('s2c.error')).toStrictEqual([]);
+    expect(socket.of('s2c.event')).toHaveLength(1);
+  });
+
   it('refuse une trame du bon `v` qui ne respecte aucune des huit formes', async () => {
     const { connection, socket } = await table.join(ALICE);
     socket.clear();
@@ -98,6 +129,39 @@ describe('la poignée de main', () => {
 
     expect(socket.closes).toStrictEqual([]);
     expect(socket.of('s2c.error')[0]?.p['code']).toBe('validation_failed');
+  });
+});
+
+describe('les identifiants de la poignée de main', () => {
+  it('sont PARSÉS, jamais castés : une forme que le moteur refuse ne devient pas une session', async () => {
+    const table = new Table();
+
+    // La couche d'authentification (M0-23) rend des chaînes ; rien ne garantit
+    // qu'elles portent la forme ULID que `zPlayerId` et `zCampaignId` exigent.
+    // Un cast donnerait la marque nominale à n'importe quoi, et la marque ne
+    // voudrait plus rien dire à partir de là.
+    await expect(table.connect('p1' as PlayerId)).rejects.toThrow();
+    await expect(table.connect(ALICE, 'campagne-2' as CampaignId)).rejects.toThrow();
+  });
+
+  it("la source d'identifiants de trame rend ce que `zMessageId` accepte, jamais un ULID", () => {
+    // LA DIVERGENCE EST VOULUE ET N'EST PAS MESURÉE AILLEURS : `zMessageId`
+    // est `z.uuid()`, alors que tout identifiant de serveur est un ULID. Une
+    // source qui se tromperait de vocabulaire ferait jeter `zS2CEnvelope` sur
+    // la première trame envoyée à un joueur, en production et pas ici.
+    const id = randomFrameIds.next();
+
+    expect(zMessageId.safeParse(id).success).toBe(true);
+    expect(zPlayerId.safeParse(id).success).toBe(false);
+    expect(randomFrameIds.next()).not.toBe(id);
+  });
+
+  it('et laissent passer la forme que les schémas gelés déclarent', async () => {
+    const table = new Table();
+    const opened = await table.connect(ALICE);
+
+    expect(opened.connection?.session.playerId).toBe(ALICE);
+    expect(opened.connection?.session.campaignId).toBe(CAMPAIGN);
   });
 });
 
@@ -149,6 +213,56 @@ describe('`c2s.hello`', () => {
     // pour un destinataire donné, `lastDeliverySeq` n'en a pas.
     expect(welcome?.p['lastSeq']).toBe(3);
     expect(welcome?.p['lastDeliverySeq']).toBe(2);
+  });
+
+  it("nomme le personnage du joueur dans `s2c.welcome.you`, et `null` quand il n'en a pas", async () => {
+    const table = new Table();
+    table.service.characters = [aCharacter(ALICE_CHARACTER, ALICE)];
+
+    const alice = await table.join(ALICE);
+    expect(alice.socket.of('s2c.welcome')[0]?.p['you']).toStrictEqual({
+      characterId: ALICE_CHARACTER,
+    });
+
+    // Bob est à la même table et n'a pas de personnage : les deux directions,
+    // sur le même état. Sans la seconde, un serveur qui rendrait toujours le
+    // premier personnage de la liste passerait.
+    const bob = await table.join(BOB);
+    expect(bob.socket.of('s2c.welcome')[0]?.p['you']).toStrictEqual({ characterId: null });
+  });
+
+  it('porte le personnage et la frappe de chacun dans `s2c.presence`', async () => {
+    const table = new Table();
+    table.service.characters = [aCharacter(ALICE_CHARACTER, ALICE)];
+
+    const alice = await table.join(ALICE);
+    await table.join(BOB);
+    alice.socket.clear();
+
+    await alice.connection.receive(c2s('c2s.typing', { typing: true }, table.nextFrameId()));
+
+    // Le tableau EXACT, dans l'ordre d'arrivée : Alice qui frappe et porte son
+    // personnage, Bob qui ne fait ni l'un ni l'autre.
+    expect(alice.socket.of('s2c.presence').at(-1)?.p['members']).toStrictEqual([
+      { playerId: ALICE, characterId: ALICE_CHARACTER, online: true, typing: true },
+      { playerId: BOB, characterId: null, online: true, typing: false },
+    ]);
+  });
+
+  it('rend la frappe à son état de repos quand le client la retire', async () => {
+    const table = new Table();
+    const alice = await table.join(ALICE);
+
+    await alice.connection.receive(c2s('c2s.typing', { typing: true }, table.nextFrameId()));
+    // La fenêtre de débit laisse passer une trame `c2s.typing` par tranche de
+    // 10 s : sans ce saut, la seconde serait ignorée en silence (section 5.6).
+    table.clock.advance(10_001);
+    alice.socket.clear();
+    await alice.connection.receive(c2s('c2s.typing', { typing: false }, table.nextFrameId()));
+
+    expect(alice.socket.of('s2c.presence').at(-1)?.p['members']).toStrictEqual([
+      { playerId: ALICE, characterId: null, online: true, typing: false },
+    ]);
   });
 
   it('diffuse la présence à toute la table quand quelqu’un arrive', async () => {
