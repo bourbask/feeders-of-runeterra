@@ -307,7 +307,17 @@ describe('GET /api/campaigns/:id', () => {
 });
 
 describe('GET /api/campaigns/:id/log', () => {
-  /** Three events: table, private to `me`, private to somebody else. */
+  /**
+   * Four events, ORDERED SO THAT `me` HAS A HOLE IN THE MIDDLE AND A HOLE AT
+   * THE END: table (1), private to the other (2), private to `me` (3), private
+   * to the other (4).
+   *
+   * The order is the whole point rather than a detail. With the private lines
+   * of `me` packed at the front, this player's `seq` runs 1, 2 and their
+   * `deliverySeq` (ADR 0010) runs 1, 2 as well — two operands equal by
+   * construction, and « pagine sur seq » could not tell the two cursors apart.
+   * The hole separates them: `me` sees `seq` 1 and 3, delivered 1 and 2.
+   */
   function seedJournal(b: Bench, me: SignedIn, other: SignedIn) {
     insertCampaign(b, ALPHA, 'La table', me.playerId, 1_000);
     b.connection
@@ -334,6 +344,15 @@ describe('GET /api/campaigns/:id/log', () => {
         {
           id: b.deps.ids.next(),
           type: 'system.note',
+          payload: note("pour l'autre seul"),
+          actorKind: 'system',
+          scope: 'private',
+          recipients: [other.playerId],
+          createdAt: b.clock.now(),
+        },
+        {
+          id: b.deps.ids.next(),
+          type: 'system.note',
           payload: note('pour moi seul'),
           actorKind: 'system',
           scope: 'private',
@@ -343,7 +362,7 @@ describe('GET /api/campaigns/:id/log', () => {
         {
           id: b.deps.ids.next(),
           type: 'system.note',
-          payload: note("pour l'autre seul"),
+          payload: note("pour l'autre seul, encore"),
           actorKind: 'system',
           scope: 'private',
           recipients: [other.playerId],
@@ -374,14 +393,14 @@ describe('GET /api/campaigns/:id/log', () => {
     const theirsPage = zCampaignLogResponse.parse(theirs.json());
 
     // Exact arrays, both ways: each sees the table event plus their own.
-    expect(minePage.entries.map((e) => e.seq)).toEqual([1, 2]);
-    expect(theirsPage.entries.map((e) => e.seq)).toEqual([1, 3]);
+    expect(minePage.entries.map((e) => e.seq)).toEqual([1, 3]);
+    expect(theirsPage.entries.map((e) => e.seq)).toEqual([1, 2, 4]);
     // And what the other player's private line SAID never reaches this one.
     expect(mine.body).not.toContain("pour l'autre seul");
     expect(theirs.body).not.toContain('pour moi seul');
     // The head is the allocator's, which both see identically.
-    expect(minePage.lastSeq).toBe(3);
-    expect(theirsPage.lastSeq).toBe(3);
+    expect(minePage.lastSeq).toBe(4);
+    expect(theirsPage.lastSeq).toBe(4);
   });
 
   it('pagine sur seq, et rend nextSinceSeq null une fois la tête atteinte', async () => {
@@ -405,15 +424,22 @@ describe('GET /api/campaigns/:id/log', () => {
       cookies: { fr_session: me.secret },
     });
     const second = zCampaignLogResponse.parse(next.json());
-    expect(second.entries.map((e) => e.seq)).toEqual([2]);
-    // Seq 3 exists but is not this player's, so the page that follows is empty
+    // LE TROU, ET C'EST LUI QUI SÉPARE LES DEUX CURSEURS. La deuxième ligne de
+    // ce joueur porte le `seq` 3, parce que le `seq` 2 est la ligne privée de
+    // l'autre. Une pagination indexée sur le NUMÉRO DE LIVRAISON (ADR 0010)
+    // rendrait ici `seq: 2` et un curseur à 2 — donc ce tableau exact, et le
+    // curseur en dessous, sont deux opérandes qui ne remontent plus à la même
+    // définition. Sans le trou, les deux valaient 2 par construction et la
+    // bascule était invisible.
+    expect(second.entries.map((e) => e.seq)).toEqual([3]);
+    // Seq 4 exists but is not this player's, so the page that follows is empty
     // and the cursor closes. A cursor derived from the player's own last line
     // would have stopped one page too early.
-    expect(second.nextSinceSeq).toBe(2);
+    expect(second.nextSinceSeq).toBe(3);
 
     const third = await b.app.inject({
       method: 'GET',
-      url: `/api/campaigns/${ALPHA}/log?limit=1&sinceSeq=2`,
+      url: `/api/campaigns/${ALPHA}/log?limit=1&sinceSeq=3`,
       cookies: { fr_session: me.secret },
     });
     const empty = zCampaignLogResponse.parse(third.json());

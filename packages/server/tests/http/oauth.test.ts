@@ -232,6 +232,33 @@ describe('GET /api/auth/discord/start', () => {
     expect(raw).toContain(location.searchParams.get('code_challenge')!);
   });
 
+  // L'ENCODAGE SE LIT SUR LA CHAÎNE BRUTE, JAMAIS À TRAVERS `searchParams.get`,
+  // QUI DÉCODE. Un opérande décodé ne peut pas témoigner d'un encodage : les
+  // deux tests ci-dessus, pourtant exacts, restent verts quand
+  // `URLSearchParams` cède la place à une concaténation qui laisse l'URI de
+  // retour en clair — mesuré, exit 0, 220/220. Seule la chaîne brute le voit.
+  it("encode l'URI de retour dans la chaîne brute : redirect_uri=http%3A%2F%2F, jamais http://", async () => {
+    const b = await bed();
+
+    const response = await b.app.inject({ method: 'GET', url: '/api/auth/discord/start' });
+    const raw = response.headers.location!;
+
+    // L'URI du banc, pour-cent-encodée À LA MAIN et écrite en toutes lettres :
+    // `encodeURIComponent` n'est pas appelé ici, il se comparerait à lui-même.
+    expect(raw).toContain(
+      'redirect_uri=http%3A%2F%2Flocalhost%3A8787%2Fapi%2Fauth%2Fdiscord%2Fcallback',
+    );
+    // L'AUTRE SENS, sans lequel la ligne du dessus passerait aussi sur une
+    // chaîne qui porterait les deux graphies : la forme non encodée est
+    // absente.
+    expect(raw).not.toContain('redirect_uri=http://');
+    // Et ce qui est encodé reste bien l'URI du banc une fois décodé : sans
+    // cette ligne, un encodage qui abîmerait la valeur passerait aussi.
+    expect(new URL(raw).searchParams.get('redirect_uri')).toBe(
+      'http://localhost:8787/api/auth/discord/callback',
+    );
+  });
+
   it('purge les états expirés, et seulement ceux-là', async () => {
     const b = await bed();
     // Two rows, so "the purge emptied the table" cannot pass for "the purge

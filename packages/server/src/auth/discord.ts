@@ -115,6 +115,14 @@ export class DiscordCallError extends Error {
  * challenge are base64url, which contains `-` and `_` and no `+` or `/`, but
  * the redirect URI is a full URL and MUST be percent-encoded or Discord
  * rejects the request with an error a developer then spends an hour on.
+ *
+ * Held by `tests/http/oauth.test.ts`, « encode l'URI de retour dans la chaîne
+ * brute : redirect_uri=http%3A%2F%2F, jamais http:// », which asserts on the
+ * RAW `Location` header. No test that reads the query through
+ * `searchParams.get` can hold this sentence: that accessor DECODES, so both
+ * spellings read back identically and a decoded operand cannot witness an
+ * encoding. Measured before the test existed — the concatenation left
+ * `redirect_uri=http://…` on the wire and 220/220 stayed green.
  */
 export function authorizeUrl(
   env: Env,

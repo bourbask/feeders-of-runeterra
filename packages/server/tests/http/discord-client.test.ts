@@ -166,6 +166,15 @@ describe('createDiscordClient — l’échange du code', () => {
     expect(wire.urls).toEqual([TOKEN_URL]);
     expect(wire.inits[0]?.method).toBe('POST');
     expect(headersOf(wire.inits[0])['content-type']).toBe('application/x-www-form-urlencoded');
+    // …ET LE CORPS EST VRAIMENT ENCODÉ AINSI, lu sur la CHAÎNE BRUTE. `bodyOf`
+    // décode, exactement comme `searchParams.get` : il ne peut pas témoigner
+    // de l'encodage que l'en-tête ci-dessus annonce, et une concaténation qui
+    // poserait `redirect_uri=https://exemple.test/…` lui serait invisible.
+    // Écrit en toutes lettres : `encodeURIComponent` n'est pas appelé ici.
+    expect(wire.inits[0]?.body).toContain(
+      'redirect_uri=https%3A%2F%2Fexemple.test%2Fapi%2Fauth%2Fdiscord%2Fcallback',
+    );
+    expect(wire.inits[0]?.body).not.toContain('redirect_uri=https://');
   });
 
   it('porte le secret client, le grant_type et LE vérificateur reçu en entrée', async () => {

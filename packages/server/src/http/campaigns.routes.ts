@@ -29,7 +29,11 @@
  * Browsed by `seq`, never by `deliverySeq` (ADR 0010): the cursor of a socket
  * is not the cursor of the journal, and `@for/contracts` says so at the top of
  * `http/tables.ts`. Held by « pagine sur seq, et rend nextSinceSeq null une
- * fois la tête atteinte ».
+ * fois la tête atteinte », WHOSE FIXTURE PUTS A HOLE IN THIS PLAYER'S STREAM
+ * ON PURPOSE: the two numbers only differ once a line the player cannot see
+ * sits between two lines they can. On a stream with no hole they coincide, and
+ * the test would stay green on a route paginating by delivery rank — measured
+ * before the hole existed.
  */
 
 import {
