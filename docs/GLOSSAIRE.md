@@ -107,7 +107,7 @@ Client to server, server to client. Des **préfixes de nom de message**, pas des
 { "v": 1, "t": "c2s.intent", "id": "<uuid>", "p": { "intent": { … } } }
 
 // serveur → client
-{ "v": 1, "t": "s2c.event", "id": "<uuid>", "ts": 1758…, "seq": 412, "p": { … } }
+{ "v": 1, "t": "s2c.event", "id": "<uuid>", "ts": 1758…, "seq": 412, "deliverySeq": 37, "p": { … } }
 ```
 
 | Champ | Contenu |
@@ -116,7 +116,8 @@ Client to server, server to client. Des **préfixes de nom de message**, pas des
 | `v` | version du protocole. Si elle ne correspond pas, la connexion se ferme. |
 | `id` | l'identifiant du message, un UUID. Le serveur s'en sert pour ne pas rejouer deux fois la même action si le message revient. |
 | `p` | la charge utile. Son contenu dépend de `t`. |
-| `seq` | serveur → client seulement. Un numéro qui ne recule jamais. La seule horloge logique du système. |
+| `seq` | serveur → client seulement. Le numéro de l'événement dans le journal de la campagne. Il ne recule jamais, mais il n'est **pas** l'horloge unique du système : depuis l'ADR 0010, `deliverySeq` en est la seconde. |
+| `deliverySeq` | serveur → client seulement. Le **numéro de livraison** : le compte des messages envoyés à **ce** joueur-là, sans trou. C'est lui, et lui seul, qui permet de voir qu'un message a été perdu, et c'est lui que `c2s.resume` porte. ADR 0010. |
 
 Huit messages du client vers le serveur. **Un seul modifie quelque chose** : `c2s.intent`. Les
 autres ouvrent la session, rattrapent ce qui a été manqué, ou demandent une lecture.

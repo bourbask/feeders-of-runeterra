@@ -1040,7 +1040,9 @@ l'affichage et se fait écraser par chaque instantané.
 **Livrables**
 - `index.html`, `vite.config.ts`, `src/{main.tsx,App.tsx,env.ts}`,
   `src/api/{http,queries,error-messages}.ts`, `src/ws/{socket,store}.ts` (reconnexion
-  exponentielle, reprise par `lastSeq`, `safeParse` sur chaque trame),
+  exponentielle, reprise par `deliverySeq`, `safeParse` sur chaque trame),
+  *(ADR 0010 décision 1 : la reprise porte `sinceDeliverySeq`, le numéro de livraison dense
+  par joueur. « Reprise par `lastSeq` » est caduc — `sinceSeq` n'existe plus sur la socket.)*
   `src/routes/{Login,CampaignList,TableRoom,CharacterPicker}.tsx`,
   `src/features/table/**` (journal, présence, coquilles vides), `src/components/ui/**`,
   `src/styles/**`.
@@ -1063,7 +1065,17 @@ l'affichage et se fait écraser par chaque instantané.
 - Un test envoie au store une trame `s2c.event` malformée : aucune exception, et le store
   demande une resynchronisation.
 - Un test vérifie qu'un `s2c.snapshot` écrase intégralement l'état local, et qu'un trou de
-  `seq` déclenche un `c2s.resume`.
+  `deliverySeq` déclenche un `c2s.resume`.
+  *(ADR 0010 décision 1 : depuis l'ADR 0008 la diffusion est adressée, donc un trou de `seq` est
+  **légitime** chez un joueur qui n'était pas destinataire. Le surveiller ferait redemander sans
+  fin des événements auxquels il n'a pas droit. Le critère se mesure dans les deux sens : un trou
+  de `deliverySeq` déclenche une reprise, un trou de `seq` seul n'en déclenche aucune.)*
+- Un test livre les numéros de livraison 3 puis 1 puis 2 et attend `[1, 2, 3]` dans les lignes du
+  journal : le fil se lit dans l'ordre des livraisons, pas dans l'ordre d'arrivée. Le testeur
+  retire le tri de `applyEvent` : le test sort en code non nul.
+- Un test vérifie qu'un `s2c.events_batch` dont la **première entrée** saute le curseur déclenche
+  un `c2s.resume`, qu'un lot qui prend la suite du curseur n'en déclenche aucun, et que le même
+  lot à trou reçu deux fois n'en redemande qu'un seul.
 - Un test du store applique un `system.reverted` portant `targetSeqs: [412, 413, 414]` : les
   trois lignes sont toujours présentes dans le journal affiché, **marquées annulées**, avec la
   cause lisible. Le testeur remplace le marquage par une suppression : le test sort en code non
@@ -1925,13 +1937,37 @@ condition que chaque correction soit signalée dans le rapport final.
   `docker compose -f infra/docker-compose.yml config` sort en 0.
 - `bash scripts/canary-regle.sh` sort en 0 et son rapport nomme les trois suites rouges.
 - `grep -c 'continue-on-error' .github/workflows/ci.yml` affiche `0`.
+
+**Trois garde-fous du socle, mesurés inertes pendant la recette de M0-19** (antérieurs à elle,
+sans propriétaire — ils arrivent ici pour ne pas être redécouverts) :
+- La règle **nommée** `client-ne-voit-que-les-contrats-et-le-moteur` de
+  `.dependency-cruiser.cjs` **tire**. Mesuré : `import '@for/server'` posé en tête de
+  `packages/client/src/routes/Login.tsx` sort bien en **1**, mais sous
+  `pas-de-dependance-orpheline` — `grep -c "client-ne-voit-que"` sur la sortie affiche `0`. La
+  frontière tient ; la règle qui prétend la tenir, non. Soit elle se mesure — un paquet interdit
+  **déclaré en dépendance** du client, donc résolu, la fait sortir sous **son** nom — soit elle
+  disparaît au profit de celle qui mord. Une règle nommée qui ne peut pas rougir n'est pas un
+  garde-fou.
+- L'exclusion de `.dependency-cruiser.cjs` couvre `.tsx` comme `.ts`. Mesuré dans les deux sens,
+  aujourd'hui asymétrique : `import '@for/db'` en tête de
+  `packages/client/src/features/table/Journal.test.tsx` ⇒ `pnpm depcruise` sort en **1** ; le
+  même import en tête de `packages/client/src/ws/journal.test.ts` ⇒ **0**. `exclude: { path:
+  '(coverage|\\.test\\.ts$)' }` ne voit pas `.tsx`. **Aligner dans le sens strict** : les deux
+  extensions sortent en 1, et un import licite depuis un fichier de test reste en 0.
+- La configuration de couverture **racine** inclut les `.tsx`. Mesuré : `pnpm test:coverage`
+  sort en **0** à 98,5 % et `grep -cE "\.tsx +\|"` sur son rapport affiche **0** — aucun
+  composant du premier paquet en `.tsx` n'entre dans le seuil global de 70 %. `vitest.config.ts`
+  racine s'arrête à `include: ['packages/*/src/**/*.ts']`. Étendre l'`include` **et** l'`exclude`
+  (`**/*.test.ts` ne couvre pas `**/*.test.tsx`), puis vérifier qu'une ligne `.tsx` apparaît au
+  rapport et qu'un composant non testé fait descendre le chiffre.
 - La CI est verte sur une PR de démonstration, et le workflow de déploiement se déclenche sur
   `main` (exécution enregistrée dans le runbook).
 - La connexion Discord fonctionne de bout en bout en local, avec la trace consignée dans
   `docs/runbook/verification-m0.md`.
 
 **Fichiers touchés** : `scripts/smoke-m0.sh`, `scripts/canary-regle.sh`,
-`docs/runbook/verification-m0.md`, `README.md`, `.github/workflows/ci.yml`
+`docs/runbook/verification-m0.md`, `README.md`, `.github/workflows/ci.yml`,
+`.dependency-cruiser.cjs`, `vitest.config.ts`
 
 ---
 

@@ -2,7 +2,7 @@
  * The WebSocket store: a MIRROR of what the server said, never an authority
  * (invariant 3, 01-architecture.md section 2.9).
  *
- * FOUR PROPERTIES THIS FILE EXISTS TO HOLD, each one tested by violating it:
+ * FIVE PROPERTIES THIS FILE EXISTS TO HOLD, each one tested by violating it:
  *
  *   1. EVERY FRAME IS `safeParse`D BEFORE IT IS LOOKED AT. A malformed frame
  *      raises nothing, changes no state and asks the server to repeat itself.
@@ -20,6 +20,10 @@
  *      `revocations` is a map `seq -> RevokedMark`, applied by `journalLines()`
  *      at read time, so a `system.reverted` that arrives BEFORE the line it
  *      names still marks it when it comes. Nothing is ever spliced out.
+ *   5. THE FEED READS IN `deliverySeq` ORDER, WHATEVER THE ARRIVAL ORDER. A
+ *      catch-up batch can land after a live event that is already ahead of it,
+ *      so insertion order is NOT reading order. `store.test.ts` delivers 3, 1,
+ *      2 and expects [1, 2, 3]: drop the sort in `applyEvent` and it goes red.
  *
  * THE STORE NEVER RECOMPOSES A PROOF. `proofs` holds what `s2c.turn_proof`
  * delivered, verbatim. There is no code path from an event to a proof entry,
@@ -181,6 +185,8 @@ export function createTableStore(deps: TableStoreDeps): StoreApi<TableState> {
       set((state) => {
         if (state.lines.some((line) => line.deliverySeq === deliverySeq)) return {};
 
+        // SORTED, NOT APPENDED. Arrival order is not reading order: a
+        // catch-up batch lands after live events that are already ahead of it.
         const lines = [...state.lines, lineOfEvent(event, deliverySeq)].sort(
           (a, b) => a.deliverySeq - b.deliverySeq,
         );
@@ -240,11 +246,24 @@ export function createTableStore(deps: TableStoreDeps): StoreApi<TableState> {
           return;
         }
 
-        case 's2c.events_batch':
+        case 's2c.events_batch': {
+          // THE HOLE IS CHECKED ON THE BATCH TOO, on its FIRST entry. A batch
+          // is by construction the answer to a `c2s.resume`
+          // (01-architecture.md section 6), but an answer that starts PAST the
+          // cursor means the deliveries in between are gone, and saying
+          // nothing would leave a hole no one ever notices. Asking once is
+          // enough and cannot live-lock: the entries are applied right after,
+          // so the cursor has moved by the time the server repeats itself —
+          // `store.test.ts` measures that second batch asks for nothing.
+          const first = frame.p.events[0];
+          if (first !== undefined && first.deliverySeq > get().lastDeliverySeq + 1) {
+            requestResume();
+          }
           for (const entry of frame.p.events) {
             applyEvent(entry.seq, entry.deliverySeq, entry.event);
           }
           return;
+        }
 
         case 's2c.presence':
           set({ presence: frame.p.members });
