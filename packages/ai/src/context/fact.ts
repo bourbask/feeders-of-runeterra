@@ -6,13 +6,21 @@
  * Everything rendered here is ALREADY TRUE. The roll happened, the outcome was
  * decided, the gauges moved, the price was drawn and applied, the journal was
  * written. The block states it in the past tense on purpose: a conditional
- * would invite the model to decide, and deciding is invariant 1.
+ * would invite the model to decide, and deciding is invariant 1. That the
+ * block is well formed with or without a roll, a price and a presage is held
+ * by tests/context-budget.test.ts « un <fait> sans jet, sans prix et sans
+ * présage reste bien formé » ; the past tense itself is prompt text, and no
+ * test can hold it.
  *
  * ── WHY THE NUMBERS ARE SPELLED OUT ─────────────────────────────────────────
  * Section 4.5, point 1: digits in the context are digits a model can copy, and
- * the post-filter forbids every numeric character in the prose. Spelling them
- * lowers the odds at the source. It is a mitigation, not a guarantee — what
- * guarantees it is `no_digits` in `src/assertions/`.
+ * the post-filter forbids every numeric character in the prose. Spelling
+ * them lowers the odds at the source — held by tests/context-budget.test.ts
+ * « les chiffres du <fait> sont en toutes lettres » and « spellNumber rend le
+ * français, et rend les chiffres au-delà de sa portée ». It is a mitigation,
+ * not a guarantee: what guarantees the PROSE carries none is `no_digits`,
+ * held by tests/assertions.test.ts « no_digits tombe sur un seul chiffre et
+ * cite sa position ».
  *
  * ── THE FRENCH THAT LIVES HERE, AND THE FRENCH THAT DOES NOT ────────────────
  * The block SKELETON — « Mouvement : », « Issue : », the sentence that
@@ -20,8 +28,10 @@
  * package. Everything campaign-specific arrives as data: the move's name, the
  * outcome's label and the already-applied consequences come from the content
  * bundle through `FactVocabulary`, and the price and presage texts are copied
- * from the brief WITHOUT EDIT, because the engine copied them from the content
- * table without edit (ADR 0006).
+ * from the brief WITHOUT EDIT, because the engine copied them from the
+ * content table without edit (ADR 0006). Held by
+ * tests/context-budget.test.ts « et le prix imposé est recopié sans
+ * retouche ».
  */
 
 import type { NarrationBriefDto } from '@for/contracts';

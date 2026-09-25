@@ -6,13 +6,19 @@
  * `presents`, server-side and silently. This assertion turns that silence into
  * a visible failure, in eval AND in the post-filter. Its failure never
  * invalidates the prose (section 8.6): the entry is already dropped, the
- * assertion only makes the incident countable.
+ * assertion only makes the incident countable. Held by
+ * tests/assertions.test.ts « scene_block_consistent refuse un présent qui
+ * figure dans les partis » and « et un bloc absent ne déclenche rien » ; the
+ * silence it is making visible is tests/scene-merge.test.ts « S5 : un parti
+ * que le bloc remet en scène est ignoré ».
  *
  * ── WHY `no_absent_reappearance` IS HARD DESPITE BEING A HEURISTIC ──────────
  * Its marker list runs in the permissive direction: it ALLOWS what we want to
  * allow — the empty shelter, the blood, the trace — and only fails on a bare
  * mention. And it is exactly the bug observed in a real session, three
- * exchanges in.
+ * exchanges in. Held in both directions by tests/assertions.test.ts
+ * « no_absent_reappearance refuse la mention nue d'un absent » and « et
+ * autorise ce qu'il a laissé derrière lui ».
  */
 
 import { ABSENCE_MARKERS } from './lexicons.js';

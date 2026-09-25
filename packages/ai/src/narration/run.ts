@@ -7,7 +7,9 @@
  * iterations at most, then `toolPolicy: 'none'`. An adapter that looped on its
  * own would put the model's proposals out of reach of the server's validation
  * — the whole point of invariant 1 is that nothing the model asks for becomes
- * true without the server saying so.
+ * true without the server saying so. Held by tests/degradation.test.ts « un
+ * appel valide est exécuté, son résultat renvoyé, puis la prose suit » and
+ * « et au-delà de trois itérations, la politique passe à none ».
  *
  * ── PROSE-ONLY, AND WHAT IT CHANGES HERE ────────────────────────────────────
  * ADR 0011: no tool definition is sent, on any turn. So the loop below is not
@@ -17,13 +19,19 @@
  * `tool_call_dropped` is logged, and the request is replayed with
  * `toolPolicy: 'none'` to get the prose. Never repaired into a plausible
  * value — repairing, here, would be deciding in the place of the model that
- * decides in the place of the engine.
+ * decides in the place of the engine. Held by tests/degradation.test.ts « un
+ * tool_call dont les arguments ne valident pas est abandonné, jamais réparé »,
+ * whose entry request carries the twelve definitions and `toolPolicy: 'auto'`
+ * so that the replay is read on what the CODE decided, and « et un appel non
+ * sollicité, en mode prose seule, est traité pareil ».
  *
  * ── AND WHAT IT NEVER DOES ──────────────────────────────────────────────────
  * It produces text, usage counters and, at most, validated tool calls. It
- * never produces an `EngineEffect`, a `character.*` event or a `roll.*` event:
- * there is no code path here that could, and `tests/degradation.test.ts`
- * replays all sixteen capability combinations to say so.
+ * never produces an `EngineEffect`, a `character.*` event or a `roll.*`
+ * event: there is no code path here that could, and tests/degradation.test.ts
+ * « et aucune ne fait sortir un EngineEffect, un character.* ni un roll.* »
+ * replays all sixteen capability combinations and searches the bytes rather
+ * than trusting this paragraph.
  */
 
 import { TOOL_INPUT_SCHEMAS, type ToolName } from '@for/contracts';

@@ -4,19 +4,25 @@
  * The SAME functions that grade the eval corpus run here, before
  * `s2c.narration_done` is emitted. That sharing is the reason
  * `src/assertions/` exists: one rule, written once, serving as a test and as a
- * guard. The contrepartie is assumed and written down — hardening an assertion
- * for CI hardens this filter in the same commit, and a stricter filter means
- * more engine fallbacks players actually see.
+ * guard. The contrepartie is assumed and written down — hardening an
+ * assertion for CI hardens this filter in the same commit, and a stricter
+ * filter means more engine fallbacks players actually see. That only the HARD
+ * ones are consumed here is held by tests/degradation.test.ts « ne consomme
+ * que les assertions dures, pas les souples » ; the retry-then-fallback
+ * ladder by « refuse, relance une fois, puis bascule sur le repli moteur ».
  *
  * ── IT RUNS ON THE PROSE, NOT ON THE ANSWER ─────────────────────────────────
- * Section 8.6: the filter reads the text BEFORE `<scene_apres>`.
- * `scene_block_consistent` is the single exception — it is about the block,
- * and its failure never invalidates the prose, because S5 has already ignored
- * the offending entry. The assertion only makes the incident visible.
+ * Section 8.6: the filter reads the text BEFORE `<scene_apres>` — held by
+ * tests/outputs.test.ts « sépare la prose du bloc, et ne diffuse jamais le
+ * bloc ». `scene_block_consistent` is the single exception — it is about the
+ * block, and its failure never invalidates the prose, because S5 has already
+ * ignored the offending entry. The assertion only makes the incident
+ * visible.
  *
  * ── AND A MISSING BLOCK TRIGGERS NOTHING ────────────────────────────────────
  * No post-filter, no retry, no fallback. Section 2.3 again: this mechanism
- * cannot be allowed to degrade availability.
+ * cannot be allowed to degrade availability. Held by tests/assertions.test.ts
+ * « et un bloc absent ne déclenche rien ».
  */
 
 import { HARD_ASSERTIONS } from '../assertions/index.js';
@@ -31,7 +37,10 @@ export interface PostfilterVerdict {
   readonly corrections: string;
   /**
    * True when a reserved champion leaked. Section 8.6: ALWAYS logged as an
-   * alert, even when the retry then succeeds.
+   * alert, even when the retry then succeeds — held by
+   * tests/degradation.test.ts « signale toujours une fuite de champion
+   * réservé, même rattrapable ». The LOGGING itself belongs to the caller;
+   * this flag is what makes it possible.
    */
   readonly reservedChampionLeak: boolean;
 }

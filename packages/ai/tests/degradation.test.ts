@@ -235,13 +235,22 @@ describe('la boucle d’outils, au-dessus du port', () => {
    * `tool_call_dropped`, replay with `toolPolicy: 'none'` — and NEVER repaired
    * into a plausible value. Repairing here would be deciding in the place of
    * the model that decides in the place of the engine.
+   *
+   * ── THE ENTRY REQUEST CARRIES TOOLS, AND IT HAS TO ────────────────────────
+   * The « replay in `toolPolicy: 'none'` » half was asserted here on a request
+   * the test itself had built as `{ tools: [], toolPolicy: 'none' }`: both
+   * operands went back to the setup, so the assertion read its own input and
+   * neutralising `current = { ...current, tools: [], toolPolicy: 'none' }`
+   * left 340 tests green. The entry request now carries the twelve
+   * definitions and `toolPolicy: 'auto'`, so the second line of the array
+   * below is what the CODE decided, not what the fixture said.
    */
   it('un tool_call dont les arguments ne valident pas est abandonné, jamais réparé', async () => {
     const logged: { code: string; detail: Record<string, unknown> }[] = [];
     const executed: NarratorToolUseBlock[] = [];
     const port = fakePort(capable, [{ text: '', calls: [badCall] }, { text: CONFORMING }]);
     const run = await runNarration(
-      { ...request(), tools: [], toolPolicy: 'none' },
+      { ...request(), tools: TOOL_DEFINITIONS, toolPolicy: 'auto' },
       {
         narrator: port,
         log: (code, detail) => logged.push({ code, detail }),
@@ -254,7 +263,14 @@ describe('la boucle d’outils, au-dessus du port', () => {
     expect(executed).toStrictEqual([]);
     expect(run.droppedCalls).toStrictEqual([badCall]);
     expect(logged.map((entry) => entry.code)).toStrictEqual(['tool_call_dropped']);
-    expect(port.seen.at(-1)?.toolPolicy).toBe('none');
+    // First line: the fixture. Second line: the replay, and it is the only
+    // one under test — `auto` went in, `none` came back out.
+    expect(
+      port.seen.map((sent) => ({ tools: sent.tools.length, policy: sent.toolPolicy })),
+    ).toStrictEqual([
+      { tools: TOOL_DEFINITIONS.length, policy: 'auto' },
+      { tools: 0, policy: 'none' },
+    ]);
     expect(run.text).toBe(CONFORMING);
   });
 

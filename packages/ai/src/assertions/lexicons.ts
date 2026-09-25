@@ -3,13 +3,18 @@
  *
  * They are CLOSED, and that is the property that makes the hard assertions
  * usable as a production post-filter: a closed list has no morphological
- * ambiguity, and the `<corrections>` retry can quote the exact offending word.
+ * ambiguity, and the `<corrections>` retry can quote the exact offending
+ * word. Held by tests/assertions.test.ts « chaque lexique porte ce que la
+ * spec écrit, et rien de plus » and, in the other direction — emptying one
+ * has to make something fall — « vider la liste fait tomber la recherche ».
  *
  * ── ONE LIST IS SEEN TWICE ──────────────────────────────────────────────────
  * `BANNED_STYLE_LEXICON` is also what the system prompt's blacklist names. A
- * term the filter rejects and the prompt never mentions is a refusal the model
- * was never warned about, and one refusal is one engine fallback a player
- * sees. `tests/prompt-size.test.ts` compares the two and names the known gap.
+ * term the filter rejects and the prompt never mentions is a refusal the
+ * model was never warned about, and one refusal is one engine fallback a
+ * player sees. tests/prompt-size.test.ts « nomme les termes de
+ * banned_style_lexicon, aux trois près qui manquent » compares the two and
+ * names the known gap.
  */
 
 /**

@@ -8,18 +8,37 @@
  * is a `superRefine` with no JSON Schema translation at all. So a sheet that a
  * provider "validated" has been checked against almost nothing, and V12 —
  * `ChampionSchema.safeParse` on the COMPLETED object — is the gate no sheet
- * gets past.
+ * gets past. THE FINAL GATE IS THE ONLY ONE THAT SEES THE SIX FIELDS THE
+ * SERVER WRITES ITSELF, and it is held by tests/outputs.test.ts « V12 : la
+ * porte FINALE refuse la fiche complétée, et son refus n'est pas celui de
+ * l'entrée » — a case that reaches it, because a case refused by the entry
+ * parse never does.
  *
  * ── THE REPAIRS ARE DETERMINISTIC, WHICH IS THE POINT ───────────────────────
  * V3 in particular: sort the proposed values descending, break ties by the
  * fixed order `vif, coeur, fer, ombre, esprit`, then reassign the canonical
  * `3,2,2,1,1` along that ranking. Two runs on the same output produce the same
- * sheet, so a forge can be replayed and compared.
+ * sheet, so a forge can be replayed and compared — held by
+ * tests/outputs.test.ts « V3 : la réparation est déterministe, et laisse une
+ * répartition légale ».
  *
- * ── A FAILED FORGE NEVER BLOCKS A GAME ──────────────────────────────────────
- * Two retries at most, then the sheet is persisted as `draft` — kept for
- * analysis, NOT playable — and the player is offered one of the twenty
- * handwritten champions.
+ * ── TWO REPAIRS RUN ABOVE THE SCHEMA, AND THEY HAVE TO ──────────────────────
+ * `ForgeOutputSchema` is derived from `ChampionSchema.shape`, so it carries
+ * the spread refinement AND `pitch.max(280)` / `description.max(2000)`. A
+ * value the entry parse refuses can never reach the code below it: a repair
+ * written there is dead code wearing the name of a criterion. V3 and V4
+ * therefore both run on the RAW answer. Held by tests/outputs.test.ts « V3 :
+ * et une fiche mal répartie est réparée de bout en bout » and « V4 : un pitch
+ * trop long est tronqué par la validation, jamais renvoyé en relance ».
+ *
+ * ── WHAT THIS FILE DOES WHEN A FORGE FAILS ──────────────────────────────────
+ * It returns a finding. It never throws, and it never returns a sheet it has
+ * not revalidated — held by tests/outputs.test.ts « readForgeAnswer extrait le
+ * JSON d'une réponse bavarde, et ne lève jamais » and by the V12 test above.
+ * The « two retries then `status: draft`, and the game is never blocked » half
+ * of section 9.5 is a BUDGET SPENT BY `@for/server`, which M0 has not
+ * delivered yet: `FORGE_RETRIES_MAX` is the number, and nothing here counts
+ * it.
  */
 
 import { ChampionSchema, ForgeOutputSchema, type ForgeOutput } from '@for/contracts';
@@ -38,8 +57,23 @@ export interface ForgeFinding {
   readonly detail: string;
 }
 
-/** Section 9.5: two retries, then `status: 'draft'`. */
+/** Section 9.5: two retries, then `status: 'draft'`. Counted by the server. */
 export const FORGE_RETRIES_MAX = 2;
+
+/**
+ * V4's bounds — section 9.5's, and `ChampionSchema`'s.
+ *
+ * Written here because `@for/contracts` does not export them as names, and the
+ * duplication is CHECKED rather than trusted: tests/outputs.test.ts « V4 : les
+ * bornes de la validation sont celles du schéma » feeds `ForgeOutputSchema` a
+ * field of exactly this length and one character more, and demands accepted
+ * then refused. Lower the bound in the schema alone and that test reddens —
+ * without it, V4 would truncate to a length the parse below still refuses, and
+ * the criterion would go back to being dead code.
+ */
+export const FORGE_TEXT_BOUNDS = { description: 2000, pitch: 280 } as const;
+
+export type ForgeTextField = keyof typeof FORGE_TEXT_BOUNDS;
 
 /** The tie-breaking order of V3. Fixed, and it is what makes the repair replayable. */
 export const ATTRIBUTE_ORDER = ['vif', 'coeur', 'fer', 'ombre', 'esprit'] as const;
@@ -214,6 +248,31 @@ export function validateForge(input: ForgeValidationInput): ForgeValidation {
     raw = { ...(raw as Record<string, unknown>), attributes: repaired };
   }
 
+  /**
+   * V4 RUNS BEFORE THE SCHEMA, FOR THE SAME REASON V3 DOES.
+   *
+   * `ForgeOutputSchema` keeps `pitch.max(280)` and `description.max(2000)`
+   * from `ChampionSchema`, so a field over its bound is REFUSED by the parse
+   * below. Truncating after it would be unreachable code, and section 9.5's
+   * « réparation : troncature à la dernière frontière de mot » would in fact
+   * be a `retry` — one of the two a forge is allowed, spent on the mistake a
+   * small model makes most often. ADR 0011: every retry eats the day's free
+   * quota, and after the second the sheet is `draft`, unplayable.
+   *
+   * Measured before the fix: a pitch of 498 characters returned
+   * `action: 'retry'`, findings `["V12:retry"]`, and not one V4.
+   */
+  const truncated = new Set<ForgeTextField>();
+  for (const field of Object.keys(FORGE_TEXT_BOUNDS) as ForgeTextField[]) {
+    if (typeof raw !== 'object' || raw === null) break;
+    const value = (raw as Record<string, unknown>)[field];
+    const bound = FORGE_TEXT_BOUNDS[field];
+    if (typeof value !== 'string' || value.length <= bound) continue;
+    findings.push({ check: 'V4', action: 'repaired', detail: `${field} tronqué` });
+    truncated.add(field);
+    raw = { ...(raw as Record<string, unknown>), [field]: truncateOnWord(value, bound) };
+  }
+
   const parsed = ForgeOutputSchema.safeParse(raw);
   if (!parsed.success) {
     return {
@@ -222,7 +281,7 @@ export function validateForge(input: ForgeValidationInput): ForgeValidation {
         {
           check: 'V12',
           action: 'retry',
-          detail: `sortie hors schéma : ${parsed.error.issues
+          detail: `sortie du modèle hors ForgeOutputSchema : ${parsed.error.issues
             .map((issue) => issue.path.join('.'))
             .join(', ')}`,
         },
@@ -247,25 +306,21 @@ export function validateForge(input: ForgeValidationInput): ForgeValidation {
   // V3 already ran, above the schema. What the parse returned is canonical.
   const attributes: AttributeSpread = draft.attributes;
 
-  // V4 and V5: bounds and forbidden vocabulary, on the long text fields.
+  // V5, then V4's floor. The truncation itself already ran, above the schema.
   /**
-   * V4 then V5 on one text field.
-   *
    * The « under forty per cent of the bound » floor is checked ONLY WHEN A
    * REPAIR HAPPENED. Section 9.5 says « si le champ TOMBE sous 40 % » — it is
    * about what a repair left behind, not about a field the model wrote short
    * on purpose. Checked unconditionally, a legitimate one-line `pitch` of
    * thirty-six characters asks for a retry, and every good sheet is forged
    * three times. Measured on the fixture of this file.
+   *
+   * `truncated` carries V4's verdict across the parse: the truncation happened
+   * on the raw answer, the floor is measured on what came back out of it.
    */
-  const repairText = (label: string, text: string, bound: number): string => {
+  const repairText = (label: ForgeTextField, text: string, bound: number): string => {
     let out = text;
-    let repaired = false;
-    if (out.length > bound) {
-      out = truncateOnWord(out, bound);
-      repaired = true;
-      findings.push({ check: 'V4', action: 'repaired', detail: `${label} tronqué` });
-    }
+    let repaired = truncated.has(label);
     const cleaned = stripOffendingSentences(out);
     if (cleaned.removed > 0) {
       findings.push({ check: 'V5', action: 'repaired', detail: `${label} : phrase retirée` });
@@ -282,8 +337,8 @@ export function validateForge(input: ForgeValidationInput): ForgeValidation {
     return out;
   };
 
-  const description = repairText('description', draft.description, 2000);
-  const pitch = repairText('pitch', draft.pitch, 280);
+  const description = repairText('description', draft.description, FORGE_TEXT_BOUNDS.description);
+  const pitch = repairText('pitch', draft.pitch, FORGE_TEXT_BOUNDS.pitch);
 
   // V6: exactly three assets, unique after normalisation.
   const assetNames = draft.startingAssets;
@@ -299,7 +354,26 @@ export function validateForge(input: ForgeValidationInput): ForgeValidation {
     });
   }
 
-  // V7: no other champion of Runeterra named in the texts.
+  /**
+   * V7 — AND A DEPARTURE FROM SECTION 9.5, REPORTED RATHER THAN HIDDEN.
+   *
+   * The spec asks for « remplacement par une périphrase générique si le nom
+   * est en fin de phrase nominale, sinon `retry` ». What is delivered is the
+   * `sinon` branch alone: ALWAYS `retry`, never the periphrasis.
+   *
+   * Why the conservative half and not both: « fin de phrase nominale » is a
+   * syntactic judgement, and the only mechanical approximations available here
+   * (a capitalised token before a full stop, a determiner-less noun group)
+   * misfire on French often enough that the repair would silently rewrite a
+   * sheet the model wrote correctly. A wrong `retry` costs one of the two
+   * retries; a wrong periphrasis ships a sheet nobody reviewed. The cost is
+   * real and is named: a single mention of `Ashe` in a pitch spends a retry
+   * that section 9.5 meant to spend on nothing.
+   *
+   * What IS held, in this direction: tests/outputs.test.ts « V7 : un autre
+   * champion de Runeterra nommé demande une relance ». There is no test for
+   * the periphrasis, because there is no periphrasis.
+   */
   const named =
     input.championNames.length === 0
       ? []
@@ -364,12 +438,20 @@ export function validateForge(input: ForgeValidationInput): ForgeValidation {
   };
   findings.push({ check: 'V1', action: 'repaired', detail: `id imposé : ${input.requestedId}` });
 
+  /**
+   * THE FINAL GATE. Same check id as the entry parse, DIFFERENT wording, and
+   * the difference is what makes the test impossible to pass by accident: a
+   * case refused by the entry parse returns a single finding that names
+   * `ForgeOutputSchema`, and never reaches this line.
+   */
   const final = ChampionSchema.safeParse(completed);
   if (!final.success) {
     findings.push({
       check: 'V12',
       action: 'retry',
-      detail: final.error.issues.map((issue) => issue.path.join('.')).join(', '),
+      detail: `fiche complétée hors ChampionSchema : ${final.error.issues
+        .map((issue) => issue.path.join('.'))
+        .join(', ')}`,
     });
     return { action: 'retry', findings, sheet: null };
   }

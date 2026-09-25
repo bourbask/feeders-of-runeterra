@@ -8,14 +8,19 @@
  * facts sorted by `event_seq`, recent digest. Two renderings of equal data are
  * equal bytes, which is what keeps `<chronique>` — message 1 of section 4.1,
  * and the largest cacheable block after the system prompt — from moving for
- * nothing.
+ * nothing. Held by tests/outputs.test.ts « rend les mêmes octets à document
+ * égal, quel que soit l'ordre reçu ».
  *
  * ── THE SEAMS ARE PART OF THE RENDERING ─────────────────────────────────────
  * T4 drops `places` and the NPCs absent from the scene; T7 keeps only the
  * premise, the open arcs, the threads and the facts tied to the scene. So the
  * rendering does not produce one string: it produces the PARTS the truncation
  * ladder cuts along (`context/budget.ts`). A single string would force the
- * ladder to re-parse its own output.
+ * ladder to re-parse its own output. Held by tests/outputs.test.ts « sépare
+ * ce que la scène porte de ce qu'elle ne porte pas » and « et une liste vide
+ * ne rend aucune section, jamais un titre orphelin » ; that the ladder really
+ * cuts along them is tests/context-budget.test.ts « et chaque niveau retire
+ * vraiment quelque chose ».
  */
 
 import type { ChronicleDoc, SceneStateDto, StructureRequest } from '@for/contracts';

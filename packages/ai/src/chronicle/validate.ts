@@ -2,22 +2,28 @@
  * C1 → C9 — server-side validation of a regenerated chronicle (02-mj-ia.md
  * section 5.6).
  *
- * Pure: the checks take the document, the journal sequences that exist and the
- * current scene state, and return a verdict. Persistence, the ten-minute lease
- * and the retry live in `@for/server`.
+ * Pure: the checks take the document, the journal sequences that exist and
+ * the current scene state, and return a verdict. The nine of them are held
+ * one by one by tests/outputs.test.ts, « C1 : … » through « C9 : … ».
+ * Persistence, the ten-minute lease and the retry live in `@for/server`.
  *
  * ── WHAT A FAILURE COSTS, AND WHY IT IS SMALL ───────────────────────────────
  * One retry with a `<corrections>` block APPENDED TO THE USER MESSAGE — never
- * a rewrite of the system prompt, which would invalidate the cache. If that
- * fails, the PREVIOUS version stays in service and the game continues. A
- * chronicle one session out of date is an inconvenience; a corrupted one is
- * not, and that is the whole reason this file exists.
+ * a rewrite of the system prompt, which would invalidate the cache. The
+ * placement is held by tests/outputs.test.ts « la requête de compaction met
+ * les corrections dans le message utilisateur ». What this file guarantees on
+ * its own is that a failure is a verdict and never an exception — held by
+ * « readChronicleAnswer ne lève jamais, même sur du bruit ». « The previous
+ * version stays in service » is a decision `@for/server` takes with that
+ * verdict, and M0 has not delivered it yet.
  *
  * ── C9 IS THE ONE THAT CARRIES A RULE ───────────────────────────────────────
  * `<scene>` beats `<chronique>` whenever they disagree (section 4.7.4, and
  * rule « Continuité » of the system prompt). C9 is that precedence, enforced
  * server-side: a chronicle that calls an NPC alive when the scene holds them
- * dead is rejected.
+ * dead is rejected. Held in both directions by tests/outputs.test.ts « C9 :
+ * une chronique qui donne vivant un mort de la scène est refusée » and « et
+ * C9 ne dit rien quand la scène ne donne personne pour mort ».
  */
 
 import {

@@ -13,6 +13,14 @@
  *    menu (ADR 0006);
  *  - `no_time_skip` — time that costs something comes from what the characters
  *    play, never from the narration.
+ *
+ * Each of the four is held by a named test of tests/assertions.test.ts :
+ * « no_outcome_decision attrape les formulations décisives »,
+ * « no_reserved_champion attrape le nom ET l'alias », « échoue sur une
+ * narration qui esquive le prix » and « échoue sur « le lendemain matin »
+ * quand le <fait> ne porte aucun saut ». The « ALWAYS logged as an alert »
+ * half lives one level up and is held by tests/degradation.test.ts
+ * « signale toujours une fuite de champion réservé, même rattrapable ».
  */
 
 import {
@@ -36,14 +44,17 @@ import { fail, pass, type Assertion } from './types.js';
  * to `dé` and `dés`, that matches `de` and `des`, so this HARD assertion would
  * fail on every French sentence and take the production post-filter with it.
  * Those two are therefore searched accent-sensitively, and the departure is
- * reported rather than hidden — `tests/assertions.test.ts` pins both halves.
+ * reported rather than hidden — held, in both directions, by
+ * tests/assertions.test.ts « mais « dé » garde son accent, sinon « de »
+ * ferait tomber toute phrase ».
  *
  * ── AND ONE QUALIFIER CANNOT BE HELD ────────────────────────────────────────
  * The spec writes `âme (en contexte de jauge)`. « Context of gauge » is not
  * mechanically expressible, so this assertion is STRICTER than the spec on
- * that one word: any `âme` outside quotes fails. Said rather than implied, and
- * pinned by a test, because the cost is real — a legitimate `âme` in prose is
- * one engine fallback a player sees.
+ * that one word: any `âme` outside quotes fails. Said rather than implied,
+ * and held by tests/assertions.test.ts « et « âme » est refusée sans son
+ * contexte de jauge — plus strict que la spec », because the cost is real —
+ * a legitimate `âme` in prose is one engine fallback a player sees.
  */
 export const noRulesLexicon: Assertion = {
   id: 'no_rules_lexicon',

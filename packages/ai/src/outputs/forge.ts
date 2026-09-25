@@ -7,8 +7,11 @@
  *
  * PURE AND NON-THROWING, unlike `narrator/structured.ts`'s
  * `extractAndValidate`, which raises a `NarratorError` because it sits on the
- * adapter side. Here a malformed answer is a `retry` finding, because a failed
- * forge must never block a game: two retries, then `status: 'draft'`.
+ * adapter side. Here a malformed answer is a `retry` finding — held by
+ * tests/outputs.test.ts « readForgeAnswer extrait le JSON d'une réponse
+ * bavarde, et ne lève jamais », which feeds it prose, broken braces and
+ * balanced-but-invalid JSON. Spending the two retries and writing
+ * `status: 'draft'` is `@for/server`'s, not this file's.
  */
 
 import {

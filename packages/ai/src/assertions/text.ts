@@ -6,9 +6,11 @@
  * ARCHITECTURE.md risk 4: French sentence segmentation and French morphology
  * are the two known sources of FALSE failures, and a false failure on a hard
  * assertion is an engine fallback a player sees. `sentence_count` and
- * `sentence_length_cap` are both built on the function below, so it is held by
- * twenty-odd examples in `tests/assertions.test.ts` — ellipses, abbreviations
- * and quoted dialogue, which are the three shapes that break naive splitting.
+ * `sentence_length_cap` are both built on the function below, so it is held
+ * by tests/assertions.test.ts « découpe les vingt-deux exemples comme un
+ * lecteur les compte » and « ne coupe pas à l'intérieur d'une réplique » —
+ * ellipses, abbreviations and quoted dialogue, the three shapes that break
+ * naive splitting.
  */
 
 /** Section 8.4: `«` … `»` is character speech, and follows other rules. */
@@ -18,9 +20,11 @@ export const QUOTE_CLOSE = '»';
 /**
  * Lowercase, diacritics removed, spaces and hyphens unified.
  *
- * The exact preparation section 8.4 prescribes for `no_reserved_champion`, and
- * reused by every lexicon search: a blacklist that misses `Étrange` because it
- * only knows `étrange` is a blacklist that guards nothing.
+ * The exact preparation section 8.4 prescribes for `no_reserved_champion`,
+ * and reused by every lexicon search: a blacklist that misses `Étrange`
+ * because it only knows `étrange` is a blacklist that guards nothing. Held by
+ * tests/assertions.test.ts « no_reserved_champion attrape le nom ET l'alias »,
+ * whose third case is `la sorciere de glace` — unaccented and lowercase.
  */
 export function normalize(text: string): string {
   return fold(text, 'ignore');
@@ -32,7 +36,8 @@ export function normalize(text: string): string {
  * An unmatched opening quote takes everything after it: a model that opens a
  * quote and never closes it has written one long line of dialogue, and
  * treating the tail as narration would let every prose rule be bypassed by a
- * single stray `«`.
+ * single stray `«`. Held by tests/assertions.test.ts « stripQuoted retire la
+ * parole, et avale une ouverture non fermée ».
  */
 export function stripQuoted(text: string): string {
   let out = '';

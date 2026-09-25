@@ -5,11 +5,15 @@
  * the six fields the SERVER owns — `schemaVersion`, `id`, `source`,
  * `portraitUrl`, `relations` and `aliases`. The forge has no privilege: the
  * completed sheet is revalidated against the one and only `ChampionSchema`
- * before it is inserted (V12).
+ * before it is inserted (V12) — held by tests/outputs.test.ts « V12 : la
+ * porte FINALE refuse la fiche complétée, et son refus n'est pas celui de
+ * l'entrée ».
  *
  * The allowed starting-asset identifiers travel in the `<lore>` block of the
  * user message, so an identifier outside the list is a repair (V11) rather
- * than a refusal.
+ * than a refusal. Held by tests/outputs.test.ts « la requête de forge porte
+ * les atouts autorisés et ses corrections » and « V11 : un atout inconnu est
+ * remplacé par le jeu par défaut ».
  */
 
 import { ForgeOutputSchema, type ForgeOutput, type StructureRequest } from '@for/contracts';

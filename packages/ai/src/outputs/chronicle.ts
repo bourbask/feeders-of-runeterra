@@ -2,9 +2,11 @@
  * Reading a chronicle answer (02-mj-ia.md section 5.6).
  *
  * Same seam as the forge, and the same reason for not throwing: a chronicle
- * one session out of date is an inconvenience, and the game continues. The
- * previous version stays in service and `chronicle_regeneration_failed` is
- * logged by the caller.
+ * one session out of date is an inconvenience, and the game continues. NOT
+ * THROWING is what this file guarantees, and it is held by
+ * tests/outputs.test.ts « readChronicleAnswer ne lève jamais, même sur du
+ * bruit ». Keeping the previous version in service and logging
+ * `chronicle_regeneration_failed` are the caller's, in `@for/server`.
  */
 
 import {

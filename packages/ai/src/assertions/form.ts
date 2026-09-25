@@ -2,9 +2,13 @@
  * The form assertions of 02-mj-ia.md section 8.4: length, person, ending,
  * language.
  *
- * Every one of them is a pure `(output, ctx) => AssertionResult`. They never
- * read a clock, a file or an environment variable, which is what lets the same
- * function be a CI grader and a production post-filter.
+ * Every one of them is a pure `(output, ctx) => AssertionResult`. THEY NEVER
+ * READ A CLOCK, A FILE OR AN ENVIRONMENT VARIABLE, which is what lets the
+ * same function be a CI grader and a production post-filter — held by
+ * tests/no-env.test.ts « aucun fichier de src/ ne lit … » and « ni process
+ * tout court, ni une variable … lue directement ». Both names are elided on
+ * purpose: they contain the very literal the first one greps `src/` for, and
+ * spelling it here made that test red. Measured, not guessed.
  */
 
 import {

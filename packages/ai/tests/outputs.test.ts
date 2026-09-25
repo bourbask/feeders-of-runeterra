@@ -10,7 +10,7 @@
  * turn.
  */
 
-import { CHRONICLE_TOKEN_BUDGET, type ChronicleDoc } from '@for/contracts';
+import { CHRONICLE_TOKEN_BUDGET, ForgeOutputSchema, type ChronicleDoc } from '@for/contracts';
 import { describe, expect, it } from 'vitest';
 
 import { buildChronicleRequest, renderChronicleParts } from '../src/chronicle/build.js';
@@ -19,6 +19,7 @@ import { buildForgeCorrections, buildForgeRequest } from '../src/forge/build.js'
 import {
   ATTRIBUTE_CANONICAL,
   ATTRIBUTE_ORDER,
+  FORGE_TEXT_BOUNDS,
   repairAttributes,
   truncateOnWord,
   validateForge,
@@ -474,6 +475,65 @@ describe('la validation d’une fiche forgée, V1 → V12', () => {
     expect(truncateOnWord('court', 12)).toBe('court');
   });
 
+  /**
+   * ── THE TEST ABOVE EXERCISES THE HELPER, NOT THE RULE ─────────────────
+   * `ForgeOutputSchema` keeps `pitch.max(280)`, so for as long as the
+   * truncation lived BELOW the entry parse, an over-long pitch came back
+   * as `retry` and the branch was unreachable: deleting it whole left 340
+   * tests green. The three tests below go through `validateForge`, which
+   * is where section 9.5 puts the rule.
+   *
+   * The bound is written out in full letters — 280 is a criterion of
+   * section 9.5, and a criterion's number is never read from `src/` by the
+   * test that checks it (ADR 0007).
+   */
+  it('V4 : un pitch trop long est tronqué par la validation, jamais renvoyé en relance', () => {
+    const tail = 'porte ce que les autres laissent derrière eux sans se plaindre du poids. ';
+    const long = `Il ${tail.repeat(6)}`;
+    expect(long.length).toBeGreaterThan(280);
+    const result = validateForge({ ...forgeInput(), raw: sheet({ pitch: long }) });
+    expect(result.action).toBe('repaired');
+    expect(result.findings).toContainEqual({
+      check: 'V4',
+      action: 'repaired',
+      detail: 'pitch tronqué',
+    });
+    const written = (result.sheet as { pitch: string }).pitch;
+    expect(written).toBe(long.slice(0, long.lastIndexOf(' ', 280)).trimEnd());
+    expect(written.length).toBeLessThanOrEqual(280);
+    // And the cut landed on a word boundary rather than mid-word.
+    expect(long.startsWith(`${written} `)).toBe(true);
+  });
+
+  it('V4 : et une troncature qui laisse moins de 40 % de la borne demande une relance', () => {
+    // One word of fifty characters, then one very long one: the cut at the
+    // last space keeps fifty, which is under 40 % of 280 — that is 112.
+    const stunted = `${'a'.repeat(50)} ${'b'.repeat(260)}`;
+    const result = validateForge({ ...forgeInput(), raw: sheet({ pitch: stunted }) });
+    expect(result.action).toBe('retry');
+    expect(result.findings).toContainEqual({
+      check: 'V4',
+      action: 'retry',
+      detail: 'pitch trop court après réparation',
+    });
+  });
+
+  /**
+   * The bounds are written in `forge/validate.ts` AND in `ChampionSchema`,
+   * in two places. This pins them together: truncating to a length the
+   * entry parse still refuses would put V4 straight back into dead code.
+   */
+  it('V4 : les bornes de la validation sont celles du schéma', () => {
+    expect(Object.keys(FORGE_TEXT_BOUNDS).sort()).toStrictEqual(['description', 'pitch']);
+    for (const [field, bound] of Object.entries(FORGE_TEXT_BOUNDS)) {
+      expect({
+        field,
+        aLaBorne: ForgeOutputSchema.safeParse(sheet({ [field]: 'a'.repeat(bound) })).success,
+        unDePlus: ForgeOutputSchema.safeParse(sheet({ [field]: 'a'.repeat(bound + 1) })).success,
+      }).toStrictEqual({ field, aLaBorne: true, unDePlus: false });
+    }
+  });
+
   it('V5 : une phrase avec un chiffre ou un terme de règle est retirée', () => {
     const result = validateForge({
       ...forgeInput(),
@@ -546,9 +606,52 @@ describe('la validation d’une fiche forgée, V1 → V12', () => {
     expect(
       result.findings.some((finding) => finding.check === 'V12' && finding.action === 'ok'),
     ).toBe(true);
-    const broken = validateForge({ ...forgeInput(), raw: sheet({ loreHooks: [] }) });
-    expect(broken.action).toBe('retry');
-    expect(broken.sheet).toBeNull();
+    // `loreHooks: []` is refused by the ENTRY parse. It never reaches the
+    // final gate, and the wording now says which of the two spoke.
+    const entry = validateForge({ ...forgeInput(), raw: sheet({ loreHooks: [] }) });
+    expect(entry).toStrictEqual({
+      action: 'retry',
+      findings: [
+        {
+          check: 'V12',
+          action: 'retry',
+          detail: 'sortie du modèle hors ForgeOutputSchema : loreHooks',
+        },
+      ],
+      sheet: null,
+    });
+  });
+
+  /**
+   * ── THE GATE NOTHING WAS WATCHING ─────────────────────────────────────
+   * Neutralising the LAST `safeParse` left 340 tests green: the only
+   * negative case above goes through the entry parse and stops there. Yet
+   * the final gate is the only one that sees the six fields the SERVER
+   * writes itself — `id`, `source`, `relations`, `aliases`,
+   * `schemaVersion` — which the model never saw and no earlier check
+   * looks at. Without it a non-conforming sheet comes back out
+   * `repaired`, typed `Champion`, and everything downstream believes it.
+   *
+   * `requestedId` is one of those six. A slug `SlugSchema` refuses
+   * therefore reaches the final gate and nothing else, which is what the
+   * exact findings array below states.
+   */
+  it('V12 : la porte FINALE refuse la fiche complétée, et son refus n’est pas celui de l’entrée', () => {
+    const result = validateForge({
+      ...forgeInput({ requestedId: 'ID INVALIDE !!' }),
+      raw: sheet(),
+    });
+    expect(result).toStrictEqual({
+      action: 'retry',
+      findings: [
+        { check: 'V1', action: 'repaired', detail: 'id imposé : ID INVALIDE !!' },
+        { check: 'V12', action: 'retry', detail: 'fiche complétée hors ChampionSchema : id' },
+      ],
+      sheet: null,
+    });
+    // V1 is in the list: the entry parse PASSED, so the gate that spoke is
+    // the last one. A list of length one would mean the opposite.
+    expect(result.findings.at(-1)?.check).toBe('V12');
   });
 
   it('readForgeAnswer extrait le JSON d’une réponse bavarde, et ne lève jamais', () => {

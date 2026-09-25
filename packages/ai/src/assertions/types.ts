@@ -5,7 +5,9 @@
  * They are used TWICE: as eval graders, and as the production post-filter
  * before `s2c.narration_done` is emitted (section 8.6). Putting them in the
  * eval package would create a cycle `ai ↔ ai-eval`, which `dependency-cruiser`
- * refuses. CLAUDE.md states the same rule.
+ * refuses. CLAUDE.md states the same rule, and `pnpm depcruise` is what
+ * holds it: it is a command, not a unit test, and it exits non-zero on the
+ * cycle.
  *
  * ── THE CONSEQUENCE, SAID OUT LOUD ──────────────────────────────────────────
  * Hardening an assertion for CI hardens the production filter in the same
@@ -13,7 +15,10 @@
  * actually see. That is why three of the register assertions stay SOFT
  * (`adverb_budget`, `no_triads`, `no_anonymous_recurrent`): their heuristics
  * on French morphology are good without being perfect, and a blocking gate is
- * not built on that.
+ * not built on that. Held by tests/assertions.test.ts « adverb_budget,
+ * no_triads et no_anonymous_recurrent restent souples » and by
+ * tests/degradation.test.ts « ne consomme que les assertions dures, pas les
+ * souples ».
  */
 
 import type { SceneBlock } from '@for/contracts';

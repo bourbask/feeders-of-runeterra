@@ -25,13 +25,16 @@
  * ── THE ORDER IS THE CACHE ──────────────────────────────────────────────────
  * Section 4.1 and 4.2: most stable first, most volatile last, four cache
  * hints and no more. The order below is not a style choice; changing it moves
- * the cacheable prefix of every campaign at once.
+ * the cacheable prefix of every campaign at once. Held by
+ * tests/context-budget.test.ts « l'ordre des messages est celui du §4.1 ».
  *
  * ── THE FOUR UNTOUCHABLE BLOCKS ─────────────────────────────────────────────
  * `<fait>`, `<intention>`, `<scene>` and the system prompt are passed to
- * `applyTrimLadder` as `FixedContext`, which the ladder weighs and cannot cut.
- * Section 4.4 calls them intouchables par définition; here that is a type, not
- * a comment.
+ * `applyTrimLadder` as `FixedContext`, which the ladder weighs and cannot
+ * cut. Section 4.4 calls them intouchables par définition; here that is a
+ * type — and a type is checked at compile time only, so it is doubled at run
+ * time by tests/context-budget.test.ts « ne touche jamais <fait>,
+ * <intention>, <scene> ni le prompt système ».
  */
 
 import type {

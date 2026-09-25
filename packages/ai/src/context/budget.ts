@@ -7,7 +7,9 @@
  * `min(7 000, contextWindowTokens x 0,6)`. The reason is not money: the
  * project runs on FREE providers, whose ceiling is DAILY, and the fixed block
  * is multiplied by every turn. At 14 000 per turn a 200 K/day allowance gives
- * fourteen turns; a session is sixty.
+ * fourteen turns; a session is sixty. Held by tests/context-budget.test.ts
+ * « la cible est 7 000 sur une fenêtre large, et 4 915 sur 8 192 » and « le
+ * contexte assemblé tient sous 7 000 aux quatre points de mesure ».
  *
  * Two of the fixed blocks were marked "figé, mesuré en CI" and nothing
  * measured them — the tool table weighed 2 112 against 900 announced, the
@@ -17,15 +19,20 @@
  *
  * ── THE ESTIMATOR IS IMPORTED, NEVER REDECLARED ─────────────────────────────
  * `estimateTokens` lives in `prompts/estimate.ts` and is imported here. Two
- * estimators is how a budget and `prompt-size.test.ts` start disagreeing about
- * the same prompt. Held by `tests/context-budget.test.ts`, which reads every
- * file of `src/` and fails if a second one declares the ratio.
+ * estimators is how a budget and `prompt-size.test.ts` start disagreeing
+ * about the same prompt. Held by tests/context-budget.test.ts « un seul
+ * fichier déclare estimateTokens, et c'est prompts/estimate.ts » and « et
+ * budget.ts l'importe plutôt que de le redéclarer », which read every file of
+ * `src/` rather than trusting this paragraph.
  *
  * ── WHAT THIS FILE DOES NOT DECIDE ──────────────────────────────────────────
  * It never calls a provider's token counter — that is a network call on the
- * critical path, and not every provider has one (section 4.3). The nightly
- * workflow compares the estimate to the real count and fails past eight per
- * cent of drift.
+ * critical path, and not every provider has one (section 4.3). What holds
+ * that is the package boundary rather than a unit test:
+ * tests/no-env.test.ts « rien hors de narrator/ ne nomme un fournisseur ni un
+ * fait d'API » greps this file among the others. The nightly comparison
+ * between the estimate and a real count belongs to M0-27 and does not exist
+ * yet.
  */
 
 import { estimateTokens } from '../prompts/estimate.js';

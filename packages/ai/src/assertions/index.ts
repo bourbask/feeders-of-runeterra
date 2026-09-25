@@ -7,13 +7,18 @@
  * `refusal_is_outcome_blind` is NOT one of them here — it is a CORPUS grader
  * (`packages/ai-eval/src/graders/refusal-blindness.ts`, M0-27), which replays
  * the whole corpus with the dice inverted. It is not a `(output, ctx)`
- * function and it cannot be one. 29 − 1 = 28.
+ * function and it cannot be one. 29 − 1 = 28. Held by
+ * tests/assertions.test.ts « il y en a vingt-huit, et
+ * refusal_is_outcome_blind n'en est pas ».
  *
  * ── THE HARD SET IS THE PRODUCTION FILTER ───────────────────────────────────
  * `hard: true` means « consumed by the post-filter of section 8.6 », and the
- * list there is closed and named. `tests/assertions.test.ts` spells it out in
- * full letters and compares — a number read from this file and checked against
- * itself would prove nothing (ADR 0007).
+ * list there is closed and named. tests/assertions.test.ts « les dures sont
+ * exactement les post-filtres du §8.6 » spells it out in full letters and
+ * compares — a number read from this file and checked against itself would
+ * prove nothing (ADR 0007). The other direction, that the filter consumes
+ * NOTHING ELSE, is tests/degradation.test.ts « ne consomme que les
+ * assertions dures, pas les souples ».
  */
 
 import {

@@ -6,14 +6,19 @@
  * That is the whole availability argument of section 2.3. An absent block, a
  * truncated one, a badly closed one, one that is not JSON, one that is JSON
  * but not our shape: every one of them keeps the PREVIOUS scene state TO THE
- * BYTE and lets the turn finish. A mechanism that could fail a turn would be a
- * mechanism that degrades availability, and this one exists to close a
- * coherence bug, not to open a reliability one.
+ * BYTE and lets the turn finish. A mechanism that could fail a turn would be
+ * a mechanism that degrades availability, and this one exists to close a
+ * coherence bug, not to open a reliability one. Held by
+ * tests/scene-merge.test.ts « aucune de ces entrées ne lève » and « un bloc
+ * nul rend l'état précédent à l'octet près, sans lever ».
  *
  * ── S9 IS WORTH READING TWICE ───────────────────────────────────────────────
  * Only an explicit mention in `partis` takes somebody out of a scene. A model
- * that forgets to copy a name does not make that person vanish — forgetting is
- * the most frequent failure mode, and it must cost nothing.
+ * that forgets to copy a name does not make that person vanish — forgetting
+ * is the most frequent failure mode, and it must cost nothing. Held by
+ * tests/scene-merge.test.ts « S9 : une personne présente et absente des deux
+ * listes reste présente », and in the other direction by « alors qu'un départ
+ * réel, lui, est un changement ».
  *
  * ── WHAT THE MERGE IS HANDED, AND WHY IT IS NARROW ──────────────────────────
  * Section 4.7.3 writes `mergeSceneBlock(before, block, state)` with the whole
@@ -21,8 +26,10 @@
  * whether they are a player character, whether the ENGINE has them dead, and
  * which place identifiers exist. `SceneMergeState` is exactly that and nothing
  * more — a narrower channel is a channel that cannot quietly widen, and it
- * keeps this package free of `@for/engine`. The narrowing is deliberate and is
- * named in the pull request.
+ * keeps this package free of `@for/engine`. The narrowing is deliberate and
+ * is named in the pull request. That the merge returns a scene state and
+ * nothing else is held by tests/scene-merge.test.ts « S10 : la fusion ne rend
+ * qu'un état de scène — garanti par le type ».
  */
 
 import {

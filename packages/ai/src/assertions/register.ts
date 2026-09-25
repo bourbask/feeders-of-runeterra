@@ -13,6 +13,11 @@
  * trade a marginal gain in style for engine fallbacks players see. The
  * opposite call was made for `banned_style_lexicon`: a closed list, no
  * morphological ambiguity, and the measured lever right after the examples.
+ *
+ * Held by tests/assertions.test.ts « adverb_budget, no_triads et
+ * no_anonymous_recurrent restent souples » for the classification, and by
+ * tests/degradation.test.ts « ne consomme que les assertions dures, pas les
+ * souples » for what it buys: a soft failure does not cost a turn.
  */
 
 import {
@@ -40,7 +45,9 @@ export const bannedStyleLexicon: Assertion = {
  *
  * Three shapes, exactly as section 8.4 writes them. The second is bounded to
  * six words after `tu sens …` so that « tu sens la corde » — a fact of the
- * body — is not caught by a feeling that appears two sentences later.
+ * body — is not caught by a feeling that appears two sentences later. Held by
+ * tests/assertions.test.ts « no_named_emotion refuse « tu ressens » et « tu
+ * sens monter la peur » ».
  */
 export const noNamedEmotion: Assertion = {
   id: 'no_named_emotion',

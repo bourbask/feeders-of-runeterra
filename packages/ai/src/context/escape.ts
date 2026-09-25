@@ -9,15 +9,22 @@
  *     for a precise reason: a player who got the model to emit one could try
  *     to cancel their own turn with a fake refusal, or walk a dead NPC back
  *     into the scene.
- *  2. The text is capped at six hundred characters.
+ *  2. The text is capped at six hundred characters — held by
+ *     tests/context-budget.test.ts « et l'intention est plafonnée à six
+ *     cents caractères ».
  *
  * ── WHAT ACTUALLY STOPS AN INJECTION ────────────────────────────────────────
  * Not this file. Even a model that is fully convinced can break nothing: no
- * tool mutates state (and ADR 0011 sends no tools at all), the scene merge
- * ignores any name it cannot match (S1) and never walks a player character out
- * of a scene (S3), and a refusal only has an effect when the SERVER proves its
- * cause on structured state (R4). This file lowers the odds; the invariants
- * carry the weight.
+ * tool mutates state (and ADR 0011 sends no tools at all — tests/
+ * context-budget.test.ts « la requête ne porte aucun outil et interdit la
+ * politique auto »), the scene merge ignores any name it cannot match
+ * (tests/scene-merge.test.ts « S1 : un nom que rien n'apparie est ignoré »)
+ * and never walks a player character out of a scene (« S3 : un personnage
+ * joueur placé dans partis est ignoré »), and a refusal only has an effect
+ * when the SERVER proves its cause on structured state
+ * (tests/refusal-proof.test.ts « R4 : la cause doit être prouvée par l'état à
+ * la déclaration »). This file lowers the odds; the invariants carry the
+ * weight.
  *
  * Held by `tests/context-budget.test.ts`, « une intention contenant
  * </consignes_du_tour> ressort échappée ».

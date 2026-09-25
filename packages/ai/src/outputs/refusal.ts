@@ -8,14 +8,20 @@
  * falls without consequence: the turn plays out, the prose is broadcast, a
  * `narration.proposal_rejected` is journalled. The storyteller can never
  * cancel a roll by sheer will — only POINT AT A FACT the server re-checks.
+ * Held by tests/refusal-proof.test.ts « R4 : la cause doit être prouvée par
+ * l'état à la déclaration » and « aucun des trois ne produit un refus
+ * retenu », which plays three absurd but materially possible proposals.
  *
  * ── THE PROOF IS BLIND TO THE OUTCOME, AND THAT IS STRUCTURAL ───────────────
  * `RefusalProofInput` has no outcome, no roll and no dice. It cannot: the type
  * does not carry them. `refusalProofInput()` is the only way to build one from
  * a turn, and it DROPS the outcome the turn carries. Wiring the dice into the
  * decision therefore means adding a field to this file — a change a reviewer
- * sees, and one `tests/refusal-proof.test.ts` reddens on, because it replays
- * the same case with `franche` and with `echec` and demands the same verdict.
+ * sees, and one tests/refusal-proof.test.ts « le même cas, avec franche puis
+ * avec echec, rend le même verdict » reddens on. That the input type cannot
+ * carry them is « et l'entrée de la preuve ne porte ni issue, ni jet, ni
+ * dé » ; that the probe is not empty is « alors que le tour, lui, porte bien
+ * l'issue — sinon la sonde serait vide ».
  *
  * Without that blindness the right of refusal becomes what section 4.8.5 names
  * as the risk: a back door for cancelling dice the model dislikes.

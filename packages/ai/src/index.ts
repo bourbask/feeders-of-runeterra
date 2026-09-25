@@ -2,9 +2,10 @@
  * `@for/ai` — the storyteller port, its adapters, the prompts and the frozen
  * tool surface.
  *
- * NO VENDOR NAME CROSSES THIS FILE. The acceptance criterion of M0-18 greps
- * `packages/ai/src` outside `narrator/` for the six provider words and the ten
- * API facts, and expects zero: `selectNarrator` is exported, the four
+ * NO VENDOR NAME CROSSES THIS FILE — held by tests/no-env.test.ts « rien
+ * hors de narrator/ ne nomme un fournisseur ni un fait d'API », which greps
+ * `packages/ai/src` outside `narrator/` for the six provider words and the
+ * ten API facts and expects zero. `selectNarrator` is exported, the four
  * constructors are not, and everything above the port is written against
  * `NarratorPort`, `NarrateFinish` and `NarratorErrorCode`.
  *
