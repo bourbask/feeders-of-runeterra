@@ -521,7 +521,7 @@ describe('invariant 3 — aucun message client ne transporte un résultat', () =
   it('zIntent EST atteignable, et c’est le seul chemin mutant', () => {
     expect(c2s.nodes.has(zIntent)).toBe(true);
     expect(payloadKeys(optionByType(zC2SMessage, 'c2s.intent'))).toStrictEqual(['intent']);
-    // Les 20 intentions sont bien parcourues : sans ça, le gel de la surface
+    // Les 21 intentions sont bien parcourues : sans ça, le gel de la surface
     // ne couvrirait pas la charge utile la plus dangereuse.
     expect(INTENT_TYPES.length).toBe(zIntent.options.length);
   });

@@ -1046,6 +1046,7 @@ Toute proposition de nouveau message c2s qui transporte un resultat est refusee 
 | `move.fulfill_your_vow` | `{ trackId }` | jet de progression de resolution |
 | `move.forsake_your_vow` | `{ trackId, reason }` | renier un serment |
 | `momentum.burn` | `{ rollId }` | bruler le souffle sur un jet dont la fenetre est ouverte (`roll.action_resolved.burnWindow`) |
+| `momentum.keep` | `{ rollId }` | ne PAS bruler : les des restent tels quels, et les effets de l'issue initiale s'appliquent. Le `rollId` est celui de la fenetre visee, pour qu'un clic perime soit refuse au lieu d'atterrir sur une autre fenetre |
 | `oracle.ask` | `{ question, likelihood }` | oracle oui/non pondere (d100, seuils du contenu) |
 | `oracle.draw` | `{ oracleId: OracleId }` | table evocatrice |
 | `speech.say` | `{ channel, text }` | genere par `c2s.speak` |

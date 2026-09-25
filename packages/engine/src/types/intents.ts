@@ -55,6 +55,17 @@ export type Intent =
   | { readonly type: 'move.forsake_your_vow'; readonly trackId: TrackId; readonly reason: string }
   /** Burn momentum on a roll whose window is still open. */
   | { readonly type: 'momentum.burn'; readonly rollId: RollId }
+  /**
+   * DECLINE the burn, and let the dice stand.
+   *
+   * The counterpart of `momentum.burn`, and the reason it exists: while the
+   * window is open the move has rolled but NOT applied its consequences
+   * (03-donnees.md section 3.4). Without a way to say no, a player who reads
+   * the dice and shrugs leaves the turn hanging, and only the safety net --
+   * the next entry about the same character -- would ever close it. Saying no
+   * is a decision, so it is an intent, like saying yes.
+   */
+  | { readonly type: 'momentum.keep'; readonly rollId: RollId }
   | { readonly type: 'oracle.ask'; readonly question: string; readonly likelihood: Likelihood }
   | { readonly type: 'oracle.draw'; readonly oracleId: string }
   | { readonly type: 'speech.say'; readonly channel: 'ic' | 'ooc'; readonly text: string }
@@ -82,6 +93,7 @@ export const INTENT_TYPES = [
   'move.fulfill_your_vow',
   'move.forsake_your_vow',
   'momentum.burn',
+  'momentum.keep',
   'oracle.ask',
   'oracle.draw',
   'speech.say',

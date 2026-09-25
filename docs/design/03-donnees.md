@@ -1048,6 +1048,25 @@ l'intention `momentum.burn { rollId }` produit alors `character.momentum_burned`
 append-only, le premier jet n'est jamais réécrit : on ajoute sa révision. Si le joueur ne brûle
 pas, la fenêtre se ferme au premier événement suivant du même personnage.
 
+**Ce que « qu'après » veut dire, littéralement.** Tant que la fenêtre est ouverte, `decide()`
+n'écrit ni effet ni `move.resolved` : le tour n'est pas fini, et la narration attend. Ce sont
+**les effets de l'issue révisée** qui s'appliquent, jamais ceux de l'issue initiale — un échec
+devenu réussite franche ne paie pas le prix de l'échec. Trois fermetures, et trois seulement :
+
+| Fermeture | Ce que le moteur écrit, dans cet ordre |
+|---|---|
+| `momentum.burn { rollId }` | `character.momentum_burned` → `roll.action_revised` → les effets de l'issue **révisée** → `move.resolved` |
+| `momentum.keep { rollId }` | les effets de l'issue **initiale** → `move.resolved` |
+| le filet de sécurité | première entrée suivante portant le **même** `subject_character_id` : le serveur ferme comme `momentum.keep` avant de traiter ce qui arrive |
+
+`momentum.keep` existe parce que son absence laissait un tour en suspens : sans un « non »
+explicite, seul le filet fermait la fenêtre. Le filet **reste** — un joueur qui ferme son
+onglet ne doit pas bloquer la table.
+
+**La révision ne tire rien.** Le score révisé est le souffle dépensé, lu contre les dés de défi
+**déjà écrits**. Aucun tirage sur le flux `action`, donc aucun décalage d'index : les valeurs
+de dés déjà journalisées restent les mêmes (§3.6).
+
 `total` est la valeur **plafonnée à 10** ; `rawTotal` garde la valeur non plafonnée pour la
 lisibilité du journal et les tests ; `cappedAtTen` explicite le plafonnement au lieu de le
 laisser déduire. Redondance volontaire : un journal qui se lit sans recalculer vaut cher au
