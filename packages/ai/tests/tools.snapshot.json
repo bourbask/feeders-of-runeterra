@@ -1,0 +1,303 @@
+{
+  "toolsVersion": "tools/1.0.0",
+  "tools": [
+    {
+      "name": "get_state",
+      "description": "Lit l'état courant de la table (jauges, horloges, serments, lieux, inventaire). Lecture seule : cet outil ne modifie rien.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": ["table", "character", "clocks", "vows", "inventory", "scene"],
+            "description": "Périmètre lu."
+          },
+          "character_id": {
+            "type": ["string", "null"],
+            "description": "Identifiant du personnage, requis si scope vaut character ou inventory, sinon null."
+          }
+        },
+        "required": ["scope", "character_id"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "get_lore",
+      "description": "Recherche dans le contenu de jeu versionné (régions, lieux, factions, coutumes, champions autorisés). Lecture seule. Les entrées concernant un champion réservé ne sont jamais renvoyées.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Ce que tu cherches, en français, en quelques mots."
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["any", "region", "place", "faction", "custom", "champion", "creature"]
+          },
+          "limit": {
+            "type": "number",
+            "enum": [1, 2, 3, 4, 5]
+          }
+        },
+        "required": ["query", "kind", "limit"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "get_chronicle",
+      "description": "Lit une section de la chronique compactée de la campagne, y compris les éléments archivés absents du contexte courant. Lecture seule.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "section": {
+            "type": "string",
+            "enum": [
+              "arcs",
+              "npcs",
+              "places",
+              "facts",
+              "open_threads",
+              "archived_facts",
+              "character"
+            ]
+          },
+          "subject_id": {
+            "type": ["string", "null"],
+            "description": "Identifiant d'arc, de PNJ, de lieu ou de personnage à cibler, sinon null."
+          },
+          "limit": {
+            "type": "number",
+            "enum": [1, 3, 5, 10]
+          }
+        },
+        "required": ["section", "subject_id", "limit"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "check_name_allowed",
+      "description": "Vérifie qu'un nom propre peut être écrit dans la narration. Renvoie faux pour tout champion réservé de la campagne, y compris ses surnoms et épithètes. Lecture seule.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": ["name"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "roll_oracle",
+      "description": "Consulte une table d'oracle évocatrice du jeu, ou pose une question oui/non pondérée. Le tirage est effectué par le moteur avec son générateur seedé, et journalisé. Cet outil ne résout jamais l'action d'un personnage, ne modifie aucune jauge et ne tranche aucune issue. Les tables « payer le prix » et « présages » ne sont PAS accessibles ici : elles ne sont tirées que par le moteur, en conséquence d'un mouvement.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "table_id": {
+            "type": "string",
+            "enum": [
+              "yes-no",
+              "action-theme",
+              "place-features",
+              "npc-names-freljord",
+              "npc-roles",
+              "npc-goals",
+              "settlement-troubles",
+              "freljord-weather",
+              "complication"
+            ],
+            "description": "Table consultée. yes-no exige likelihood ; les autres l'ignorent."
+          },
+          "question": {
+            "type": "string",
+            "description": "La question posée, en français. Chaîne vide si la table n'est pas yes-no."
+          },
+          "likelihood": {
+            "type": "string",
+            "enum": [
+              "quasi-certain",
+              "probable",
+              "incertain",
+              "peu-probable",
+              "improbable",
+              "sans-objet"
+            ]
+          }
+        },
+        "required": ["table_id", "question", "likelihood"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "propose_npc_introduce",
+      "description": "Propose l'apparition d'un personnage non joueur nommé. Le serveur vérifie qu'il ne s'agit pas d'un champion réservé, déduplique avec les PNJ existants et attribue un identifiant. Ne crée rien tant que le serveur n'a pas répondu.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nom propre, cohérent avec le Freljord."
+          },
+          "role": {
+            "type": "string",
+            "description": "Rôle social en quelques mots : chasseresse, forgeron, éclaireur du clan."
+          },
+          "one_line": {
+            "type": "string",
+            "description": "Une phrase de caractérisation, sans chiffre ni terme de règle."
+          },
+          "place_id": {
+            "type": "string",
+            "description": "Lieu où il apparaît, identifiant tiré de l'état ou de la chronique."
+          },
+          "disposition": {
+            "type": "string",
+            "enum": ["hostile", "mefiant", "neutre", "curieux", "allie"]
+          }
+        },
+        "required": ["name", "role", "one_line", "place_id", "disposition"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "propose_clock_create",
+      "description": "Propose la création d'une horloge de menace ou d'enjeu. Le serveur fixe le nombre de segments autorisé et décide de sa visibilité.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nom de l'horloge, formulé comme une menace concrète : « La tempête se lève »."
+          },
+          "segments": {
+            "type": "number",
+            "enum": [4, 6, 8, 10]
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["scene", "menace", "campagne"]
+          },
+          "rationale": {
+            "type": "string",
+            "description": "Pourquoi la fiction courante la justifie, en une phrase."
+          }
+        },
+        "required": ["name", "segments", "kind", "rationale"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "propose_clock_advance",
+      "description": "Propose de faire avancer une horloge existante d'un à trois segments, lorsque la fiction du tour le justifie. Le serveur vérifie que le fait du tour autorise cette avance et peut la réduire ou la refuser. Cet outil ne modifie aucune jauge de personnage.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clock_id": {
+            "type": "string"
+          },
+          "segments": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3
+          },
+          "rationale": {
+            "type": "string"
+          }
+        },
+        "required": ["clock_id", "segments", "rationale"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "propose_thread_open",
+      "description": "Propose l'ouverture d'un fil narratif que la campagne devra reprendre plus tard. Le serveur l'enregistre comme dette narrative visible dans la chronique.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string",
+            "description": "Une à deux phrases, sans chiffre."
+          },
+          "tied_to_kind": {
+            "type": "string",
+            "enum": ["npc", "place", "vow", "character", "none"]
+          },
+          "tied_to_id": {
+            "type": "string",
+            "description": "Identifiant lié, chaîne vide si tied_to_kind vaut none."
+          }
+        },
+        "required": ["title", "summary", "tied_to_kind", "tied_to_id"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "propose_lore_fact",
+      "description": "Propose d'inscrire au canon de la campagne un fait du monde établi pendant la scène (une coutume, l'histoire d'un lieu, un lien entre deux personnages non joueurs). Le serveur refuse tout fait qui contredit le canon existant, mentionne un champion réservé ou porte une valeur chiffrée.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "statement": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Une phrase affirmative, sans chiffre, sans terme de règle."
+          },
+          "tied_to_kind": {
+            "type": "string",
+            "enum": ["npc", "place", "region", "faction", "character", "none"]
+          },
+          "tied_to_id": {
+            "type": "string"
+          }
+        },
+        "required": ["statement", "tied_to_kind", "tied_to_id"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "propose_scene_transition",
+      "description": "Propose de déplacer la scène vers un autre lieu. Le serveur applique la transition et met à jour la scène. Cet outil ne fait pas passer le temps, ne coûte rien et ne déclenche aucune conséquence mécanique.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "to_place_id": {
+            "type": "string",
+            "description": "Lieu existant, ou chaîne vide si tu proposes un lieu neuf."
+          },
+          "new_place_name": {
+            "type": "string",
+            "description": "Nom du lieu neuf proposé, ou chaîne vide."
+          }
+        },
+        "required": ["to_place_id", "new_place_name"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "propose_vow_hook",
+      "description": "Propose au joueur une occasion de jurer un serment. Le serveur enregistre l'offre ; c'est le joueur, via l'interface, qui décide de jurer ou non. Ne raconte jamais le serment comme s'il était prêté.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "rank": {
+            "type": "string",
+            "enum": ["genant", "dangereux", "redoutable", "extreme", "epique"]
+          },
+          "why_now": {
+            "type": "string"
+          }
+        },
+        "required": ["title", "rank", "why_now"],
+        "additionalProperties": false
+      }
+    }
+  ]
+}
