@@ -106,22 +106,74 @@ export interface DecisionRng {
 }
 
 /**
- * The action roll still awaiting a burn decision, derived from the journal by
- * the caller.
+ * THE UNFINISHED TURN: an action roll that is written, visible, and whose
+ * consequences have NOT been applied yet.
  *
- * It is not a field of `CampaignState` because that type is mirrored in
- * `@for/contracts` and adding to it is a contract change; it is not invented
- * here because 03-donnees.md section 3.7 already says where it comes from —
- * the journal, like everything else.
+ * 03-donnees.md section 3.4: "la regle veut qu'on voie les des avant de
+ * decider [...] `move.resolved` n'applique les effets qu'apres". So the window
+ * is not a flag on a finished turn, it IS the turn, held open. Everything
+ * `decide` needs to finish it lives here, because there is nowhere else to put
+ * it: `CampaignState` is mirrored in `@for/contracts` and adding to it is a
+ * contract change.
+ *
+ * `intent` is what the player asked for, carried verbatim, and `plan` is what
+ * the engine made of it AT DECLARATION TIME. The plan is CARRIED rather than
+ * recomputed, because recomputing it replays the feasibility check that was
+ * already settled before the dice were drawn: a scene closed between the two
+ * steps made `strike` answer `no_active_scene` at closing time, with the dice
+ * already in the journal and no way left to finish the turn. A window must
+ * always be closeable — the dice are written, and only the consequences are
+ * still owed.
+ *
+ * WHO FILLS IT: `decide` itself, on the turn that rolled (`Decision.pending`).
+ * The caller stores it and hands it back on the closing intent. A cancelled
+ * turn (`system.reverted`) drops it, which is how 03-donnees.md section 3.7
+ * keeps its promise that the burn window comes back with everything else.
  */
 export interface BurnWindow {
-  readonly rollId: RollId;
-  /** Journal sequence of the `roll.action_resolved` this burn revises. */
+  /** Journal sequence of the `roll.action_resolved` this window holds open. */
   readonly rollSeq: number;
   readonly characterId: CharacterId;
-  /** The score written on that roll. A burn must beat it to be worth anything. */
-  readonly total: number;
-  readonly challengeDice: readonly [number, number];
+  /** The move still waiting for its consequences, exactly as it was asked. */
+  readonly intent: MoveIntent;
+  /**
+   * The group the turn is already written under. CARRIED, so the closing
+   * entries join it instead of opening a second one: a turn is ONE
+   * `correlation_id` (03-donnees.md sections 0.5 and 3.7). Two groups would
+   * let `system.reverted` cancel a `roll.action_resolved` without the
+   * `character.gauge_changed` it caused, and would leave `buildTurnProof` —
+   * built from the events of one group — with the dice on one side and the
+   * consequences on the other.
+   */
+  readonly correlationId: string;
+  /** The `move.declared` every entry of this turn hangs from (`causation_id`). */
+  readonly declarationId: EventId;
+  /** What the engine made of the intent, decided BEFORE the dice were drawn. */
+  readonly plan: MovePlan;
+  /** What the dice gave, before any burn. */
+  readonly outcome: Outcome;
+  readonly isPresage: boolean;
+  /**
+   * The arithmetic written on `roll.action_resolved`, unmodified. It carries
+   * `rollId`, the score a burn must beat (`total`) and the challenge dice the
+   * revision is read against — so none of the three is copied twice.
+   */
+  readonly roll: BriefRollDetail;
+}
+
+/**
+ * Does this journal entry shut that window?
+ *
+ * The safety net of 03-donnees.md section 3.4, in one place: "si le joueur ne
+ * brule pas, la fenetre se ferme au premier evenement suivant du meme
+ * personnage". Exported because the CALLER is the one that sees the next
+ * entry, and a net whose rule is retyped at the call site is a net with a hole.
+ *
+ * It answers WHETHER, never WHAT: the events of the closing are produced by
+ * `decide` on `momentum.keep`, like any other decision.
+ */
+export function burnWindowClosedBy(window: BurnWindow, event: GameEvent): boolean {
+  return event.subjectCharacterId === window.characterId && event.seq > window.rollSeq;
 }
 
 export interface DecisionContext {
@@ -140,6 +192,14 @@ export interface Decision {
   readonly events: readonly GameEvent[];
   /** Already decided, already journalled. The storyteller dresses it. */
   readonly brief: NarrationBrief;
+  /**
+   * NON-NULL WHEN THE TURN IS NOT OVER: the dice are written and the burn
+   * window is open, so no consequence has been applied and no `move.resolved`
+   * has been emitted. The caller stores it, hands it back on the closing
+   * intent, and holds the narration until then — narrating an outcome the
+   * player is about to revise would be telling the story twice.
+   */
+  readonly pending: BurnWindow | null;
 }
 
 // ------------------------------------------------------------------ helpers
@@ -211,20 +271,34 @@ export function fallbackTemplateId(moveId: MoveId | null, outcome: Outcome | nul
 // ------------------------------------------------------------ the turn scribe
 
 /**
+ * What a turn joins when it CONTINUES one already written instead of opening
+ * its own: the correlation group, and the declaration its entries hang from.
+ * Only the second step of a burn uses it (`closeBurnWindow`).
+ */
+interface TurnContinuation {
+  readonly correlationId: string;
+  readonly declarationId: EventId;
+}
+
+/**
  * The bookkeeping every decision shares: sequences, envelopes, draw indexes,
  * and the running values of whoever the turn touches.
  *
  * It mutates ONLY its own copies. `decide` never writes into the state it was
  * handed, which is the same promise `reduce` makes and for the same reason.
  */
-function createTurn(state: CampaignState, ctx: DecisionContext) {
+function createTurn(state: CampaignState, ctx: DecisionContext, continued?: TurnContinuation) {
   const events: GameEvent[] = [];
   const workingCharacters = new Map<CharacterId, CharacterState>();
   const workingTracks = new Map<TrackId, TrackState>();
   const workingClocks = new Map<ClockId, ClockState>();
   const drawIndexes = new Map<RngStream, number>();
   const appliedEffects: BriefAppliedEffect[] = [];
-  const correlationId = ctx.ids.next();
+  const correlationId = continued?.correlationId ?? ctx.ids.next();
+  // The entry everything hangs from. Null until the first one is written, then
+  // that one — except on a CONTINUED turn, where it is the declaration written
+  // in the first half and the whole group keeps hanging from it.
+  let causationId: EventId | null = continued?.declarationId ?? null;
   let imposedPrice: BriefImposedPrice | null = null;
   let presage: BriefPresage | null = null;
   let xpEarnedThisTurn = 0;
@@ -235,7 +309,6 @@ function createTurn(state: CampaignState, ctx: DecisionContext) {
     payload: GameEventPayloads[TType],
     options: EmitOptions,
   ): GameEventOf<TType> {
-    const first = events[0];
     const event: GameEventOf<TType> = {
       id: ctx.ids.next() as EventId,
       campaignId: state.campaignId,
@@ -246,7 +319,7 @@ function createTurn(state: CampaignState, ctx: DecisionContext) {
       actorPlayerId: options.actorPlayerId ?? null,
       subjectCharacterId: options.subjectCharacterId ?? null,
       correlationId,
-      causationId: first === undefined ? null : first.id,
+      causationId,
       rngStream: options.rngStream ?? null,
       rngDrawIndex: options.rngDrawIndex ?? null,
       createdAt: ctx.now,
@@ -256,6 +329,7 @@ function createTurn(state: CampaignState, ctx: DecisionContext) {
       payload,
     };
     events.push(event as GameEvent);
+    causationId ??= event.id;
     return event;
   }
 
@@ -994,7 +1068,7 @@ function decideMove(
   const bonus = plan.roll.kind === 'action' ? wholeBonus(plan.roll.bonus) : 0;
   const adds: readonly RollAdd[] = bonus === 0 ? [] : [{ source: 'intent', value: bonus }];
 
-  turn.emit(
+  const declared = turn.emit(
     'move.declared',
     {
       moveId: handler.id,
@@ -1013,6 +1087,35 @@ function decideMove(
   applyEffects(state, turn, ctx, plan, plan.upfrontEffects, 0);
 
   const resolved = resolveRoll(turn, ctx, plan, actor.value.id, bonus, adds, definition);
+
+  // THE TWO-STEP BURN, and the whole point of this task: when the roll opened a
+  // window, the turn STOPS HERE. No outcome effect, no `move.resolved` — the
+  // player has seen the dice and has not decided yet, and deciding for them by
+  // applying the consequences now is what made burning cost a resource for
+  // nothing (03-donnees.md section 3.4).
+  if (resolved.detail !== null && resolved.burnWindow) {
+    return ok({
+      events: [...turn.events],
+      brief: buildBrief(state, turn, ctx, {
+        moveId: handler.id,
+        outcome: resolved.outcome,
+        isPresage: resolved.isPresage,
+        roll: resolved.detail,
+        playerInput: plan.narrativeInput,
+      }),
+      pending: {
+        rollSeq: resolved.rollSeq,
+        characterId: actor.value.id,
+        intent,
+        correlationId: turn.correlationId,
+        declarationId: declared.id,
+        plan,
+        outcome: resolved.outcome,
+        isPresage: resolved.isPresage,
+        roll: resolved.detail,
+      },
+    });
+  }
 
   applyEffects(state, turn, ctx, plan, definition.outcomes[resolved.outcome].effects, 0);
   applyResolution(turn, ctx, plan, resolved.outcome, resolved.rollSeq);
@@ -1038,6 +1141,7 @@ function decideMove(
       roll: resolved.detail,
       playerInput: plan.narrativeInput,
     }),
+    pending: null,
   });
 }
 
@@ -1046,6 +1150,8 @@ interface ResolvedRoll {
   readonly isPresage: boolean;
   readonly rollSeq: number;
   readonly detail: BriefRollDetail | null;
+  /** `roll.action_resolved.burnWindow`, as written. Only an action roll opens one. */
+  readonly burnWindow: boolean;
 }
 
 /**
@@ -1071,7 +1177,13 @@ function resolveRoll(
       // No roll, so no roll sequence: `move.resolved.rollSeq` points at the
       // declaration instead, which is the entry this move really hangs from.
       const declaredSeq = turn.events[0]?.seq ?? 0;
-      return { outcome: plan.roll.outcome, isPresage: false, rollSeq: declaredSeq, detail: null };
+      return {
+        outcome: plan.roll.outcome,
+        isPresage: false,
+        rollSeq: declaredSeq,
+        detail: null,
+        burnWindow: false,
+      };
     }
     case 'progress': {
       const track = turn.track(plan.roll.trackId);
@@ -1102,6 +1214,7 @@ function resolveRoll(
         isPresage: roll.presage,
         rollSeq: event.seq,
         detail: null,
+        burnWindow: false,
       };
     }
     case 'action': {
@@ -1162,6 +1275,7 @@ function resolveRoll(
         outcome: roll.outcome,
         isPresage: roll.presage,
         rollSeq: event.seq,
+        burnWindow,
         detail: {
           rollId,
           attribute,
@@ -1257,47 +1371,110 @@ function applyResolution(
 
 // ---------------------------------------------------------- the other intents
 
-function decideBurn(
+/**
+ * CLOSING THE WINDOW — the second step of the burn, in the only three ways it
+ * happens (ARCHITECTURE.md section 4.4, 03-donnees.md section 3.4):
+ *
+ *   a. `momentum.burn` — `character.momentum_burned`, THEN `roll.action_revised`,
+ *      THEN the effects of the REVISED outcome, THEN `move.resolved`;
+ *   b. `momentum.keep` — the effects of the INITIAL outcome, then `move.resolved`;
+ *   c. the safety net: the caller sees an entry about the same character
+ *      (`burnWindowClosedBy`) and closes the window as (b).
+ *
+ * THE POINT, in one sentence: the burn REWRITES THE OUTCOME, and the effects
+ * that are applied are those of the revised outcome, never those of the first
+ * one. A failure can become a clean success, and then the failure's price is
+ * never paid — that is what burning buys, and before this it bought nothing.
+ *
+ * THE FIRST ROLL IS NEVER REWRITTEN. The journal is append-only: the revision
+ * is ADDED (`roll.action_revised.revisedFromSeq` points back at it), and the
+ * first `roll.action_resolved` stays exactly as the players read it.
+ *
+ * NOT A DIE IS DRAWN HERE. The revised score is the momentum that was spent,
+ * read against the challenge dice ALREADY WRITTEN on the first roll. Drawing
+ * anything on the `action` stream would shift every index after it and rewrite
+ * dice that are already in the journal.
+ *
+ * IT IS THE SAME TURN, NOT A SECOND ONE. The correlation group and the
+ * declaration come from the window, so the closing entries land in the group
+ * the dice are in: `system.reverted` cancels the whole thing at once
+ * (03-donnees.md section 3.7) and `buildTurnProof` reads the dice and their
+ * consequences in one pass (section 0.5).
+ *
+ * AND IT CANNOT BE REFUSED FOR A REASON ABOUT THE MOVE. The plan comes from
+ * the window too: feasibility was settled before the dice, and replaying it
+ * here against a state that has moved on would strand an open window nothing
+ * could ever close. What remains state-dependent is the actor
+ * (`requireActor`) — and an entry about that character is exactly what
+ * `burnWindowClosedBy` makes the caller close the window on first.
+ */
+function closeBurnWindow(
   state: CampaignState,
-  intent: Extract<Intent, { readonly type: 'momentum.burn' }>,
   ctx: DecisionContext,
+  window: BurnWindow,
+  burn: boolean,
 ): Result<Decision, RuleViolation> {
   const actor = requireActor(state, ctx.actorId);
   if (isErr(actor)) return actor;
 
-  const window = ctx.burnWindow ?? null;
-  if (window?.rollId !== intent.rollId || window.characterId !== actor.value.id) {
-    return err({ code: 'no_burn_window', details: { rollId: intent.rollId } });
+  const handler = MOVE_BY_INTENT[window.intent.type];
+  const definition = ctx.content.moves[handler.id];
+  if (definition === undefined) {
+    return err({ code: 'unknown_move', details: { moveId: handler.id } });
   }
-  if (!canBurnMomentum(actor.value.momentum, window.total)) {
-    return err({
-      code: 'momentum_too_low',
-      details: { momentum: actor.value.momentum, total: window.total },
-    });
+  const plan = window.plan;
+
+  const turn = createTurn(state, ctx, {
+    correlationId: window.correlationId,
+    declarationId: window.declarationId,
+  });
+  let outcome = window.outcome;
+  let roll = window.roll;
+
+  if (burn) {
+    const spent = actor.value.momentum;
+    const resetTo = resetMomentum(actor.value.momentumBounds);
+    turn.emit(
+      'character.momentum_burned',
+      { characterId: actor.value.id, spent, resetTo, appliedToRollSeq: window.rollSeq },
+      { actorKind: 'engine', subjectCharacterId: actor.value.id },
+    );
+    // The burn is spent BEFORE the outcome effects run, so a `{ op: 'momentum' }`
+    // reward on the revised outcome starts from the reset value and not from
+    // the elan the character no longer has.
+    turn.putCharacter({ ...actor.value, momentum: resetTo });
+    outcome = outcomeFor(spent, window.roll.challengeDice);
+    turn.emit(
+      'roll.action_revised',
+      {
+        rollId: window.roll.rollId,
+        revisedFromSeq: window.rollSeq,
+        total: spent,
+        outcome,
+        isPresage: window.isPresage,
+      },
+      { actorKind: 'engine', subjectCharacterId: actor.value.id },
+    );
+    // `rawTotal` equals `total`: a burned score is the momentum itself, and
+    // momentum is bounded at 10, so there is nothing to cap and nothing the
+    // cap swallowed.
+    roll = { ...window.roll, rawTotal: spent, total: spent, cappedAtTen: false, burned: true };
   }
 
-  const turn = createTurn(state, ctx);
-  const spent = actor.value.momentum;
-  const resetTo = resetMomentum(actor.value.momentumBounds);
+  applyEffects(state, turn, ctx, plan, definition.outcomes[outcome].effects, 0);
+  applyResolution(turn, ctx, plan, outcome, window.rollSeq);
+
   turn.emit(
-    'character.momentum_burned',
+    'move.resolved',
     {
+      moveId: handler.id,
       characterId: actor.value.id,
-      spent,
-      resetTo,
-      appliedToRollSeq: window.rollSeq,
-    },
-    { actorKind: 'engine', subjectCharacterId: actor.value.id },
-  );
-  const outcome = outcomeFor(spent, window.challengeDice);
-  turn.emit(
-    'roll.action_revised',
-    {
-      rollId: window.rollId,
-      revisedFromSeq: window.rollSeq,
-      total: spent,
+      // The ROLL, not the revision: `roll.action_revised` links itself to it
+      // through `revisedFromSeq`, and a proof that pointed at the revision
+      // would lose the dice.
+      rollSeq: window.rollSeq,
       outcome,
-      isPresage: window.challengeDice[0] === window.challengeDice[1],
+      effectsApplied: turn.appliedEffects.map((applied) => applied.effect),
     },
     { actorKind: 'engine', subjectCharacterId: actor.value.id },
   );
@@ -1305,13 +1482,61 @@ function decideBurn(
   return ok({
     events: [...turn.events],
     brief: buildBrief(state, turn, ctx, {
-      moveId: null,
+      moveId: handler.id,
       outcome,
-      isPresage: window.challengeDice[0] === window.challengeDice[1],
-      roll: null,
-      playerInput: '',
+      isPresage: window.isPresage,
+      roll,
+      playerInput: plan.narrativeInput,
     }),
+    pending: null,
   });
+}
+
+/** The window this intent aims at, or the reason there is none to aim at. */
+function requireBurnWindow(
+  rollId: RollId,
+  ctx: DecisionContext,
+): Result<BurnWindow, RuleViolation> {
+  const window = ctx.burnWindow ?? null;
+  if (window?.roll.rollId !== rollId || window.characterId !== ctx.actorId) {
+    return err({ code: 'no_burn_window', details: { rollId } });
+  }
+  return ok(window);
+}
+
+function decideBurn(
+  state: CampaignState,
+  intent: Extract<Intent, { readonly type: 'momentum.burn' }>,
+  ctx: DecisionContext,
+): Result<Decision, RuleViolation> {
+  const window = requireBurnWindow(intent.rollId, ctx);
+  if (isErr(window)) return window;
+  const actor = requireActor(state, ctx.actorId);
+  if (isErr(actor)) return actor;
+  if (!canBurnMomentum(actor.value.momentum, window.value.roll.total)) {
+    return err({
+      code: 'momentum_too_low',
+      details: { momentum: actor.value.momentum, total: window.value.roll.total },
+    });
+  }
+  return closeBurnWindow(state, ctx, window.value, true);
+}
+
+/**
+ * Saying NO, which is a decision and not an absence of one.
+ *
+ * It takes the same `rollId` as the burn so that a stale click — the window
+ * already closed by the safety net, another roll since — is refused rather
+ * than applied to whatever is open now.
+ */
+function decideKeep(
+  state: CampaignState,
+  intent: Extract<Intent, { readonly type: 'momentum.keep' }>,
+  ctx: DecisionContext,
+): Result<Decision, RuleViolation> {
+  const window = requireBurnWindow(intent.rollId, ctx);
+  if (isErr(window)) return window;
+  return closeBurnWindow(state, ctx, window.value, false);
 }
 
 function decideOracleAsk(
@@ -1353,6 +1578,7 @@ function decideOracleAsk(
       roll: null,
       playerInput: intent.question,
     }),
+    pending: null,
   });
 }
 
@@ -1384,6 +1610,7 @@ function decideOracleDraw(
       roll: null,
       playerInput: '',
     }),
+    pending: null,
   });
 }
 
@@ -1413,6 +1640,7 @@ function decideSpeech(
       roll: null,
       playerInput: intent.text,
     }),
+    pending: null,
   });
 }
 
@@ -1442,6 +1670,7 @@ function decideJoin(
       roll: null,
       playerInput: '',
     }),
+    pending: null,
   });
 }
 
@@ -1468,6 +1697,7 @@ function decideLeave(state: CampaignState, ctx: DecisionContext): Result<Decisio
       roll: null,
       playerInput: '',
     }),
+    pending: null,
   });
 }
 
@@ -1507,6 +1737,7 @@ function decideCreateDraft(
       roll: null,
       playerInput: intent.background,
     }),
+    pending: null,
   });
 }
 
@@ -1533,6 +1764,7 @@ function decideSessionBoundary(
       roll: null,
       playerInput: '',
     }),
+    pending: null,
   });
 }
 
@@ -1541,7 +1773,7 @@ function decideSessionBoundary(
 /**
  * Settle one intent.
  *
- * The switch has TWENTY branches and no `default`: adding an intent without
+ * The switch has TWENTY-ONE branches and no `default`: adding an intent without
  * deciding what it does breaks the lint
  * (`@typescript-eslint/switch-exhaustiveness-check`, which does not take a
  * default as coverage) instead of falling through to a silent refusal.
@@ -1575,6 +1807,8 @@ export function decide(
       return decideMove(state, intent, ctx);
     case 'momentum.burn':
       return decideBurn(state, intent, ctx);
+    case 'momentum.keep':
+      return decideKeep(state, intent, ctx);
     case 'oracle.ask':
       return decideOracleAsk(state, intent, ctx);
     case 'oracle.draw':

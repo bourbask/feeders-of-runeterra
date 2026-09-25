@@ -49,6 +49,28 @@ describe('zIntent — le client n’envoie que des intentions (invariant 3)', ()
     expect(Object.keys(parsed).sort()).toStrictEqual(['rollId', 'type']);
   });
 
+  it('momentum.keep ne porte que le jet visé, comme la brûlure', () => {
+    // La contrepartie de `momentum.burn` : dire non est une décision, donc une
+    // intention. Elle ne transporte pas plus de résultat que le oui.
+    const parsed = zIntent.parse({
+      type: 'momentum.keep',
+      rollId: ulid(5),
+      outcome: 'echec',
+      effectsApplied: [],
+    });
+    expect(Object.keys(parsed).sort()).toStrictEqual(['rollId', 'type']);
+  });
+
+  it('la famille momentum tient en deux membres, et ils visent le même jet', () => {
+    const rollId = ulid(6);
+    const family = intentTypesOfSchema().filter((type) => type.startsWith('momentum.'));
+    expect([...family].sort()).toStrictEqual(['momentum.burn', 'momentum.keep']);
+    for (const type of family) {
+      expect(zIntent.safeParse({ type, rollId }).success).toBe(true);
+      expect(zIntent.safeParse({ type }).success).toBe(false);
+    }
+  });
+
   it('refuse un type d’intention inconnu', () => {
     expect(zIntent.safeParse({ type: 'gauge.set', gauge: 'vigueur', value: 5 }).success).toBe(
       false,

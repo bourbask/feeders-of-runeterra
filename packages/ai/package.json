@@ -22,7 +22,8 @@
   },
   "dependencies": {
     "@for/contracts": "workspace:*",
-    "@for/content": "workspace:*"
+    "@for/content": "workspace:*",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@for/tsconfig": "workspace:*"

@@ -83,7 +83,7 @@ describe('the domain vocabulary', () => {
       expect(INTENT_TYPES).not.toContain(forbidden);
     }
     expect(INTENT_TYPES.filter((type) => type.startsWith('narration.'))).toEqual([]);
-    expect(INTENT_TYPES).toHaveLength(20);
+    expect(INTENT_TYPES).toHaveLength(21);
   });
 
   it('declares every effect op, and no op that builds an effect from text', () => {

@@ -111,8 +111,16 @@ export type ToolName = ReadOnlyToolName | ProposalToolName;
 
 /**
  * Names that must never become a tool. The list lives here, next to the
- * definitions, and `packages/ai/tests/tool-surface.test.ts` fails if one of
- * them appears in `TOOL_DEFINITIONS`.
+ * definitions, and `packages/ai/tests/tool-surface.test.ts` PINS IT IN FULL
+ * LETTERS with `toStrictEqual` before using it as a loop source — measured in
+ * the M0-12 acceptance pass, a tuple that is only ever iterated over can be
+ * emptied down to one member with 569 tests out of 569 still green.
+ *
+ * `propose_price` JOINED THE TUPLE IN M0-18. Section 3.1 lists seven names and
+ * section 3.4 forbids a price tool in its own words; the eighth name therefore
+ * existed as a literal inside one test's loop and nowhere else, which is the
+ * "three copies of a closed list" problem the header of this file already
+ * warns about. It belongs here, with the other seven.
  */
 export const FORBIDDEN_TOOL_NAMES = [
   'apply_damage',
@@ -122,6 +130,7 @@ export const FORBIDDEN_TOOL_NAMES = [
   'kill_character',
   'advance_vow',
   'spend_momentum',
+  'propose_price',
 ] as const;
 
 // --------------------------------------------------------------- read: input
