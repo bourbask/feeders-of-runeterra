@@ -1,0 +1,442 @@
+/**
+ * The in-memory table every `tests/ws/**` suite drives: a pair of sockets, a
+ * fake `CampaignService`, a simulated clock.
+ *
+ * A `.test.ts` THOUGH IT IS A SUPPORT FILE, following the precedent of
+ * `packages/db/tests/support/campaign.test.ts` and
+ * `packages/engine/tests/support/every-event.test.ts`: the flat ESLint config
+ * maps `**\/*.test.ts` to `tsconfig.test.json` and everything else to the
+ * project service, which only sees `src/**`. A plain `.ts` here would belong
+ * to no TypeScript program and `pnpm lint` would stop on it. It carries its
+ * own tests at the foot — a fixture that does not hold up is a suite that
+ * measures nothing.
+ *
+ * EVERY IDENTIFIER IS ULID-SHAPED AND EVERY FRAME IDENTIFIER IS A UUID. Not
+ * cosmetic: `zPlayerId` refuses `p1`, and `zMessageId` refuses a ULID. The
+ * connection parses every frame it sends against `zS2CEnvelope`, so a fixture
+ * with sloppy identifiers would fail inside the code under test and the suite
+ * would be measuring its own strings.
+ *
+ * THE FAKE SERVICE COUNTS WHAT IT IS ASKED. `journal.length`, `submitCalls`
+ * and `narrationsStarted` are what the "`c2s.why` mutates nothing" criterion
+ * reads; a fake that merely returned canned answers could not tell a read
+ * from a write.
+ */
+
+import { describe, expect, it } from 'vitest';
+
+import { staticContent } from '@for/content';
+import type { TableStateDto, TurnProofDto } from '@for/contracts';
+import { PROTOCOL_VERSION, zGameEvent, zPlayerId, zTableState, zTurnProof } from '@for/contracts';
+import type { CampaignId, PlayerId, Result } from '@for/engine';
+import { err, ok } from '@for/engine';
+
+import type { TimeSource } from '../../../src/deps.js';
+import { AppError } from '../../../src/errors.js';
+import type {
+  CampaignService,
+  PersistedEvent,
+  SubmitIntentInput,
+  SubmitIntentResult,
+  TurnProofResult,
+} from '../../../src/game/types.js';
+import type {
+  CampaignAccess,
+  FrameIdSource,
+  NarrationReplay,
+  TableConnection,
+  TableHub,
+  WsLogger,
+  WsSocket,
+} from '../../../src/ws/index.js';
+import { attachSocket, createTableHub } from '../../../src/ws/index.js';
+
+// ───────────────────────────────────────────────────────────── identifiers
+
+/** Crockford base32, the 32 symbols a ULID is written in. */
+const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+
+/** A distinct, valid ULID per number. First symbol `0`, as the shape demands. */
+export function anId(n: number): string {
+  let rest = n;
+  let tail = '';
+  for (let i = 0; i < 25; i += 1) {
+    tail = CROCKFORD.charAt(rest % 32) + tail;
+    rest = Math.floor(rest / 32);
+  }
+  return `0${tail}`;
+}
+
+/** A distinct, valid UUID per number — what `zMessageId` and `zCorrelationId` want. */
+export function aUuid(n: number): string {
+  return `00000000-0000-4000-8000-${n.toString(16).padStart(12, '0')}`;
+}
+
+export const CAMPAIGN = anId(1) as CampaignId;
+export const OTHER_CAMPAIGN = anId(2) as CampaignId;
+export const ALICE = anId(10) as PlayerId;
+export const BOB = anId(11) as PlayerId;
+
+// ─────────────────────────────────────────────────────────────── the socket
+
+export interface CloseRecord {
+  readonly code: number;
+  readonly reason: string | undefined;
+}
+
+/**
+ * A transport that keeps the BYTES.
+ *
+ * The suites assert on `sent`, the raw strings, and not on objects the hub
+ * handed over: the ADR 0008 question is what left the server, and an
+ * assertion on an intermediate structure could be satisfied by a frame that
+ * was built and then filtered by the client.
+ */
+export class FakeSocket implements WsSocket {
+  readonly sent: string[] = [];
+
+  readonly closes: CloseRecord[] = [];
+
+  /** While true the transport never acknowledges: the queue never drains. */
+  stalled = false;
+
+  send(data: string, onFlushed?: () => void): void {
+    this.sent.push(data);
+    if (!this.stalled) onFlushed?.();
+  }
+
+  close(code: number, reason?: string): void {
+    this.closes.push({ code, reason });
+  }
+
+  frames(): { t: string; p: Record<string, unknown> }[] {
+    return this.sent.map((line) => JSON.parse(line) as { t: string; p: Record<string, unknown> });
+  }
+
+  types(): string[] {
+    return this.frames().map((frame) => frame.t);
+  }
+
+  of(type: string): { t: string; p: Record<string, unknown> }[] {
+    return this.frames().filter((frame) => frame.t === type);
+  }
+
+  clear(): void {
+    this.sent.length = 0;
+    this.closes.length = 0;
+  }
+}
+
+// ──────────────────────────────────────────────────────────────── the clock
+
+export class FakeClock implements TimeSource {
+  constructor(private current = 1_700_000_000_000) {}
+
+  now(): number {
+    return this.current;
+  }
+
+  advance(ms: number): number {
+    this.current += ms;
+    return this.current;
+  }
+}
+
+/** UUIDs, minted in order, so a failing assertion names a frame. */
+export class CountingFrameIds implements FrameIdSource {
+  private n = 0;
+
+  next(): string {
+    this.n += 1;
+    return aUuid(this.n);
+  }
+}
+
+/** ULIDs, for `s2c.error.requestId`. */
+export class CountingIds {
+  private n = 1000;
+
+  next(): string {
+    this.n += 1;
+    return anId(this.n);
+  }
+}
+
+export const SILENT_LOGGER: WsLogger = { warn: () => undefined };
+
+// ────────────────────────────────────────────────────────────── the events
+
+export interface EventInput {
+  readonly seq: number;
+  readonly scope: 'table' | 'subset' | 'private';
+  readonly recipients?: readonly string[] | null;
+  readonly campaignId?: CampaignId;
+  readonly correlationId?: string | null;
+  readonly text?: string;
+}
+
+/**
+ * One journalled event. `system.note` because it is the cheapest of the 71
+ * variants that still carries a real payload — the suites are about delivery,
+ * not about any one event's meaning.
+ */
+export function anEvent(input: EventInput): PersistedEvent {
+  return {
+    id: anId(5000 + input.seq),
+    campaignId: input.campaignId ?? CAMPAIGN,
+    seq: input.seq,
+    playSessionId: null,
+    type: 'system.note',
+    payloadVersion: 1,
+    payload: { text: input.text ?? `note ${String(input.seq)}`, byPlayerId: ALICE },
+    actorKind: 'system',
+    actorPlayerId: null,
+    subjectCharacterId: null,
+    correlationId: input.correlationId ?? null,
+    causationId: null,
+    rngStream: null,
+    rngDrawIndex: null,
+    scope: input.scope,
+    recipients: input.recipients ?? null,
+    createdAt: 1_700_000_000_000,
+  };
+}
+
+// ───────────────────────────────────────────────────────────── the service
+
+const EMPTY_STATE = (campaignId: CampaignId, characters: TableStateDto['characters']) =>
+  ({
+    campaignId,
+    seq: 0,
+    status: 'active',
+    contentPackHash: 'hash-de-test',
+    settings: {
+      schemaVersion: 1,
+      models: { narration: null, structured: null },
+      gmVerbosity: 'standard',
+      oracleBias: 'neutre',
+      safety: { lines: [], veils: [] },
+      allowForgedChampions: true,
+      requireForgeReview: false,
+    },
+    truths: [],
+    characters,
+    tracks: [],
+    clocks: [],
+    entities: [],
+    championLocks: [],
+    scene: null,
+    party: { memberPlayerIds: [ALICE, BOB], ownerPlayerId: ALICE },
+  }) as unknown as TableStateDto;
+
+/**
+ * The service the hub routes to. It COUNTS, so that a read can be told from a
+ * write by something other than good intentions.
+ */
+export class FakeCampaignService implements CampaignService {
+  readonly journal: PersistedEvent[] = [];
+
+  /** Keyed `campaignId|correlationId`: a proof belongs to exactly one table. */
+  readonly proofs = new Map<string, TurnProofResult>();
+
+  submitCalls = 0;
+
+  readCalls = 0;
+
+  snapshotCalls = 0;
+
+  proofCalls = 0;
+
+  /** Stands in for the out-of-band storyteller. A read must never move it. */
+  narrationsStarted = 0;
+
+  /** Set by a probe to check that the "mutates nothing" suite really bites. */
+  mutateOnProof = false;
+
+  characters: TableStateDto['characters'] = [];
+
+  submitIntent(input: SubmitIntentInput): Promise<Result<SubmitIntentResult, AppError>> {
+    this.submitCalls += 1;
+    if ((input.intent as { type: string }).type === 'campaign.leave') {
+      return Promise.resolve(
+        err(new AppError('forbidden_campaign', 403, 'La table te refuse ce geste.')),
+      );
+    }
+    const event = anEvent({
+      seq: this.journal.length + 1,
+      scope: 'table',
+      campaignId: input.campaignId,
+    });
+    this.journal.push(event);
+    this.narrationsStarted += 1;
+    return Promise.resolve(ok({ accepted: true, events: [event] }));
+  }
+
+  getSnapshot(campaignId: CampaignId): Promise<{ state: TableStateDto; lastSeq: number }> {
+    this.snapshotCalls += 1;
+    return Promise.resolve({
+      state: EMPTY_STATE(campaignId, this.characters),
+      lastSeq: this.journal.length,
+    });
+  }
+
+  readEventsSince(campaignId: CampaignId, seq: number): Promise<readonly PersistedEvent[]> {
+    this.readCalls += 1;
+    return Promise.resolve(
+      this.journal.filter((event) => event.campaignId === campaignId && event.seq > seq),
+    );
+  }
+
+  getTurnProof(campaignId: CampaignId, correlationId: string): Promise<TurnProofResult | null> {
+    this.proofCalls += 1;
+    if (this.mutateOnProof) {
+      this.journal.push(anEvent({ seq: this.journal.length + 1, scope: 'table', campaignId }));
+    }
+    return Promise.resolve(this.proofs.get(`${campaignId}|${correlationId}`) ?? null);
+  }
+
+  /** Appends straight to the journal, the way a committed turn would. */
+  commit(events: readonly PersistedEvent[]): void {
+    for (const event of events) this.journal.push(event);
+  }
+}
+
+/** A minimal proof, valid against `zTurnProof`. */
+export function aProof(correlationId: string): TurnProofDto {
+  return zTurnProof.parse({
+    correlationId,
+    firstSeq: 1,
+    lastSeq: 2,
+    status: 'applied',
+    revertedBy: null,
+    move: null,
+    roll: null,
+    revision: null,
+    effects: [],
+    price: null,
+    presage: null,
+    narration: null,
+  });
+}
+
+// ──────────────────────────────────────────────────────────── the table
+
+export class AccessStub implements CampaignAccess {
+  verdict: 'ok' | 'forbidden' | 'not_found' = 'ok';
+
+  check(): Promise<'ok' | 'forbidden' | 'not_found'> {
+    return Promise.resolve(this.verdict);
+  }
+}
+
+/** One c2s frame, serialised the way a browser would send it. */
+export function c2s(type: string, payload: unknown, id: string): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, t: type, id, p: payload });
+}
+
+export interface OpenSocket {
+  readonly connection: TableConnection;
+  readonly socket: FakeSocket;
+}
+
+/**
+ * A live table: one hub, one fake service, one simulated clock, and as many
+ * sockets as a suite needs.
+ */
+export class Table {
+  readonly service = new FakeCampaignService();
+
+  readonly clock = new FakeClock();
+
+  readonly access = new AccessStub();
+
+  readonly hub: TableHub;
+
+  private frames = 0;
+
+  constructor(readonly narration?: NarrationReplay) {
+    this.hub = createTableHub(this.service);
+  }
+
+  /** The next c2s frame identifier. Distinct per call, valid as a UUID. */
+  nextFrameId(): string {
+    this.frames += 1;
+    return aUuid(100_000 + this.frames);
+  }
+
+  /**
+   * `playerId: null` is "no valid session", `campaignId: null` is "no
+   * `?campaignId=`" — the two handshake refusals, expressed as inputs rather
+   * than as a second code path in the fixture.
+   */
+  async connect(
+    playerId: PlayerId | null,
+    campaignId: CampaignId | null = CAMPAIGN,
+  ): Promise<{ socket: FakeSocket; connection: TableConnection | null }> {
+    const socket = new FakeSocket();
+    const connection = await attachSocket({
+      hub: this.hub,
+      socket,
+      request: { session: playerId === null ? null : { playerId }, campaignId },
+      access: this.access,
+      service: this.service,
+      content: staticContent(),
+      clock: this.clock,
+      ids: new CountingIds(),
+      frameIds: new CountingFrameIds(),
+      logger: SILENT_LOGGER,
+      ...(this.narration === undefined ? {} : { narration: this.narration }),
+    });
+    return { connection, socket };
+  }
+
+  /** Connect, then say hello. What every suite but the handshake one starts with. */
+  async join(playerId: PlayerId, lastDeliverySeq: number | null = null): Promise<OpenSocket> {
+    const opened = await this.connect(playerId);
+    if (opened.connection === null) throw new Error('la poignée de main a été refusée');
+    await opened.connection.receive(
+      c2s('c2s.hello', { clientVersion: '0.0.0-test', lastDeliverySeq }, this.nextFrameId()),
+    );
+    return { connection: opened.connection, socket: opened.socket };
+  }
+}
+
+// ───────────────────────────────────────────────────────── the fixture holds
+
+describe('le harnais des suites WebSocket', () => {
+  it('produit des identifiants que les schémas gelés acceptent', () => {
+    expect(zPlayerId.safeParse(ALICE).success).toBe(true);
+    expect(zPlayerId.safeParse(BOB).success).toBe(true);
+    expect(ALICE).not.toBe(BOB);
+  });
+
+  it('produit des événements que zGameEvent accepte, dans les trois portées', () => {
+    expect(zGameEvent.safeParse(anEvent({ seq: 1, scope: 'table' })).success).toBe(true);
+    expect(
+      zGameEvent.safeParse(anEvent({ seq: 2, scope: 'private', recipients: [ALICE] })).success,
+    ).toBe(true);
+    expect(
+      zGameEvent.safeParse(anEvent({ seq: 3, scope: 'subset', recipients: [ALICE, BOB] })).success,
+    ).toBe(true);
+  });
+
+  it('produit un état de table que zTableState accepte', () => {
+    expect(zTableState.safeParse(EMPTY_STATE(CAMPAIGN, [])).success).toBe(true);
+  });
+
+  it('compte les écritures et les lectures séparément', async () => {
+    const service = new FakeCampaignService();
+    await service.submitIntent({
+      campaignId: CAMPAIGN,
+      playerId: ALICE,
+      intentId: aUuid(1),
+      intent: { type: 'play_session.begin' },
+    });
+    expect(service.journal).toHaveLength(1);
+    expect(service.narrationsStarted).toBe(1);
+
+    await service.getTurnProof(CAMPAIGN, aUuid(9));
+    expect(service.journal).toHaveLength(1);
+    expect(service.narrationsStarted).toBe(1);
+  });
+});

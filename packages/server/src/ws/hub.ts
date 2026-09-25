@@ -1,0 +1,319 @@
+/**
+ * `TableHub` — who is connected, WHO RECEIVES WHAT, and where each player's
+ * dense delivery numbering stands.
+ *
+ * ══ THE SERVER DECIDES WHO RECEIVES WHAT (ADR 0008 decision 1, invariant 3) ══
+ *
+ * `isVisibleTo` below is the only place ON THIS PATH where that question is
+ * answered — live broadcast and catch-up both call it, and nothing else in
+ * `src/ws/` looks at `scope`. It is NOT the only expression of the predicate
+ * in the repository: `@for/db` carries the same rule as SQL
+ * (`VISIBLE_TO_PLAYER`, `repositories/events.ts`) for replaying one player's
+ * thread. Two expressions, one rule, and saying so is the point — a comment
+ * that claimed uniqueness here would be promising a guarantee nobody holds.
+ *
+ * A `private` event is never written to a socket whose player is not in
+ * `recipients`, and the client filters NOTHING — a client-side filter is not
+ * confidentiality, it is a suggestion. The proof is
+ * `tests/ws/addressed-broadcast.test.ts`, which reads the BYTES handed to the
+ * other player's transport rather than the frames the hub thinks it sent.
+ *
+ * ══ THE DELIVERY NUMBER (ADR 0010 decision 1) ═══════════════════════════════
+ *
+ * `seq` is the journal's clock and has legitimate holes for any one player
+ * since broadcast became addressed. `deliverySeq` is dense per
+ * (campaign, player) and is what `c2s.resume` carries. The hub mints it here,
+ * and it is NOT stored: `@for/db` derives the same number from the journal
+ * with a `ROW_NUMBER() OVER (ORDER BY seq)` over the visible stream
+ * (`readForPlayerAfterDelivery`), so the definition is
+ *
+ *     deliverySeq(p, e) = |{ f : f.seq <= e.seq and isVisibleTo(f, p) }|
+ *
+ * and this module computes exactly that, from `readEventsSince(campaignId, 0)`
+ * at hydration and by increment afterwards. Two paths, one definition — which
+ * is the point, because a counter kept only in memory would not survive a
+ * restart and could not be compared to anything.
+ *
+ * ══ WHY HYDRATION READS THE WHOLE JOURNAL, AND WHAT WOULD FIX IT ═══════════
+ *
+ * REPORTED, NOT WORKED AROUND. `CampaignService` as M0-20 froze it has no
+ * delivery-aware read: `readEventsSince(campaignId, seq)` takes no `viewerId`
+ * and returns no `deliverySeq`, and `getSnapshot` returns no
+ * `lastDeliverySeq` — while `s2c.welcome`, `s2c.snapshot`, `s2c.events_batch`
+ * and `c2s.resume` all need one. `@for/db` ALREADY SHIPS the indexed query
+ * (`readForPlayerAfterDelivery`, M0-15); the interface simply does not expose
+ * it. Until it does, a player's first `c2s.hello` on a campaign costs one full
+ * journal read. The hub may not reach past the service to the database — it
+ * routes, it does not read — so the cost is paid here and named here.
+ *
+ * ══ WHAT THIS FILE IS NOT ══════════════════════════════════════════════════
+ *
+ * It rolls no die, applies no event to any state, and builds no proof. It
+ * holds a list of connections, a per-player counter, and a bounded tail of
+ * what it has already delivered.
+ */
+
+import { EVENT_SCOPES } from '@for/engine';
+
+import type { CampaignId, PlayerId } from '@for/engine';
+import type { CampaignService, PersistedEvent } from '../game/types.js';
+import type { DeliveredEntry, PresenceMember, TableConnection } from './connection.js';
+
+/**
+ * How far back a client may resume from, in delivered events.
+ *
+ * MINE, AND SAID SO. 01-architecture.md section 5.4 says a snapshot is sent
+ * when the client's cursor is "trop ancien ou absent" and never quantifies
+ * "trop ancien". 200 is the snapshot cadence of ARCHITECTURE.md section 4.5:
+ * past that many events a client is, by the repository's own measure, better
+ * served by a fresh state than by a replay. Raising it costs memory per
+ * connected player and nothing else.
+ */
+export const WS_DELIVERY_TAIL_MAX = 200;
+
+/**
+ * THE VISIBILITY PREDICATE OF ADR 0008. One function, one answer, one caller
+ * per direction — live broadcast and catch-up both go through it.
+ *
+ * A SWITCH, NOT AN `if`: `switch-exhaustiveness-check` makes a fourth scope a
+ * lint error here instead of a silent delivery. And the default of the two
+ * addressed scopes is REFUSAL — a `recipients` that is null or empty reaches
+ * nobody, which is the fail-closed direction.
+ */
+export function isVisibleTo(event: PersistedEvent, playerId: string): boolean {
+  switch (event.scope) {
+    case 'table':
+      return true;
+    case 'subset':
+    case 'private':
+      return event.recipients?.includes(playerId) ?? false;
+  }
+}
+
+/**
+ * The scopes that are addressed, derived from the engine's own tuple.
+ *
+ * Exported so a test can compare it to the list ADR 0008 writes out in full,
+ * rather than to this module's own arithmetic.
+ */
+export const ADDRESSED_SCOPES: readonly string[] = EVENT_SCOPES.filter(
+  (scope) => scope !== 'table',
+);
+
+/** What `c2s.hello` and `c2s.resume` get back. */
+export type Catchup =
+  | { readonly kind: 'batch'; readonly entries: readonly DeliveredEntry[] }
+  | { readonly kind: 'snapshot'; readonly reason: string };
+
+/** One player's dense stream in one campaign. */
+interface PlayerStream {
+  /** High-water mark of `deliverySeq`. Exact, whatever the tail retains. */
+  head: number;
+  /** Highest journal `seq` already counted. Makes appends idempotent. */
+  lastSeq: number;
+  /** The last `WS_DELIVERY_TAIL_MAX` deliveries, for the catch-up. */
+  tail: DeliveredEntry[];
+  /** True while the first journal read is in flight. */
+  hydrating: boolean;
+  /** Events broadcast during hydration, applied once it lands. */
+  pending: PersistedEvent[];
+}
+
+interface CampaignRoom {
+  readonly connections: Set<TableConnection>;
+  readonly streams: Map<string, PlayerStream>;
+}
+
+export interface HubDeps {
+  readonly service: CampaignService;
+}
+
+export class TableHub {
+  private readonly deps: HubDeps;
+
+  private readonly rooms = new Map<string, CampaignRoom>();
+
+  constructor(deps: HubDeps) {
+    this.deps = deps;
+  }
+
+  // ------------------------------------------------------------- the room
+
+  private room(campaignId: string): CampaignRoom {
+    const existing = this.rooms.get(campaignId);
+    if (existing !== undefined) return existing;
+    const created: CampaignRoom = { connections: new Set(), streams: new Map() };
+    this.rooms.set(campaignId, created);
+    return created;
+  }
+
+  /**
+   * A connection joins the broadcast set. Called AFTER its `c2s.hello` has
+   * been answered, so that the catch-up and the live stream cannot interleave.
+   * Nothing is lost in between: the stream keeps counting during the handshake
+   * and the catch-up reads from it.
+   */
+  attach(connection: TableConnection): void {
+    this.room(connection.session.campaignId).connections.add(connection);
+  }
+
+  /** The socket went away. The last one out drops the room's streams. */
+  detach(connection: TableConnection): void {
+    const campaignId = connection.session.campaignId;
+    const room = this.rooms.get(campaignId);
+    if (room === undefined) return;
+    room.connections.delete(connection);
+    if (room.connections.size === 0) this.rooms.delete(campaignId);
+  }
+
+  connectionsOf(campaignId: CampaignId): readonly TableConnection[] {
+    return [...(this.rooms.get(campaignId)?.connections ?? [])];
+  }
+
+  // -------------------------------------------------------- the numbering
+
+  /**
+   * Makes sure this player's stream exists and is numbered, reading the
+   * journal once if it is not.
+   *
+   * THE RACE IS HANDLED, AND IT IS THE INTERESTING PART. The stream is put in
+   * the map BEFORE the read is awaited, marked `hydrating`, so an event
+   * broadcast meanwhile lands in `pending` instead of being dropped. The read
+   * is then applied first, `pending` second, and `appendVisible` skips
+   * anything whose `seq` is already counted — so an event that appears in both
+   * is counted exactly once, and one that appears in neither cannot exist.
+   */
+  async openStream(campaignId: CampaignId, playerId: PlayerId): Promise<void> {
+    const room = this.room(campaignId);
+    if (room.streams.has(playerId)) return;
+
+    const stream: PlayerStream = {
+      head: 0,
+      lastSeq: 0,
+      tail: [],
+      hydrating: true,
+      pending: [],
+    };
+    room.streams.set(playerId, stream);
+
+    const journal = await this.deps.service.readEventsSince(campaignId, 0);
+    for (const event of journal) this.appendVisible(stream, event, playerId);
+
+    const pending = stream.pending;
+    stream.pending = [];
+    stream.hydrating = false;
+    for (const event of pending) this.appendVisible(stream, event, playerId);
+  }
+
+  /** Head of this player's dense stream. 0 when nothing was ever delivered. */
+  deliveryHead(campaignId: CampaignId, playerId: PlayerId): number {
+    return this.rooms.get(campaignId)?.streams.get(playerId)?.head ?? 0;
+  }
+
+  /**
+   * What the player is missing after `sinceDeliverySeq`.
+   *
+   * `null` means "I have never received anything", which is a snapshot, not a
+   * replay of the whole campaign: `c2s.hello` carries `lastDeliverySeq: null`
+   * exactly in that case.
+   */
+  catchUpFrom(campaignId: CampaignId, playerId: PlayerId, since: number | null): Catchup {
+    const stream = this.rooms.get(campaignId)?.streams.get(playerId);
+    if (stream === undefined) return { kind: 'snapshot', reason: 'flux inconnu' };
+    if (since === null) return { kind: 'snapshot', reason: 'aucun curseur' };
+
+    if (since > stream.head) {
+      return { kind: 'snapshot', reason: 'curseur en avance sur le serveur' };
+    }
+
+    const missing = stream.tail.filter((entry) => entry.deliverySeq > since);
+    if (stream.head - since > missing.length) {
+      return { kind: 'snapshot', reason: 'curseur trop ancien' };
+    }
+
+    return { kind: 'batch', entries: missing };
+  }
+
+  // --------------------------------------------------------- the delivery
+
+  /**
+   * Hands a batch of journalled events to everyone entitled to them.
+   *
+   * ORDER IS THE POINT. Events are delivered in `seq` order, and each player's
+   * `deliverySeq` therefore increases by exactly one per frame — the "sans
+   * trou" guarantee of ARCHITECTURE.md section 6, moved onto the counter for
+   * which it is still true.
+   */
+  broadcast(campaignId: CampaignId, events: readonly PersistedEvent[]): void {
+    const room = this.rooms.get(campaignId);
+    if (room === undefined) return;
+
+    for (const event of events) {
+      for (const [playerId, stream] of room.streams) {
+        if (stream.hydrating) {
+          stream.pending.push(event);
+          continue;
+        }
+        const entry = this.appendVisible(stream, event, playerId);
+        if (entry === null) continue;
+        for (const connection of room.connections) {
+          if (connection.session.playerId !== playerId) continue;
+          connection.sendEvent(entry);
+        }
+      }
+    }
+  }
+
+  /**
+   * Counts one event into one player's stream, if that player may see it.
+   *
+   * Returns the entry when it was counted, `null` when it was not visible or
+   * was already counted. `null` is what stops a frame from being written.
+   */
+  private appendVisible(
+    stream: PlayerStream,
+    event: PersistedEvent,
+    playerId: string,
+  ): DeliveredEntry | null {
+    if (event.seq <= stream.lastSeq) return null;
+    stream.lastSeq = event.seq;
+
+    if (!isVisibleTo(event, playerId)) return null;
+
+    stream.head += 1;
+    const entry: DeliveredEntry = { seq: event.seq, deliverySeq: stream.head, event };
+    stream.tail.push(entry);
+    if (stream.tail.length > WS_DELIVERY_TAIL_MAX) {
+      stream.tail = stream.tail.slice(stream.tail.length - WS_DELIVERY_TAIL_MAX);
+    }
+    return entry;
+  }
+
+  // --------------------------------------------------------- the presence
+
+  presence(campaignId: CampaignId): readonly PresenceMember[] {
+    const room = this.rooms.get(campaignId);
+    if (room === undefined) return [];
+    return [...room.connections].map((connection) => connection.member);
+  }
+
+  /** Everyone at the table learns who is there. Ephemeral, never journalled. */
+  broadcastPresence(campaignId: CampaignId): void {
+    const members = this.presence(campaignId);
+    for (const connection of this.connectionsOf(campaignId)) {
+      connection.sendPresence(members);
+    }
+  }
+
+  // --------------------------------------------------------- the heartbeat
+
+  /** One beat, driven by the injected clock. Closed sockets leave the room. */
+  tick(now: number): void {
+    for (const room of [...this.rooms.values()]) {
+      for (const connection of [...room.connections]) {
+        connection.tick(now);
+        if (!connection.isOpen) this.detach(connection);
+      }
+    }
+  }
+}
