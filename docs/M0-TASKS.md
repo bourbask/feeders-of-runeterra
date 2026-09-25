@@ -1620,6 +1620,24 @@ revenir la fenêtre de brûlure avec le reste (`03-donnees.md` §3.7, point 1). 
 branche sur `burnWindowClosedBy` : avant de traiter une intention qui écrirait sur le même
 personnage, le serveur ferme d'abord par `momentum.keep`.
 
+La fenêtre porte désormais, en plus du jet : le `correlationId` du tour, l'`id` du
+`move.declared`, et le `MovePlan` décidé à la déclaration. Que des valeurs — elle se sérialise
+en JSON telle quelle, et c'est ce que le serveur persiste.
+
+**Une fenêtre ouverte doit toujours pouvoir se fermer.** Les dés sont écrits et lus ; il ne
+reste dû que leurs conséquences. Deux moitiés, et elles ne se tiennent pas au même endroit :
+
+| Ce qui change sous la fenêtre | Qui le tient, et comment |
+|---|---|
+| la **scène** (`scene.ended`, cible partie) | **le moteur**. Le `MovePlan` est porté par la fenêtre, pas recalculé à la fermeture : la faisabilité a été tranchée avant les dés. Personne ne peut ordonner les transitions de scène du conteur contre la décision d'un joueur, donc ça ne peut pas être une règle de serveur |
+| le **statut de campagne** (`paused`, `archived`) | **le serveur**, et c'est une clause de ce contrat : le serveur **ferme toute fenêtre ouverte de la campagne par `momentum.keep` avant d'écrire le changement de statut**. `decide()` refuse tout sur une campagne non active — c'est voulu, une pause n'est pas un demi-arrêt —, et la pause est une intention humaine sérialisée sur la même file d'écriture (`03-donnees.md` §0.3), donc l'ordre est tenable |
+| le **personnage** (mort, retraite, départ) | **le filet**, déjà : ces événements portent le personnage en `subject_character_id`, donc `burnWindowClosedBy` les voit et la fenêtre se ferme avant. `scene.ended`, lui, ne porte aucun sujet — c'est pourquoi la première ligne n'est pas du ressort du filet |
+
+Mesuré côté moteur : `decide.test.ts` → « the scene ends between the dice and the decision »
+(la fenêtre se ferme, l'effet tombe), « une campagne en pause » (le refus `campaign_not_active`,
+qui est la raison d'être de la clause ci-dessus) et « refuses a closing whose character died in
+between » (le filet, dans les deux sens).
+
 **Fichiers touchés** : `packages/engine/src/{decide.ts,decide.test.ts,index.test.ts}`,
 `packages/engine/src/types/intents.ts`,
 `packages/contracts/src/intents/{index.ts,index.test.ts}`,
@@ -2072,7 +2090,8 @@ sans propriétaire — ils arrivent ici pour ne pas être redécouverts) :
 | ~~M0-21~~ | *absorbée par M0-16* | — | — | — |
 | M0-22 | IA : contexte, budget, assertions | 7 | grosse | M0-18 |
 | M0-23 | Serveur : Discord et surface HTTP | 7 | grosse | M0-15, M0-20 |
-| M0-24 | Serveur : le chemin d'une intention | 7 | grosse | M0-13, M0-15, M0-20 |
+| M0-34 | Moteur : la brûlure en deux temps | 7 | moyenne | M0-13 |
+| M0-24 | Serveur : le chemin d'une intention | 7 | grosse | M0-13, M0-15, M0-20, M0-34 |
 | M0-25 | Serveur : hub WebSocket | 7 | grosse | M0-08, M0-20 |
 | M0-32 | Sonde de fumée d'un fournisseur gratuit | 7 | petite | M0-18 |
 | M0-26 | Base : campagne de démonstration | 8 | grosse | M0-17, M0-16 |
