@@ -342,6 +342,28 @@ describe('`c2s.hello`', () => {
   });
 });
 
+describe('la présence est éphémère', () => {
+  it('ne passe jamais par le journal, là où un geste y passe', async () => {
+    const table = new Table();
+    const alice = await table.join(ALICE);
+    await table.join(BOB);
+    await alice.connection.receive(c2s('c2s.typing', { typing: true }, table.nextFrameId()));
+
+    // De la présence a bien circulé — sinon ce test serait vert sur un serveur
+    // qui n'en diffuse aucune.
+    expect(alice.socket.of('s2c.presence').length).toBeGreaterThan(0);
+    expect(table.service.journal).toStrictEqual([]);
+    expect(table.service.submitCalls).toBe(0);
+
+    // LA DIRECTION BASSE : un geste, lui, passe par le journal. Sans elle, un
+    // service qui n'écrirait jamais rien rendrait l'assertion précédente vide.
+    await alice.connection.receive(
+      c2s('c2s.intent', { intent: { type: 'play_session.begin' } }, table.nextFrameId()),
+    );
+    expect(table.service.journal).toHaveLength(1);
+  });
+});
+
 describe("le destinataire des lectures — la moitié LECTURE de l'ADR 0008", () => {
   /**
    * `src/game/types.ts` l'écrit mot pour mot : « `getSnapshot` et

@@ -19,9 +19,14 @@ import { fileURLToPath } from 'node:url';
 
 import { c2sMessageTypesOfSchema } from '@for/contracts';
 import type { Intent } from '@for/engine';
+import Fastify from 'fastify';
 import { describe, expect, it } from 'vitest';
 
+import type { FastifyInstance } from 'fastify';
+
+import type { AppDeps } from '../../src/deps.js';
 import { ROUTES } from '../../src/ws/handlers.js';
+import { wsPlugin } from '../../src/ws/index.js';
 import { ALICE, BOB, CAMPAIGN, Table, c2s } from './support/harness.test.js';
 
 /** Le chiffre de la fiche, en toutes lettres. */
@@ -101,6 +106,26 @@ describe('le routage', () => {
     expect(table.service.submitCalls).toBe(0);
     expect(opened.socket.of('s2c.error')[0]?.p['code']).toBe('validation_failed');
     expect(opened.socket.of('s2c.event')).toHaveLength(0);
+  });
+
+  it("le battement passe avant l'accueil, et il repousse l'échéance", async () => {
+    const table = new Table();
+    const opened = await table.connect(ALICE);
+    const connection = opened.connection;
+    expect(connection).not.toBeNull();
+    if (connection === null) return;
+
+    // LA DIRECTION HAUTE du test précédent : `BEFORE_HELLO` laisse passer DEUX
+    // trames, et le battement en est une — c'est le serveur qui l'a commencé.
+    table.clock.advance(59_000);
+    await connection.receive(c2s('c2s.pong', {}, table.nextFrameId()));
+    expect(opened.socket.of('s2c.error')).toStrictEqual([]);
+
+    // Et il a été PRIS EN COMPTE, pas seulement toléré : sans cela, ce tic
+    // fermerait une socket qui vient de répondre.
+    connection.tick(table.clock.advance(1_000));
+    expect(connection.isOpen).toBe(true);
+    expect(opened.socket.closes).toStrictEqual([]);
   });
 
   it('`c2s.speak` devient une intention `speech.say`, jamais un chemin d’écriture à part', async () => {
@@ -354,5 +379,54 @@ describe('le hub ne décide rien (invariant 1)', () => {
     // en `import type`, donc rien de ce que le moteur DÉCIDE n'est joignable
     // d'ici.
     expect(valueImports).toStrictEqual(["hub.ts : import { EVENT_SCOPES } from '@for/engine';"]);
+  });
+});
+
+describe("le greffon Fastify, et ce qu'il n'enregistre pas", () => {
+  /**
+   * L'EN-TÊTE DE `index.ts` L'ANNONCE EN CAPITALES — « `wsPlugin` STILL
+   * REGISTERS NO ROUTE » — et c'est un manque REPORTÉ, pas un oubli : la
+   * montée en WebSocket demande `@fastify/websocket`, qui n'est pas une
+   * dépendance du paquet et que la liste de fichiers de M0-25 ne permet pas
+   * d'ajouter. Les deux moitiés du rapport se lisent ici plutôt qu'elles ne se
+   * croient.
+   */
+  function routesAddedBy(register: (app: FastifyInstance) => void): string[] {
+    const app = Fastify();
+    const routes: string[] = [];
+    app.addHook('onRoute', (route) => {
+      routes.push(`${String(route.method)} ${route.url}`);
+    });
+    register(app);
+    return routes;
+  }
+
+  it("n'enregistre aucune route, et `@fastify/websocket` n'est pas une dépendance du paquet", () => {
+    let finished = false;
+    // Appelé comme Fastify l'appelle. Les options ne sont pas lues par ce
+    // greffon — c'est exactement ce qui se mesure, donc rien n'est construit.
+    const routes = routesAddedBy((app) => {
+      wsPlugin(app, { deps: undefined as unknown as AppDeps }, () => {
+        finished = true;
+      });
+    });
+
+    expect(finished).toBe(true);
+    expect(routes).toStrictEqual([]);
+
+    // LA SONDE LIT BIEN QUELQUE CHOSE : un greffon qui déclare une route la
+    // fait apparaître. Sans cette ligne, `[]` serait vert sur un crochet muet.
+    expect(
+      routesAddedBy((app) => {
+        app.get('/sonde', () => 'ok');
+      }),
+    ).toStrictEqual(['GET /sonde', 'HEAD /sonde']);
+
+    const manifest = JSON.parse(readFileSync(join(WS_DIR, '..', '..', 'package.json'), 'utf8')) as {
+      dependencies: Record<string, string>;
+    };
+    expect(Object.keys(manifest.dependencies)).not.toContain('@fastify/websocket');
+    // Et le manifeste lu est bien celui du serveur.
+    expect(Object.keys(manifest.dependencies)).toContain('fastify');
   });
 });

@@ -429,6 +429,47 @@ describe("l'hydratation du flux ne relit le journal qu'une fois", () => {
   });
 });
 
+describe('la salle et ses flux, quand les sockets partent', () => {
+  /**
+   * `detach` L'ÉCRIT : « The last one out drops the room's streams ». Les deux
+   * moitiés comptent, et une seule serait pire que rien : si une salle perdait
+   * ses flux dès le premier départ, le joueur RESTÉ verrait sa numérotation
+   * repartir de zéro au prochain événement.
+   *
+   * CE QUI SE MESURE EST LA RELECTURE DU JOURNAL : un flux qui existe encore ne
+   * se réhydrate pas, un flux emporté se repaie. DEUX ACTEURS, sans quoi « il
+   * reste quelqu'un » n'aurait aucun sens.
+   */
+  it("garde les flux tant qu'une socket reste, et les emporte quand la dernière part", async () => {
+    const table = new Table();
+    table.service.commit([anEvent({ seq: 1, scope: 'table' })]);
+
+    await table.join(ALICE);
+    const bob = await table.join(BOB);
+    expect(table.service.readCalls).toBe(2);
+
+    // Bob s'en va, Alice reste : la salle survit, et les DEUX flux avec elle.
+    bob.connection.markClosed();
+    table.hub.tick(table.clock.now());
+    expect(table.hub.connectionsOf(CAMPAIGN)).toHaveLength(1);
+    expect(table.hub.deliveryHead(CAMPAIGN, ALICE)).toBe(1);
+    await table.join(BOB);
+    expect(table.service.readCalls).toBe(2);
+
+    // Tout le monde s'en va : la salle part avec ses flux.
+    for (const connection of table.hub.connectionsOf(CAMPAIGN)) connection.markClosed();
+    table.hub.tick(table.clock.now());
+    expect(table.hub.connectionsOf(CAMPAIGN)).toStrictEqual([]);
+    expect(table.hub.deliveryHead(CAMPAIGN, ALICE)).toBe(0);
+
+    // Et la prochaine arrivée repaie sa lecture — la preuve que le flux avait
+    // bien disparu, et pas seulement la connexion.
+    await table.join(ALICE);
+    expect(table.service.readCalls).toBe(3);
+    expect(table.hub.deliveryHead(CAMPAIGN, ALICE)).toBe(1);
+  });
+});
+
 describe('le fractionnement du rattrapage', () => {
   it('découpe un rattrapage trop lourd en plusieurs trames de moins de 256 Kio', async () => {
     const table = new Table();

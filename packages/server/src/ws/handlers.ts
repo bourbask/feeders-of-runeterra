@@ -1,7 +1,9 @@
 /**
  * The routing of the eight `c2s.*` frames, and the rate limiting of section
  * 5.6. Nothing here decides anything: every routine either asks
- * `CampaignService` or asks `TableHub`, and forwards the answer.
+ * `CampaignService` or asks `TableHub`, and forwards the answer — the grep of
+ * the acceptance criterion covers this file too, `tests/ws/routing.test.ts`,
+ * describe « le hub ne décide rien (invariant 1) ».
  *
  * ══ `c2s.why` IS A READ, AND IT IS PROVEN TO BE ONE (P22) ══════════════════
  *
@@ -13,6 +15,14 @@
  * identifier passed to the service is the SOCKET's, never the client's: the
  * frame carries one field and it is not a campaign.
  *
+ * HELD BY `tests/ws/why.test.ts`: « ne mute rien après 100 appels : ni le
+ * journal, ni une narration » with its counter-probe « et le compteur mord :
+ * une lecture qui écrirait ferait tomber le test précédent », « interroge le
+ * service avec la campagne DE LA SOCKET, pas une campagne fournie par le
+ * client », « un `correlationId` d'une AUTRE campagne est traité comme
+ * inconnu, jamais servi » and « demande la preuve DU JOUEUR DE LA SOCKET, et
+ * sert la sienne, pas celle du voisin ».
+ *
  * ══ TWO THINGS ABOUT THE RATE LIMITER THAT ARE NOT OBVIOUS ════════════════
  *
  *   1. `WS_RATE_LIMITS.burst` IS NOT HONOURED, AND IT CANNOT BE. The frozen
@@ -23,16 +33,22 @@
  *      the criterion is false; under the criterion, `burst` is dead. The two
  *      cannot both hold. The criterion wins here because it is what M0-25 is
  *      measured on, and the contradiction is reported rather than papered
- *      over — see the PR.
+ *      over — see the PR. The criterion's side is held by
+ *      `tests/ws/limits.test.ts`, « accepte cinq `c2s.intent` en 10 s et refuse
+ *      le sixième »; `burst` is read by nothing, here or anywhere.
  *   2. `c2s.typing` OVERRUNS ARE DROPPED IN SILENCE, not answered and not
  *      counted as a strike. Section 5.6 spells that row out: "échantillonné à
  *      1/s côté client, ignoré au-delà côté serveur". Erroring on it would
- *      close a socket over a keystroke.
+ *      close a socket over a keystroke. Held by `tests/ws/limits.test.ts`,
+ *      « `c2s.typing` au-delà de sa cadence est ignoré, pas refusé, et ne
+ *      compte pas de faute ».
  *
  * THE ROUTE TABLE IS A `Record<C2SMessageType, …>`, not a switch. A frame type
  * the protocol has and this file has not is then a COMPILATION error, and
- * `tests/ws/routing.test.ts` compares its keys to `c2sMessageTypesOfSchema()`
- * — derived on both sides — plus the number the task sheet writes out.
+ * `tests/ws/routing.test.ts`, « route exactement les huit trames que le
+ * protocole déclare », compares its keys to `c2sMessageTypesOfSchema()` —
+ * derived on both sides — plus the number the task sheet writes out; « répond
+ * à chacune des huit sans jamais fermer la socket » drives all eight.
  */
 
 import { contentVersion } from '@for/content';
@@ -53,6 +69,10 @@ export type RateVerdict = 'ok' | 'error' | 'close' | 'drop';
 /**
  * The frames whose overrun is ignored instead of refused (section 5.6).
  * A list, so that adding one is a visible edit rather than a condition.
+ *
+ * IT IS WALKED, NOT PINNED: empty it and `tests/ws/limits.test.ts`,
+ * « `c2s.typing` au-delà de sa cadence est ignoré, pas refusé, et ne compte pas
+ * de faute », goes red — the overrun becomes an `s2c.error`.
  */
 const SILENTLY_DROPPED: readonly C2SMessageType[] = ['c2s.typing'];
 
@@ -63,6 +83,10 @@ const SILENTLY_DROPPED: readonly C2SMessageType[] = ['c2s.typing'];
  * "puis fermeture 4008 au troisième" under a table of per-connection limits,
  * and a client that alternates between two buckets to stay under three
  * strikes each would be exactly the loop the rule exists to stop.
+ *
+ * HELD BY `tests/ws/limits.test.ts`, « les fautes se comptent PAR CONNEXION,
+ * pas par seau : trois dépassements sur deux seaux ferment » — two buckets, so
+ * a per-bucket counter would still be at two and would not close.
  */
 /**
  * The frozen table of section 5.6, widened to the shape this file reads it
@@ -70,7 +94,9 @@ const SILENTLY_DROPPED: readonly C2SMessageType[] = ['c2s.typing'];
  * own type only has the five keys it declares; indexing it by an arbitrary
  * frame type needs the declared shape, not the inferred one. Same object,
  * named once — emptying the table in `@for/contracts` makes every bucket
- * vanish here, which is what the probe of mode 6 checks.
+ * vanish here, and `tests/ws/limits.test.ts`, « les seaux viennent de la table
+ * gelée : un type sans seau passe toujours », reads that table rather than a
+ * copy of it.
  */
 const LIMITS: Partial<Record<C2SMessageType, WsRateLimit>> = WS_RATE_LIMITS;
 
@@ -105,7 +131,11 @@ export class WsRateLimiter {
  * 01-architecture.md section 2.8), which is why this is a port and why it is
  * optional: `c2s.resume_narration` must be ROUTED by M0-25 — the task sheet
  * says eight frames — but the buffer it replays is not M0-25's to write. It
- * never triggers a second generation (02-mj-ia.md section 6.3).
+ * never triggers a second generation (02-mj-ia.md section 6.3) — held by
+ * `tests/ws/routing.test.ts`, « rejoue le tampon quand il existe, et ne relance
+ * jamais une génération », which also requires the campaign and the player of
+ * the replay to come from the socket, and « annonce `aborted` quand le tampon
+ * n'a plus rien ».
  */
 export interface NarrationReplay {
   replay(input: {
@@ -157,6 +187,19 @@ export interface HandlerContext {
  * number, and everything the stream gained since is written here, before the
  * socket joins the broadcast set. A duplicate is caught up — the snapshot has
  * just wiped the client's state, so re-applying is exact — a loss is not.
+ *
+ * HELD BY `tests/ws/snapshot-race.test.ts`, on both paths and in both
+ * directions: « livre un événement diffusé pendant que la lecture est en vol —
+ * `c2s.hello` », « ne laisse jamais un instantané écraser un événement plus
+ * récent que lui — `c2s.resume` », « le rattrapage de la fenêtre reste adressé :
+ * ce qui n'est pas pour Alice ne passe pas », « le rattrapage de la fenêtre ne
+ * rejoue rien quand la fenêtre est vide », and — because the window may be
+ * longer than what the hub still holds — « sert le lot partiel que la file
+ * retient encore quand elle a roulé pendant la fenêtre », on both paths.
+ *
+ * AND IT IS `deliveredSince`, NOT `catchUpFrom`: see that method's header. The
+ * two tests just named assert the substitution's outcome, so swapping them here
+ * is refused by a test and not by a comment.
  */
 function flushAfterSnapshot(ctx: HandlerContext, since: number): void {
   const { campaignId, playerId } = ctx.connection.session;
@@ -211,6 +254,13 @@ async function handleHello(
  * The only mutating frame. The engine decides inside `submitIntent`; this
  * routine hands over an `Intent` and broadcasts whatever came back already
  * journalled and already numbered.
+ *
+ * WHAT THE SERVER SIGNS IS MEASURED, with two actors and two callers:
+ * `tests/ws/routing.test.ts`, « signe l'écriture avec la campagne, le joueur de
+ * la socket et l'`id` de la trame — `c2s.intent` », « et la signe de la même
+ * façon quand la parole passe par `c2s.speak` », « la clé d'idempotence change
+ * à chaque trame : deux gestes ne sont jamais le même tour », and the refusal
+ * path by « un refus du service devient `s2c.rejected`, jamais un événement ».
  */
 async function submit(ctx: HandlerContext, intentId: string, intent: Intent): Promise<void> {
   const { hub, service } = ctx.deps;
@@ -234,7 +284,9 @@ async function handleIntent(
 /**
  * Speech. `c2s.speak` BECOMES `speech.say` here — section 5.2 — and the two
  * fields it carries are the intent's own schema nodes, so nothing is
- * translated on the way.
+ * translated on the way. Held by `tests/ws/routing.test.ts`, « `c2s.speak`
+ * devient une intention `speech.say`, jamais un chemin d'écriture à part »,
+ * which sends both channels so that a hard-coded one cannot pass.
  */
 async function handleSpeak(
   ctx: HandlerContext,
@@ -272,7 +324,10 @@ async function handleResume(
   // READ BEFORE THE AWAIT, same race as `handleHello` and worse on this path:
   // the socket IS attached, so an event of the window is written live and
   // would then be OVERWRITTEN by a snapshot older than itself. The flush puts
-  // it back after the snapshot, which costs one duplicate frame.
+  // it back after the snapshot, which costs one duplicate frame. Measured by
+  // `tests/ws/snapshot-race.test.ts`, « ne laisse jamais un instantané écraser
+  // un événement plus récent que lui — `c2s.resume` », which reads the ORDER of
+  // the bytes and not just their presence.
   const head = hub.deliveryHead(campaignId, playerId);
   const snapshot = await service.getSnapshot(campaignId, playerId);
   ctx.connection.sendSnapshot(snapshot.state, snapshot.lastSeq, head);
@@ -314,8 +369,12 @@ async function handleResumeNarration(
 }
 
 /**
- * « Pourquoi ? ». The campaign identifier is the SOCKET's: a proof from
- * another table cannot be asked for, let alone served.
+ * « Pourquoi ? ». The campaign identifier is the SOCKET's, and so is the
+ * viewer: a proof from another table cannot be asked for, let alone served,
+ * and a neighbour's proof is not served either — `tests/ws/why.test.ts`,
+ * « interroge le service avec la campagne DE LA SOCKET, pas une campagne
+ * fournie par le client » and « demande la preuve DU JOUEUR DE LA SOCKET, et
+ * sert la sienne, pas celle du voisin ».
  */
 async function handleWhy(
   ctx: HandlerContext,
@@ -347,7 +406,9 @@ type RouteTable = {
 /**
  * THE EIGHT. `Record<C2SMessageType, …>` and not `Partial<…>`: a ninth frame
  * added to the protocol stops this file from compiling, which is the only
- * kind of completeness that survives a refactor.
+ * kind of completeness that survives a refactor. The count and the names are
+ * held at runtime too — `tests/ws/routing.test.ts`, « route exactement les huit
+ * trames que le protocole déclare ».
  */
 export const ROUTES: RouteTable = {
   'c2s.hello': handleHello,
@@ -365,7 +426,10 @@ export const ROUTES: RouteTable = {
  * check: `ROUTES[message.t]` is the routine declared for THAT discriminant,
  * so the frame it is handed is the frame it declared. TypeScript cannot join
  * the two sides of a mapped type through a union key; that is a limitation of
- * the checker, not a hole in the routing.
+ * the checker, not a hole in the routing. What the cast could hide — a routine
+ * handed the wrong frame — is what `tests/ws/routing.test.ts`, « répond à
+ * chacune des huit sans jamais fermer la socket », drives: each of the eight
+ * produces its own answer, and none produces a schema throw.
  */
 function routineFor(
   type: C2SMessageType,
@@ -375,7 +439,10 @@ function routineFor(
 
 /**
  * The two frames a socket may send before `c2s.hello` has been answered: the
- * greeting itself, and the heartbeat, which the server started.
+ * greeting itself, and the heartbeat, which the server started. BOTH
+ * DIRECTIONS, in `tests/ws/routing.test.ts`: « refuse toute trame autre que
+ * l'accueil tant que `c2s.hello` n'a pas répondu » and « le battement passe
+ * avant l'accueil, et il repousse l'échéance ».
  */
 const BEFORE_HELLO: readonly C2SMessageType[] = ['c2s.hello', 'c2s.pong'];
 
@@ -384,7 +451,11 @@ const BEFORE_HELLO: readonly C2SMessageType[] = ['c2s.hello', 'c2s.pong'];
  *
  * The limiter runs BEFORE the routine, on every frame including `c2s.pong`
  * and `c2s.hello` — which have no bucket and therefore always pass. Putting
- * it after would let a flood of expensive reads through.
+ * it after would let a flood of expensive reads through: that the refused
+ * frame never reaches the service is asserted by `tests/ws/limits.test.ts`,
+ * « accepte cinq `c2s.intent` en 10 s et refuse le sixième » (`submitCalls`
+ * stays at five), and the no-bucket half by « les seaux viennent de la table
+ * gelée : un type sans seau passe toujours ».
  */
 export async function routeMessage(ctx: HandlerContext, message: C2SMessage): Promise<void> {
   switch (ctx.limiter.check(message.t, ctx.deps.clock.now())) {

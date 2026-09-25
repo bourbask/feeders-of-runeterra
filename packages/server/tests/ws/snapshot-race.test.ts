@@ -28,6 +28,8 @@
 
 import { describe, expect, it } from 'vitest';
 
+import { WS_DELIVERY_TAIL_MAX } from '../../src/ws/hub.js';
+
 import type { FakeSocket } from './support/harness.test.js';
 import {
   ALICE,
@@ -184,5 +186,132 @@ describe("l'instantané et le curseur sont pris au même instant", () => {
     const opened = await table.join(ALICE);
 
     expect(opened.socket.types()).toStrictEqual(['s2c.welcome', 's2c.snapshot', 's2c.presence']);
+  });
+});
+
+describe('la fenêtre plus longue que ce que la file retient', () => {
+  /**
+   * ═══ `deliveredSince` N'EST PAS `catchUpFrom`, ET ÇA SE MESURE ════════════
+   *
+   * L'en-tête de `deliveredSince` y consacre un paragraphe : `catchUpFrom`
+   * répond au CURSEUR D'UN CLIENT et a le droit de le refuser — trop ancien,
+   * en avance —, ce qui est juste pour une reprise et faux ici. Le repli, lui,
+   * vient d'écrire un instantané bâti AVANT la lecture du curseur : ce qui est
+   * arrivé depuis doit partir, sans second avis.
+   *
+   * TANT QUE LA FENÊTRE TIENT DANS LA FILE, LES DEUX RENDENT LA MÊME CHOSE, et
+   * c'est pour ça que la distinction n'était gardée par rien : échanger l'une
+   * pour l'autre laissait toute la suite verte. Ici la file ROULE pendant la
+   * fenêtre — `WS_DELIVERY_TAIL_MAX + 100` livraisons —, et les deux réponses
+   * divergent enfin : la file retient encore ses dernières entrées, alors que
+   * le curseur, lui, est devenu « trop ancien ». Le repli sert le lot partiel,
+   * avec un trou VISIBLE que le client rattrape par `c2s.resume` ; l'autre
+   * lecture n'écrirait RIEN, et la perte serait silencieuse.
+   *
+   * LES DEUX CHEMINS, parce que le symptôme diffère : sur `c2s.hello` les
+   * trames ne sont jamais écrites, sur `c2s.resume` elles sont écrites puis
+   * écrasées par un instantané plus vieux qu'elles.
+   */
+  const FLOOD = WS_DELIVERY_TAIL_MAX + 100;
+
+  function aFlood(): ReturnType<typeof anEvent>[] {
+    return Array.from({ length: FLOOD }, (_, i) => anEvent({ seq: i + 1, scope: 'table' }));
+  }
+
+  it('sert le lot partiel que la file retient encore quand elle a roulé pendant la fenêtre — `c2s.hello`', async () => {
+    const table = new Table();
+
+    // DEUX ACTEURS ET DEUX DESTINATAIRES : Bob est déjà à la table, et le
+    // dernier événement du flot ne regarde que lui. La file rendue à Alice est
+    // donc la SIENNE — un repli qui servirait le flux du voisin, ou qui
+    // laisserait passer le secret, se voit ici et nulle part ailleurs.
+    const bob = await table.join(BOB);
+    const gate = new Gate();
+    table.service.suspendSnapshot = () => gate.closed;
+
+    const opened = await table.connect(ALICE);
+    const connection = opened.connection;
+    expect(connection).not.toBeNull();
+    if (connection === null) return;
+
+    const hello = connection.receive(
+      c2s('c2s.hello', { clientVersion: '0.0.0-test', lastDeliverySeq: null }, table.nextFrameId()),
+    );
+    await letAwaitsRun();
+    expect(table.service.snapshotCalls).toBe(2);
+
+    const flood = aFlood();
+    const hidden = anEvent({ seq: FLOOD, scope: 'private', recipients: [BOB] });
+    const wave = [...flood.slice(0, FLOOD - 1), hidden];
+    table.service.commit(wave);
+    table.hub.broadcast(CAMPAIGN, wave);
+
+    gate.open();
+    await hello;
+
+    const frames = wire(opened.socket);
+    const delivered = frames.filter((frame) => frame.t === 's2c.event');
+
+    // Le curseur de l'instantané vaut 0, et ce qui part ensuite est TOUT ce que
+    // la file retient — pas rien.
+    expect(frames.find((frame) => frame.t === 's2c.snapshot')?.p['lastDeliverySeq']).toBe(0);
+    expect(delivered).toHaveLength(WS_DELIVERY_TAIL_MAX);
+    expect(delivered.at(-1)?.deliverySeq).toBe(FLOOD - 1);
+    expect(delivered.at(0)?.deliverySeq).toBe(FLOOD - 1 - WS_DELIVERY_TAIL_MAX + 1);
+
+    // LE TROU EST VISIBLE : le client a mémorisé 0, il reçoit bien plus loin,
+    // donc son détecteur de trou part et il redemande par `c2s.resume`.
+    expect(delivered.at(0)?.deliverySeq).toBeGreaterThan(1);
+
+    // Le secret de Bob n'est pas dans le lot d'Alice, et il EST chez Bob.
+    expect(positionsOf(opened.socket, hidden.id)).toStrictEqual([]);
+    expect(positionsOf(bob.socket, hidden.id)).not.toStrictEqual([]);
+
+    // ET L'AUTRE LECTURE AURAIT ÉCRIT ZÉRO : `catchUpFrom` refuse ce curseur.
+    // Sans cette ligne, rien ne distingue les deux fonctions sur ce chemin.
+    expect(table.hub.catchUpFrom(CAMPAIGN, ALICE, 0)).toStrictEqual({
+      kind: 'snapshot',
+      reason: 'curseur trop ancien',
+    });
+  });
+
+  it('sert le lot partiel que la file retient encore quand elle a roulé pendant la fenêtre — `c2s.resume`', async () => {
+    const table = new Table();
+    const alice = await table.join(ALICE);
+    alice.socket.clear();
+
+    const gate = new Gate();
+    table.service.suspendSnapshot = () => gate.closed;
+
+    // `9 999` force la branche instantané : le curseur est en avance.
+    const resume = alice.connection.receive(
+      c2s('c2s.resume', { sinceDeliverySeq: 9_999 }, table.nextFrameId()),
+    );
+    await letAwaitsRun();
+
+    const flood = aFlood();
+    table.service.commit(flood);
+    table.hub.broadcast(CAMPAIGN, flood);
+
+    gate.open();
+    await resume;
+
+    const frames = wire(alice.socket);
+    const snapshotAt = frames.findIndex((frame) => frame.t === 's2c.snapshot');
+    expect(snapshotAt).toBeGreaterThanOrEqual(0);
+
+    // Ici la socket est attachée : les livraisons sont parties EN DIRECT, puis
+    // l'instantané (curseur 0) les a toutes annulées. Ce qui suit l'instantané
+    // est donc ce que le joueur garde — et ce doit être le lot partiel.
+    const after = frames.slice(snapshotAt + 1).filter((frame) => frame.t === 's2c.event');
+    expect(frames[snapshotAt]?.p['lastDeliverySeq']).toBe(0);
+    expect(after).toHaveLength(WS_DELIVERY_TAIL_MAX);
+    expect(after.at(0)?.deliverySeq).toBe(FLOOD - WS_DELIVERY_TAIL_MAX + 1);
+    expect(after.at(-1)?.deliverySeq).toBe(FLOOD);
+
+    expect(table.hub.catchUpFrom(CAMPAIGN, ALICE, 0)).toStrictEqual({
+      kind: 'snapshot',
+      reason: 'curseur trop ancien',
+    });
   });
 });

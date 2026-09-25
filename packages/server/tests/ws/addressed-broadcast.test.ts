@@ -14,6 +14,10 @@
  * absence would stay green on a hub that delivered nothing at all.
  */
 
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { EVENT_SCOPES } from '@for/engine';
 import { describe, expect, it } from 'vitest';
 
@@ -120,12 +124,60 @@ describe('les portées, comparées à leur source', () => {
   it('chaque portée du moteur a une réponse, et seule `table` est ouverte', () => {
     const openToEveryone: string[] = [];
     const addressed: string[] = [];
+    const toTheNamed: unknown[] = [];
     for (const scope of EVENT_SCOPES) {
       const visible = isVisibleTo(anEvent({ seq: 1, scope, recipients: [BOB] }), ALICE);
       if (visible) openToEveryone.push(scope);
       else addressed.push(scope);
+      toTheNamed.push(isVisibleTo(anEvent({ seq: 1, scope, recipients: [ALICE] }), ALICE));
     }
     expect(openToEveryone).toStrictEqual(['table']);
     expect(addressed).toStrictEqual(['subset', 'private']);
+
+    // « UNE RÉPONSE » SE MESURE SUR LE DESTINATAIRE, pas sur l'étranger : un
+    // `case` manquant rend `undefined`, que la boucle du haut rangerait
+    // tranquillement parmi les portées adressées. Ici il ne peut pas passer.
+    expect(toTheNamed).toStrictEqual([true, true, true]);
+  });
+});
+
+describe('une seule lecture de la portée dans tout `src/ws`', () => {
+  /**
+   * L'EN-TÊTE DE `hub.ts` L'AFFIRME : « `isVisibleTo` est le seul endroit de ce
+   * chemin où la question est tranchée — rien d'autre dans `src/ws/` ne lit la
+   * portée d'un événement ». Une affirmation pareille se périme au premier
+   * `if (event.scope === …)` écrit ailleurs, et personne ne le verrait : ce
+   * test relit le dossier à chaque exécution.
+   *
+   * LA SONDE CHERCHE L'ACCÈS AU CHAMP, pas le mot : un commentaire qui parle de
+   * portée ne compte pas, une lecture du champ compte.
+   */
+  const WS_DIR = join(fileURLToPath(new URL('.', import.meta.url)), '..', '..', 'src', 'ws');
+
+  function wsSources(): { file: string; text: string }[] {
+    return readdirSync(WS_DIR)
+      .filter((name) => name.endsWith('.ts'))
+      .map((name) => ({ file: name, text: readFileSync(join(WS_DIR, name), 'utf8') }));
+  }
+
+  it('le champ `scope` n’est lu qu’une fois, et c’est dans `isVisibleTo`', () => {
+    const readings: string[] = [];
+    for (const { file, text } of wsSources()) {
+      text.split('\n').forEach((line, index) => {
+        if (line.includes('.scope')) readings.push(`${file}:${String(index + 1)} ${line.trim()}`);
+      });
+    }
+
+    expect(readings).toHaveLength(1);
+    expect(readings[0]).toContain('hub.ts:');
+    expect(readings[0]).toContain('switch (event.scope)');
+
+    // La sonde lit bien les quatre fichiers du dossier — sans cette ligne, un
+    // chemin faux rendrait la liste vide et le test vert.
+    expect(
+      wsSources()
+        .map((source) => source.file)
+        .sort(),
+    ).toStrictEqual(['connection.ts', 'handlers.ts', 'hub.ts', 'index.ts']);
   });
 });

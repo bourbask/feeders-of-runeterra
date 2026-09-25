@@ -212,7 +212,7 @@ describe('le repli de file', () => {
   });
 });
 
-describe("les trois identifiants d'enveloppe, sur une trame réelle", () => {
+describe("l'enveloppe, sur des trames réelles", () => {
   /**
    * L'EN-TÊTE DE `connection.ts` CONSACRE UN PARAGRAPHE À LA DIVERGENCE :
    * « NOT `AppDeps.ids`, AND THAT IS A DIVERGENCE WORTH NAMING ». `zMessageId`
@@ -221,6 +221,13 @@ describe("les trois identifiants d'enveloppe, sur une trame réelle", () => {
    * DIFFÉRENTES. `handshake.test.ts` mesure la fabrique `randomFrameIds` ; ici
    * on mesure que `send` confie le bon champ à la bonne source, sur les octets
    * réellement écrits — c'est le seul endroit où une inversion se voit.
+   *
+   * ET SUR `s2c.event`, PAS SEULEMENT SUR L'ACCUEIL. `connection.ts` a porté
+   * deux fabriques d'enveloppe : `frame()` et, en toutes lettres, `sendEvent`.
+   * Les trois premiers tests ne lisent que des trames de la première, donc
+   * figer l'`id` ou le `ts` de la seconde ne faisait rien tomber — sur la trame
+   * la PLUS FRÉQUENTE du fil, et la seule numérotée. Les deux derniers lisent
+   * une trame `s2c.event` réelle ; le code, lui, n'a plus qu'une fabrique.
    */
   it('un `id` par trame, distinct, et de la forme que `zMessageId` exige', async () => {
     const table = new Table();
@@ -276,5 +283,53 @@ describe("les trois identifiants d'enveloppe, sur une trame réelle", () => {
       expect(zMessageId.safeParse(requestId).success).toBe(false);
     }
     expect(requestIds[0]).not.toBe(errors[0]?.id);
+  });
+
+  it("l'enveloppe d'un `s2c.event` sort de la même fabrique : deux événements, deux `id`", async () => {
+    const table = new Table();
+    const alice = await table.join(ALICE);
+    alice.socket.clear();
+
+    // DEUX ÉVÉNEMENTS : à un seul, un `id` figé à une constante passerait.
+    table.hub.broadcast(CAMPAIGN, [
+      anEvent({ seq: 1, scope: 'table' }),
+      anEvent({ seq: 2, scope: 'table' }),
+    ]);
+
+    const frames = stamped(alice.socket);
+    expect(frames.map((frame) => frame.t)).toStrictEqual(['s2c.event', 's2c.event']);
+
+    const ids = frames.map((frame) => frame.id);
+    expect(new Set(ids).size).toBe(2);
+    for (const id of ids) {
+      expect(zMessageId.safeParse(id).success).toBe(true);
+      expect(zPlayerId.safeParse(id).success).toBe(false);
+    }
+
+    // Et les deux compteurs restent DANS l'enveloppe, pas dans la charge
+    // utile : c'est là que le protocole les met, et une fabrique unique doit
+    // les y laisser.
+    const carried = alice.socket.sent.map(
+      (line) =>
+        JSON.parse(line) as { seq?: number; deliverySeq?: number; p: Record<string, unknown> },
+    );
+    expect(carried.map((frame) => frame.seq)).toStrictEqual([1, 2]);
+    expect(carried.map((frame) => frame.deliverySeq)).toStrictEqual([1, 2]);
+    expect(carried[0]?.p['seq']).toBeUndefined();
+  });
+
+  it("et le `ts` d'un `s2c.event` suit l'horloge injectée, à deux instants", async () => {
+    const table = new Table();
+    const alice = await table.join(ALICE);
+    alice.socket.clear();
+
+    const born = table.clock.now();
+    table.hub.broadcast(CAMPAIGN, [anEvent({ seq: 1, scope: 'table' })]);
+    const later = table.clock.advance(7_654);
+    table.hub.broadcast(CAMPAIGN, [anEvent({ seq: 2, scope: 'table' })]);
+
+    const frames = stamped(alice.socket);
+    expect(later).not.toBe(born);
+    expect(frames.map((frame) => frame.ts)).toStrictEqual([born, later]);
   });
 });

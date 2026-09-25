@@ -29,6 +29,7 @@ import {
   WS_HEARTBEAT_INTERVAL_MS,
   WS_HEARTBEAT_TIMEOUT_MS,
   WS_MAX_INCOMING_FRAME_BYTES,
+  WS_RATE_LIMIT_STRIKES_BEFORE_CLOSE,
   WS_RATE_LIMITS,
   WS_SOCKET_QUEUE_MAX_MESSAGES,
 } from '@for/contracts';
@@ -36,7 +37,7 @@ import { describe, expect, it } from 'vitest';
 
 import { WS_CLOSE_HEARTBEAT_TIMEOUT } from '../../src/ws/connection.js';
 import { WsRateLimiter } from '../../src/ws/handlers.js';
-import { ALICE, CAMPAIGN, FakeClock, Table, anEvent, c2s } from './support/harness.test.js';
+import { ALICE, anEvent, c2s, CAMPAIGN, FakeClock, Table } from './support/harness.test.js';
 
 const A_MOVE = {
   type: 'move.face_danger',
@@ -184,6 +185,36 @@ describe('la limitation de débit', () => {
     expect(alice.socket.closes).toStrictEqual([]);
     // Une seule présence diffusée : la première trame de la fenêtre.
     expect(alice.socket.of('s2c.presence')).toHaveLength(1);
+  });
+
+  it('les fautes se comptent PAR CONNEXION, pas par seau : trois dépassements sur deux seaux ferment', async () => {
+    const table = new Table();
+    const alice = await table.join(ALICE);
+    alice.socket.clear();
+
+    // Première faute, dans le seau `c2s.intent`.
+    for (let i = 0; i < 6; i += 1) {
+      await alice.connection.receive(c2s('c2s.intent', { intent: A_MOVE }, table.nextFrameId()));
+    }
+    expect(alice.socket.closes).toStrictEqual([]);
+
+    // Deuxième faute, dans un AUTRE seau : `c2s.why`. Un compteur par seau
+    // resterait à une faute de chaque côté, et personne ne fermerait jamais.
+    for (let i = 0; i < 11; i += 1) {
+      await alice.connection.receive(
+        c2s('c2s.why', { correlationId: table.nextFrameId() }, table.nextFrameId()),
+      );
+    }
+    expect(alice.socket.closes).toStrictEqual([]);
+
+    // Troisième faute, de retour dans le premier seau : c'est la fermeture, et
+    // elle ne peut venir que d'un compteur tenu par CONNEXION.
+    await alice.connection.receive(c2s('c2s.intent', { intent: A_MOVE }, table.nextFrameId()));
+
+    expect(alice.socket.closes.map((close) => close.code)).toStrictEqual([
+      WS_CLOSE_CODES.rate_limited,
+    ]);
+    expect(WS_RATE_LIMIT_STRIKES_BEFORE_CLOSE).toBe(3);
   });
 
   it('les seaux viennent de la table gelée : un type sans seau passe toujours', () => {
@@ -348,6 +379,21 @@ describe('le battement de cœur', () => {
     expect(alice.socket.closes.map((close) => close.code)).toStrictEqual([
       WS_CLOSE_HEARTBEAT_TIMEOUT,
     ]);
+  });
+
+  it("le code du battement n'appartient pas aux codes que le protocole gelé nomme", () => {
+    // L'EN-TÊTE DE `connection.ts` L'ANNONCE : « §5.5 assigne 4001-4004 et
+    // 4008-4011 et n'a AUCUN nom pour “pas de `c2s.pong` en 60 s” ». La
+    // conséquence se mesure : le code retenu n'est aucun de ceux que le
+    // protocole gelé nomme, et c'est le 1001 « going away » de la RFC 6455 —
+    // écrit en toutes lettres parce qu'il vient de la RFC, pas du dépôt.
+    expect(Object.values(WS_CLOSE_CODES)).not.toContain(WS_CLOSE_HEARTBEAT_TIMEOUT);
+    expect(WS_CLOSE_HEARTBEAT_TIMEOUT).toBe(1001);
+
+    // La liste est PARCOURUE : vide, le refus ci-dessus ne voudrait rien dire.
+    // Huit codes, ceux des deux plages de la §5.5.
+    expect(Object.keys(WS_CLOSE_CODES)).toHaveLength(8);
+    expect(Object.values(WS_CLOSE_CODES).every((code) => code >= 4001)).toBe(true);
   });
 
   it('ferme la connexion sans `c2s.pong` pendant 60 s, et pas avant', async () => {

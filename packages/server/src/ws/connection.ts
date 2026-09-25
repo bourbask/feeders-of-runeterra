@@ -6,6 +6,11 @@
  * nothing about the game: `hub.ts` decides WHO receives an event,
  * `handlers.ts` decides WHICH routine answers a frame, and the engine — which
  * this module never calls, directly or otherwise — decides everything else.
+ * HELD BY `tests/ws/routing.test.ts`, describe « le hub ne décide rien
+ * (invariant 1) » — its first test greps this directory for the three names
+ * the acceptance criterion forbids, which is why THEY are not written here,
+ * not even in a comment — and « n'importe du moteur que des types, et un seul
+ * tuple de valeurs ». Both re-read this file on every run.
  *
  * WHY THE TRANSPORT IS AN INTERFACE AND NOT `@fastify/websocket`. `WsSocket`
  * has two methods. Everything the acceptance criteria of M0-25 ask for —
@@ -14,7 +19,12 @@
  * of in-memory sockets measures them without a listening port. The real
  * upgrade needs `@fastify/websocket`, which is NOT in
  * `packages/server/package.json` and which this task's file list does not let
- * it add; see the header of `index.ts`.
+ * it add; see the header of `index.ts`. That absence is read, not asserted, by
+ * `tests/ws/routing.test.ts`, « le greffon n'enregistre aucune route, et
+ * `@fastify/websocket` n'est pas une dépendance du paquet », and the two
+ * methods of the double are held to the interface's own by
+ * `tests/ws/support/harness.test.ts`, « déclare exactement les paramètres de
+ * l'interface, jamais un de moins ».
  *
  * EVERY OUTGOING FRAME IS PARSED BY `zS2CEnvelope` BEFORE IT IS SERIALISED.
  * That is deliberate and it is not a belt-and-braces gesture: the protocol was
@@ -22,11 +32,16 @@
  * is worth. A frame this server builds wrongly must die here, on the server,
  * rather than reach a browser as something the client's own schema will
  * reject. It costs one parse per frame; M0 is a foundation, not a benchmark.
- * MEASURED, not announced: `tests/ws/outgoing.test.ts` hands `send` a frame
- * the protocol does not declare and one whose payload is wrongly typed, and
- * requires a throw with NOTHING written to the transport. The same suite holds
- * the three other guarantees this file used to claim without proof — the
- * 256 KiB wire bound, the single close, and the queue collapse that must rearm.
+ * MEASURED, not announced, in `tests/ws/outgoing.test.ts`: « jette sur une
+ * trame que le serveur aurait mal construite, et n'écrit rien », « refuse un
+ * type de trame que le protocole gelé ne déclare pas », and the low direction,
+ * « laisse passer la même trame une fois bien formée ». The same suite holds
+ * the three other guarantees this file used to claim without proof: the 256 KiB
+ * wire bound (« abandonne une trame trop lourde pour le fil, et le dit au
+ * journal » / « écrit la même trame quand elle tient »), the single close
+ * (« n'est fermée qu'une fois, et n'écrit plus rien après ») and the queue
+ * collapse that must rearm (« se réarme quand le transport a rattrapé son
+ * retard »).
  *
  * THE ORDER OF THE ENTRY CHECKS IS PART OF THE CONTRACT, because two of them
  * answer with a close code rather than with a message:
@@ -35,6 +50,14 @@
  *   2. JSON.parse      fails               -> `s2c.error { validation_failed }`;
  *   3. `v`             != PROTOCOL_VERSION -> close 4001, before the union;
  *   4. `zC2SEnvelope`  fails               -> `s2c.error { validation_failed }`.
+ *
+ * ONE NAMED TEST PER STEP, and step 1's order is measured rather than stated:
+ * `tests/ws/limits.test.ts`, « ferme sur la taille AVANT de tenter la moindre
+ * analyse » sends perfectly valid JSON that is only too big;
+ * `tests/ws/handshake.test.ts` holds the other three — « refuse une trame qui
+ * n'est pas du JSON, sans fermer la socket », « ferme en 4001 une trame dont le
+ * `v` diffère », « refuse une trame du bon `v` qui ne respecte aucune des huit
+ * formes ».
  *
  * Step 3 goes through `zEnvelopeHead` rather than the full union on purpose: a
  * frame from a future protocol will not parse as any of the eight variants,
@@ -75,6 +98,11 @@ import type { PersistedEvent } from '../game/types.js';
  * DERIVED FROM THE FROZEN SCHEMAS, never retyped. `@for/contracts` exports the
  * two enums as schemas and not as types; recopying their members here would be
  * a mirror nobody guards, which is the whole lesson of ADR 0007.
+ *
+ * WHAT HOLDS THEM IS THE COMPILER, NOT A TEST, and it is said plainly: these
+ * are `z.output<…>` of the frozen schemas, so a member removed in
+ * `@for/contracts` turns the call sites red under `pnpm typecheck` and
+ * `pnpm typecheck:tests`. No runtime assertion compares the two lists here.
  */
 export type NarrationErrorCode = z.output<typeof zNarrationErrorCode>;
 export type NarrationStatus = z.output<typeof zNarrationStatus>;
@@ -85,13 +113,21 @@ export type NarrationStatus = z.output<typeof zNarrationStatus>;
  * DECLARED HERE AND NOT IN `hub.ts`, although the hub is what mints
  * `deliverySeq`: `hub.ts` already imports this module, and dependency-cruiser
  * forbids cycles with `tsPreCompilationDeps` on — a type-only back edge is
- * still an edge. The shape is a frame shape anyway: it is exactly what
- * `s2c.event` and one entry of `s2c.events_batch` carry.
+ * still an edge. The gate that holds it is `pnpm run depcruise`, rule
+ * `pas-de-cycle`, not a test file. The shape is a frame shape anyway: it is
+ * exactly what `s2c.event` and one entry of `s2c.events_batch` carry.
  */
 export interface DeliveredEntry {
-  /** Journal position. Global, and NOT dense for a given recipient. */
+  /**
+   * Journal position. Global, and NOT dense for a given recipient — held by
+   * `tests/ws/delivery.test.ts`, « `seq` a des trous légitimes là où
+   * `deliverySeq` n'en a aucun ».
+   */
   readonly seq: number;
-  /** ADR 0010: dense per (campaign, player). The only gap-free counter. */
+  /**
+   * ADR 0010: dense per (campaign, player). The only gap-free counter — same
+   * test, which asserts the density of this one beside the holes of the other.
+   */
   readonly deliverySeq: number;
   readonly event: PersistedEvent;
 }
@@ -113,12 +149,23 @@ export interface PresenceMember {
  * RFC 6455 "going away", which is what actually happened and which no
  * deployed client can confuse with an application refusal. Adding a 4012
  * would be a protocol change, and the protocol is frozen.
+ *
+ * MEASURED, in `tests/ws/limits.test.ts`: « le code du battement n'appartient
+ * pas aux codes que le protocole gelé nomme » reads `WS_CLOSE_CODES` and
+ * requires this number to be absent from it, and « ferme la connexion sans
+ * `c2s.pong` pendant 60 s, et pas avant » requires it on the wire.
  */
 export const WS_CLOSE_HEARTBEAT_TIMEOUT = 1001;
 
 /** A transport. Two methods, so a test can be one object literal. */
 export interface WsSocket {
-  /** `onFlushed` fires when the transport has actually written the frame. */
+  /**
+   * `onFlushed` fires when the transport has actually written the frame. The
+   * double honours it — `tests/ws/support/harness.test.ts`, « retient les
+   * acquittements pendant que le transport est bloqué, et les rend au drain » —
+   * and what the server does with it is `tests/ws/outgoing.test.ts`, « se
+   * réarme quand le transport a rattrapé son retard ».
+   */
   send(data: string, onFlushed?: () => void): void;
   close(code: number, reason?: string): void;
 }
@@ -128,7 +175,14 @@ export interface WsLogger {
   warn(context: object, message: string): void;
 }
 
-/** Who this socket is, settled during the handshake and never again. */
+/**
+ * Who this socket is, settled during the handshake and never again: there is
+ * no setter, and every write the server signs is signed from here —
+ * `tests/ws/routing.test.ts`, « signe l'écriture avec la campagne, le joueur de
+ * la socket et l'`id` de la trame — `c2s.intent` », and
+ * `tests/ws/handshake.test.ts`, « nomme la socket dans `s2c.welcome` : son
+ * joueur et sa campagne ».
+ */
 export interface ConnectionSession {
   readonly playerId: PlayerId;
   readonly campaignId: CampaignId;
@@ -143,6 +197,11 @@ export interface ConnectionSession {
  * base32, which `z.uuid()` refuses. The two identifier vocabularies are both
  * deliberate and they do not meet, so frame identifiers get their own source,
  * injected like everything else that is not deterministic.
+ *
+ * THAT THEY DO NOT MEET IS MEASURED: `tests/ws/outgoing.test.ts`, « le
+ * `requestId` d'une erreur est un ULID, jamais l'`id` de la trame qui le
+ * porte », and `tests/ws/handshake.test.ts`, « la source d'identifiants de
+ * trame rend ce que `zMessageId` accepte, jamais un ULID ».
  */
 export interface FrameIdSource {
   next(): string;
@@ -177,14 +236,23 @@ export class TableConnection {
   /** Frames handed to the transport and not yet flushed. */
   private inFlight = 0;
 
-  /** Set once the queue overflowed; cleared when the transport drains. */
+  /**
+   * Set once the queue overflowed; cleared when the transport drains — the
+   * rearming is `tests/ws/outgoing.test.ts`, « se réarme quand le transport a
+   * rattrapé son retard ».
+   */
   private collapsed = false;
 
   private lastPongAt: number;
 
   private lastPingAt: number;
 
-  /** Filled at `c2s.hello`; `s2c.presence` reports it. */
+  /**
+   * Filled at `c2s.hello`; `s2c.welcome` and `s2c.presence` report it —
+   * `tests/ws/handshake.test.ts`, « nomme le personnage du joueur dans
+   * `s2c.welcome.you`, et `null` quand il n'en a pas » and « porte le
+   * personnage et la frappe de chacun dans `s2c.presence` ».
+   */
   private characterId: CharacterId | null = null;
 
   /**
@@ -195,6 +263,11 @@ export class TableConnection {
    * and journalled while this socket is not yet in the hub's broadcast set:
    * the table would see the events and the author would not. Refusing it is
    * the only answer that leaves no silent hole.
+   *
+   * BOTH DIRECTIONS, in `tests/ws/routing.test.ts`: « refuse toute trame autre
+   * que l'accueil tant que `c2s.hello` n'a pas répondu » for the refusal, and
+   * « le battement passe avant l'accueil, et il repousse l'échéance » for the
+   * exception this flag deliberately leaves open.
    */
   private greeted = false;
 
@@ -293,7 +366,9 @@ export class TableConnection {
    *
    * `zS2CEnvelope.parse` THROWS here rather than returning a verdict: a frame
    * the server built wrongly is a programming error, not a client problem, and
-   * swallowing it would put the bug on a player's screen.
+   * swallowing it would put the bug on a player's screen. Held by
+   * `tests/ws/outgoing.test.ts`, « jette sur une trame que le serveur aurait
+   * mal construite, et n'écrit rien ».
    */
   send(frame: unknown): boolean {
     if (!this.open) return false;
@@ -323,7 +398,10 @@ export class TableConnection {
    * Back pressure, as 02-mj-ia.md section 6.3 words it: past the queue bound
    * the server collapses the socket queue rather than growing it without end.
    * The client is told to redo `c2s.hello`, which is the one recovery that
-   * needs no buffer at all.
+   * needs no buffer at all. Held by `tests/ws/limits.test.ts`, « replie la file
+   * au-delà de sa borne et demande une resynchronisation », and by
+   * `tests/ws/outgoing.test.ts`, « se réarme quand le transport a rattrapé son
+   * retard », which is the half a single collapse cannot show.
    */
   private collapse(): void {
     if (this.collapsed) return;
@@ -347,13 +425,28 @@ export class TableConnection {
     });
   }
 
-  /** The `{ v, t, id, ts, p }` shell every s2c frame but `s2c.event` wears. */
-  private frame(type: string, payload: unknown): unknown {
+  /**
+   * The `{ v, t, id, ts, p }` shell EVERY s2c frame wears, `s2c.event`
+   * included — its two counters arrive through `extra` and sit where the
+   * protocol puts them, beside `ts` and not inside `p`.
+   *
+   * ONE FACTORY, ONE PATH, AND THAT IS THE WHOLE POINT. `s2c.event` used to
+   * build its own shell in full, so the `id` and the `ts` of the most frequent
+   * frame of the stream were minted by a second expression that no guard
+   * watched: freezing either of them left the suite green. A guard can only
+   * hold the shell it looks at, so there is now one shell.
+   *
+   * Held on a real `s2c.event` by `tests/ws/outgoing.test.ts`, « l'enveloppe
+   * d'un `s2c.event` sort de la même fabrique : deux événements, deux `id` » and
+   * « et son `ts` suit l'horloge injectée, à deux instants et pas un seul ».
+   */
+  private frame(type: string, payload: unknown, extra?: Record<string, number>): unknown {
     return {
       v: PROTOCOL_VERSION,
       t: type,
       id: this.deps.frameIds.next(),
       ts: this.deps.clock.now(),
+      ...(extra ?? {}),
       p: payload,
     };
   }
@@ -378,17 +471,22 @@ export class TableConnection {
     this.send(this.frame('s2c.snapshot', { state, lastSeq, lastDeliverySeq }));
   }
 
-  /** The only numbered frame. Both counters, always — ADR 0010. */
+  /**
+   * The only numbered frame. Both counters, always — ADR 0010, and through the
+   * one shell factory like every other frame.
+   *
+   * Held by `tests/ws/delivery.test.ts`, « livre 50 événements dans l'ordre
+   * strict, sans trou de livraison » and « `seq` a des trous légitimes là où
+   * `deliverySeq` n'en a aucun ».
+   */
   sendEvent(entry: DeliveredEntry): boolean {
-    return this.send({
-      v: PROTOCOL_VERSION,
-      t: 's2c.event',
-      id: this.deps.frameIds.next(),
-      ts: this.deps.clock.now(),
-      seq: entry.seq,
-      deliverySeq: entry.deliverySeq,
-      p: { event: entry.event },
-    });
+    return this.send(
+      this.frame(
+        's2c.event',
+        { event: entry.event },
+        { seq: entry.seq, deliverySeq: entry.deliverySeq },
+      ),
+    );
   }
 
   /**
@@ -396,7 +494,12 @@ export class TableConnection {
    *
    * ALWAYS SENDS AT LEAST ONE FRAME, empty batch included: the acceptance
    * criterion says a `c2s.hello` is answered by a catch-up OR a snapshot, and
-   * "you had missed nothing" is a catch-up, not a silence.
+   * "you had missed nothing" is a catch-up, not a silence. Held by
+   * `tests/ws/delivery.test.ts`, « `c2s.hello` avec un curseur exactement à
+   * jour répond un lot VIDE, pas un instantané » and « `c2s.resume` avec un
+   * curseur exactement à jour répond un lot VIDE, pas un silence »; the split
+   * itself by « découpe un rattrapage trop lourd en plusieurs trames de moins
+   * de 256 Kio ».
    */
   sendBatch(entries: readonly DeliveredEntry[]): number {
     const overhead = Buffer.byteLength(
@@ -468,7 +571,8 @@ export class TableConnection {
   /**
    * The whole narration buffer, replayed after a cut. NEVER a second
    * generation: what is sent here is what the server already holds
-   * (02-mj-ia.md section 6.3).
+   * (02-mj-ia.md section 6.3). Held by `tests/ws/routing.test.ts`, « rejoue le
+   * tampon quand il existe, et ne relance jamais une génération ».
    */
   sendNarrationSnapshot(buffered: {
     readonly narrationId: string;
@@ -488,6 +592,9 @@ export class TableConnection {
   /**
    * One beat of the injected clock. Timeout is checked BEFORE the ping: a
    * socket that has been silent for a minute is closed, not pinged again.
+   * Held by `tests/ws/limits.test.ts`, « au battement qui ferme, RIEN d'autre
+   * ne part : le délai est vérifié AVANT le ping », and the cadence itself by
+   * « envoie un `s2c.ping` toutes les 25 s — une CADENCE, donc quatre tics ».
    */
   tick(now: number): void {
     if (!this.open) return;
@@ -506,14 +613,22 @@ export class TableConnection {
 
   // ---------------------------------------------------------------- close
 
-  /** Closes with the number section 5.5 gives that reason, and only that. */
+  /**
+   * Closes with the number section 5.5 gives that reason, and only that —
+   * `tests/ws/handshake.test.ts` for 4001 to 4004, `tests/ws/limits.test.ts`
+   * for 4008 (« ferme en 4008 au troisième dépassement ») and 4009 (« ferme en
+   * 4009 à 65 Kio — le chiffre du critère »).
+   */
   closeWith(reason: WsCloseReason): void {
     if (!this.open) return;
     this.open = false;
     this.deps.socket.close(WS_CLOSE_CODES[reason], reason);
   }
 
-  /** The transport went away on its own. */
+  /**
+   * The transport went away on its own. Held by `tests/ws/outgoing.test.ts`,
+   * « quitte la table quand le transport est parti de lui-même ».
+   */
   markClosed(): void {
     this.open = false;
   }
@@ -527,7 +642,11 @@ export interface CampaignAccess {
    * Whether this player may follow this campaign. THREE ANSWERS, NOT TWO: a
    * campaign that does not exist and a campaign that is somebody else's are
    * different close codes (4004 and 4003), and collapsing them would either
-   * lie to a legitimate player or tell a stranger which tables exist.
+   * lie to a legitimate player or tell a stranger which tables exist. Held by
+   * `tests/ws/handshake.test.ts`, « ferme en 4003 une campagne interdite » and
+   * « ferme en 4004 une campagne inconnue, et une absence de campagne »; what
+   * is submitted to the verdict, by « soumet à l'autorisation la campagne de la
+   * requête ET le joueur de la session ».
    */
   check(campaignId: string, playerId: string): Promise<'ok' | 'forbidden' | 'not_found'>;
 }
@@ -550,7 +669,9 @@ export type HandshakeOutcome =
  * IDENTITY BEFORE RESOURCE. An unauthenticated caller is 4002 whatever
  * campaign it named: answering 4004 first would tell an anonymous stranger
  * whether a campaign identifier exists, which is a disclosure for free on a
- * public deployment.
+ * public deployment. Held by `tests/ws/handshake.test.ts`, « répond 4002 avant
+ * 4004 : l'identité passe avant la ressource » and « ne consulte pas
+ * l'autorisation quand l'identité manque : 4002 d'abord ».
  */
 export async function authorizeHandshake(
   access: CampaignAccess,
