@@ -117,6 +117,13 @@ Deux façons d'obtenir un vert qui ne veut rien dire, toutes deux rencontrées e
 - **`z.toJSONSchema` écrit `additionalProperties: false` même sur un objet non strict**, en mode
   par défaut. Toute vérification de strictness par le JSON Schema doit passer `io: 'input'`, et
   doubler d'un test d'exécution — sinon elle est verte pour la mauvaise raison.
+- **Douze jobs verts ne sont pas douze portes fermées.** Les jobs 8 à 11 — migrations, contenu,
+  éval hors ligne, simulateur — portent un `continue-on-error` marqué `TODO M0-30` : ils
+  **restent verts en échouant**, et seule la conclusion de leur étape le dit. Une PR en conflit,
+  elle, n'a pas une CI rouge : elle n'a **pas de CI du tout**, parce que le déclencheur
+  `pull_request` porte sur la ref de fusion que GitHub ne fabrique pas. Dans les deux cas,
+  « aucun échec » ne veut pas dire « tout est passé ». Compte les check-runs sur le sha de tête,
+  et regarde les conclusions d'étapes.
 
 ## Trois pièges de l'environnement, déjà payés
 
