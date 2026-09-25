@@ -37,6 +37,29 @@
  * `@for/contracts`): `FALLBACK_DEFAULT_KEY` repeats the engine's
  * `FALLBACK_DEFAULT_TEMPLATE_ID`, which no schema mirrors today. Reported with
  * the task rather than hidden here.
+ *
+ * ── ONE DIVERGENCE IS ACCEPTED, AND THIS IS WHERE IT IS WRITTEN ──────
+ * `MoveSchema.rollKind` and the roll each engine handler actually plans are
+ * NOT compared, here or anywhere. `moves/strike.json` switched to
+ * `rollKind: 'none'` with `attributeOptions: []` leaves `pnpm content:check`
+ * at 0 while `strike`'s handler keeps planning `{ kind: 'action' }`.
+ *
+ * The engine is not silent about it: the eleven handlers each pin the roll
+ * they plan in their `plan()` body (`strike.ts`, `endure-cold.ts` and the six
+ * other action moves give `kind: 'action'`; `fulfill-your-vow.ts` gives
+ * `'progress'`; `reach-a-milestone.ts` and `forsake-your-vow.ts` give
+ * `'none'`), and all eleven agree with the delivered content today. What is
+ * missing is an EXPOSED constant: `MoveHandler` carries no `rollKind` field.
+ *
+ * It is not fixed here, and not because it is small. `@for/content` declares
+ * `@for/contracts` as its only runtime dependency (01-architecture.md
+ * section 1.2), so this file cannot read `MOVE_REGISTRY`: comparing the two
+ * from here would mean recopying the eleven kinds, which is the number
+ * compared to itself of ADR 0007, one commit later. The comparison belongs
+ * where the delivered bundle first meets the engine — the task that runs
+ * `content/` through `decide()` — written as
+ * `MOVE_REGISTRY[id].rollKind === bundle.moves.get(id)?.rollKind` over the
+ * eleven, with no recopy. Raised with the lead in the M0-16 follow-up.
  */
 
 import { dirname, join } from 'node:path';
@@ -84,6 +107,36 @@ const MIN_REGIONS = 5;
 const MIN_ASSETS = 6;
 /** « les trois fiches portent une répartition 3/2/2/1/1 ». */
 const ATTRIBUTE_SPREAD = '3,2,2,1,1';
+
+/**
+ * ADR 0009 : « un atout qui ne se déclenche jamais n'existe pas ». Une fiche
+ * sans atout de perception rend la perception par personnage décorative, ce
+ * qui est l'avertissement exact qui a produit la décision 3 de l'ADR 0008.
+ * DEUX et non un : un seul atout fait tenir tout un personnage sur un domaine,
+ * et le schéma en autorise six.
+ */
+const MIN_PERCEPTION_TRAITS = 2;
+
+/**
+ * La bande de CONTENU d'une force d'atout — plus étroite que la bande de FORME
+ * du schéma (`PERCEPTION_STRENGTH_MIN/MAX` = 1..99, qui n'interdit que la
+ * certitude 100 et l'impossibilité 0, et que le chargeur fait déjà respecter).
+ *
+ * L'ADR 0009 ne pose aucun chiffre. Il pose le principe — « un atout qui se
+ * déclenche toujours n'est plus un atout, c'est une règle ; un atout qui ne se
+ * déclenche jamais n'existe pas » — et deux adjectifs, « forte » et
+ * « minuscule ». Les bornes ci-dessous traduisent ce principe dans le seul
+ * vocabulaire de chances que le jeu possède déjà, celui de l'oracle oui/non
+ * livré dans `content/oracles/yes-no.json` : `quasi-certain` y vaut 90,
+ * `improbable` y vaut 10. Une force de 90 ou plus est donc quasi-certaine —
+ * une règle ; une force sous 10 est sous « improbable » — elle n'existe pas.
+ *
+ * Écrites en toutes lettres plutôt qu'importées de `YESNO_THRESHOLDS` : c'est
+ * un choix de contenu pris ici, pas une dépendance de l'atout envers l'oracle.
+ * Rééquilibrable en M1, et signalé au lead pour ratification en ADR.
+ */
+const PERCEPTION_STRENGTH_FLOOR = 10;
+const PERCEPTION_STRENGTH_CEILING = 89;
 
 /**
  * The reserved key of a turn that played no move: `fallbackTemplateId(null,
@@ -412,6 +465,43 @@ export function sheetProblems(files: Files): readonly string[] {
         `${id} : aucun alias en plus du nom — le verrouillage de distribution n'aurait qu'une orthographe`,
       );
     }
+
+    // ADR 0009. The loop below IS its own source of iteration: empty
+    // `perceptionTraits` and it reports nothing. That is precisely why the
+    // count is checked FIRST and against a number written in full letters —
+    // emptying the array trips that one, on all three sheets at once.
+    const traits = (list(sheet['perceptionTraits']) ?? [])
+      .map((trait) => record(trait))
+      .filter((trait): trait is Record<string, unknown> => trait !== undefined);
+    if (traits.length < MIN_PERCEPTION_TRAITS) {
+      problems.push(
+        `${id} : ${String(traits.length)} atout(s) de perception, il en faut au moins ` +
+          `${String(MIN_PERCEPTION_TRAITS)} — sans eux la perception par personnage est décorative`,
+      );
+    }
+    for (const trait of traits) {
+      const traitId = text(trait['id']) ?? '(sans id)';
+      const trigger = record(trait['trigger']) ?? {};
+      const moveIds = list(trigger['moveIds']) ?? [];
+      if (record(trigger['presentEntity']) === undefined && moveIds.length === 0) {
+        problems.push(
+          `${id}/${traitId} : déclencheur sans « presentEntity » ni « moveIds » — ` +
+            `« le regard de prédateur voit des cibles », pas une phrase que le conteur interprète`,
+        );
+      }
+      const strength = trait['strength'];
+      if (
+        typeof strength !== 'number' ||
+        strength < PERCEPTION_STRENGTH_FLOOR ||
+        strength > PERCEPTION_STRENGTH_CEILING
+      ) {
+        problems.push(
+          `${id}/${traitId} : force ${String(strength)} hors de la bande ` +
+            `${String(PERCEPTION_STRENGTH_FLOOR)}..${String(PERCEPTION_STRENGTH_CEILING)} — ` +
+            `au-dessus c'est une règle, en dessous l'atout n'existe pas`,
+        );
+      }
+    }
   }
   return problems;
 }
@@ -561,7 +651,7 @@ describe('le contenu livré porte ce que les règles exigent', () => {
     expect(forestProblems(disk())).toStrictEqual([]);
   });
 
-  it('livre trois fiches manuscrites en 3/2/2/1/1, chacune avec un alias de plus que son nom', () => {
+  it('livre trois fiches manuscrites en 3/2/2/1/1, chacune avec un alias de plus que son nom, et chacune au moins deux atouts de perception déclenchables et dans la bande', () => {
     expect(sheetProblems(disk())).toStrictEqual([]);
   });
 
@@ -716,6 +806,63 @@ describe('chaque garde-fou rougit sur la faute qu’il annonce', () => {
     });
     expect(sheetProblems(files)).toStrictEqual([
       "braum : aucun alias en plus du nom — le verrouillage de distribution n'aurait qu'une orthographe",
+    ]);
+  });
+
+  it('les trois fiches vidées de leurs atouts de perception tombent toutes les trois', () => {
+    let files = disk();
+    for (const id of HANDWRITTEN_SHEETS) {
+      files = edit(files, `champions/${id}.json`, (document) => {
+        document['perceptionTraits'] = [];
+      });
+    }
+    expect(sheetProblems(files)).toStrictEqual([
+      'ashe : 0 atout(s) de perception, il en faut au moins 2 — sans eux la perception par personnage est décorative',
+      'braum : 0 atout(s) de perception, il en faut au moins 2 — sans eux la perception par personnage est décorative',
+      'sejuani : 0 atout(s) de perception, il en faut au moins 2 — sans eux la perception par personnage est décorative',
+    ]);
+  });
+
+  it('une fiche ramenée à un seul atout de perception est refusée', () => {
+    const files = edit(disk(), 'champions/braum.json', (document) => {
+      document['perceptionTraits'] = (document['perceptionTraits'] as unknown[]).slice(0, 1);
+    });
+    expect(sheetProblems(files)).toStrictEqual([
+      'braum : 1 atout(s) de perception, il en faut au moins 2 — sans eux la perception par personnage est décorative',
+    ]);
+  });
+
+  it('un déclencheur sans entité présente ni mouvement est nommé avec son atout', () => {
+    const files = edit(disk(), 'champions/braum.json', (document) => {
+      const traits = document['perceptionTraits'] as Record<string, unknown>[];
+      const trigger = traits[0]?.['trigger'] as Record<string, unknown>;
+      delete trigger['presentEntity'];
+      trigger['moveIds'] = [];
+    });
+    expect(sheetProblems(files)).toStrictEqual([
+      'braum/pressent-le-danger : déclencheur sans « presentEntity » ni « moveIds » — ' +
+        '« le regard de prédateur voit des cibles », pas une phrase que le conteur interprète',
+    ]);
+  });
+
+  it('une force quasi-certaine fait de l’atout une règle, et est refusée', () => {
+    const files = edit(disk(), 'champions/braum.json', (document) => {
+      const traits = document['perceptionTraits'] as Record<string, unknown>[];
+      for (const trait of traits) trait['strength'] = 99;
+    });
+    expect(sheetProblems(files)).toStrictEqual([
+      "braum/pressent-le-danger : force 99 hors de la bande 10..89 — au-dessus c'est une règle, en dessous l'atout n'existe pas",
+      "braum/voit-qui-va-lacher : force 99 hors de la bande 10..89 — au-dessus c'est une règle, en dessous l'atout n'existe pas",
+    ]);
+  });
+
+  it('une force sous « improbable » fait un atout qui n’existe pas, et est refusée', () => {
+    const files = edit(disk(), 'champions/sejuani.json', (document) => {
+      const traits = document['perceptionTraits'] as Record<string, unknown>[];
+      if (traits[0] !== undefined) traits[0]['strength'] = 9;
+    });
+    expect(sheetProblems(files)).toStrictEqual([
+      "sejuani/flaire-la-faiblesse : force 9 hors de la bande 10..89 — au-dessus c'est une règle, en dessous l'atout n'existe pas",
     ]);
   });
 
