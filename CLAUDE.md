@@ -74,13 +74,13 @@ sécurité — **nomme le test qui la tient**, ou ne l'affirme pas.
 
 C'est le défaut le plus fréquent trouvé en recette, et il revient à chaque passe :
 
-| Promesse écrite | Ce que mesurait le test |
-|---|---|
-| « la portée est `identify` seule : une portée qu'on ne demande pas ne peut pas fuiter » | rien — l'élargir à `email` laissait 117 tests verts |
-| « les deux cookies sont effacés à **chaque** sortie » | la moitié du titre du test, pas les cookies |
-| « `deleted_at IS NULL` est dans le SQL : un joueur anonymisé ne doit pas se reconnecter » | rien |
-| « `SESSION_SECRET` sert de poivre pour que la colonne ne devienne pas la liste des adresses » | rien |
-| « rejouer du point de vue d'un joueur redonne exactement ce qu'il a vu » | rien — le destinataire était absent du double de test |
+| Promesse écrite                                                                               | Ce que mesurait le test                               |
+| --------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| « la portée est `identify` seule : une portée qu'on ne demande pas ne peut pas fuiter »       | rien — l'élargir à `email` laissait 117 tests verts   |
+| « les deux cookies sont effacés à **chaque** sortie »                                         | la moitié du titre du test, pas les cookies           |
+| « `deleted_at IS NULL` est dans le SQL : un joueur anonymisé ne doit pas se reconnecter »     | rien                                                  |
+| « `SESSION_SECRET` sert de poivre pour que la colonne ne devienne pas la liste des adresses » | rien                                                  |
+| « rejouer du point de vue d'un joueur redonne exactement ce qu'il a vu »                      | rien — le destinataire était absent du double de test |
 
 **Pourquoi c'est pire qu'une absence de commentaire** : le lecteur suivant fait confiance et ne
 vérifie pas. Une garantie annoncée et non tenue se propage — trois tâches ont construit dessus.
