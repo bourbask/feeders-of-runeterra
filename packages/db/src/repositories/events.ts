@@ -262,6 +262,31 @@ export function readRange(
 }
 
 /**
+ * One turn, whole: every entry written under `correlationId`, in order.
+ *
+ * A turn is a GROUP, not a row — 03-donnees.md section 3.7 cancels a group and
+ * section 0.5 builds `TurnProof` from a group — and a burned turn is written by
+ * TWO calls to `decide()` under one identifier (section 3.4). Reading the group
+ * from the journal is what keeps that true without anyone holding a list: the
+ * seed used to keep its own map of correlation to sequences, and a second write
+ * under the same identifier silently replaced the first half of the turn.
+ */
+export function readGroup(
+  connection: SqliteConnection,
+  campaignId: string,
+  correlationId: string,
+): readonly JournalEvent[] {
+  const rows = connection
+    .prepare(
+      `SELECT ${EVENT_COLUMNS} FROM events
+        WHERE campaign_id = ? AND correlation_id = ?
+        ORDER BY seq`,
+    )
+    .all(campaignId, correlationId) as EventRow[];
+  return rows.map((row) => toJournalEvent(row));
+}
+
+/**
  * The visibility predicate of ADR 0008, as one SQL fragment.
  *
  * `json_each` compares WHOLE array members. A `LIKE '%p1%'` would have

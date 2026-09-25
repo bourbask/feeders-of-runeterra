@@ -2,7 +2,7 @@
 
 > M0 construit les fondations : aucune fonctionnalité de jeu, mais tout l'outillage qui permet à
 > un agent développeur de savoir **en quelques secondes s'il a cassé quelque chose**.
-> **31 tâches**, **9 vagues**. (M0-21 est absorbée par M0-16 ; M0-31 a été ajoutée par le tech
+> **32 tâches**, **9 vagues**. (M0-21 est absorbée par M0-16 ; M0-31 a été ajoutée par le tech
 > lead pour mesurer un fournisseur gratuit sur le corpus complet ; **M0-32** par le même
 > arbitrage, pour obtenir le **signal précoce** bien avant la vague 8.)
 >
@@ -54,7 +54,7 @@
 | 4 | Les dés, le protocole réseau, les schémas de contenu, les fixtures, le schéma de base | M0-07 · M0-08 · M0-09 · M0-10 · M0-11 |
 | 5 | Les mouvements et le journal rejouable, le chargeur de contenu, l'accès base, les schémas IA | M0-12 · M0-13 · M0-14 · M0-15 |
 | 6 | Le contenu de jeu **et les fiches de champion**, la reconstruction de base, les prompts du conteur, la page table, le serveur | M0-16 · M0-17 · M0-18 · M0-19 · M0-20 |
-| 7 | Le contexte IA, l'authentification Discord, l'orchestration, le WebSocket, **et la sonde de fumée d'un fournisseur gratuit** | M0-22 · M0-23 · M0-24 · M0-25 · **M0-32** (à démarrer en premier) |
+| 7 | Le contexte IA, l'authentification Discord, l'orchestration, le WebSocket, **la sonde de fumée d'un fournisseur gratuit**, **et la brûlure du souffle en deux temps** | M0-22 · M0-23 · **M0-34** (avant M0-24) · M0-24 · M0-25 · **M0-32** (à démarrer en premier) |
 | 8 | La campagne de démonstration, le harnais d'éval, le simulateur, les travailleurs IA, **et la mesure complète d'un fournisseur gratuit** | **M0-31** (à démarrer en premier) · M0-26 · M0-27 · M0-28 · M0-29 |
 | 9 | L'assemblage : le parcours de bout en bout qui prouve que le socle tient | M0-30 |
 
@@ -1300,7 +1300,7 @@ besoin. Une fuite de la base ne doit donner **aucune** session utilisable.
 ---
 
 ### M0-24 · Serveur : le chemin d'une intention
-**Taille** : grosse · **Dépend de** : M0-13, M0-15, M0-20 · **Parallélisable** : oui
+**Taille** : grosse · **Dépend de** : M0-13, M0-15, M0-20, **M0-34** · **Parallélisable** : oui
 
 **À quoi ça sert.** **Le seul** chemin d'écriture de l'état de partie, et l'endroit où les
 quatre invariants se rencontrent : valider, autoriser, décider (les dés sont tirés ici),
@@ -1330,6 +1330,11 @@ transaction — demander à l'IA d'habiller le fait déjà acquis.
   appelle cette fonction.
 - `src/game/snapshots.ts` (tous les 200 événements + jalons), `src/game/chronicle.ts`
   (déclenchement, sans le travailleur).
+- `intent-pipeline.closeAllBurnWindows(deps, campaignId)` : la **clause du statut de campagne**
+  que M0-34 laisse au serveur (`03-donnees.md` §3.4). Une campagne qui n'est plus `active`
+  refuse tout, fermeture comprise, donc le chemin d'administration qui écrira
+  `campaign.status_changed` (M0-27) **appelle cette fonction d'abord** ; une réponse non vide
+  nomme ce qui a empêché, et le statut ne s'écrit pas.
 - `tests/game/*.test.ts`.
 
 **Critères d'acceptation**
@@ -1354,6 +1359,15 @@ transaction — demander à l'IA d'habiller le fait déjà acquis.
 - Un test vérifie la fenêtre de brûlure du souffle en deux temps : `roll.action_resolved
   { burnWindow: true }` → `momentum.burn` → `character.momentum_burned` + `roll.action_revised`,
   sans jamais réécrire le premier jet.
+- **La table est libre, donc DEUX fenêtres ouvertes à la fois sont l'état normal** et non un cas
+  limite (`ARCHITECTURE.md` §4.4 : « ordre du tour : aucun »). Un test nommé ouvre une fenêtre
+  pour A puis une pour B, et chacun ferme la sienne : la fenêtre se cherche par le `rollId` que
+  l'intention vise, ou par le personnage concerné — **jamais « la dernière du journal »**, qui
+  perd le tour du premier joueur en silence. Le moteur en livre la mécanique en **M0-34** ; ce qui se
+  vérifie **ici** est la part du serveur : `Decision.pending` persisté, **aucun appel au
+  conteur** tant que la fenêtre est ouverte, la fenêtre rendue en `ctx.burnWindow` sur
+  l'intention de fermeture, et le filet de sécurité branché sur `burnWindowClosedBy` — une
+  intention qui écrirait sur le même personnage ferme d'abord par `momentum.keep`.
 - **La preuve est une projection du journal, pas une donnée fabriquée** (P22). Trois critères,
   tous tranchables :
   1. `grep -rnE "decide\(|rollChallenge\(|rollProgress\(|Math\.random" packages/server/src/game/turn-proof.ts | wc -l`
@@ -1370,6 +1384,16 @@ transaction — demander à l'IA d'habiller le fait déjà acquis.
 
 **Fichiers touchés** : `packages/server/src/game/{campaign-service,intent-pipeline,write-queue,snapshots,chronicle,revert,turn-proof,index}.ts`,
 `packages/server/src/ai/narrator.ts`, `packages/server/tests/game/**`
+
+**Cinq fichiers de plus sous `src/game/`, et pourquoi** *(livré)* :
+
+| Fichier | Ce qu'il porte, et pourquoi il n'est pas dans un autre |
+|---|---|
+| `content.ts` | l'adaptateur `ContentRegistry` → `EngineContent`, qui n'existait nulle part : M0-14 a livré le registre, M0-13 le port, personne ne les avait joints |
+| `journal.ts` | relire une entrée du journal en valeur du moteur (upcast + `zGameEvent`), une fois pour les trois lecteurs — fenêtre, preuve, annulation |
+| `burn-window.ts` | la fenêtre de brûlure **dérivée du journal**, ce que l'invariant 4 exige et ce qui la fait revenir seule après une annulation |
+| `table-state.ts` | `project(CampaignState, viewerId)`, appelé par `getSnapshot` |
+| `dispositions.ts` | la conversion des cinq dispositions proposables vers les quatre du moteur, **qui refuse** les deux qui n'ont pas d'équivalent |
 
 ---
 
@@ -1559,6 +1583,88 @@ CI**. Elle informe une décision.
 *(Ne touche ni `packages/ai-eval/src/**`, qui appartient à M0-27, ni `packages/ai-eval/probe/**`,
 qui appartient à M0-31. Aucune collision dans la vague 7 : M0-22 livre dans `packages/ai`,
 M0-23, M0-24 et M0-25 dans `packages/server`.)*
+
+---
+
+### M0-34 · Moteur : la brûlure en deux temps, comme la spec l'écrit
+**Taille** : moyenne · **Dépend de** : M0-13 · **Parallélisable** : oui
+· **À démarrer AVANT M0-24 dans la vague 7**
+
+**À quoi ça sert.** Faire que brûler son souffle serve à quelque chose. `03-donnees.md` §3.4 et
+`ARCHITECTURE.md` §4.4 écrivent la brûlure en deux temps depuis le début ; `decide()` appliquait
+les effets **immédiatement**, au moment où il écrivait `roll.action_resolved`. Mesuré en recette
+de M0-13 : le joueur vidait la ressource la plus rare du jeu et prenait les dégâts quand même —
+ni `character.momentum_burned` ni `roll.action_revised` ne produisaient le moindre effet de jeu.
+Ce n'est pas un arbitrage de conception, c'est une divergence entre la spec et l'implémentation,
+et **la spec fait foi**.
+
+**Livrables**
+- `packages/engine/src/decide.ts` : quand `roll.action_resolved` porte `burnWindow: true`,
+  `decide()` n'émet **ni effet ni `move.resolved`**, et rend la fenêtre dans
+  `Decision.pending`. Trois fermetures, et trois seulement : `momentum.burn` (les effets de
+  l'issue **révisée**), `momentum.keep` (ceux de l'issue **initiale**), et le filet de sécurité
+  de `03-donnees.md` §3.4, tenu par le prédicat exporté `burnWindowClosedBy(window, event)`.
+- `packages/engine/src/types/intents.ts` : l'intention `momentum.keep { rollId }`, dans le type
+  **et** dans le tuple `INTENT_TYPES` que gardent `satisfies` + `AssertNever`.
+- `packages/contracts/src/intents/index.ts` : `zMomentumKeepIntent`, membre de `zIntent`.
+- `docs/GLOSSAIRE.md` : l'entrée **Souffle** réécrite — quand, pourquoi, ce que ça coûte.
+- Les trois specs remises d'accord avec le code : `ARCHITECTURE.md` §4.4,
+  `docs/design/03-donnees.md` §3.4, `docs/design/01-architecture.md` §5.3.
+
+**Critères d'acceptation**
+- Un jet qui ouvre la fenêtre écrit **exactement** `move.declared` puis `roll.action_resolved`,
+  et rien d'autre : ni `roll.price_paid`, ni `move.resolved`.
+- `momentum.burn` sur un échec que le souffle transforme en réussite franche applique les effets
+  de la **réussite franche** ; le prix de l'échec n'est jamais tiré.
+- `momentum.keep` applique les effets de l'issue initiale et ne dépense **aucun** souffle.
+- Le premier jet n'est jamais réécrit : `roll.action_revised.revisedFromSeq` pointe dessus, et
+  `move.resolved.rollSeq` pointe sur le **jet**, pas sur la révision.
+- **La révision ne tire rien** : tous les flux du contexte de fermeture sont scriptés **vides**
+  (un générateur scripté épuisé lève), et l'index de tirage du flux `action` après la fermeture
+  vaut celui d'après le jet — deux opérandes, deux origines.
+- Rejouer la séquence complète deux fois rend le même état (`stableStringify`).
+- Le miroir Zod **rougit dans les deux sens** quand `INTENT_TYPES` et `zIntent` divergent :
+  `exhaustive-union.test.ts` et `ws-protocol.test.ts`, mesurés en ajoutant le membre au moteur
+  seul.
+- `turbo run build typecheck lint test --force` puis `turbo run typecheck:tests --force` sortent
+  en 0.
+
+**Ce que la tâche ne fait pas** : toucher au serveur (M0-24), inventer une règle d'équilibrage,
+élargir le périmètre.
+
+**Contrat pour M0-24**, parce que le serveur le consomme :
+`decide()` rend `Decision.pending: BurnWindow | null`. Non nul, le tour n'est **pas** fini : le
+serveur persiste la fenêtre, **n'appelle pas le conteur**, et la rend en `ctx.burnWindow` sur
+l'intention de fermeture. Une annulation (`system.reverted`) la jette — c'est ce qui fait
+revenir la fenêtre de brûlure avec le reste (`03-donnees.md` §3.7, point 1). Le filet se
+branche sur `burnWindowClosedBy` : avant de traiter une intention qui écrirait sur le même
+personnage, le serveur ferme d'abord par `momentum.keep`.
+
+La fenêtre porte désormais, en plus du jet : le `correlationId` du tour, l'`id` du
+`move.declared`, et le `MovePlan` décidé à la déclaration. Que des valeurs — elle se sérialise
+en JSON telle quelle, et c'est ce que le serveur persiste.
+
+**Une fenêtre ouverte doit toujours pouvoir se fermer.** Les dés sont écrits et lus ; il ne
+reste dû que leurs conséquences. Deux moitiés, et elles ne se tiennent pas au même endroit :
+
+| Ce qui change sous la fenêtre | Qui le tient, et comment |
+|---|---|
+| la **scène** (`scene.ended`, cible partie) | **le moteur**. Le `MovePlan` est porté par la fenêtre, pas recalculé à la fermeture : la faisabilité a été tranchée avant les dés. Personne ne peut ordonner les transitions de scène du conteur contre la décision d'un joueur, donc ça ne peut pas être une règle de serveur |
+| le **statut de campagne** (`paused`, `archived`) | **le serveur**, et c'est une clause de ce contrat : le serveur **ferme toute fenêtre ouverte de la campagne par `momentum.keep` avant d'écrire le changement de statut**. `decide()` refuse tout sur une campagne non active — c'est voulu, une pause n'est pas un demi-arrêt —, et la pause est une intention humaine sérialisée sur la même file d'écriture (`03-donnees.md` §0.3), donc l'ordre est tenable |
+| le **personnage** (mort, retraite, départ) | **le filet**, déjà : ces événements portent le personnage en `subject_character_id`, donc `burnWindowClosedBy` les voit et la fenêtre se ferme avant. `scene.ended`, lui, ne porte aucun sujet — c'est pourquoi la première ligne n'est pas du ressort du filet |
+
+Mesuré côté moteur : `decide.test.ts` → « the scene ends between the dice and the decision »
+(la fenêtre se ferme, l'effet tombe), « une campagne en pause » (le refus `campaign_not_active`,
+qui est la raison d'être de la clause ci-dessus) et « refuses a closing whose character died in
+between » (le filet, dans les deux sens).
+
+**Fichiers touchés** : `packages/engine/src/{decide.ts,decide.test.ts,index.test.ts}`,
+`packages/engine/src/types/intents.ts`,
+`packages/contracts/src/intents/{index.ts,index.test.ts}`,
+`packages/contracts/tests/ws-protocol.test.ts`, `docs/GLOSSAIRE.md`, `docs/ARCHITECTURE.md`,
+`docs/design/{01-architecture,03-donnees}.md`, `docs/M0-TASKS.md`
+*(Aucune collision dans la vague 7 : M0-22 livre dans `packages/ai`, M0-23, M0-24 et M0-25 dans
+`packages/server`, M0-32 dans `packages/ai-eval`.)*
 
 ---
 
@@ -1924,6 +2030,12 @@ condition que chaque correction soit signalée dans le rapport final.
   commandes du quotidien.
 
 **Critères d'acceptation**
+- **Aucune promesse orpheline.** Balayage du dépôt : tout en-tête de fichier qui affirme une
+  propriété en capitales nomme le test qui la tient, ou cesse de l'affirmer. Cinq promesses non
+  tenues ont été trouvées en vague 7, dont deux propriétés de sécurité sur un dépôt public
+  (la portée OAuth, l'effacement des cookies du tour) et une qui portait l'ADR 0008
+  (« rejouer du point de vue d'un joueur redonne exactement ce qu'il a vu »). Le testeur en
+  choisit trois au hasard et vérifie que le test nommé rougit quand on casse la propriété.
 - Sur un clone neuf : `pnpm install && pnpm verify` sort en 0 en **moins de 3 minutes**.
 - `pnpm db:reset && pnpm db:check` sortent en 0 (les 12 oracles).
 - `bash scripts/smoke-m0.sh` sort en 0.
@@ -2004,7 +2116,8 @@ sans propriétaire — ils arrivent ici pour ne pas être redécouverts) :
 | ~~M0-21~~ | *absorbée par M0-16* | — | — | — |
 | M0-22 | IA : contexte, budget, assertions | 7 | grosse | M0-18 |
 | M0-23 | Serveur : Discord et surface HTTP | 7 | grosse | M0-15, M0-20 |
-| M0-24 | Serveur : le chemin d'une intention | 7 | grosse | M0-13, M0-15, M0-20 |
+| M0-34 | Moteur : la brûlure en deux temps | 7 | moyenne | M0-13 |
+| M0-24 | Serveur : le chemin d'une intention | 7 | grosse | M0-13, M0-15, M0-20, M0-34 |
 | M0-25 | Serveur : hub WebSocket | 7 | grosse | M0-08, M0-20 |
 | M0-32 | Sonde de fumée d'un fournisseur gratuit | 7 | petite | M0-18 |
 | M0-26 | Base : campagne de démonstration | 8 | grosse | M0-17, M0-16 |

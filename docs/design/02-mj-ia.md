@@ -603,15 +603,15 @@ fichier et applique **deux** règles, de portées différentes :
 
 | Règle | Motifs interdits | Où elle s'applique |
 |---|---|---|
-| N1 — **faits d'API** | `claude-`, `gpt-`, `stop_reason`, `cache_control`, `output_config`, `max_tokens`, `@anthropic-ai`, `openrouter.ai`, `/api/chat`, `chat/completions` | **partout sauf §0.3 à §0.6** |
+| N1 — **faits d'API** | `claude-`, `gpt-`, `stop_reason`, `cache_control`, `output_config`, `max_tokens`, `@anthropic-ai`, `openrouter.ai`, `/api/chat`, `chat/completions` | **partout sauf §0.3 à §0.6** et §0.7 (cette table) |
 | N2 — **noms de fournisseur** | `anthropic`, `openai`, `ollama`, `OpenRouter`, `Groq`, `Together` | partout **sauf** : §0.1 (l'union `NarratorProviderId`, qui est le vocabulaire du port lui-même), §0.3 à §0.6, §0.7 (cette table), §10 (les chemins de fichiers d'adaptateur) et §11 (le tableau d'arbitrage et les questions ouvertes) |
 
 Les exemptions de N2 sont **nominatives et closes**, pas une tolérance : un `providerId` doit
 s'écrire quelque part, et les chemins `adapters/<id>.ts` doivent se lire dans l'arborescence. Ce
-qui ne doit jamais fuir, c'est un **fait d'API**, gardé par N1, dont l'unique exemption est le
-bloc des adaptateurs. Un test qui interdirait les six mots partout serait rouge dès sa première
-exécution sur ce fichier ; un test rouge par construction est un test qu'on désactive dans la
-semaine.
+qui ne doit jamais fuir, c'est un **fait d'API**, gardé par N1, dont les seules exemptions sont le
+bloc des adaptateurs et cette table, qui doit épeler les motifs qu'elle interdit. Un test qui
+interdirait les six mots partout serait rouge dès sa première exécution sur ce fichier ; un test
+rouge par construction est un test qu'on désactive dans la semaine.
 
 ---
 
