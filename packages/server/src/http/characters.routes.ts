@@ -2,19 +2,25 @@
  * `GET /api/me` — who is signed in, and what they may open
  * (01-architecture.md section 6).
  *
+ * EVERY PROMISE BELOW NAMES THE TEST THAT HOLDS IT (CLAUDE.md, « une promesse
+ * nomme le test qui la tient »).
+ *
  * THE ROUTE RETURNS A PROJECTION, NOT THREE TABLES. `zPlayerProfile` is built
  * by `auth/guards.ts` from the `players` row and deliberately leaves the
  * Discord snowflake, the e-mail column and `last_seen_at` in the database;
  * `zCharacterSummary` is a name and a status, not a sheet. The sheet arrives
- * with the table, over the socket.
+ * with the table, over the socket. Held by `tests/http/session.test.ts`,
+ * « répond 200 avec le cookie, et rend le profil projeté », which pins the
+ * FIVE raw keys of `player` and no sixth, on the RAW JSON — a `parse` would
+ * have stripped a leaked field before the assertion could see it.
  *
  * BOTH LISTS ARE ORDERED, AND THE ORDER IS ASSERTED. Most recently touched
  * first, for the same reason in both cases: this answer draws a home page, and
  * a home page that reshuffles between two reloads is a bug nobody can
- * reproduce. `tests/http/campaigns.test.ts`, `describe('GET /api/me — les
- * deux listes')`, measures it on TWO rows inserted in the wrong order and
- * compares the whole array, because a fixture of one element, or one already
- * sorted, says nothing about an `ORDER BY`.
+ * reproduce. Held by `tests/http/campaigns.test.ts`, « rend personnages et
+ * tables, chacun dans l'ordre annoncé », which measures it on TWO rows per
+ * list, inserted in the wrong order, and compares the whole array — a fixture
+ * of one element, or one already sorted, says nothing about an `ORDER BY`.
  */
 
 import { zMeResponse } from '@for/contracts';

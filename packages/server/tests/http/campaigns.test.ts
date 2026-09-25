@@ -473,6 +473,41 @@ describe('GET /api/campaigns/:id/log', () => {
     expect(second.nextSinceSeq).toBeNull();
   });
 
+  it('refuse de servir une ligne que le contrat ne décrit pas, plutôt qu’un demi-événement', async () => {
+    // `campaigns.routes.ts` dit que le sérialiseur PARSE le résultat, « so a
+    // row this server cannot describe fails here rather than reaching a client
+    // as a half-event ». Rien ne le mesurait : toutes les autres lignes de
+    // journal de ce fichier passent par `appendEvents`, qui n'écrit que des
+    // types du contrat.
+    const b = await bed();
+    const me = await signIn(b);
+    insertCampaign(b, ALPHA, 'La table', me.playerId, 1_000);
+    // Le déclencheur `events_seq_dense` exige que `events.seq` vaille
+    // `campaigns.seq` : l'allocateur avance d'abord.
+    b.connection.prepare(`UPDATE campaigns SET seq = 1 WHERE id = ?`).run(ALPHA);
+    b.connection
+      .prepare(
+        `INSERT INTO events
+           (id, campaign_id, seq, type, payload_json, actor_kind, scope, created_at)
+         VALUES (?, ?, 1, 'inconnu.hors.contrat', '{"texte":"charge utile brute"}',
+                 'system', 'table', ?)`,
+      )
+      .run(b.deps.ids.next(), ALPHA, b.clock.now());
+
+    const response = await b.app.inject({
+      method: 'GET',
+      url: `/api/campaigns/${ALPHA}/log`,
+      cookies: { fr_session: me.secret },
+    });
+
+    // La route s'arrête ici, et le client ne reçoit ni le type inconnu ni sa
+    // charge utile — pas même dans le message d'erreur.
+    expect(response.statusCode).toBe(500);
+    expect(zAppErrorPayload.parse(response.json()).code).toBe('internal_error');
+    expect(response.body).not.toContain('inconnu.hors.contrat');
+    expect(response.body).not.toContain('charge utile brute');
+  });
+
   it('répond 404 sur une table inconnue, avant même de parler d’appartenance', async () => {
     const b = await bed();
     const me = await signIn(b);

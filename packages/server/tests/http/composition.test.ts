@@ -19,6 +19,8 @@
  *    measured here.
  */
 
+import { existsSync } from 'node:fs';
+
 import { CSRF_HEADER_NAME, CSRF_HEADER_VALUE, zAppErrorPayload } from '@for/contracts';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -144,6 +146,40 @@ describe('ce que buildApp enregistre vraiment', () => {
       cookies: { fr_session: playerWithSession(bed, true) },
     });
     expect(admin.statusCode).toBe(200);
+  });
+});
+
+describe('ce que le banc est vraiment', () => {
+  it('tourne sur un VRAI FICHIER, en WAL, comme la production', async () => {
+    // `testing.ts` dit « A REAL FILE, NEVER `:memory:` : `journal_mode = WAL`
+    // est silencieusement rétrogradé en mémoire ». Rien ne le mesurait, et une
+    // suite bâtie sur `:memory:` mesurerait un autre moteur que celui qui
+    // tourne en production.
+    const bed = await bench();
+    open.push(bed);
+
+    const liste = bed.connection.prepare(`PRAGMA database_list`).all() as {
+      name: string;
+      file: string;
+    }[];
+    const principale = liste.find((une) => une.name === 'main');
+    expect(principale).toBeDefined();
+    // `:memory:` rend un chemin VIDE : c'est la distinction, pas le nom.
+    expect(principale!.file).not.toBe('');
+    expect(existsSync(principale!.file)).toBe(true);
+
+    expect(bed.connection.prepare(`PRAGMA journal_mode`).get()).toEqual({ journal_mode: 'wal' });
+  });
+
+  it('le fil-piège Drizzle mord : la couche requête n’est ouverte par personne', async () => {
+    // Les tests de cette tâche passent tous sur un `deps.db` piégé — ce qui
+    // serait également vrai d'un piège devenu inerte. Ici, on le déclenche.
+    const bed = await bench();
+    open.push(bed);
+
+    expect(() => (bed.deps.db as unknown as Record<string, unknown>)['select']).toThrow(
+      /couche Drizzle/,
+    );
   });
 });
 

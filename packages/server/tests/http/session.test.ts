@@ -122,6 +122,41 @@ describe('ce que la base contient d’une session', () => {
   });
 });
 
+describe('les attributs, hors de l’environnement de test', () => {
+  it('porte Secure même en développement : l’attribut ne dépend pas de NODE_ENV', async () => {
+    // `session.ts` dit « `secure: true` IS UNCONDITIONAL, INCLUDING IN
+    // DEVELOPMENT ». Le banc tourne en `test` : la promesse parlait donc d'un
+    // environnement qu'aucun test n'ouvrait, et un jour où le drapeau
+    // deviendrait `nodeEnv === 'production'`, rien ne tomberait.
+    const b = await bench({ env: { NODE_ENV: 'development' } });
+    open.push(b);
+
+    const start = await b.app.inject({ method: 'GET', url: '/api/auth/discord/start' });
+    const state = cookieValue(start.headers, 'fr_oauth_state')!;
+    const verifier = cookieValue(start.headers, 'fr_oauth_verifier')!;
+    const callback = await b.app.inject({
+      method: 'GET',
+      url: `/api/auth/discord/callback?code=c&state=${encodeURIComponent(state)}`,
+      cookies: { fr_oauth_state: state, fr_oauth_verifier: verifier },
+    });
+
+    // LES TROIS COOKIES DE CETTE TÂCHE, pas seulement celui de session : les
+    // deux cookies du tour portent le même socle d'attributs.
+    const lignes = [...setCookies(start.headers), ...setCookies(callback.headers)];
+    const noms = lignes.map((ligne) => ligne.split('=')[0]);
+    expect(noms).toEqual(
+      expect.arrayContaining(['fr_oauth_state', 'fr_oauth_verifier', 'fr_session']),
+    );
+    // Collectées puis comparées comme un tableau, pour que l'échec nomme la
+    // ligne fautive au lieu de l'assertion qui a tourné.
+    const sansGarde = lignes.filter((ligne) => {
+      const attributs = ligne.split(';').map((part) => part.trim());
+      return !attributs.includes('Secure') || !attributs.includes('HttpOnly');
+    });
+    expect(sansGarde).toEqual([]);
+  });
+});
+
 describe('GET /api/me', () => {
   it('répond 401 sans cookie', async () => {
     const b = await bed();
@@ -398,6 +433,36 @@ describe('la règle CSRF', () => {
       cookies: { fr_session: signed.secret },
     });
     expect(after.statusCode).toBe(200);
+  });
+
+  it('refuse AVANT de lire le corps : le crochet est onRequest, pas preHandler', async () => {
+    const b = await bed();
+    // Un corps que l'analyseur JSON ne peut pas accepter. S'il est lu, il
+    // décide de la réponse ; s'il ne l'est pas, c'est le crochet qui décide.
+    const corpsIllisible = '{ceci n’est pas du JSON';
+
+    const sans = await b.app.inject({
+      method: 'POST',
+      url: '/api/auth/logout',
+      headers: { 'content-type': 'application/json' },
+      payload: corpsIllisible,
+    });
+
+    // 403 : le corps n'a jamais été analysé. Un `preHandler` tourne APRÈS
+    // l'analyseur de contenu, donc ce même corps aurait répondu autre chose.
+    expect(sans.statusCode).toBe(403);
+    expect(zAppErrorPayload.parse(sans.json()).code).toBe('csrf_failed');
+
+    // L'AUTRE SENS, sans lequel le 403 ci-dessus vaudrait aussi pour un corps
+    // parfaitement valide : avec l'en-tête, le même corps EST lu, et il échoue.
+    const avec = await b.app.inject({
+      method: 'POST',
+      url: '/api/auth/logout',
+      headers: { 'content-type': 'application/json', ...csrf },
+      payload: corpsIllisible,
+    });
+    expect(avec.statusCode).not.toBe(403);
+    expect(zAppErrorPayload.parse(avec.json()).code).not.toBe('csrf_failed');
   });
 
   it('la paire attendue est celle du contrat, écrite ici en toutes lettres', () => {

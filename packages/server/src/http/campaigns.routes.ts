@@ -1,13 +1,17 @@
 /**
  * Campaigns and the paginated journal (01-architecture.md section 6).
  *
+ * EVERY PROMISE BELOW NAMES THE TEST THAT HOLDS IT (CLAUDE.md, « une promesse
+ * nomme le test qui la tient »). The tests live in `tests/http/campaigns.test.ts`.
+ *
  * `POST /api/campaigns` WRITES NO EVENT, AND THAT IS THE INVARIANT RATHER THAN
  * A GAP. `ARCHITECTURE.md` section 6 says there is exactly ONE write path for
  * game state — the intent pipeline — and that any pull request opening a
  * second one must be refused. `campaigns` and `campaign_members` are zone A
  * (03-donnees.md section 0.4): platform rows, not replayable state, which
  * `db:rebuild` never touches. So creating a campaign inserts two zone A rows
- * and stops there. Whether the journal should also open on a
+ * and stops there. Held by « n'ouvre pas de second chemin d'écriture : aucun
+ * événement n'est journalisé ». Whether the journal should also open on a
  * `campaign.created` is a question for the pipeline that owns `appendEvents`
  * (M0-24) and for the seed (M0-26); answering it from an HTTP handler would
  * be the second write path. Reported, not worked around.
@@ -17,10 +21,15 @@
  * exactly the identifiers in `recipients_json`. Invariant 4 says replaying
  * from one player's point of view must return exactly what that player saw —
  * so this route cannot use `readSince`, which returns the table's stream.
+ * Held by « rend à chaque joueur exactement son fil, ni plus ni moins (ADR
+ * 0008) », which needs TWO ACTORS to say anything: two sessions read the same
+ * campaign, each exact array is compared whole, and what the other player's
+ * private line SAID is hunted through the body.
  *
  * Browsed by `seq`, never by `deliverySeq` (ADR 0010): the cursor of a socket
  * is not the cursor of the journal, and `@for/contracts` says so at the top of
- * `http/tables.ts`.
+ * `http/tables.ts`. Held by « pagine sur seq, et rend nextSinceSeq null une
+ * fois la tête atteinte ».
  */
 
 import {
@@ -85,11 +94,12 @@ const CAMPAIGN_COLUMNS = `campaigns.id, campaigns.slug, campaigns.name, campaign
  * The tables one player may open, most recently touched first.
  *
  * ORDER IS PART OF THE ANSWER, so it is written here once and asserted on an
- * out-of-order fixture: `tests/http/campaigns.test.ts`, `describe('GET
- * /api/me — les deux listes')`, inserts two campaigns whose `updated_at`
- * disagrees with their identifiers and compares the WHOLE array. A single-row
- * fixture, or one already in the right order, would leave this clause
- * unmeasured.
+ * out-of-order fixture: `tests/http/campaigns.test.ts`, « rend personnages et
+ * tables, chacun dans l'ordre annoncé », inserts two campaigns whose
+ * `updated_at` disagrees with their identifiers and compares the WHOLE array;
+ * « ne rend que les tables du joueur, la plus récemment touchée en tête » does
+ * the same on this route. A single-row fixture, or one already in the right
+ * order, would leave this clause unmeasured.
  */
 export function listCampaignsForPlayer(
   connection: SqliteConnection,
@@ -121,7 +131,12 @@ function isMember(connection: SqliteConnection, campaignId: string, playerId: st
   return row !== undefined;
 }
 
-/** kebab-case, ASCII, as `zSlug` spells it. Accents are folded, not dropped. */
+/**
+ * kebab-case, ASCII, as `zSlug` spells it. Accents are folded, not dropped.
+ *
+ * Held by `tests/http/campaigns.test.ts`, « plie les accents au lieu de les
+ * laisser tomber, et ne rend jamais une adresse vide ».
+ */
 export function slugify(name: string): string {
   const folded = name
     .normalize('NFD')
@@ -136,9 +151,18 @@ export function slugify(name: string): string {
  * A journal row, as the 71-variant union describes it.
  *
  * `type` and `payload` sit NEXT TO the envelope rather than inside it — that
- * is the shape `zGameEvent` discriminates on — and the serializer parses the
- * result, so a row this server cannot describe fails here rather than reaching
- * a client as a half-event.
+ * is the shape `zGameEvent` discriminates on.
+ *
+ * The PROPERTY — a row this server cannot describe never reaches a client as a
+ * half-event — is held by `tests/http/campaigns.test.ts`, « refuse de servir
+ * une ligne que le contrat ne décrit pas, plutôt qu'un demi-événement », which
+ * writes a row with a type outside the union straight into `events`.
+ *
+ * This `parse` is not what that test pins, and saying otherwise would be the
+ * comment promising more than it holds: replacing it with a cast leaves the
+ * suite at 126/126 green, because the reply serializer of
+ * `zCampaignLogResponse` refuses the row one step later. Two nets, one mesh
+ * each — the parse is the one that names the offending row in the log.
  */
 function toGameEvent(event: JournalEvent): GameEventDto {
   return zGameEvent.parse({
@@ -222,7 +246,8 @@ export const campaignRoutes: FastifyPluginCallback<AppPluginOptions> = (app, opt
       } catch (error) {
         // `campaigns_slug_uq`. The slug is either the player's own proposal or
         // one derived from a name somebody else already used; either way the
-        // answer is "pick another", not "something went wrong".
+        // answer is "pick another", not "something went wrong". Held by
+        // « répond 409 sur un slug déjà pris ».
         throw new AppError(
           'conflict',
           409,
@@ -295,6 +320,8 @@ export const campaignRoutes: FastifyPluginCallback<AppPluginOptions> = (app, opt
       // the ALLOCATOR (`campaigns.seq`), not the last row this player was
       // allowed to see: a full page ending below the head means there is more
       // to ask for, even if the next rows turn out to be invisible to them.
+      // Held by « ferme le curseur quand la page finit SUR la tête, pas
+      // seulement quand elle est vide ».
       const last = entries.at(-1);
       const nextSinceSeq =
         last !== undefined && entries.length === request.query.limit && last.seq < row.seq

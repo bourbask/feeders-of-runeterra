@@ -1,24 +1,32 @@
 /**
  * The content surface (01-architecture.md section 6).
  *
+ * EVERY PROMISE BELOW NAMES THE TEST THAT HOLDS IT (CLAUDE.md, « une promesse
+ * nomme le test qui la tient »). The tests live in `tests/http/content.test.ts`.
+ *
  * ONE TABLE, TWO USES. `KINDS` is what `/api/content/manifest` counts AND what
  * `/api/content/:kind/:id` resolves; a kind that the manifest announces is
  * therefore, by construction, a kind that can be fetched. Two hand-kept lists
  * would be two places to forget, and the one that drifts is always the one
  * nobody reads.
  *
- * `tests/http/content.test.ts` writes the six kinds out IN FULL and compares
- * its own literal list to `Object.keys(KINDS)`. It does not loop over `KINDS`
- * to check `KINDS`: emptying the table has to make a test red, and a test that
- * iterates the thing it verifies goes green instead — the sixth failure mode
- * of `docs/RECETTE.md`.
+ * « sont les six que voici, écrits en toutes lettres » writes the six kinds
+ * out IN FULL and compares its own literal list to `Object.keys(KINDS)`. It
+ * does not loop over `KINDS` to check `KINDS`: emptying the table has to make
+ * a test red, and a test that iterates the thing it verifies goes green
+ * instead — the sixth failure mode of `docs/RECETTE.md`. The counts are held
+ * against the FILES, not against the registry, by « compte ce que les fichiers
+ * contiennent, pas ce que le registre annonce ».
  *
  * THE CACHING RULE IS NOT DECORATIVE. A document URL is keyed on a content
  * version, and a campaign is frozen on one version (03-donnees.md section
  * 4.8), so a document at a given version never changes and may be served
- * `immutable`. The MANIFEST, which is how a client learns the current version,
- * is exactly the response that must NOT be: it carries an `ETag` and
- * `no-cache`, so a browser revalidates and gets a 304 when nothing moved.
+ * `immutable` — held by « rend la fiche, en cache immuable ». The MANIFEST,
+ * which is how a client learns the current version, is exactly the response
+ * that must NOT be: it carries an `ETag` and `no-cache`, so a browser
+ * revalidates and gets a 304 when nothing moved — held by « porte un ETag, et
+ * répond 304 quand le client le renvoie », which also shows a STALE validator
+ * getting a 200 rather than a 304.
  */
 
 import { contentVersion } from '@for/content';
@@ -70,6 +78,13 @@ export const contentRoutes: FastifyPluginCallback<AppPluginOptions> = (app, opti
    * The manifest is PUBLIC: it says which version of the rules and of the
    * content a deployment runs, which is the first thing a player needs before
    * they have an account. No session is required, and none is read.
+   *
+   * Both halves are held by `tests/http/content.test.ts`: « est public :
+   * aucune session, et pas de 401 » for the first, and « n'en lit aucune non
+   * plus : last_used_at ne bouge pas quand un cookie passe » for the second,
+   * measured at TWO INSTANTS on the only trace a session lookup leaves — and
+   * with `/api/me` called afterwards to show the same column does move when a
+   * route really does resolve the cookie.
    */
   routes.get(
     '/api/content/manifest',
@@ -77,7 +92,9 @@ export const contentRoutes: FastifyPluginCallback<AppPluginOptions> = (app, opti
     // measured: it serialises the four characters `null` into a 304, which RFC
     // 9110 says carries no body at all. The entry is needed because without it
     // the type provider narrows `reply.status` to 200 and the revalidation
-    // branch does not compile.
+    // branch does not compile. The empty 304 is held by
+    // `tests/http/content.test.ts`, « porte un ETag, et répond 304 quand le
+    // client le renvoie ».
     { schema: { response: { 200: zContentManifestResponse, 304: z.undefined() } } },
     (request, reply) => {
       const bundle = deps.content.bundle;

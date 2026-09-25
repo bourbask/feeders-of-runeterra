@@ -1,29 +1,58 @@
 /**
  * The four OAuth routes of 01-architecture.md section 6.
  *
- * THE ROUND TRIP IS BOUND AT THREE POINTS, and each one is a different attack:
+ * EVERY PROMISE BELOW NAMES THE TEST THAT HOLDS IT (CLAUDE.md, « une promesse
+ * nomme le test qui la tient »). Two of them were orphans until this pass, and
+ * both are security properties on a public repository — so the list is read in
+ * FULL from now on, not narrowed to the line being edited.
+ *
+ * THE ROUND TRIP IS BOUND AT THREE POINTS, and each one is a different attack.
+ * `tests/http/oauth.test.ts` carries one refusal per binding, each pinning the
+ * network counter to zero:
  *
  *   1. the `oauth_states` row (zone A, ADR 0010 arbitration 6) is what proves
  *      the callback answers a start THIS SERVER issued, and it carries the
  *      deadline. It is consumed by a `DELETE … RETURNING`, so a `state`
- *      is usable exactly once;
+ *      is usable exactly once — « state inconnu : 400 … », « state expiré :
+ *      400 … » and « le même state, une seconde fois : 400 »;
  *   2. the `fr_oauth_state` cookie is what proves the callback reaches the
  *      SAME BROWSER the start left from. Without it, anybody holding a stolen
- *      `state` could complete somebody else's sign-in;
+ *      `state` could complete somebody else's sign-in — « sans le cookie
+ *      d'état : 400 … » for absence, and « avec un cookie d'état présent mais
+ *      DIFFÉRENT de la ligne … » for the binding itself, on a cookie of the
+ *      SAME LENGTH so a comparison degraded to a presence check turns red;
  *   3. the `fr_oauth_verifier` cookie is the PKCE verifier, and it is compared
  *      to the copy in the row. Section 6 and the fiche both say "state + PKCE
  *      in a cookie"; the DDL says `oauth_states.code_verifier NOT NULL`. Both
  *      are honoured rather than one being chosen: the verifier travels in the
- *      cookie AND is stored, and a mismatch between the two ends the flow.
+ *      cookie AND is stored, and a mismatch between the two ends the flow —
+ *      « avec un vérificateur PKCE qui n'est pas celui de la ligne : 400 ».
  *      Reported as an arbitration rather than applied silently.
  *
  * NO SECRET EVER TRAVELS IN A QUERY STRING — a URL ends up in an access log,
  * in a `Referer` and in browser history. `state` is the single exception the
  * protocol forces, and it is a nonce, not a credential.
  *
+ * Held by `tests/http/oauth.test.ts`, « n'emporte aucun secret dans la chaîne
+ * de requête : les sept paramètres, écrits ici, et jamais le vérificateur »,
+ * which compares the WHOLE key set of the authorisation URL to a list spelled
+ * out there and hunts the verifier and the client secret through the raw
+ * string. Measured before that test was written: appending the real
+ * `code_verifier` to the URL left 118/118 green, because every other assertion
+ * read parameters one at a time and a parameter IN EXCESS was invisible.
+ *
  * WHAT THE ERROR PATHS ANSWER: 400, always, and never a hint about WHICH of
  * the three bindings failed. The distinction is in `details`, which
  * `errors.ts` keeps in the log.
+ *
+ * Held in both directions by `tests/http/oauth.test.ts`: `expectRefused` pins
+ * the refusal sentence WORD FOR WORD — so the four refusals answer exactly one
+ * message — and hunts the four internal reasons through the body; « garde le
+ * motif du refus dans le journal, et seulement là » shows the reason really is
+ * in the log, without which "the body is clean" would also hold for a server
+ * that diagnoses nothing. Measured before: concatenating `details` into the
+ * public message left 118/118 green, and the wire then said WHICH binding had
+ * failed — an oracle telling an attacker whether a `state` ever existed.
  */
 
 import {
@@ -88,7 +117,13 @@ export const authRoutes: FastifyPluginCallback<AppPluginOptions> = (app, options
    * whose only growth comes from sign-ins that were never completed, so the
    * sign-in path is exactly where it is worth a `DELETE`. Running it at plugin
    * registration would also make `/healthz` touch the database, which
-   * `tests/http/health.test.ts` forbids by proof rather than by convention.
+   * `tests/http/health.test.ts`, « répond 200 sans jamais toucher la base »,
+   * forbids by proof rather than by convention.
+   *
+   * That the purge takes only what is due is held by `tests/http/oauth.test.ts`,
+   * « purge les états expirés, et seulement ceux-là », on TWO rows — one dead,
+   * one alive — so "the table was emptied" cannot pass for "the expired row
+   * was removed".
    */
   routes.get(
     '/api/auth/discord/start',
@@ -168,6 +203,10 @@ export const authRoutes: FastifyPluginCallback<AppPluginOptions> = (app, options
       }
 
       // A DISCORD OUTAGE IS NOT AN INTERNAL ERROR, and it is not the player's
+      // — held in both directions by `tests/http/oauth.test.ts`: « quand
+      // Discord est injoignable : 502, aucun joueur, aucune session » and
+      // « une panne qui n'est PAS un DiscordCallError n'est pas maquillée en
+      // 502 », which is the `throw error` below.
       // mistake either. Left to the default handler, `DiscordCallError` would
       // come back as `internal_error` with a stack in the log and a sentence
       // telling the player to try again in a moment — which is right by
@@ -195,8 +234,12 @@ export const authRoutes: FastifyPluginCallback<AppPluginOptions> = (app, options
       }
       const user = identity;
 
-      // One transaction: an identity that exists without its session, or the
-      // other way round, is a state nobody wrote a recovery for.
+      // Wrapped in ONE transaction. What a test holds is the outcome on the
+      // only failure M0 can actually reach — an upstream outage, before this
+      // block runs: « quand Discord est injoignable : 502, aucun joueur,
+      // aucune session ». No failure INSIDE the transaction is reachable from
+      // the HTTP surface today, so atomicity itself is held by SQLite and by
+      // this call, not by a test of ours. Said rather than dressed up.
       const session = deps.connection.transaction(() => {
         upsertPlayer(deps.connection, {
           id: deps.ids.next(),
@@ -216,7 +259,10 @@ export const authRoutes: FastifyPluginCallback<AppPluginOptions> = (app, options
 
         // ROTATION (section 6): signing in again never reuses the cookie that
         // arrived. The old session is revoked rather than left live, so a
-        // stolen cookie stops working the next time its owner signs in.
+        // stolen cookie stops working the next time its owner signs in. Held
+        // by `tests/http/session.test.ts`, « révoque la session précédente du
+        // même navigateur », which carries the first cookie into the second
+        // sign-in — without that, "rotation" would only mean "a second row".
         const previous = sessionSecretOf(request);
         if (previous !== null) revokeSessionBySecret(deps.connection, previous, now);
 
@@ -237,10 +283,12 @@ export const authRoutes: FastifyPluginCallback<AppPluginOptions> = (app, options
   /**
    * Logout: revoke, then clear.
    *
-   * IDEMPOTENT ON PURPOSE — 200 even with no cookie. A logout that answered
-   * 401 when nobody is signed in would make "sign me out everywhere" a
-   * two-outcome operation for no gain; and the CSRF hook already refuses this
-   * route to anybody who cannot set a header.
+   * IDEMPOTENT ON PURPOSE — 200 even with no cookie, held by
+   * `tests/http/session.test.ts`, « reste idempotent sans session ». A logout
+   * that answered 401 when nobody is signed in would make "sign me out
+   * everywhere" a two-outcome operation for no gain; and the CSRF hook already
+   * refuses this route to anybody who cannot set a header, held by « refuse
+   * une mutation sans l'en-tête, et la session survit ».
    *
    * BOTH HALVES ARE ASSERTED, and the second one had to be added: deleting the
    * `clearCookie` below left the whole suite green, though a revoked cookie

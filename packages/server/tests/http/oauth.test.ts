@@ -12,17 +12,44 @@
  * `node:crypto` (the PKCE challenge). Comparing the route's challenge to the
  * route's own helper would be a number compared to itself.
  *
- * THE TWO PROMISES THE HEADERS MAKE IN CAPITALS ARE MEASURED HERE, because a
+ * THE PROMISES THE TWO HEADERS MAKE IN CAPITALS ARE MEASURED HERE, because a
  * comment that promises a security property nothing holds is worse than no
- * comment: the next reader trusts it and does not check.
+ * comment: the next reader trusts it and does not check. The list is the
+ * WHOLE list, re-read from both files rather than narrowed to the griefs of
+ * the day — twice now it was the promise NEXT TO the one being fixed that had
+ * nothing under it.
  *
- *   - `discord.ts` says the requested scope is `identify` ALONE. Asserted in
- *     the start test, SPELLED OUT rather than read from `DISCORD_SCOPES`:
+ *   - `discord.ts`, the requested scope is `identify` ALONE — « redirige vers
+ *     discord.com … », SPELLED OUT rather than read from `DISCORD_SCOPES`:
  *     widening the constant to `identify email` has to turn this file red;
- *   - `auth.routes.ts` says the two `oauth_*` cookies are cleared on every
- *     exit of the callback. `expectOauthCookiesCleared` asserts it on the
- *     success path AND on every refusal, since a verifier left in a browser is
- *     the one that can be paired with a second stolen code.
+ *   - `discord.ts`, PKCE « IS NOT OPTIONAL » — « pose les deux cookies, et le
+ *     défi PKCE est bien le SHA-256 du vérificateur posé » plus « transmet au
+ *     fournisseur le vérificateur PKCE posé au démarrage »;
+ *   - `auth.routes.ts`, « NO SECRET EVER TRAVELS IN A QUERY STRING » —
+ *     « n'emporte aucun secret dans la chaîne de requête … », which compares
+ *     the WHOLE key set of the authorisation URL. Every other assertion here
+ *     reads one parameter at a time with `.get()`, and a parameter in EXCESS
+ *     is invisible to all of them: appending the real `code_verifier` to the
+ *     URL left 118/118 green before that test existed;
+ *   - `auth.routes.ts`, the three bindings — « state inconnu … », « sans le
+ *     cookie d'état … », « avec un vérificateur PKCE qui n'est pas celui de la
+ *     ligne … », one per binding, each with its own network counter;
+ *   - `auth.routes.ts`, « never a hint about WHICH of the three bindings
+ *     failed » — `expectRefused`, which pins the refusal sentence WORD FOR
+ *     WORD and hunts the four internal reasons in the body. Concatenating
+ *     `details` into the public message left 118/118 green before that;
+ *   - `auth.routes.ts`, « the distinction is in `details`, which `errors.ts`
+ *     keeps in the log » — the other direction, « garde le motif du refus dans
+ *     le journal, et seulement là »;
+ *   - `auth.routes.ts`, the two `oauth_*` cookies are cleared on every exit of
+ *     the callback — `expectOauthCookiesCleared`, on the success path AND on
+ *     every refusal, since a verifier left in a browser is the one that can be
+ *     paired with a second stolen code;
+ *   - `auth.routes.ts`, THE PURGE LIVES HERE — « purge les états expirés, et
+ *     seulement ceux-là »;
+ *   - `auth.routes.ts`, A DISCORD OUTAGE IS NOT AN INTERNAL ERROR — « quand
+ *     Discord est injoignable : 502 … » and its other half, « une panne qui
+ *     n'est PAS un DiscordCallError n'est pas maquillée en 502 ».
  */
 
 import { createHash } from 'node:crypto';
@@ -166,6 +193,45 @@ describe('GET /api/auth/discord/start', () => {
     expect(OAUTH_STATE_TTL_MS).toBe(10 * 60 * 1000);
   });
 
+  it("n'emporte aucun secret dans la chaîne de requête : les sept paramètres, écrits ici, et jamais le vérificateur", async () => {
+    const b = await bed();
+
+    const response = await b.app.inject({ method: 'GET', url: '/api/auth/discord/start' });
+
+    const raw = response.headers.location!;
+    const location = new URL(raw);
+
+    // LE JEU EXACT DES CLÉS, écrit en toutes lettres. Toutes les autres
+    // assertions de ce fichier lisent un paramètre à la fois avec `.get()` :
+    // un paramètre EN TROP leur est invisible. Mesuré avant d'écrire cette
+    // ligne — le vrai `code_verifier` ajouté à l'URL laissait 118/118 verts,
+    // alors qu'une URL finit dans un journal d'accès, dans un `Referer` et
+    // dans l'historique du navigateur.
+    expect([...location.searchParams.keys()].sort()).toEqual([
+      'client_id',
+      'code_challenge',
+      'code_challenge_method',
+      'redirect_uri',
+      'response_type',
+      'scope',
+      'state',
+    ]);
+
+    // Et le vérificateur nommément, qui est LA raison d'être de PKCE : il part
+    // en cookie et n'apparaît nulle part dans l'URL, ni tel quel ni encodé.
+    const verifier = cookieValue(response.headers, 'fr_oauth_verifier')!;
+    expect(verifier).not.toBe('');
+    expect(raw).not.toContain(verifier);
+    expect(raw).not.toContain(encodeURIComponent(verifier));
+    // Le secret client non plus : il n'a rien à faire sur un canal frontal.
+    expect(raw).not.toContain('client-secret-jamais-commite');
+
+    // L'AUTRE SENS, sans lequel les trois `not.toContain` ci-dessus vaudraient
+    // aussi pour une URL vide : la même recherche TROUVE le défi, qui, lui,
+    // doit bien voyager.
+    expect(raw).toContain(location.searchParams.get('code_challenge')!);
+  });
+
   it('purge les états expirés, et seulement ceux-là', async () => {
     const b = await bed();
     // Two rows, so "the purge emptied the table" cannot pass for "the purge
@@ -284,11 +350,43 @@ describe('GET /api/auth/discord/callback — le chemin qui marche', () => {
 });
 
 describe('GET /api/auth/discord/callback — les refus', () => {
-  /** Every refusal asserts the same three things. */
+  /**
+   * LA PHRASE UNIQUE que rendent les trois liaisons, recopiée ici.
+   *
+   * Recopiée et non importée de `auth.routes.ts` : deux opérandes qui
+   * remontent à la même définition n'assertent rien.
+   */
+  const REFUS_MESSAGE =
+    "La connexion Discord n'a pas pu être vérifiée. Recommence depuis la page de connexion.";
+
+  /**
+   * Les motifs internes, chacun écrit ici, qui ne doivent JAMAIS atteindre le
+   * fil : ils disent LAQUELLE des trois liaisons a cédé. C'est un oracle —
+   * apprendre qu'un `state` a existé côté serveur, ou que seul le cookie
+   * manquait, oriente la tentative suivante.
+   */
+  const MOTIFS_INTERNES = [
+    'state inconnu',
+    'state expiré',
+    'cookie d’état',
+    'vérificateur PKCE',
+    'access_denied',
+  ];
+
+  /** Every refusal asserts the same things. */
   async function expectRefused(b: Bench, url: string, cookies: Record<string, string>) {
     const response = await b.app.inject({ method: 'GET', url, cookies });
     expect(response.statusCode).toBe(400);
-    expect(zAppErrorPayload.parse(response.json()).code).toBe('validation_failed');
+    const payload = zAppErrorPayload.parse(response.json());
+    expect(payload.code).toBe('validation_failed');
+    // « NEVER A HINT ABOUT WHICH OF THE THREE BINDINGS FAILED », dit l'en-tête
+    // du fichier. Mesuré avant d'écrire ces deux assertions : `details`
+    // concaténé dans le message public laissait 118/118 verts. Le message est
+    // comparé MOT POUR MOT, donc les quatre refus en rendent exactement un.
+    expect(payload.message).toBe(REFUS_MESSAGE);
+    for (const motif of MOTIFS_INTERNES) {
+      expect(response.body, `le motif « ${motif} » a traversé`).not.toContain(motif);
+    }
     // The criterion, literally: no player is created.
     expect(countPlayers(b)).toBe(0);
     // « À CHAQUE SORTIE », dit l'en-tête du rappel — et c'est sur un refus que
@@ -297,6 +395,27 @@ describe('GET /api/auth/discord/callback — les refus', () => {
     expectOauthCookiesCleared(response.headers);
     return response;
   }
+
+  it('garde le motif du refus dans le journal, et seulement là', async () => {
+    // L'AUTRE SENS de `expectRefused` : sans lui, « le motif ne traverse pas »
+    // serait également vrai d'un serveur qui ne diagnostique rien du tout.
+    // L'en-tête du rappel dit « the distinction is in `details`, which
+    // `errors.ts` keeps in the log » — les deux moitiés sont ici.
+    const lignes: string[] = [];
+    const b = await bench({ logs: lignes });
+    open.push(b);
+
+    const response = await b.app.inject({
+      method: 'GET',
+      url: '/api/auth/discord/callback?code=c&state=jamais-emis',
+      cookies: { fr_oauth_state: 'jamais-emis', fr_oauth_verifier: 'peu-importe' },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.body).not.toContain('state inconnu');
+    expect(lignes.length).toBeGreaterThan(0);
+    expect(lignes.some((ligne) => ligne.includes('state inconnu'))).toBe(true);
+  });
 
   it('state inconnu : 400, aucun joueur, aucun appel réseau', async () => {
     const b = await bed();
@@ -419,7 +538,13 @@ describe('GET /api/auth/discord/callback — les refus', () => {
     const b = await bench({
       discord: {
         ...enPanne,
-        exchangeCode: () => Promise.reject(new DiscordCallError('token', 503, 'indisponible')),
+        // DÉCLARÉ AVEC SON PARAMÈTRE, et il s'en sert : un double qui prend
+        // MOINS que le vrai compile sans un mot, et l'argument cesse
+        // d'exister pour toute la suite. Huitième mode de `docs/RECETTE.md`.
+        // Ici le code du tour repart dans `details`, ce que le corps de la
+        // réponse ne doit toujours pas porter.
+        exchangeCode: (input) =>
+          Promise.reject(new DiscordCallError('token', 503, `indisponible (${input.code})`)),
       },
     });
     open.push(b);
@@ -459,7 +584,9 @@ describe('GET /api/auth/discord/callback — les refus', () => {
     const b = await bench({
       discord: {
         ...modele,
-        exchangeCode: () => Promise.reject(new TypeError('un bogue bien à nous')),
+        // Même règle que ci-dessus : le faux prend ce que le vrai prend.
+        exchangeCode: (input) =>
+          Promise.reject(new TypeError(`un bogue bien à nous (${input.code})`)),
       },
     });
     open.push(b);

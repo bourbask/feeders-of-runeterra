@@ -13,7 +13,7 @@ import { GENERATED_FILES } from '@for/content';
 import { CONTENT_CACHE_CONTROL, zAppErrorPayload, zContentManifestResponse } from '@for/contracts';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { bench } from '../../src/auth/testing.js';
+import { bench, signIn } from '../../src/auth/testing.js';
 import { KINDS } from '../../src/http/content.routes.js';
 
 import type { Bench } from '../../src/auth/testing.js';
@@ -105,6 +105,41 @@ describe('GET /api/content/manifest', () => {
     const response = await b.app.inject({ method: 'GET', url: '/api/content/manifest' });
 
     expect(response.statusCode).toBe(200);
+  });
+
+  it('n’en lit aucune non plus : last_used_at ne bouge pas quand un cookie passe', async () => {
+    // « No session is required, AND NONE IS READ », dit l'en-tête du fichier.
+    // La première moitié est le test ci-dessus ; la seconde se mesure à DEUX
+    // INSTANTS, sur la seule trace qu'une résolution de session laisse.
+    const b = await bed();
+    const signed = await signIn(b);
+    const lastUsed = (): number =>
+      (
+        b.connection.prepare(`SELECT last_used_at FROM auth_sessions`).get() as {
+          last_used_at: number;
+        }
+      ).last_used_at;
+    const avant = lastUsed();
+
+    b.clock.advance(60_000);
+    const response = await b.app.inject({
+      method: 'GET',
+      url: '/api/content/manifest',
+      cookies: { fr_session: signed.secret },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(lastUsed()).toBe(avant);
+
+    // L'AUTRE SENS : une route qui, elle, résout la session repousse bien la
+    // date. Sans cela, l'égalité ci-dessus tiendrait aussi pour un
+    // `touchSession` devenu inerte.
+    await b.app.inject({
+      method: 'GET',
+      url: '/api/me',
+      cookies: { fr_session: signed.secret },
+    });
+    expect(lastUsed()).toBe(avant + 60_000);
   });
 });
 

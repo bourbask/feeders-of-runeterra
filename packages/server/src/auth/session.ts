@@ -2,6 +2,9 @@
  * Cookie sessions and the short-lived OAuth state, both in zone A
  * (03-donnees.md section 1.1, ADR 0010 arbitration 6).
  *
+ * EVERY PROMISE BELOW NAMES THE TEST THAT HOLDS IT (CLAUDE.md, « une promesse
+ * nomme le test qui la tient »).
+ *
  * THE ONE PROPERTY THIS FILE EXISTS FOR: a dump of the database hands out no
  * usable session. The cookie carries 32 random bytes; `auth_sessions.id` is
  * their SHA-256, and the secret itself is never written anywhere — not in a
@@ -10,18 +13,27 @@
  * sent and reading by primary key, which is also why the lookup is a single
  * indexed read rather than a scan.
  *
- * `tests/http/session.test.ts` proves it by reading EVERY COLUMN OF EVERY ROW
- * of `auth_sessions` after a sign-in and asserting the cookie's secret appears
- * in none of them — and by recomputing the SHA-256 with `node:crypto` in the
- * test itself rather than calling `hashSecret`, so the two sides of the
- * comparison do not come from the same line of code.
+ * Held by `tests/http/session.test.ts`, « ne contient jamais le secret du
+ * cookie, seulement son SHA-256 », which reads EVERY COLUMN OF EVERY ROW of
+ * `auth_sessions` after a sign-in, asserts the cookie's secret appears in none
+ * of them AND that the digest appears in one — "not found" alone is equally
+ * true of a scan that looks nowhere. The SHA-256 is recomputed there with
+ * `node:crypto` rather than by calling `hashSecret`, so the two sides of the
+ * comparison do not come from the same line of code. The log half is held by
+ * « n'apparaît dans aucune ligne de journal, même à trace ».
  *
  * NO SIGNATURE ON THE COOKIE, and that is a decision rather than an omission.
  * A signature protects a value the server has to trust as it comes back; this
- * value is looked up, and a forged one simply misses the index. What
- * `SESSION_SECRET` is used for here is the pepper of `ipHash` — a diagnostic
- * column that must not turn into a list of the players' home addresses if the
- * file leaks.
+ * value is looked up, and a forged one simply misses the index. Held by
+ * `tests/http/session.test.ts`, « répond 401 sur un cookie inventé, et la base
+ * n'a pas bougé ».
+ *
+ * What `SESSION_SECRET` is used for here is the pepper of `ipHash` — a
+ * diagnostic column that must not turn into a list of the players' home
+ * addresses if the file leaks. Held by `tests/http/session.test.ts`, « la
+ * colonne ne porte ni l'adresse ni son SHA-256 nu, mais celui de l'adresse
+ * poivrée » : the bare digest is refused and the peppered one is demanded, so
+ * dropping the pepper turns it red rather than green.
  */
 
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
@@ -42,7 +54,14 @@ export const SECRET_BYTES = 32;
 
 export { SESSION_COOKIE_NAME, SESSION_MAX_AGE_MS };
 
-/** base64url of `SECRET_BYTES` bytes from the OS. Never a PRNG, never `deps.rng`. */
+/**
+ * base64url of `SECRET_BYTES` bytes, from `node:crypto` by default.
+ *
+ * Says what the code does: the default argument is `randomBytes`, and the
+ * parameter exists so a test can pin the bytes. That the CALLERS never hand it
+ * `deps.rng` is not something a test holds — it is read off the three call
+ * sites in this package.
+ */
 export function newSecret(random: (size: number) => Buffer = randomBytes): string {
   return random(SECRET_BYTES).toString('base64url');
 }
@@ -107,10 +126,18 @@ export function insertOAuthState(
  * Reads the row AND deletes it, whatever happens next.
  *
  * SINGLE USE IS THE POINT: a `state` that survived its callback could be
- * replayed with a second authorisation code. The delete runs even when the row
- * has expired, so a stale row cannot be retried until the purge catches it.
- * `RETURNING` makes read-and-delete one statement, hence atomic against a
- * second callback arriving at the same instant.
+ * replayed with a second authorisation code. Held by `tests/http/oauth.test.ts`,
+ * « le même state, une seconde fois : 400 », which also pins the exchange to
+ * ONE call, so a second round trip cannot quietly go through.
+ *
+ * The delete runs even when the row has expired, so a stale row cannot be
+ * retried until the purge catches it — held by « state expiré : 400, aucun
+ * joueur, et la ligne est consommée quand même ».
+ *
+ * `RETURNING` makes read-and-delete one statement. That it is therefore atomic
+ * against a second callback arriving at the same instant is a property of
+ * SQLite, not of this repository: no test here holds it, and the sentence says
+ * what the statement IS rather than what it would survive.
  */
 export function consumeOAuthState(
   connection: SqliteConnection,
@@ -148,7 +175,7 @@ export interface NewSessionInput {
 }
 
 export interface NewSession {
-  /** Goes in the cookie, and nowhere else, ever. */
+  /** Goes in the cookie, and nowhere else: see this file's header, first promise. */
   readonly secret: string;
   /** `sha256(secret)`. This is what the row is keyed on. */
   readonly id: string;
@@ -186,6 +213,11 @@ export function createSession(connection: SqliteConnection, input: NewSessionInp
  * that must not authenticate anybody should never become a JavaScript object
  * in the first place, because that object is what a later edit forgets to
  * check.
+ *
+ * Both clauses are held, each by its own test of `tests/http/session.test.ts`:
+ * expiry by « répond 401 quand la session a dépassé ses trente jours », one
+ * millisecond past the deadline, and revocation by « révoque la session, et
+ * efface le cookie : la requête suivante répond 401 ».
  */
 export function findLiveSession(
   connection: SqliteConnection,
@@ -230,12 +262,14 @@ export function revokeSessionBySecret(
  * The four attributes section 6 fixes, plus `Path`.
  *
  * ALL FIVE ARE ASSERTED, AND AS WHOLE ATTRIBUTES. `tests/http/session.test.ts`,
- * `le cookie porte HttpOnly, Secure, SameSite=Lax, Path=/ et trente jours`,
+ * « le cookie porte HttpOnly, Secure, SameSite=Lax, Path=/ et trente jours »,
  * splits the `Set-Cookie` line and compares each attribute entire: a substring
  * check on the raw line is satisfied by `Path=/api`, which is a different
  * cookie. `Path` earns its own assertion twice over, because
  * `clearedCookieAttributes` below must carry the SAME one — a clear on another
- * path leaves the original cookie sitting beside the empty one.
+ * path leaves the original cookie sitting beside the empty one, which
+ * `expectOauthCookiesCleared` of `tests/http/oauth.test.ts` holds on every
+ * exit of the callback.
  *
  * `secure: true` IS UNCONDITIONAL, including in development, and that is a
  * decision worth the two lines it takes to explain. Browsers treat
@@ -244,10 +278,18 @@ export function revokeSessionBySecret(
  * buy nothing and would leave a code path in which the production cookie is
  * the one nobody tested.
  *
+ * "Including in development" is held by `tests/http/session.test.ts`, « porte
+ * Secure même en développement : l'attribut ne dépend pas de NODE_ENV », which
+ * builds the bench on `NODE_ENV=development` and checks `Secure` and
+ * `HttpOnly` on ALL THREE cookies of this task — the session one and the two
+ * round-trip ones, which no other test looked at.
+ *
  * `sameSite: 'lax'` rather than `'strict'`: the Discord callback is a
  * TOP-LEVEL GET arriving from another origin, which `strict` would strip the
  * cookie from — the sign-in would silently never complete. `lax` plus the
  * `X-Requested-With` header on every mutation is the pair section 6 specifies.
+ * The attribute is asserted by the first test named above; what `strict` would
+ * do to a real browser is a statement about browsers, held by nothing here.
  */
 export interface CookieAttributes {
   readonly httpOnly: true;
@@ -288,5 +330,11 @@ export const oauthCookieAttributes: CookieAttributes = {
  * when the field is set to 600. The field is here because `CookieAttributes`
  * demands one; what this object really contributes is `Path`, `SameSite`,
  * `Secure` and `HttpOnly`.
+ *
+ * The `Max-Age=0` that DOES reach the browser is held — by
+ * `expectOauthCookiesCleared` of `tests/http/oauth.test.ts` and by « révoque
+ * la session, et efface le cookie … » of `tests/http/session.test.ts`. What no
+ * test holds is the sentence above about this field, which is why it is
+ * written as a measurement and not as a guarantee.
  */
 export const clearedCookieAttributes: CookieAttributes = { ...BASE, maxAge: 0 };

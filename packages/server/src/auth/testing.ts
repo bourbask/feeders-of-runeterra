@@ -1,20 +1,26 @@
 /**
  * The bench `tests/http/*.test.ts` drive. NOT re-exported by `src/index.ts`.
  *
+ * EVERY PROMISE BELOW NAMES THE TEST THAT HOLDS IT (CLAUDE.md, « une promesse
+ * nomme le test qui la tient »).
+ *
  * WHY IT LIVES UNDER `src/` AND NOT UNDER `tests/`, which is where a reader
  * looks first: the repository's flat ESLint config maps `**\/*.test.ts` to
  * `tsconfig.test.json` and everything else to the project service, which only
  * sees `src/**`. A support file under `tests/` is therefore in NO TypeScript
  * program at all and `pnpm lint` stops on "not found by the project service".
  * `@for/db` hit the same wall and answered it the same way (`db/src/testing.ts`);
- * this is that precedent, not a new idea.
+ * this is that precedent, not a new idea. Held by the `lint` gate itself, not
+ * by a unit test: moving this file under `tests/` makes `pnpm lint` exit 1.
  *
  * THE BENCH COMPOSES THE APPLICATION THE WAY `app.ts` DOES, and that is safe
  * for one reason only: `app.ts` is closed. Its own header says it "is not
  * modified again" — it exists so three agents can fill `auth/`, `ws/` and
  * `game/` in parallel without serialising behind one merge. A mirror of a file
  * that never changes cannot drift. `tests/http/composition.test.ts` measures
- * the claim anyway, on an application built by the REAL `buildApp`.
+ * the claim anyway, on an application built by the REAL `buildApp`: « expose
+ * une route de CHACUN des quatre modules de la surface HTTP », « applique le
+ * garde de session : 401 sans cookie, 200 avec », « applique la règle CSRF ».
  *
  * WHY A MIRROR AT ALL: the Discord client is an option of `authPlugin`, not a
  * field of `AppDeps`, so that `deps.ts` and `main.ts` — neither of which
@@ -24,7 +30,10 @@
  *
  * A REAL FILE, NEVER `:memory:`. `journal_mode = WAL` is silently downgraded
  * on an in-memory database, so a suite built on it would measure a different
- * engine from the one production runs.
+ * engine from the one production runs. Held by `tests/http/composition.test.ts`,
+ * « tourne sur un VRAI FICHIER, en WAL, comme la production », which reads
+ * `PRAGMA database_list` — `:memory:` answers an EMPTY path — and
+ * `PRAGMA journal_mode`.
  */
 
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -85,10 +94,30 @@ export function envVars(overrides: Record<string, string> = {}): Record<string, 
   };
 }
 
-/** Nothing reaches a terminal during a test run. */
-const SILENT = { write: (): void => undefined };
+/**
+ * Nothing reaches a terminal during a test run.
+ *
+ * Declared WITH the parameter the real sink is handed, although it drops it:
+ * eighth failure mode of `docs/RECETTE.md`. TypeScript accepts a `write()`
+ * that takes nothing, and the next reader cannot tell a sink that ignores its
+ * line from one that never receives it.
+ */
+const SILENT: { write: (line: string) => void } = {
+  // Nullary, and said rather than dressed up: nothing is ever asserted THROUGH
+  // this sink — the redaction test drives the `logs` sink below, which does
+  // take the line. The eighth mode of `docs/RECETTE.md` bites when a missing
+  // argument disappears from the assertions; this double carries none. The
+  // annotation above keeps the real signature in view all the same.
+  write: () => undefined,
+};
 
-/** Throws on ANY property access. See its single use below. */
+/**
+ * Throws on ANY property access. See its single use below.
+ *
+ * That it still bites is held by `tests/http/composition.test.ts`, « le
+ * fil-piège Drizzle mord : la couche requête n'est ouverte par personne » —
+ * 126 green tests on a tripwire would be equally green on an inert one.
+ */
 function drizzleTripwire(): AppDeps['db'] {
   return new Proxy(
     {},
@@ -105,7 +134,9 @@ function drizzleTripwire(): AppDeps['db'] {
  *
  * The counter is the part that matters: "no network happened" is proven by
  * the refusal path calling neither method, which a client that merely returned
- * a canned answer could not show.
+ * a canned answer could not show. Read back by every refusal of
+ * `tests/http/oauth.test.ts`, e.g. « state inconnu : 400, aucun joueur, aucun
+ * appel réseau ».
  *
  * EVERY METHOD HERE TAKES EVERY PARAMETER THE REAL INTERFACE PASSES IT, and
  * that is a rule rather than a style. TypeScript accepts a function that
@@ -278,7 +309,9 @@ export interface SignedIn {
  * Deliberately not a hand-written row in `auth_sessions`: a fixture that
  * inserts its own session would let every assertion about `/api/me` pass while
  * the OAuth path was broken, which is the failure this whole file exists to
- * make impossible.
+ * make impossible. Says what the function DOES — it injects into the two real
+ * routes — rather than promising a property; the routes themselves are held by
+ * `tests/http/oauth.test.ts`.
  */
 export async function signIn(bed: Bench, code = 'code-discord'): Promise<SignedIn> {
   const start = await bed.app.inject({ method: 'GET', url: '/api/auth/discord/start' });
@@ -313,8 +346,12 @@ export async function signIn(bed: Bench, code = 'code-discord'): Promise<SignedI
  * A SHORTCUT, AND IT IS BOUNDED. `signIn` above goes through the real OAuth
  * routes, and every claim about the flow rests on it; this one exists only so
  * a test can ask "what does SOMEBODY ELSE see", which a single fake Discord
- * identity cannot express. It writes the same two rows the callback writes,
- * with the secret hashed the same way — never the secret itself.
+ * identity cannot express — it is what makes « rend à chaque joueur exactement
+ * son fil, ni plus ni moins (ADR 0008) » a TWO-ACTOR test. It writes the same
+ * two rows the callback writes, through `createSession`, so the secret is
+ * hashed the same way and never stored; that property is held once, for both
+ * paths, by `tests/http/session.test.ts`, « ne contient jamais le secret du
+ * cookie, seulement son SHA-256 ».
  */
 export function fabricateSession(bed: Bench, discordUserId: string, username: string): SignedIn {
   const playerId = bed.deps.ids.next();

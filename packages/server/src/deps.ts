@@ -36,7 +36,9 @@ import type { IdFactory, RngStream, TracingRng } from '@for/engine';
 // nothing else augmented `fastify` — the moment M0-23 registered
 // `@fastify/cookie`, which declares `interface FastifyInstance extends
 // SignerMethods`, `tsc -b` started answering TS6192 on this very line and the
-// whole package stopped building. Removed by M0-23 and reported.
+// whole package stopped building. Removed by M0-23 and reported. Held by the
+// `typecheck` gate itself — putting the import back makes `tsc -b` exit 1 —
+// and not by a unit test, which is said here rather than dressed up as one.
 import type { Logger } from 'pino';
 import type { Env } from './env.js';
 
