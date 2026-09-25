@@ -1635,6 +1635,22 @@ export const EffectSchema: z.ZodType<EngineEffect> = z.lazy(() =>
 Un `op` inconnu fait échouer le chargement. Ajouter un effet impose une branche dans
 l'exécuteur du moteur — même mécanique d'exhaustivité TypeScript que pour le réducteur.
 
+**`choice` ATTEND M1, et c'est acté plutôt que découvert une troisième fois.** La borne 3 de
+l'ADR 0006 dit que la sélection du joueur « arrive comme une intention ordinaire validée par le
+serveur ». Cette intention n'existe pas : `Intent` en compte vingt et une, aucune ne sélectionne
+une option. Mesuré dans le code du moteur, où la branche est explicite et rend `false` sans rien
+appliquer — et `resolveTargets` a le même trou sur `target: 'chosen-ally'`.
+
+| | |
+|---|---|
+| Ce que fait un contenu qui écrit un `choice` aujourd'hui | rien : l'effet est ignoré, aucun événement, aucune trace |
+| Pourquoi ce n'est pas réparé ici | ajouter une intention de sélection touche `Intent`, `INTENT_TYPES`, `zIntent`, `decide()` et le protocole : c'est une tâche de moteur, pas de serveur |
+| Ce qui est fait à la place | **acté** : aucun mouvement de M0 n'écrit `choice`. Une seule occurrence de `chosen-ally` existe, `content/assets/arc-de-givre.json`, sur un effet `momentum` — où le champ `target` **n'existe pas** dans `EngineEffect` et est donc retiré au chargement. Deux trous distincts, tous deux signalés |
+| Qui le lève | M1, avec l'intention de sélection et les deux bornes de l'ADR 0006 qui vont avec |
+
+*(Constat de M0-24. Les deux autres bornes de l'ADR 0006 tiennent : `pay_price` n'a qu'un mode, et
+aucune option ne vient du modèle.)*
+
 ### 4.4 Mouvement (`content/moves/*.json`)
 
 ```ts
