@@ -36,7 +36,11 @@ const FILES = walk(SRC);
 describe('la frontière d’environnement de @for/ai', () => {
   it('le scan voit bien les sources du paquet', () => {
     expect(FILES.length).toBeGreaterThan(10);
-    const barrel = FILES.find((path) => path.endsWith('index.ts'));
+    // `join(SRC, 'index.ts')`, not `endsWith('index.ts')`: since M0-22 there
+    // are several `index.ts` under `src/`, and the loose predicate picked
+    // `assertions/index.ts` — a marker check that was passing on the wrong
+    // file would have gone green on an empty barrel.
+    const barrel = FILES.find((path) => path === join(SRC, 'index.ts'));
     expect(barrel).toBeDefined();
     expect(readFileSync(barrel ?? '', 'utf8')).toContain('@for/ai');
   });
