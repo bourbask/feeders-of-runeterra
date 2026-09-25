@@ -20,7 +20,7 @@
  * upgrade needs `@fastify/websocket`, which is NOT in
  * `packages/server/package.json` and which this task's file list does not let
  * it add; see the header of `index.ts`. That absence is read, not asserted, by
- * `tests/ws/routing.test.ts`, « le greffon n'enregistre aucune route, et
+ * `tests/ws/routing.test.ts`, « n'enregistre aucune route, et
  * `@fastify/websocket` n'est pas une dépendance du paquet », and the two
  * methods of the double are held to the interface's own by
  * `tests/ws/support/harness.test.ts`, « déclare exactement les paramètres de
@@ -35,10 +35,11 @@
  * MEASURED, not announced, in `tests/ws/outgoing.test.ts`: « jette sur une
  * trame que le serveur aurait mal construite, et n'écrit rien », « refuse un
  * type de trame que le protocole gelé ne déclare pas », and the low direction,
- * « laisse passer la même trame une fois bien formée ». The same suite holds
- * the three other guarantees this file used to claim without proof: the 256 KiB
- * wire bound (« abandonne une trame trop lourde pour le fil, et le dit au
- * journal » / « écrit la même trame quand elle tient »), the single close
+ * « laisse passer la même trame une fois bien formée — la direction basse ».
+ * The same suite holds the three other guarantees this file used to claim
+ * without proof: the 256 KiB wire bound (« abandonne une trame trop lourde
+ * pour le fil, et le dit au journal » / « écrit la même trame quand elle
+ * tient — la direction basse »), the single close
  * (« n'est fermée qu'une fois, et n'écrit plus rien après ») and the queue
  * collapse that must rearm (« se réarme quand le transport a rattrapé son
  * retard »).
@@ -99,10 +100,30 @@ import type { PersistedEvent } from '../game/types.js';
  * two enums as schemas and not as types; recopying their members here would be
  * a mirror nobody guards, which is the whole lesson of ADR 0007.
  *
- * WHAT HOLDS THEM IS THE COMPILER, NOT A TEST, and it is said plainly: these
- * are `z.output<…>` of the frozen schemas, so a member removed in
- * `@for/contracts` turns the call sites red under `pnpm typecheck` and
- * `pnpm typecheck:tests`. No runtime assertion compares the two lists here.
+ * AND `z.output<…>` IS AN ALIAS, NOT A MIRROR. An earlier version of this
+ * comment said the compiler held the two lists. It does not, and here is the
+ * measurement that says so, taken on this branch when nothing else guarded
+ * them (`vitest run tests/ws`, 202 green at the time):
+ *
+ *   - `aborted` removed from `zNarrationStatus` — `pnpm typecheck` 0 (17/17),
+ *     `pnpm typecheck:tests` 0 (17/17), `vitest run tests/ws` 0;
+ *   - `action_impossible` removed from `zNarrationErrorCode` — the same three
+ *     zeroes;
+ *   - `aborted` removed from `zNarrationErrorCode` — `pnpm typecheck` 1,
+ *     `TS2345`, and ONLY because `handlers.ts` spells that one member out in
+ *     `sendNarrationError(…, 'aborted')`.
+ *
+ * The alias NARROWS with the schema, so a member no call site spells out
+ * vanishes in silence. That is the fourth mode of ADR 0007, met here while
+ * believing oneself immune to it.
+ *
+ * WHAT HOLDS THE TWO LISTS IS THEREFORE A RUNTIME TEST,
+ * `tests/ws/narration-vocabulary.test.ts`: « les codes d'erreur de narration
+ * sont ceux que la §5.4 écrit, membre à membre » and « les statuts de
+ * narration du fil sont ceux de la §6.3, moins `finalizing` ». Each compares
+ * the schema's `.options` to a list written out in full from the spec — two
+ * operands, two origins — so a member removed there goes red, and a member
+ * added goes red too.
  */
 export type NarrationErrorCode = z.output<typeof zNarrationErrorCode>;
 export type NarrationStatus = z.output<typeof zNarrationStatus>;
@@ -437,8 +458,12 @@ export class TableConnection {
    * hold the shell it looks at, so there is now one shell.
    *
    * Held on a real `s2c.event` by `tests/ws/outgoing.test.ts`, « l'enveloppe
-   * d'un `s2c.event` sort de la même fabrique : deux événements, deux `id` » and
-   * « et son `ts` suit l'horloge injectée, à deux instants et pas un seul ».
+   * d'un `s2c.event` sort de la même fabrique : deux événements, deux `id` »
+   * and « et le `ts` d'un `s2c.event` suit l'horloge injectée, à deux
+   * instants ». That second title is the one that bears on a REAL event; the
+   * suite also carries « le `ts` suit l'horloge injectée, à deux instants et
+   * pas un seul », which measures any frame and not this factory's most
+   * frequent customer.
    */
   private frame(type: string, payload: unknown, extra?: Record<string, number>): unknown {
     return {

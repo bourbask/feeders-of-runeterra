@@ -205,8 +205,11 @@ export class TableHub {
    * wrong: the stream does keep counting during the handshake, but a snapshot
    * answer carries a cursor read BEFORE the service call, so what the stream
    * gained in between reaches nobody unless it is written out. That is
-   * `handlers.ts`, `flushAfterSnapshot`, which runs just before this call, and
-   * `tests/ws/snapshot-race.test.ts` holds the whole order, frame by frame.
+   * `handlers.ts`, `flushAfterSnapshot`, which runs just before this call.
+   * Held by `tests/ws/snapshot-race.test.ts`, « livre un événement diffusé
+   * pendant que la lecture est en vol — `c2s.hello` », which commits an event
+   * while `getSnapshot` is suspended and then reads the whole order back,
+   * frame by frame.
    */
   attach(connection: TableConnection): void {
     this.room(connection.session.campaignId).connections.add(connection);
@@ -399,8 +402,9 @@ export class TableHub {
   /**
    * Everyone at the table learns who is there — `tests/ws/handshake.test.ts`,
    * « diffuse la présence à toute la table quand quelqu'un arrive — Y COMPRIS
-   * au nouvel arrivant ». Ephemeral, never journalled: « la présence est
-   * éphémère : elle ne passe jamais par le journal », in the same suite.
+   * au nouvel arrivant ». Ephemeral, never journalled: « ne passe jamais par
+   * le journal, là où un geste y passe », in the same suite, under describe
+   * « la présence est éphémère ».
    */
   broadcastPresence(campaignId: CampaignId): void {
     const members = this.presence(campaignId);

@@ -32,7 +32,7 @@
  * its calls and threw the input away, so neither the `playerId` the server
  * attributes the write to (invariant 3) nor the idempotence key was measured
  * anywhere. The fake now RECORDS every viewer, KEEPS every input, and ANSWERS
- * PER VIEWER — and `FAKE_SERVICE_ARITIES` below makes a fake that loses a
+ * PER VIEWER — and `DOUBLE_ARITIES` below makes a fake that loses a
  * parameter again a compilation error rather than a silent hole.
  */
 

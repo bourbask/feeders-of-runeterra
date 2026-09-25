@@ -31,7 +31,7 @@
  * parameter), so binding it is a dozen lines with no decisions left in them.
  *
  * BOTH HALVES OF THAT REPORT ARE READ BY A TEST rather than believed:
- * `tests/ws/routing.test.ts`, « le greffon n'enregistre aucune route, et
+ * `tests/ws/routing.test.ts`, « n'enregistre aucune route, et
  * `@fastify/websocket` n'est pas une dépendance du paquet », registers the
  * plugin on a real Fastify instance, counts the routes it adds, and reads
  * `packages/server/package.json`.
@@ -133,10 +133,13 @@ export interface AttachInput {
  * The two identifiers are PARSED, not cast. `zPlayerId` and `zCampaignId`
  * carry the engine's brand and the ULID shape; a cast would hand the brand to
  * whatever the auth layer happened to produce, which is how a nominal type
- * stops meaning anything. MEASURED, not announced: `tests/ws/handshake.test.ts`
- * hands the auth layer a `playerId` of `p1` and a `campaignId` of
- * `campagne-2`, and requires this function to reject rather than to mint a
- * session — replace either `parse` with a cast and that test goes red.
+ * stops meaning anything. MEASURED, not announced, by
+ * `tests/ws/handshake.test.ts`, « sont PARSÉS, jamais castés : une forme que
+ * le moteur refuse ne devient pas une session »: it hands the auth layer a
+ * `playerId` of `p1` and a `campaignId` of `campagne-2`, and requires this
+ * function to reject rather than to mint a session — replace either `parse`
+ * with a cast and that test goes red. Its low direction is « et laissent
+ * passer la forme que les schémas gelés déclarent », in the same describe.
  */
 export async function attachSocket(input: AttachInput): Promise<TableConnection | null> {
   const outcome = await authorizeHandshake(input.access, input.request);
