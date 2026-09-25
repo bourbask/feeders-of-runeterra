@@ -181,6 +181,12 @@ jobs:
       - uses: ./.github/actions/setup-node-pnpm
       - name: Installer les dépendances
         run: pnpm install --frozen-lockfile
+      # Ces cibles lisent le `dist/` des paquets : sans construction, elles
+      # échouent sur ERR_MODULE_NOT_FOUND, et le `continue-on-error` en fait un
+      # travail vert. La tolérance existe pour les cibles NON LIVRÉES, pas pour
+      # masquer une chaîne cassée.
+      - name: Construire les paquets
+        run: pnpm build
       - name: Schéma, migration à blanc et amorçage sur base jetable
         id: migrations
         continue-on-error: true # TODO M0-30: retirer
@@ -205,6 +211,12 @@ jobs:
       - uses: ./.github/actions/setup-node-pnpm
       - name: Installer les dépendances
         run: pnpm install --frozen-lockfile
+      # Ces cibles lisent le `dist/` des paquets : sans construction, elles
+      # échouent sur ERR_MODULE_NOT_FOUND, et le `continue-on-error` en fait un
+      # travail vert. La tolérance existe pour les cibles NON LIVRÉES, pas pour
+      # masquer une chaîne cassée.
+      - name: Construire les paquets
+        run: pnpm build
       - name: Chargeur en quatre passes, puis index régénéré à l'identique
         id: content
         continue-on-error: true # TODO M0-30: retirer
@@ -227,6 +239,12 @@ jobs:
       - uses: ./.github/actions/setup-node-pnpm
       - name: Installer les dépendances
         run: pnpm install --frozen-lockfile
+      # Ces cibles lisent le `dist/` des paquets : sans construction, elles
+      # échouent sur ERR_MODULE_NOT_FOUND, et le `continue-on-error` en fait un
+      # travail vert. La tolérance existe pour les cibles NON LIVRÉES, pas pour
+      # masquer une chaîne cassée.
+      - name: Construire les paquets
+        run: pnpm build
       - name: Éval N0
         id: eval-offline
         continue-on-error: true # TODO M0-30: retirer
@@ -247,6 +265,12 @@ jobs:
       - uses: ./.github/actions/setup-node-pnpm
       - name: Installer les dépendances
         run: pnpm install --frozen-lockfile
+      # Ces cibles lisent le `dist/` des paquets : sans construction, elles
+      # échouent sur ERR_MODULE_NOT_FOUND, et le `continue-on-error` en fait un
+      # travail vert. La tolérance existe pour les cibles NON LIVRÉES, pas pour
+      # masquer une chaîne cassée.
+      - name: Construire les paquets
+        run: pnpm build
       - name: Tous les scénarios
         id: sim
         continue-on-error: true # TODO M0-30: retirer
