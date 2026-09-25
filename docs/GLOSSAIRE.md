@@ -28,6 +28,17 @@ accumulé de vitesse, de confiance et de chance.
 **Le brûler, c'est réécrire un jet que tu as déjà vu.** C'est la seule chose du jeu qui
 rattrape un mauvais résultat, et elle ne se déclenche jamais toute seule.
 
+Quatre mots ci-dessous viennent du **Jet de défi**, défini plus bas — ils s'y lisent en entier :
+
+| Le mot | En une ligne |
+|---|---|
+| **score** | ce que tu totalises : ton dé d'action + ton attribut + tes bonus, plafonné à 10. |
+| **dés de défi** | les deux d10 que ton score doit battre. |
+| **réussite franche** | tu bats les deux : ça marche. |
+| **échec** | tu n'en bats aucun : ça ne marche pas. |
+
+La brûlure, question par question :
+
 | Question | Réponse |
 |---|---|
 | **Quand ?** | **après** le lancer. Les dés sont sur la table, tu les lis, **puis** tu décides. |
@@ -69,7 +80,8 @@ Pas de niveaux. Un personnage ne devient pas meilleur, il devient différent.
 
 ### Jet de défi
 
-1d6 (**dé d'action**) + attribut + bonus, contre **2d10** (**dés de défi**).
+1d6 (**dé d'action**) + attribut + bonus : leur somme est ton **score**, plafonné à **10**.
+Il se lit contre **2d10**, les **dés de défi**.
 
 | Résultat | Nom | Sens |
 |---|---|---|

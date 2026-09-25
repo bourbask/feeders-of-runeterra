@@ -116,10 +116,14 @@ export interface DecisionRng {
  * it: `CampaignState` is mirrored in `@for/contracts` and adding to it is a
  * contract change.
  *
- * `intent` is what the player asked for, carried verbatim. The move plan is
- * recomputed from it when the window closes rather than carried, so the closing
- * turn reads the state as it stands then — which is the state the effects are
- * about to be applied to.
+ * `intent` is what the player asked for, carried verbatim, and `plan` is what
+ * the engine made of it AT DECLARATION TIME. The plan is CARRIED rather than
+ * recomputed, because recomputing it replays the feasibility check that was
+ * already settled before the dice were drawn: a scene closed between the two
+ * steps made `strike` answer `no_active_scene` at closing time, with the dice
+ * already in the journal and no way left to finish the turn. A window must
+ * always be closeable — the dice are written, and only the consequences are
+ * still owed.
  *
  * WHO FILLS IT: `decide` itself, on the turn that rolled (`Decision.pending`).
  * The caller stores it and hands it back on the closing intent. A cancelled
@@ -132,6 +136,20 @@ export interface BurnWindow {
   readonly characterId: CharacterId;
   /** The move still waiting for its consequences, exactly as it was asked. */
   readonly intent: MoveIntent;
+  /**
+   * The group the turn is already written under. CARRIED, so the closing
+   * entries join it instead of opening a second one: a turn is ONE
+   * `correlation_id` (03-donnees.md sections 0.5 and 3.7). Two groups would
+   * let `system.reverted` cancel a `roll.action_resolved` without the
+   * `character.gauge_changed` it caused, and would leave `buildTurnProof` —
+   * built from the events of one group — with the dice on one side and the
+   * consequences on the other.
+   */
+  readonly correlationId: string;
+  /** The `move.declared` every entry of this turn hangs from (`causation_id`). */
+  readonly declarationId: EventId;
+  /** What the engine made of the intent, decided BEFORE the dice were drawn. */
+  readonly plan: MovePlan;
   /** What the dice gave, before any burn. */
   readonly outcome: Outcome;
   readonly isPresage: boolean;
@@ -253,20 +271,34 @@ export function fallbackTemplateId(moveId: MoveId | null, outcome: Outcome | nul
 // ------------------------------------------------------------ the turn scribe
 
 /**
+ * What a turn joins when it CONTINUES one already written instead of opening
+ * its own: the correlation group, and the declaration its entries hang from.
+ * Only the second step of a burn uses it (`closeBurnWindow`).
+ */
+interface TurnContinuation {
+  readonly correlationId: string;
+  readonly declarationId: EventId;
+}
+
+/**
  * The bookkeeping every decision shares: sequences, envelopes, draw indexes,
  * and the running values of whoever the turn touches.
  *
  * It mutates ONLY its own copies. `decide` never writes into the state it was
  * handed, which is the same promise `reduce` makes and for the same reason.
  */
-function createTurn(state: CampaignState, ctx: DecisionContext) {
+function createTurn(state: CampaignState, ctx: DecisionContext, continued?: TurnContinuation) {
   const events: GameEvent[] = [];
   const workingCharacters = new Map<CharacterId, CharacterState>();
   const workingTracks = new Map<TrackId, TrackState>();
   const workingClocks = new Map<ClockId, ClockState>();
   const drawIndexes = new Map<RngStream, number>();
   const appliedEffects: BriefAppliedEffect[] = [];
-  const correlationId = ctx.ids.next();
+  const correlationId = continued?.correlationId ?? ctx.ids.next();
+  // The entry everything hangs from. Null until the first one is written, then
+  // that one — except on a CONTINUED turn, where it is the declaration written
+  // in the first half and the whole group keeps hanging from it.
+  let causationId: EventId | null = continued?.declarationId ?? null;
   let imposedPrice: BriefImposedPrice | null = null;
   let presage: BriefPresage | null = null;
   let xpEarnedThisTurn = 0;
@@ -277,7 +309,6 @@ function createTurn(state: CampaignState, ctx: DecisionContext) {
     payload: GameEventPayloads[TType],
     options: EmitOptions,
   ): GameEventOf<TType> {
-    const first = events[0];
     const event: GameEventOf<TType> = {
       id: ctx.ids.next() as EventId,
       campaignId: state.campaignId,
@@ -288,7 +319,7 @@ function createTurn(state: CampaignState, ctx: DecisionContext) {
       actorPlayerId: options.actorPlayerId ?? null,
       subjectCharacterId: options.subjectCharacterId ?? null,
       correlationId,
-      causationId: first === undefined ? null : first.id,
+      causationId,
       rngStream: options.rngStream ?? null,
       rngDrawIndex: options.rngDrawIndex ?? null,
       createdAt: ctx.now,
@@ -298,6 +329,7 @@ function createTurn(state: CampaignState, ctx: DecisionContext) {
       payload,
     };
     events.push(event as GameEvent);
+    causationId ??= event.id;
     return event;
   }
 
@@ -1036,7 +1068,7 @@ function decideMove(
   const bonus = plan.roll.kind === 'action' ? wholeBonus(plan.roll.bonus) : 0;
   const adds: readonly RollAdd[] = bonus === 0 ? [] : [{ source: 'intent', value: bonus }];
 
-  turn.emit(
+  const declared = turn.emit(
     'move.declared',
     {
       moveId: handler.id,
@@ -1075,6 +1107,9 @@ function decideMove(
         rollSeq: resolved.rollSeq,
         characterId: actor.value.id,
         intent,
+        correlationId: turn.correlationId,
+        declarationId: declared.id,
+        plan,
         outcome: resolved.outcome,
         isPresage: resolved.isPresage,
         roll: resolved.detail,
@@ -1359,6 +1394,19 @@ function applyResolution(
  * read against the challenge dice ALREADY WRITTEN on the first roll. Drawing
  * anything on the `action` stream would shift every index after it and rewrite
  * dice that are already in the journal.
+ *
+ * IT IS THE SAME TURN, NOT A SECOND ONE. The correlation group and the
+ * declaration come from the window, so the closing entries land in the group
+ * the dice are in: `system.reverted` cancels the whole thing at once
+ * (03-donnees.md section 3.7) and `buildTurnProof` reads the dice and their
+ * consequences in one pass (section 0.5).
+ *
+ * AND IT CANNOT BE REFUSED FOR A REASON ABOUT THE MOVE. The plan comes from
+ * the window too: feasibility was settled before the dice, and replaying it
+ * here against a state that has moved on would strand an open window nothing
+ * could ever close. What remains state-dependent is the actor
+ * (`requireActor`) — and an entry about that character is exactly what
+ * `burnWindowClosedBy` makes the caller close the window on first.
  */
 function closeBurnWindow(
   state: CampaignState,
@@ -1374,19 +1422,12 @@ function closeBurnWindow(
   if (definition === undefined) {
     return err({ code: 'unknown_move', details: { moveId: handler.id } });
   }
-  // The plan is recomputed rather than carried: it is a pure function of the
-  // intent and the state, and the state it must read is the one the effects
-  // are about to touch.
-  const planned = handler.plan({
-    state,
-    character: actor.value,
-    definition,
-    intent: window.intent,
-  });
-  if (isErr(planned)) return planned;
-  const plan = planned.value;
+  const plan = window.plan;
 
-  const turn = createTurn(state, ctx);
+  const turn = createTurn(state, ctx, {
+    correlationId: window.correlationId,
+    declarationId: window.declarationId,
+  });
   let outcome = window.outcome;
   let roll = window.roll;
 
