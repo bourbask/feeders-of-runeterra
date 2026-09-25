@@ -35,6 +35,20 @@ const outillage = [
 // paquet, exactement comme les tests eux-mêmes.
 const appointDeTest = [
   {
+    // Les sondes de `packages/*/smoke/` sont des scripts lancés par tsx. Le
+    // tsconfig de build n'émet que `src/`, donc le service de projet ne les
+    // voit pas et le lint échouait sur une erreur d'analyse, pas sur une règle.
+    // Elles se rattachent au tsconfig de test du paquet, comme les tests.
+    files: ['packages/*/smoke/**/*.ts'],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+        project: ['./tsconfig.test.json'],
+        tsconfigRootDir: process.cwd(),
+      },
+    },
+  },
+  {
     files: ['packages/*/tests/**/*.ts', 'tests/**/*.ts'],
     languageOptions: {
       parserOptions: {
