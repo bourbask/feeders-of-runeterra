@@ -56,18 +56,36 @@ export function refuseInProduction(command: string): void {
  *
  * Reads only: a base that cannot be opened, or that has no `campaigns` table
  * yet, is not a production base and is left alone.
+ *
+ * THAT FIRST HALF WAS A COMMENT AND NOTHING ELSE until this version. `openSqlite`
+ * and `prepare` throw on a file that is not a SQLite base, and the throw walked
+ * straight out of here: `DATABASE_PATH` pointing at a text file made
+ * `pnpm db:reset` exit 1 with a `SqliteError` and the message « rien n'a été
+ * supprimé », instead of resetting a file that is not a base. Found by reading
+ * the coverage report — this file was at 0 % of lines.
  */
 export function refuseForeignBase(target: string): void {
   if (!existsSync(target)) return;
-  const connection = openSqlite(target, { readonly: true });
+  const foreign = readForeignCampaign(target);
+  if (foreign !== undefined) throw new NotADemoBase(foreign.id, foreign.slug);
+}
+
+/** `undefined` for anything this guard has no opinion about. Reads only. */
+function readForeignCampaign(target: string): { id: string; slug: string } | undefined {
+  let connection;
+  try {
+    connection = openSqlite(target, { readonly: true });
+  } catch {
+    return undefined;
+  }
   try {
     const table = connection
       .prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'campaigns'`)
       .get() as { name: string } | undefined;
-    if (table === undefined) return;
+    if (table === undefined) return undefined;
     const handles = DEMO_PLAYERS.map((player) => player.handle);
     const placeholders = handles.map(() => '?').join(', ');
-    const foreign = connection
+    return connection
       .prepare(
         `SELECT c.id AS id, c.slug AS slug FROM campaigns c
            JOIN players p ON p.id = c.owner_player_id
@@ -75,7 +93,9 @@ export function refuseForeignBase(target: string): void {
           ORDER BY c.id LIMIT 1`,
       )
       .get(...handles) as { id: string; slug: string } | undefined;
-    if (foreign !== undefined) throw new NotADemoBase(foreign.id, foreign.slug);
+  } catch {
+    // Not a readable base. `db:reset` may have it.
+    return undefined;
   } finally {
     connection.close();
   }

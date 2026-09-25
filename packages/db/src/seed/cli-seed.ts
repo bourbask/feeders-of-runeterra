@@ -28,11 +28,15 @@ const target = databasePath();
 
 try {
   refuseInProduction('db:seed');
-  // `--force` removes the file: the same two guards `db:reset` runs, and for
-  // the same reason — they must answer before anything is deleted.
-  if (flags.has('--force')) refuseForeignBase(target);
+  // THE FOREIGN-BASE GUARD RUNS WHETHER OR NOT `--force` IS PASSED. It used to
+  // run only under `--force`, on the reasoning that nothing is deleted without
+  // it — but without `--force` the command does something worse than delete:
+  // it APPENDS the demo campaign to somebody's real journal, which is
+  // append-only and has no undo. Found by reading the coverage report:
+  // `guard.ts` was at 0 % of lines and `refuseForeignBase` had no test.
+  refuseForeignBase(target);
 } catch (error) {
-  console.error(`db:seed — ${String(error)} ; rien n'a été supprimé.`);
+  console.error(`db:seed — ${String(error)} ; rien n'a été écrit.`);
   process.exit(1);
 }
 

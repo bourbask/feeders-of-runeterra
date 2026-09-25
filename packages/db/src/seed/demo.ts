@@ -41,7 +41,6 @@ import { dirname, resolve } from 'node:path';
 
 import { stateHash } from '../check.js';
 import type { SqliteConnection } from '../client.js';
-import { openSqlite } from '../client.js';
 import { migrateFile } from '../migrate.js';
 import { rebuildCampaign, replayCampaign, replayJournal } from '../rebuild.js';
 import { readSince } from '../repositories/events.js';
@@ -68,6 +67,7 @@ import type {
   CharacterId,
   ChronicleId,
   EntityId,
+  GameEventType,
   IdFactory,
   PlayerId,
   PlaySessionId,
@@ -122,6 +122,17 @@ export interface SeedReport {
   readonly events: number;
   /** Distinct event types the journal holds. */
   readonly types: number;
+  /**
+   * The partition of the catalogue, AS THIS RUN PRODUCED IT.
+   *
+   * `playedTypes` is what `decide()` emitted, `serverWrittenTypes` what the
+   * seed authored. `seed-deterministic.test.ts` unites the two and compares the
+   * result to `GAME_EVENT_TYPES`: that assertion is the only thing holding the
+   * invariant-1 line of `director.ts`, and reading both halves off the RUN is
+   * what keeps `SERVER_WRITTEN_TYPES` from drifting into a list of wishes.
+   */
+  readonly playedTypes: readonly GameEventType[];
+  readonly serverWrittenTypes: readonly GameEventType[];
   readonly characters: number;
   readonly sessions: number;
   readonly chronicles: number;
@@ -237,6 +248,8 @@ export function seedDemo(connection: SqliteConnection, options: SeedOptions = {}
     characters: journal.filter((event) => event.type === 'character.created').length,
     sessions: journal.filter((event) => event.type === 'session.opened').length,
     chronicles: journal.filter((event) => event.type === 'chronicle.compacted').length,
+    playedTypes: director.playedTypes,
+    serverWrittenTypes: director.writtenTypes,
     snapshots: (
       connection
         .prepare(`SELECT count(*) AS n FROM snapshots WHERE campaign_id = ?`)
@@ -334,13 +347,17 @@ function writeDerivedRows(
   const { campaignId } = identities;
   const at = DEMO_SEED.epoch;
 
-  // ---- membership. `character_id` names the character the player ENDED with.
+  // ---- membership. `character_id` names the character the player ENDED with,
+  // which is the LAST one the journal creates for them, not the first. The
+  // table owner plays Olaf, Olaf dies at the Porte Basse, and Udyr is created
+  // after him: keeping the first put `campaign_members.character_id` on a
+  // corpse while the comment claimed the opposite. Measured in recette.
   const owner = demand(identities.players.get('demo-mj'), 'demo-mj');
   const active = new Map<string, string>();
   for (const event of journal) {
     if (event.type !== 'character.created') continue;
     const payload = event.payload as { playerId: string; characterId: string };
-    if (!active.has(payload.playerId)) active.set(payload.playerId, payload.characterId);
+    active.set(payload.playerId, payload.characterId);
   }
   const insertMember = connection.prepare(
     `INSERT INTO campaign_members (id, campaign_id, player_id, role, character_id, invited_by,
@@ -610,19 +627,5 @@ export function removeDatabaseFiles(target: string): void {
   for (const suffix of ['', '-wal', '-shm']) {
     const file = `${target}${suffix}`;
     if (existsSync(file)) rmSync(file);
-  }
-}
-
-/** Opens a base read-only and answers whether the demo campaign is in it. */
-export function isSeeded(target: string): boolean {
-  if (!existsSync(target)) return false;
-  const connection = openSqlite(target, { readonly: true });
-  try {
-    const row = connection
-      .prepare(`SELECT id FROM campaigns WHERE slug = ?`)
-      .get(DEMO_CAMPAIGN_SLUG) as { id: string } | undefined;
-    return row !== undefined;
-  } finally {
-    connection.close();
   }
 }

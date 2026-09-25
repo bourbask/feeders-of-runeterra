@@ -23,7 +23,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { copyFileSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -36,14 +36,35 @@ import { openSqlite } from '../src/client.js';
 import { dumpProjections, rebuildCampaign } from '../src/rebuild.js';
 import { readSince, readSinceForPlayer } from '../src/repositories/events.js';
 import { CHRONICLE_VERSIONS } from '../src/seed/chronicles.js';
+import type { SeedReport } from '../src/seed/demo.js';
 import {
   DEMO_CAMPAIGN_SLUG,
   DEMO_MINIMAL_EVENT_COUNT,
   DEMO_SEED,
   seedDemoFile,
 } from '../src/seed/demo.js';
+import { DemoScriptInconsistent, Director, SERVER_WRITTEN_TYPES } from '../src/seed/director.js';
+import {
+  DemoContentIncomplete,
+  demoContent,
+  previousPackVersion,
+} from '../src/seed/engine-content.js';
+import {
+  NotADemoBase,
+  databasePath,
+  refuseForeignBase,
+  refuseInProduction,
+} from '../src/seed/guard.js';
+import { ULID_LENGTH, demoCorrelationId, monotonicUlidFactory } from '../src/seed/ids.js';
 
-import { GAME_EVENT_TYPES } from '@for/engine';
+import type { CampaignId, ClockId, PlayerId } from '@for/engine';
+import {
+  CLOCK_ADVANCE_MAX,
+  CLOCK_ADVANCE_MIN,
+  GAME_EVENT_TYPES,
+  boxesFilled,
+  createInitialCampaignState,
+} from '@for/engine';
 
 /** M0-26, acceptance criteria. Written out, never derived from the seed. */
 const EXPECTED_EVENTS = 248;
@@ -57,6 +78,8 @@ const EXPECTED_ENTITIES = 11;
 const EXPECTED_CHRONICLES = 3;
 /** The acceptance criterion of the production guard. */
 const REFUSED_EXIT_CODE = 1;
+/** A clock identifier for the unit tests below. Never written to a journal. */
+const CLOCK_ID = 'clock-de-test' as ClockId;
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = resolve(HERE, '..');
@@ -65,6 +88,7 @@ const WORKSPACE_ROOT = resolve(PACKAGE_ROOT, '..', '..');
 let workspace: string;
 let full: string;
 let minimal: string;
+let fullReport: SeedReport;
 
 /**
  * The file `pnpm <command>` runs, read out of the workspace manifest.
@@ -134,7 +158,7 @@ beforeAll(() => {
   workspace = mkdtempSync(join(tmpdir(), 'for-seed-'));
   full = join(workspace, 'full.db');
   minimal = join(workspace, 'minimal.db');
-  seedDemoFile(full, { force: true });
+  fullReport = seedDemoFile(full, { force: true });
   seedDemoFile(minimal, { force: true, minimal: true });
 });
 
@@ -266,11 +290,110 @@ describe('la campagne de démonstration', () => {
     // Invariant 4, measured the way control 9 measures it: zone C thrown away,
     // replayed, compared byte for byte. A gauge posted straight into
     // `characters` by the seed would show up here as a divergence.
-    withBase(full, (connection) => {
+    //
+    // ON A COPY, AND THAT IS A CORRECTION, NOT A PRECAUTION. This test used to
+    // rebuild `full` itself, and `passe les douze oracles` runs after it on the
+    // same file: control 9 was therefore MADE TRUE by this test a moment before
+    // the other one read it. Measured in recette — with an `UPDATE characters`
+    // posted after the rebuild, `passe les douze oracles` stayed GREEN under
+    // `vitest run tests/seed-deterministic.test.ts`, the command `turbo run
+    // test` runs, and only went red when run alone with `-t`. Mode 3 of the
+    // battery: a threshold no contractual command reaches.
+    const copy = join(workspace, 'rebuild-copy.db');
+    copyFileSync(full, copy);
+    withBase(copy, (connection) => {
       const id = campaignId(connection);
       const before = dumpProjections(connection, id);
       rebuildCampaign(connection, id);
       expect(dumpProjections(connection, id)).toBe(before);
+    });
+  });
+
+  it('partage le catalogue en deux : ce que le jeu tranche, ce que le serveur écrit', () => {
+    // INVARIANT 1, MEASURED. `director.ts` draws the line between `play()` —
+    // anything the rules decide — and `write()` — what the server decides. The
+    // line is held by a type (`SERVER_WRITTEN_TYPES`, which stops the probe
+    // « authored('roll.action_resolved', …) » from compiling) and by the four
+    // assertions below, which hold the type honest.
+    //
+    // The catalogue is the ENGINE's and its length is the task sheet's 71,
+    // spelled out: without it, emptying `GAME_EVENT_TYPES` would make this pass
+    // over nothing.
+    expect(GAME_EVENT_TYPES).toHaveLength(EXPECTED_TYPES);
+
+    const played = [...fullReport.playedTypes];
+    const declared = [...SERVER_WRITTEN_TYPES];
+
+    // 1. Nothing the rules produce may be hand-written. An empty intersection
+    //    is what « le moteur décide, l'IA raconte » means in this file.
+    expect(declared.filter((type) => played.includes(type))).toEqual([]);
+
+    // 2. The two halves cover the catalogue exactly — so emptying the tuple
+    //    leaves 49 types uncovered and this assertion names every one of them.
+    expect([...new Set([...played, ...declared])].sort()).toEqual([...GAME_EVENT_TYPES].sort());
+
+    // 3. And the tuple is not a list of wishes: what the RUN authored is what
+    //    it declares, member for member. A member nothing writes proves nothing.
+    expect(declared.sort()).toEqual([...fullReport.serverWrittenTypes].sort());
+  });
+
+  it('n’avance jamais une horloge autrement que le réducteur ne les compte', () => {
+    // The three `clock.advanced` of the campaign used to carry `delta`, `from`
+    // and `to` TYPED OUT in `script.ts`. Measured in recette: replacing
+    // `{ delta: 3, from: 3, to: 6 }` with `{ delta: 3, from: 1, to: 99 }` on a
+    // six-segment clock left the 17 tests, `db:seed` and `db:check` at 0 — and
+    // the « Pourquoi ? » proof of that turn would have told a player the clock
+    // went from 1 to 99. `Director.clockAdvance` now derives the three numbers
+    // from the reduced state; this walks the journal and checks it did.
+    withBase(full, (connection) => {
+      const rows = connection
+        .prepare(
+          `SELECT seq, type, payload_json FROM events
+            WHERE type IN ('clock.created', 'clock.advanced', 'clock.filled') ORDER BY seq`,
+        )
+        .all() as { seq: number; type: string; payload_json: string }[];
+
+      const segments = new Map<string, number>();
+      const filled = new Map<string, number>();
+      const advances: { seq: number; from: number; to: number; delta: number }[] = [];
+
+      for (const row of rows) {
+        const payload = JSON.parse(row.payload_json) as {
+          clockId: string;
+          segments?: number;
+          delta?: number;
+          from?: number;
+          to?: number;
+        };
+        if (row.type === 'clock.created') {
+          segments.set(payload.clockId, payload.segments ?? 0);
+          filled.set(payload.clockId, 0);
+          continue;
+        }
+        if (row.type === 'clock.filled') {
+          filled.set(payload.clockId, segments.get(payload.clockId) ?? 0);
+          continue;
+        }
+        const size = segments.get(payload.clockId);
+        const before = filled.get(payload.clockId);
+        expect(size, `horloge inconnue au seq ${String(row.seq)}`).toBeDefined();
+        expect(before, `horloge jamais créée au seq ${String(row.seq)}`).toBeDefined();
+        const delta = payload.delta ?? 0;
+        // The ceiling of a single advance is the ENGINE's, not a number here.
+        expect(delta, `avance du seq ${String(row.seq)}`).toBeGreaterThanOrEqual(CLOCK_ADVANCE_MIN);
+        expect(delta).toBeLessThanOrEqual(CLOCK_ADVANCE_MAX);
+        expect(payload.from, `from du seq ${String(row.seq)}`).toBe(before);
+        expect(payload.to, `to du seq ${String(row.seq)}`).toBe(
+          Math.min((before ?? 0) + delta, size ?? 0),
+        );
+        filled.set(payload.clockId, payload.to ?? 0);
+        advances.push({ seq: row.seq, from: payload.from ?? 0, to: payload.to ?? 0, delta });
+      }
+
+      // The fixture has to be able to tell a derived `from` from a hard-coded
+      // one: at least two advances, and not all of them starting at zero.
+      expect(advances.length).toBeGreaterThan(1);
+      expect(new Set(advances.map((advance) => advance.from)).size).toBeGreaterThan(1);
     });
   });
 
@@ -325,6 +448,87 @@ describe('la campagne de démonstration', () => {
           expect(fact.event_seq).toBeLessThanOrEqual(row.source_event_seq);
           expect(row.source_event_seq).toBeLessThanOrEqual(highest);
         }
+      }
+    });
+  });
+
+  it('clôt le serment dangereux par une réussite, et les dés en sont tirés', () => {
+    // 03-donnees.md section 7.1 : « 1 accompli (dangereux), 1 en cours
+    // (redoutable), 1 abandonné ». The three words are spelled out here; what
+    // the seed arranges is the SCORE (three milestones at `dangereux`, so six
+    // complete boxes), never the outcome.
+    withBase(full, (connection) => {
+      const resolved = connection
+        .prepare(
+          `SELECT e.seq AS seq, e.payload_json AS payload, t.rank AS rank, t.ticks AS ticks
+             FROM events e JOIN progress_tracks t
+               ON t.id = json_extract(e.payload_json, '$.trackId')
+            WHERE e.type = 'track.resolved'
+              AND json_extract(e.payload_json, '$.outcome') = 'fulfilled'`,
+        )
+        .all() as { seq: number; payload: string; rank: string; ticks: number }[];
+      expect(resolved).toHaveLength(1);
+      const vow = resolved[0];
+      expect(vow?.rank).toBe('dangereux');
+
+      // The rank-to-XP branch of `track.resolved` is exercised by real data:
+      // that is what makes this seed usable as a golden-corpus fixture.
+      const payload = JSON.parse(vow?.payload ?? '{}') as { xpAwarded: number; rollSeq: number };
+      expect(payload.xpAwarded).toBeGreaterThan(0);
+
+      // The roll behind it was DRAWN, not written: it carries its stream and
+      // its draw index, and its score is the engine's reading of the ticks.
+      const roll = connection
+        .prepare(`SELECT payload_json, rng_stream, rng_draw_index FROM events WHERE seq = ?`)
+        .get(payload.rollSeq) as {
+        payload_json: string;
+        rng_stream: string | null;
+        rng_draw_index: number | null;
+      };
+      const rollPayload = JSON.parse(roll.payload_json) as {
+        filledBoxes: number;
+        challengeDice: [number, number];
+      };
+      expect(roll.rng_stream).not.toBeNull();
+      expect(roll.rng_draw_index).not.toBeNull();
+      expect(rollPayload.filledBoxes).toBe(boxesFilled(vow?.ticks ?? 0));
+      // A weak hit fulfils too, so the only thing the dice OWE is that the
+      // score beat at least one of them — which is what `outcome` already says.
+      expect(Math.min(...rollPayload.challengeDice)).toBeLessThan(rollPayload.filledBoxes);
+
+      // The other two lines of section 7.1, on the same fixture.
+      const statuses = (
+        connection.prepare(`SELECT status FROM progress_tracks`).all() as { status: string }[]
+      ).map((row) => row.status);
+      expect(statuses).toContain('open');
+      expect(statuses).toContain('abandoned');
+    });
+  });
+
+  it('lie chaque joueur au personnage avec lequel il a fini', () => {
+    withBase(full, (connection) => {
+      const created = connection
+        .prepare(`SELECT payload_json FROM events WHERE type = 'character.created' ORDER BY seq`)
+        .all() as { payload_json: string }[];
+      const last = new Map<string, string>();
+      const counts = new Map<string, number>();
+      for (const row of created) {
+        const payload = JSON.parse(row.payload_json) as { playerId: string; characterId: string };
+        last.set(payload.playerId, payload.characterId);
+        counts.set(payload.playerId, (counts.get(payload.playerId) ?? 0) + 1);
+      }
+      // WITHOUT THIS LINE THE TEST PROVES NOTHING: if every player had made a
+      // single character, « the first » and « the last » would be the same row
+      // and the bug this replaces would still be here.
+      expect(Math.max(...counts.values())).toBeGreaterThan(1);
+
+      const members = connection
+        .prepare(`SELECT player_id, character_id FROM campaign_members ORDER BY player_id`)
+        .all() as { player_id: string; character_id: string | null }[];
+      for (const member of members) {
+        expect(member.character_id, `adhésion de ${member.player_id}`).toBe(
+          last.get(member.player_id) ?? null,
+        );
       }
     });
   });
@@ -410,6 +614,228 @@ describe('la base minimale', () => {
 
   it('est plus courte que la campagne entière', () => {
     expect(DEMO_MINIMAL_EVENT_COUNT).toBeLessThan(EXPECTED_EVENTS);
+  });
+});
+
+/**
+ * `guard.ts` was at 0 % OF LINES on the coverage report, and `refuseForeignBase`
+ * had no test at all — the recette had to check by hand that it bites. That is
+ * the file this block covers, and reading it is what turned up the two defects
+ * corrected with it: an unopenable file walked its exception out of the guard,
+ * and `pnpm db:seed` without `--force` never called it.
+ */
+describe('la garde de base étrangère', () => {
+  /** A base seeded, then re-owned by somebody who is not a demo player. */
+  function foreignBase(name: string): string {
+    const target = join(workspace, name);
+    seedDemoFile(target, { force: true, minimal: true });
+    withBase(target, (connection) => {
+      connection.prepare(`UPDATE players SET discord_username = 'vrai-joueur'`).run();
+    });
+    return target;
+  }
+
+  it('laisse passer une base de démonstration', () => {
+    expect(() => {
+      refuseForeignBase(minimal);
+    }).not.toThrow();
+  });
+
+  it('refuse une base dont le propriétaire n’est pas un joueur de démonstration', () => {
+    const target = foreignBase('etrangere.db');
+    expect(() => {
+      refuseForeignBase(target);
+    }).toThrow(NotADemoBase);
+  });
+
+  it('laisse passer un fichier absent, un fichier vide, et un fichier qui n’est pas une base', () => {
+    // The comment on `refuseForeignBase` promised exactly this, and until now
+    // nothing held it: `openSqlite` threw and the exception walked out, so
+    // `pnpm db:reset` on a `DATABASE_PATH` pointing at a text file exited 1
+    // with a `SqliteError` instead of resetting a file that is not a base.
+    const absent = join(workspace, 'jamais-creee.db');
+    const garbage = join(workspace, 'pas-une-base.db');
+    writeFileSync(garbage, 'ceci n’est pas une base SQLite\n');
+    const bare = join(workspace, 'vide.db');
+    withBase(bare, (connection) => {
+      connection.exec(`CREATE TABLE rien (x INTEGER)`);
+    });
+
+    for (const target of [absent, garbage, bare]) {
+      expect(() => {
+        refuseForeignBase(target);
+      }).not.toThrow();
+    }
+  });
+
+  it(
+    'fait sortir « pnpm db:seed » en 1 SANS --force, sans rien écrire',
+    () => {
+      // THE COMMAND, not the function. Without `--force` nothing is deleted —
+      // but the demo campaign would be APPENDED to somebody's real journal,
+      // which is append-only and has no undo. The guard used to run under
+      // `--force` only.
+      const target = foreignBase('etrangere-commande.db');
+      const before = sha256(target);
+      expect(runCommand('db:seed', [], target)).toBe(REFUSED_EXIT_CODE);
+      expect(sha256(target)).toBe(before);
+      expect(runCommand('db:seed', ['--force'], target)).toBe(REFUSED_EXIT_CODE);
+      expect(sha256(target)).toBe(before);
+    },
+    SUBPROCESS_TIMEOUT_MS,
+  );
+});
+
+describe('les deux refus, en appel direct', () => {
+  it('ne refuse que sous NODE_ENV=production, et nomme la commande', () => {
+    const before = process.env['NODE_ENV'];
+    try {
+      process.env['NODE_ENV'] = 'production';
+      expect(() => {
+        refuseInProduction('db:reset');
+      }).toThrow(/db:reset/);
+      process.env['NODE_ENV'] = 'development';
+      expect(() => {
+        refuseInProduction('db:reset');
+      }).not.toThrow();
+    } finally {
+      if (before === undefined) delete process.env['NODE_ENV'];
+      else process.env['NODE_ENV'] = before;
+    }
+  });
+
+  it('lit DATABASE_PATH, et retombe sur le défaut de la section 6.1', () => {
+    const before = process.env['DATABASE_PATH'];
+    try {
+      process.env['DATABASE_PATH'] = '/tmp/une-base-a-moi.db';
+      expect(databasePath()).toBe('/tmp/une-base-a-moi.db');
+      delete process.env['DATABASE_PATH'];
+      expect(databasePath()).toBe('./data/app.db');
+    } finally {
+      if (before === undefined) delete process.env['DATABASE_PATH'];
+      else process.env['DATABASE_PATH'] = before;
+    }
+  });
+});
+
+describe('l’avance d’horloge, hors de tout journal', () => {
+  /** A director over a state that holds one six-segment clock at three. */
+  function directorWithClock(filled: number): Director {
+    const campaignId = 'c-horloge' as CampaignId;
+    const ownerPlayerId = 'p-horloge' as PlayerId;
+    const base = createInitialCampaignState({
+      campaignId,
+      ownerPlayerId,
+      seed: DEMO_SEED.rngSeed,
+      contentPackHash: 'hash',
+    });
+    return new Director({
+      // `clockAdvance` reads the state and nothing else; no row is written.
+      connection: undefined as unknown as SqliteConnection,
+      campaignId,
+      ownerPlayerId,
+      seed: DEMO_SEED.rngSeed,
+      content: demoContent().engine,
+      ids: monotonicUlidFactory(DEMO_SEED.ulidSeed),
+      epoch: DEMO_SEED.epoch,
+      step: 1,
+      initialState: {
+        ...base,
+        clocks: {
+          [CLOCK_ID]: {
+            id: CLOCK_ID,
+            title: 'La neige tient le col',
+            description: '',
+            segments: 6,
+            filled,
+            status: 'ticking',
+            visibility: 'public',
+            consequence: '',
+            createdSeq: 1,
+            updatedSeq: 1,
+          },
+        },
+      },
+      stopAt: null,
+    });
+  }
+
+  it('plafonne aux segments plutôt que de les dépasser', () => {
+    // Two starting points, chosen so a hard-coded `from: 0` or a `to` that
+    // forgot its ceiling would fail on one of them.
+    expect(directorWithClock(0).clockAdvance(CLOCK_ID, 3, 'gm:proposal').payload).toEqual({
+      clockId: CLOCK_ID,
+      delta: 3,
+      from: 0,
+      to: 3,
+      cause: 'gm:proposal',
+    });
+    expect(directorWithClock(5).clockAdvance(CLOCK_ID, 3, 'gm:proposal').payload).toEqual({
+      clockId: CLOCK_ID,
+      delta: 3,
+      from: 5,
+      to: 6,
+      cause: 'gm:proposal',
+    });
+  });
+
+  it('refuse une avance hors du plafond du moteur, et une horloge inconnue', () => {
+    const director = directorWithClock(0);
+    for (const delta of [CLOCK_ADVANCE_MIN - 1, CLOCK_ADVANCE_MAX + 1, 1.5]) {
+      expect(() => director.clockAdvance(CLOCK_ID, delta, 'gm:proposal')).toThrow(
+        DemoScriptInconsistent,
+      );
+    }
+    expect(() => director.clockAdvance('pas-une-horloge' as ClockId, 1, 'gm:proposal')).toThrow(
+      DemoScriptInconsistent,
+    );
+  });
+});
+
+describe('les deux fabriques d’identifiants', () => {
+  it('rend la graine, puis la graine incrémentée, en retenant sa retenue', () => {
+    // Two calls are not enough to see a carry: the seed below ends in `Z`, the
+    // last letter of Crockford base32, so the second increment has to carry.
+    const factory = monotonicUlidFactory('01JQ000000000000000000000Z');
+    const handed = [factory.next(), factory.next(), factory.next()];
+    expect(handed).toEqual([
+      '01JQ000000000000000000000Z',
+      '01JQ0000000000000000000010',
+      '01JQ0000000000000000000011',
+    ]);
+  });
+
+  it('refuse une graine de mauvaise longueur, un caractère hors base 32, un débordement', () => {
+    expect(() => monotonicUlidFactory('trop-court')).toThrow(RangeError);
+    const outside = monotonicUlidFactory('01JQ00000000000000000000IL');
+    outside.next();
+    expect(() => outside.next()).toThrow(RangeError);
+    const full = monotonicUlidFactory('Z'.repeat(ULID_LENGTH));
+    expect(full.next()).toBe('Z'.repeat(ULID_LENGTH));
+    expect(() => full.next()).toThrow(RangeError);
+  });
+
+  it('rend un UUID de version 4 qui ne dépend que du compteur', () => {
+    expect(demoCorrelationId(0)).toBe('00000000-0000-4000-8000-000000000000');
+    expect(demoCorrelationId(255)).toBe('00000000-0000-4000-8000-0000000000ff');
+    expect(demoCorrelationId(7)).toBe(demoCorrelationId(7));
+    expect(demoCorrelationId(7)).not.toBe(demoCorrelationId(8));
+    expect(() => demoCorrelationId(-1)).toThrow(RangeError);
+    expect(() => demoCorrelationId(1.5)).toThrow(RangeError);
+    expect(() => demoCorrelationId(16 ** 12)).toThrow(RangeError);
+  });
+});
+
+describe('le pack de contenu précédent', () => {
+  it('recule d’un patch, d’un mineur, puis d’un majeur', () => {
+    expect(previousPackVersion('1.2.3')).toBe('1.2.2');
+    expect(previousPackVersion('1.2.0')).toBe('1.1.9');
+    expect(previousPackVersion('1.0.0')).toBe('0.9.9');
+    expect(previousPackVersion('0.0.0')).toBe('0.9.9');
+  });
+
+  it('refuse une fiche de champion que le bundle ne porte pas', () => {
+    expect(() => demoContent().championSheet('pas-un-champion')).toThrow(DemoContentIncomplete);
   });
 });
 

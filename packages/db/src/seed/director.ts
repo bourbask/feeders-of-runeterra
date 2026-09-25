@@ -9,13 +9,14 @@
  * change, and it can hold states the engine would never produce — which would
  * make `db:check` control 9 a liar.
  *
- * MEASURED, AND REPORTED: `decide()` can produce 26 of the 71 event types.
- * `Intent` has twenty members and none of them opens a scene, introduces an
- * entity, opens a play session, writes a chronicle or reverts a turn — three
- * `decide*` functions say so in their own comments ("M0-24 writes the event",
- * "Play sessions produce no engine event, and that is a finding"). So a seed
- * built on intents ALONE cannot cover the catalogue, and the note on the task
- * sheet is true of the dice and false of the rest.
+ * MEASURED ON THE RUN, NOT DEDUCED: `decide()` emits 22 of the 71 types in
+ * this campaign; the seed authors the other 49. `Intent` has twenty members
+ * and none of them opens a scene, introduces an entity, opens a play session,
+ * writes a chronicle or reverts a turn — three `decide*` functions say so in
+ * their own comments ("M0-24 writes the event", "Play sessions produce no
+ * engine event, and that is a finding"). So a seed built on intents ALONE
+ * cannot cover the catalogue, and the note on the task sheet is true of the
+ * dice and false of the rest.
  *
  * The line this file draws, and it is the invariant-1 line:
  *
@@ -24,7 +25,13 @@
  *     here recomputes an outcome, and no caller may hand in an event.
  *   - `write()` — what the SERVER decides, and nothing else: lifecycle,
  *     membership, scenes, entities, narration, sessions, chronicles,
- *     administration. These carry no roll and no arithmetic.
+ *     administration.
+ *
+ * THAT LINE IS A TYPE, NOT A SENTENCE: `SERVER_WRITTEN_TYPES` below closes the
+ * second half, `authored()` is generic over it, and
+ * `seed-deterministic.test.ts` proves the two halves partition
+ * `GAME_EVENT_TYPES`. The paragraph you are reading used to be the whole
+ * guarantee, and it held nothing.
  *
  * ── WHAT IT RE-STAMPS, AND WHY THAT IS THE SERVER'S JOB ──────────────────
  * `playSessionId` and `correlationId`. The first is bookkeeping the engine has
@@ -53,6 +60,8 @@ import type {
   CampaignId,
   CampaignState,
   CharacterId,
+  ClockId,
+  ClockState,
   DecisionContext,
   DecisionRng,
   EngineContent,
@@ -61,6 +70,7 @@ import type {
   GameEvent,
   GameEventOf,
   GameEventPayloads,
+  GameEventType,
   IdFactory,
   Intent,
   PlayerId,
@@ -68,7 +78,14 @@ import type {
   Rng,
   RngStream,
 } from '@for/engine';
-import { createCampaignRng, decide, isErr, reduceAll } from '@for/engine';
+import {
+  CLOCK_ADVANCE_MAX,
+  CLOCK_ADVANCE_MIN,
+  createCampaignRng,
+  decide,
+  isErr,
+  reduceAll,
+} from '@for/engine';
 
 /** Raised when a scripted intent the demo depends on is refused by the rules. */
 export class DemoIntentRefused extends Error {
@@ -98,8 +115,91 @@ export class DemoStopped extends Error {
   }
 }
 
+/**
+ * The CLOSED list of journal entries the seed is allowed to author by hand.
+ *
+ * ── WHY A TUPLE AND NOT A COMMENT ────────────────────────────────────────
+ * The header above draws the invariant-1 line between `play()` and `write()`.
+ * Until this tuple existed, NOTHING held it: a caller could hand `write()` a
+ * complete `roll.action_resolved` — action die, challenge dice, outcome — or a
+ * `character.gauge_changed` with a delta of -99, and `tsc` and `eslint` both
+ * exited 0. Measured in recette, and it is the sixth « rule present and inert »
+ * of the project (ADR 0007). `authored()` is now generic over THIS tuple, so
+ * the same probe stops compiling (`TS2345`).
+ *
+ * ── WHAT IS IN IT, AND WHAT IS NOT ───────────────────────────────────────
+ * What the SERVER decides: lifecycle, membership, scenes, entities, narration,
+ * sessions, chronicles, administration — plus the four types measured
+ * unreachable through `decide()` with the shipped content (`script.ts` header).
+ * What the RULES decide is absent by construction: every die, every gauge,
+ * every tick, every price comes out of `decide()` or does not exist.
+ *
+ * ONE ENTRY CARRIES DICE AND SAYS SO: `roll.raw`. No `decide()` branch produces
+ * a loose roll, and the faces are NOT typed — `Director.rawRoll()` draws them
+ * on the engine's own generator. It is in this list because the SERVER writes
+ * the entry, not because the seed writes the numbers.
+ *
+ * The partition is measured, not promised: `seed-deterministic.test.ts` asserts
+ * that the types `play()` produced, united with this tuple, are exactly
+ * `GAME_EVENT_TYPES`, with an empty intersection.
+ */
+export const SERVER_WRITTEN_TYPES = [
+  'campaign.content_pack_changed',
+  'campaign.created',
+  'campaign.settings_updated',
+  'campaign.status_changed',
+  'campaign.truth_set',
+  'character.asset_added',
+  'character.asset_removed',
+  'character.asset_upgraded',
+  'character.attributes_corrected',
+  'character.condition_removed',
+  'character.created',
+  'character.died',
+  'character.renamed',
+  'character.retired',
+  'character.sheet_rebound',
+  'character.xp_spent',
+  'chronicle.compacted',
+  'clock.advanced',
+  'clock.cancelled',
+  'clock.created',
+  'clock.filled',
+  'clock.resolved',
+  'entity.introduced',
+  'entity.mentioned',
+  'entity.status_changed',
+  'entity.updated',
+  'move.aborted',
+  'narration.gm_failed',
+  'narration.gm_message',
+  'narration.gm_proposal',
+  'narration.proposal_accepted',
+  'narration.proposal_rejected',
+  'narration.safety_flag',
+  'party.champion_locked',
+  'party.champion_unlocked',
+  'party.member_role_changed',
+  'roll.raw',
+  'scene.ended',
+  'scene.facts_updated',
+  'scene.started',
+  'session.closed',
+  'session.opened',
+  'system.correction',
+  'system.note',
+  'system.payload_upcast',
+  'system.reverted',
+  'system.rules_version_migrated',
+  'track.abandoned',
+  'track.rank_changed',
+] as const satisfies readonly GameEventType[];
+
+/** A type this file is allowed to hand-write. Anything else is `decide()`'s. */
+export type ServerWrittenType = (typeof SERVER_WRITTEN_TYPES)[number];
+
 /** One entry the server writes. No roll, no arithmetic, no gauge. */
-export interface AuthoredEvent<TType extends keyof GameEventPayloads = keyof GameEventPayloads> {
+export interface AuthoredEvent<TType extends ServerWrittenType = ServerWrittenType> {
   readonly type: TType;
   readonly payload: GameEventPayloads[TType];
   readonly actorKind: GameEvent['actorKind'];
@@ -111,7 +211,7 @@ export interface AuthoredEvent<TType extends keyof GameEventPayloads = keyof Gam
 }
 
 /** Sugar so the script reads as a list of facts rather than a list of casts. */
-export function authored<TType extends keyof GameEventPayloads>(
+export function authored<TType extends ServerWrittenType>(
   type: TType,
   payload: GameEventPayloads[TType],
   envelope: Omit<AuthoredEvent<TType>, 'type' | 'payload'>,
@@ -164,6 +264,8 @@ export class Director {
   #burnWindow: BurnWindow | null = null;
   readonly #options: DirectorOptions;
   readonly #groups = new Map<string, number[]>();
+  readonly #played = new Set<GameEventType>();
+  readonly #written = new Set<GameEventType>();
 
   constructor(options: DirectorOptions) {
     this.#options = options;
@@ -177,6 +279,22 @@ export class Director {
 
   get now(): number {
     return this.#now;
+  }
+
+  /**
+   * The two halves of the partition, AS PLAYED — not as declared.
+   *
+   * `seed-deterministic.test.ts` unites them and compares the result to
+   * `GAME_EVENT_TYPES`. Reading them off the run rather than off a list is what
+   * makes emptying `SERVER_WRITTEN_TYPES` fail something: an unused member of
+   * the tuple never shows up here.
+   */
+  get playedTypes(): readonly GameEventType[] {
+    return [...this.#played].sort();
+  }
+
+  get writtenTypes(): readonly GameEventType[] {
+    return [...this.#written].sort();
   }
 
   /** The roll a `momentum.burn` may still revise, as the journal leaves it. */
@@ -255,6 +373,7 @@ export class Director {
     );
     this.#apply(decision.value.events);
     this.#groups.set(correlationId, [...written.map((event) => event.seq)]);
+    for (const event of decision.value.events) this.#played.add(event.type);
     this.#rememberBurnWindow(decision.value.events);
     this.#now += this.#options.step;
     return { events: written, correlationId };
@@ -276,8 +395,53 @@ export class Director {
     );
     this.#apply(built);
     this.#groups.set(correlationId, [...written.map((event) => event.seq)]);
+    for (const event of events) this.#written.add(event.type);
     this.#now += this.#options.step;
     return { events: written, correlationId };
+  }
+
+  /**
+   * A clock advance whose THREE NUMBERS come from the reduced state.
+   *
+   * WHY THIS EXISTS. `clock.advanced` is one of the four types the shipped
+   * content cannot reach through `decide()`, so the server writes it — and for
+   * three releases it wrote `{ delta, from, to }` typed out in `script.ts`.
+   * Measured in recette: replacing `{ delta: 3, from: 3, to: 6 }` with
+   * `{ delta: 3, from: 1, to: 99 }` on a SIX-segment clock left all 17 tests,
+   * `db:seed` and `db:check` green, and the « Pourquoi ? » proof of that turn
+   * would have told a player the clock went from 1 to 99. Arithmetic in the
+   * seed is arithmetic nobody checks.
+   *
+   * Here `from` is the clock's filled count as the reducer left it and `to` is
+   * `min(from + delta, segments)` — the same ceiling `reduce.ts` applies. The
+   * script chooses the clock and the size of the push, and nothing else.
+   */
+  clockAdvance(
+    clockId: ClockId,
+    delta: number,
+    cause: GameEventPayloads['clock.advanced']['cause'],
+  ): AuthoredEvent {
+    if (!Number.isInteger(delta) || delta < CLOCK_ADVANCE_MIN || delta > CLOCK_ADVANCE_MAX) {
+      throw new DemoScriptInconsistent(
+        `avance d'horloge de ${String(delta)} segment(s), hors de ` +
+          `${String(CLOCK_ADVANCE_MIN)}..${String(CLOCK_ADVANCE_MAX)}`,
+      );
+    }
+    const clock: ClockState | undefined = this.#state.clocks[clockId];
+    if (clock === undefined) {
+      throw new DemoScriptInconsistent(`horloge ${clockId} inconnue de l'état`);
+    }
+    return authored(
+      'clock.advanced',
+      {
+        clockId,
+        delta,
+        from: clock.filled,
+        to: Math.min(clock.filled + delta, clock.segments),
+        cause,
+      },
+      { actorKind: 'gm_ai' },
+    );
   }
 
   /**

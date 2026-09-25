@@ -15,6 +15,23 @@
  * large enough to reach the cap, a momentum worth burning, a forged sheet that
  * came back with a negative momentum) and then takes what comes.
  *
+ * ── THE ONE VOW THAT IS ACCOMPLISHED, AND WHY IT IS NOT A CHEAT ──────────
+ * 03-donnees.md section 7.1 asks for « 1 accompli (dangereux) », and the first
+ * release of this seed had NOTHING succeed in the whole arc: five vows ending
+ * failed, open, forsaken, abandoned, open. That left the `fulfilled` branch of
+ * `track.resolved` — and the XP-by-rank that goes with it — unexercised by any
+ * realistic data, in the fixture the golden corpora, the eval harness and the
+ * end-to-end run all read from. It also made a demo campaign in which nobody
+ * ever succeeds at anything.
+ *
+ * What is scripted is the SCORE and nothing else: Braum marks three milestones
+ * on a `dangereux` vow, which is 24 ticks, which the engine reads as six
+ * complete boxes. The two challenge dice are drawn by `createCampaignRng` on
+ * the campaign seed, and `fulfill-your-vow` fulfils on a weak hit as well as on
+ * a strong one. They came up 8 and 5, so the vow closes on a `partielle`: it is
+ * done, and it costs. Had they come up higher it would have failed, and the
+ * seed would say so.
+ *
  * ── THE FORGED SHEET THAT CAME BACK WRONG, AND WHY IT IS IN THE DEMO ─────
  * Udyr is created with a NEGATIVE momentum. That is not a flourish: negative
  * momentum is the only state in which the rules can cancel an action die
@@ -35,6 +52,10 @@
  * every `xp` in the bundle is positive. All four are written here the way the
  * server writes them — a validated storyteller proposal, or a player action —
  * and all four are reported with the task.
+ *
+ * `clock.advanced` is the one of the four that carries ARITHMETIC, so its three
+ * numbers are not written here: `Director.clockAdvance` reads `from` off the
+ * reduced state and derives `to`. This file says which clock and how hard.
  */
 
 import { DEMO_CHARACTERS, DEMO_ENTITIES, DEMO_TRUTHS, FORGED_SHEETS } from './cast.js';
@@ -790,13 +811,9 @@ function sceneThree(stage: DemoStage, vows: Record<string, TrackId>, clockId: Cl
 
   // The clock the storyteller proposed, advanced by the server. No move in
   // `content/` carries a `clock_advance`, so this is the proposal circuit.
-  director.write([
-    authored(
-      'clock.advanced',
-      { clockId, delta: 3, from: 0, to: 3, cause: 'gm:proposal' },
-      { actorKind: 'gm_ai' },
-    ),
-  ]);
+  // THE THREE NUMBERS ARE NOT WRITTEN HERE: `clockAdvance` reads `from` off the
+  // reduced state and derives `to`. The script says which clock and how hard.
+  director.write([director.clockAdvance(clockId, 3, 'gm:proposal')]);
 
   director.play(
     characterOf(stage, 'braum'),
@@ -1134,12 +1151,17 @@ function sceneFour(stage: DemoStage, vows: Record<string, TrackId>): SceneId {
     ),
   ]);
 
-  // ── the vows close, one way or another ─────────────────────────────────
-  director.play(
-    characterOf(stage, 'braum'),
-    { type: 'move.fulfill_your_vow', trackId: vowIn(vows, 'braum') },
-    'Braum tient son serment',
-  );
+  // ── the vows move, one way or another ──────────────────────────────────
+  // Braum does not claim the end of his vow here: the cart is through the
+  // Porte Basse, which is two milestones at `dangereux`, and the claim waits
+  // for the second veillée. What the dice do with it is `sessionTwoPlay`'s.
+  for (const step of ['le chariot franchit la Porte Basse', 'le chariot redescend sans verser']) {
+    director.play(
+      characterOf(stage, 'braum'),
+      { type: 'move.reach_a_milestone', trackId: vowIn(vows, 'braum') },
+      `Braum marque un jalon : ${step}`,
+    );
+  }
   director.play(
     characterOf(stage, 'sejuani'),
     {
@@ -1206,24 +1228,12 @@ function restOfSessionOne(
 
   // The two clocks end the session: the public one is resolved, the hidden one
   // fills and is then cancelled when the thread it carried turns out elsewhere.
-  director.write([
-    authored(
-      'clock.advanced',
-      { clockId: second.publicClock, delta: 3, from: 3, to: 6, cause: 'gm:proposal' },
-      { actorKind: 'gm_ai' },
-    ),
-  ]);
+  director.write([director.clockAdvance(second.publicClock, 3, 'gm:proposal')]);
   // The hidden clock got close enough to matter before the thread it carried
   // turned out to lead elsewhere. It is cancelled at three of eight, not at
   // zero: an empty clock proves nothing about the projection. Three is also
   // the ceiling a single proposed advance may carry (ARCHITECTURE.md 4.4).
-  director.write([
-    authored(
-      'clock.advanced',
-      { clockId: second.hiddenClock, delta: 3, from: 0, to: 3, cause: 'gm:proposal' },
-      { actorKind: 'gm_ai' },
-    ),
-  ]);
+  director.write([director.clockAdvance(second.hiddenClock, 3, 'gm:proposal')]);
 
   director.write([
     authored(
@@ -1616,15 +1626,30 @@ function sessionTwoPlay(
     }),
   ]);
 
-  for (const note of ['le nom du forgeron', 'la marque sur le manche']) {
-    director.play(
-      characterOf(stage, 'ashe'),
-      { type: 'move.reach_a_milestone', trackId: vowIn(vows, 'ashe') },
-      `Ashe marque un jalon : ${note}`,
-    );
-  }
+  // ── the one vow that is CLAIMED, and the dice that answer ──────────────
+  // §7.1 asks for « 1 accompli (dangereux) », and a demo campaign where nobody
+  // ever succeeds at anything is a demo campaign nobody wants to play. What is
+  // arranged here is the CONDITION — three milestones at `dangereux`, so six
+  // complete boxes — and nothing else: the two challenge dice are drawn by the
+  // engine on the campaign generator, and `fulfill-your-vow` fulfils on a weak
+  // hit as well as on a strong one. Had they come up higher, the vow would
+  // have failed and this comment would be wrong; the SCORE is scripted, the
+  // OUTCOME is not.
+  director.play(
+    characterOf(stage, 'braum'),
+    {
+      type: 'speech.say',
+      channel: 'ic',
+      text: '« Le chariot est passé, le grain est au grenier. Je réclame la fin de mon serment. »',
+    },
+    'Braum réclame la fin devant la table',
+  );
 
-  compactChronicle(stage, 3);
+  director.play(
+    characterOf(stage, 'braum'),
+    { type: 'move.fulfill_your_vow', trackId: vowIn(vows, 'braum') },
+    'Braum réclame la fin de son serment',
+  );
 
   director.write([
     gm(
@@ -1634,6 +1659,8 @@ function sessionTwoPlay(
       [director.state.seq],
     ),
   ]);
+
+  compactChronicle(stage, 3);
 }
 
 /**
