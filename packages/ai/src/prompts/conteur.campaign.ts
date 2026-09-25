@@ -109,6 +109,10 @@ export function buildCampaignBlock(campaign: CampaignBlockInput): string {
     '',
     ...list(npcs),
     '',
-    'Pour tout personnage nommé qui ne figure pas dans cette liste, passe par propose_npc_introduce.',
+    // ADR 0011, prose-only mode: there is no `propose_*` tool to send them
+    // through any more, so the line that named one became an instruction to do
+    // something impossible — the shape of prompt a small model answers with a
+    // hallucinated tool call. The rule it carried is unchanged and now closed.
+    'Aucun autre personnage nommé n’entre en scène : ceux qui ne figurent pas dans cette liste n’existent pas encore.',
   ].join('\n');
 }
