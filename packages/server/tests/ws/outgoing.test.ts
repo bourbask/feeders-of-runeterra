@@ -18,9 +18,16 @@
 
 import { Buffer } from 'node:buffer';
 
-import { PROTOCOL_VERSION, WS_MAX_OUTGOING_FRAME_BYTES } from '@for/contracts';
+import {
+  PROTOCOL_VERSION,
+  WS_MAX_OUTGOING_FRAME_BYTES,
+  zId,
+  zMessageId,
+  zPlayerId,
+} from '@for/contracts';
 import { describe, expect, it } from 'vitest';
 
+import type { FakeSocket } from './support/harness.test.js';
 import {
   ALICE,
   anEvent,
@@ -30,6 +37,18 @@ import {
   RecordingLogger,
   Table,
 } from './support/harness.test.js';
+
+/** Une trame telle qu'elle part, ENVELOPPE COMPRISE. */
+interface Stamped {
+  readonly t: string;
+  readonly id: string;
+  readonly ts: number;
+  readonly p: Record<string, unknown>;
+}
+
+function stamped(socket: FakeSocket): Stamped[] {
+  return socket.sent.map((line) => JSON.parse(line) as Stamped);
+}
 
 /** Le squelette `{ v, t, id, ts, p }` que porte toute trame `s2c.*`. */
 function envelope(type: string, payload: unknown): unknown {
@@ -190,5 +209,72 @@ describe('le repli de file', () => {
     flood(1_000);
 
     expect(alice.socket.of('s2c.resync_required')).toHaveLength(1);
+  });
+});
+
+describe("les trois identifiants d'enveloppe, sur une trame réelle", () => {
+  /**
+   * L'EN-TÊTE DE `connection.ts` CONSACRE UN PARAGRAPHE À LA DIVERGENCE :
+   * « NOT `AppDeps.ids`, AND THAT IS A DIVERGENCE WORTH NAMING ». `zMessageId`
+   * est `z.uuid()` tandis que tout identifiant de serveur est un ULID, donc
+   * l'`id` d'enveloppe et le `requestId` d'une erreur viennent de DEUX SOURCES
+   * DIFFÉRENTES. `handshake.test.ts` mesure la fabrique `randomFrameIds` ; ici
+   * on mesure que `send` confie le bon champ à la bonne source, sur les octets
+   * réellement écrits — c'est le seul endroit où une inversion se voit.
+   */
+  it('un `id` par trame, distinct, et de la forme que `zMessageId` exige', async () => {
+    const table = new Table();
+    const alice = await table.join(ALICE);
+
+    const ids = stamped(alice.socket).map((frame) => frame.id);
+
+    // Trois trames d'accueil, trois identifiants : un `id` figé à une
+    // constante passerait toute analyse de schéma et se verrait ici seulement.
+    expect(ids).toHaveLength(3);
+    expect(new Set(ids).size).toBe(3);
+    for (const id of ids) {
+      expect(zMessageId.safeParse(id).success).toBe(true);
+      expect(zPlayerId.safeParse(id).success).toBe(false);
+    }
+  });
+
+  it("le `ts` suit l'horloge injectée, à deux instants et pas un seul", async () => {
+    const table = new Table();
+    const born = table.clock.now();
+    const alice = await table.join(ALICE);
+
+    const later = table.clock.advance(4_321);
+    await alice.connection.receive(c2s('c2s.typing', { typing: true }, table.nextFrameId()));
+
+    const frames = stamped(alice.socket);
+    // DEUX INSTANTS : à un seul, un `ts` figé à n'importe quel entier — ou une
+    // horloge ambiante à la place de celle qu'on injecte — resterait vert.
+    expect(later).not.toBe(born);
+    expect(frames.slice(0, 3).map((frame) => frame.ts)).toStrictEqual([born, born, born]);
+    expect(frames.at(-1)?.t).toBe('s2c.presence');
+    expect(frames.at(-1)?.ts).toBe(later);
+  });
+
+  it("le `requestId` d'une erreur est un ULID, jamais l'`id` de la trame qui le porte", async () => {
+    const table = new Table();
+    const alice = await table.join(ALICE);
+    alice.socket.clear();
+
+    await alice.connection.receive('{ pas du json');
+    await alice.connection.receive('{ toujours pas');
+
+    const errors = stamped(alice.socket);
+    expect(errors.map((frame) => frame.t)).toStrictEqual(['s2c.error', 's2c.error']);
+
+    const requestIds = errors.map((frame) => frame.p['requestId'] as string);
+    // `zAppErrorPayload.requestId` est un `z.string().min(1)` : le schéma
+    // accepterait une constante. Les deux vocabulaires, eux, ne se confondent
+    // pas — et c'est ce qui se mesure ici.
+    expect(new Set(requestIds).size).toBe(2);
+    for (const requestId of requestIds) {
+      expect(zId.safeParse(requestId).success).toBe(true);
+      expect(zMessageId.safeParse(requestId).success).toBe(false);
+    }
+    expect(requestIds[0]).not.toBe(errors[0]?.id);
   });
 });

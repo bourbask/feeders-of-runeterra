@@ -120,6 +120,55 @@ describe('la limitation de débit', () => {
     expect(table.service.submitCalls).toBe(6);
   });
 
+  it('la fenêtre est prise EXACTEMENT à sa borne : à la milliseconde près, elle a glissé', async () => {
+    // La largeur vient du protocole gelé, donc elle se lit dans
+    // `@for/contracts` et ne s'écrit pas ici. Ce qui se mesure, c'est OÙ la
+    // fenêtre s'ouvre : un cran avant, le sixième est encore refusé ; à la
+    // borne, il passe. Sans les deux sens, `now - at < windowMs` et
+    // `now - at <= windowMs` sont le même test.
+    const windowMs = WS_RATE_LIMITS['c2s.intent'].windowMs;
+
+    const tooEarly = new Table();
+    const early = await tooEarly.join(ALICE);
+    for (let i = 0; i < 6; i += 1) {
+      await early.connection.receive(c2s('c2s.intent', { intent: A_MOVE }, tooEarly.nextFrameId()));
+    }
+    tooEarly.clock.advance(windowMs - 1);
+    await early.connection.receive(c2s('c2s.intent', { intent: A_MOVE }, tooEarly.nextFrameId()));
+    expect(tooEarly.service.submitCalls).toBe(5);
+
+    const atTheEdge = new Table();
+    const edge = await atTheEdge.join(ALICE);
+    for (let i = 0; i < 6; i += 1) {
+      await edge.connection.receive(c2s('c2s.intent', { intent: A_MOVE }, atTheEdge.nextFrameId()));
+    }
+    atTheEdge.clock.advance(windowMs);
+    await edge.connection.receive(c2s('c2s.intent', { intent: A_MOVE }, atTheEdge.nextFrameId()));
+    expect(atTheEdge.service.submitCalls).toBe(6);
+  });
+
+  it("le refus de débit porte l'`intentId` de la trame refusée, et une erreur sans trame n'en porte pas", async () => {
+    const table = new Table();
+    const alice = await table.join(ALICE);
+    alice.socket.clear();
+
+    for (let i = 0; i < 5; i += 1) {
+      await alice.connection.receive(c2s('c2s.intent', { intent: A_MOVE }, table.nextFrameId()));
+    }
+    const refused = table.nextFrameId();
+    await alice.connection.receive(c2s('c2s.intent', { intent: A_MOVE }, refused));
+
+    // Sans ce champ, le client ne peut rattacher le `rate_limited` à aucune de
+    // ses trames en vol : il ne sait pas laquelle rejouer.
+    expect(alice.socket.of('s2c.error')[0]?.p['intentId']).toBe(refused);
+
+    // LA DIRECTION BASSE : une erreur qui ne répond à aucune trame — le JSON
+    // n'a même pas été lu — n'invente pas d'identifiant.
+    alice.socket.clear();
+    await alice.connection.receive('{ pas du json');
+    expect(alice.socket.of('s2c.error')[0]?.p['intentId']).toBeUndefined();
+  });
+
   it('`c2s.typing` au-delà de sa cadence est ignoré, pas refusé, et ne compte pas de faute', async () => {
     const table = new Table();
     const alice = await table.join(ALICE);
@@ -256,16 +305,49 @@ describe('la taille des trames', () => {
 });
 
 describe('le battement de cœur', () => {
-  it('envoie un `s2c.ping` toutes les 25 s', async () => {
+  it('envoie un `s2c.ping` toutes les 25 s — une CADENCE, donc quatre tics', async () => {
     const table = new Table();
     const alice = await table.join(ALICE);
     alice.socket.clear();
 
+    // UN SEUL BATTEMENT NE MESURE PAS UNE CADENCE. Avec deux tics seulement,
+    // un serveur qui ne réarmerait jamais son compteur — donc un `s2c.ping` à
+    // CHAQUE tic au lieu d'un toutes les 25 s — passerait sans broncher. Il
+    // faut le tic d'après, celui qui doit rester muet, puis le suivant.
     table.hub.tick(table.clock.advance(WS_HEARTBEAT_INTERVAL_MS - 1));
     expect(alice.socket.of('s2c.ping')).toHaveLength(0);
 
     table.hub.tick(table.clock.advance(1));
     expect(alice.socket.of('s2c.ping')).toHaveLength(1);
+
+    // Une milliseconde plus tard : le compteur vient d'être réarmé, silence.
+    table.hub.tick(table.clock.advance(1));
+    expect(alice.socket.of('s2c.ping')).toHaveLength(1);
+
+    // Et vingt-cinq secondes après le premier battement, le second.
+    table.hub.tick(table.clock.advance(WS_HEARTBEAT_INTERVAL_MS - 1));
+    expect(alice.socket.of('s2c.ping')).toHaveLength(2);
+  });
+
+  it("au battement qui ferme, RIEN d'autre ne part : le délai est vérifié AVANT le ping", async () => {
+    const table = new Table();
+    const alice = await table.join(ALICE);
+    alice.socket.clear();
+
+    // Un seul tic, et il est dû des deux côtés : 60 s sans `c2s.pong` (donc
+    // fermeture) et 60 s sans ping (donc battement). L'ordre tranche, et il
+    // est écrit dans `connection.ts` : « Timeout is checked BEFORE the ping :
+    // a socket that has been silent for a minute is closed, not pinged
+    // again ». Intervertis les deux blocs et un `s2c.ping` part vers une
+    // socket qu'on ferme dans la ligne suivante.
+    table.hub.tick(table.clock.advance(WS_HEARTBEAT_TIMEOUT_MS));
+
+    // LA LISTE EXACTE DES TRAMES, pas « pas de ping » : c'est la seule forme
+    // qui distingue « rien n'est parti » de « autre chose est parti ».
+    expect(alice.socket.types()).toStrictEqual([]);
+    expect(alice.socket.closes.map((close) => close.code)).toStrictEqual([
+      WS_CLOSE_HEARTBEAT_TIMEOUT,
+    ]);
   });
 
   it('ferme la connexion sans `c2s.pong` pendant 60 s, et pas avant', async () => {

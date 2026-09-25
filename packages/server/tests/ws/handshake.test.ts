@@ -15,16 +15,25 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { randomFrameIds } from '../../src/ws/index.js';
 
+import type { FakeSocket } from './support/harness.test.js';
 import {
   ALICE,
   ALICE_CHARACTER,
   BOB,
   CAMPAIGN,
+  OTHER_CAMPAIGN,
   Table,
   aCharacter,
   anEvent,
   c2s,
 } from './support/harness.test.js';
+
+/** Les vérités que l'instantané écrit sur le fil, dans l'ordre exact. */
+function truthsOnTheWire(socket: FakeSocket): string[] {
+  const state = socket.of('s2c.snapshot').at(-1)?.p['state'] as
+    { truths: { truthId: string }[] } | undefined;
+  return (state?.truths ?? []).map((truth) => truth.truthId);
+}
 
 describe('la poignée de main', () => {
   let table: Table;
@@ -71,6 +80,39 @@ describe('la poignée de main', () => {
     table.access.verdict = 'ok';
     const nameless = await table.connect(ALICE, null);
     expect(nameless.socket.closes.map((close) => close.code)).toStrictEqual([
+      WS_CLOSE_CODES.campaign_not_found,
+    ]);
+  });
+
+  it("soumet à l'autorisation la campagne de la requête ET le joueur de la session", async () => {
+    // DEUX ACTEURS, DEUX TABLES. À un seul couple, un serveur qui poserait
+    // toujours la même question — ou la question de quelqu'un d'autre —
+    // passerait : c'est l'invariant 3 à la porte d'entrée, et la seule chose
+    // qui empêche un joueur d'être autorisé sur la table d'un autre.
+    await table.connect(ALICE, CAMPAIGN);
+    await table.connect(BOB, OTHER_CAMPAIGN);
+
+    expect(table.access.asked).toStrictEqual([
+      { campaignId: CAMPAIGN, playerId: ALICE },
+      { campaignId: OTHER_CAMPAIGN, playerId: BOB },
+    ]);
+  });
+
+  it("ne consulte pas l'autorisation quand l'identité manque : 4002 d'abord", async () => {
+    await table.connect(null, CAMPAIGN);
+
+    // L'identité passe avant la ressource, donc la couche d'autorisation ne
+    // doit pas même apprendre qu'une campagne a été nommée.
+    expect(table.access.asked).toStrictEqual([]);
+  });
+
+  it('ferme en 4004 une campagne nommée par une chaîne vide', async () => {
+    // `?campaignId=` présent mais vide n'est pas « une campagne » : sans ce
+    // contrôle, `access.check('', …)` déciderait à la place du protocole.
+    const { connection, socket } = await table.connect(ALICE, '' as CampaignId);
+
+    expect(connection).toBeNull();
+    expect(socket.closes.map((close) => close.code)).toStrictEqual([
       WS_CLOSE_CODES.campaign_not_found,
     ]);
   });
@@ -265,15 +307,92 @@ describe('`c2s.hello`', () => {
     ]);
   });
 
-  it('diffuse la présence à toute la table quand quelqu’un arrive', async () => {
+  it('nomme la socket dans `s2c.welcome` : son joueur et sa campagne', async () => {
+    const table = new Table();
+    // DEUX ACTEURS, parce qu'à un seul joueur un serveur qui rendrait toujours
+    // le premier venu — ou la campagne à la place du joueur — passerait.
+    const alice = await table.join(ALICE);
+    const bob = await table.join(BOB);
+
+    expect(alice.socket.of('s2c.welcome')[0]?.p['playerId']).toBe(ALICE);
+    expect(bob.socket.of('s2c.welcome')[0]?.p['playerId']).toBe(BOB);
+    expect(alice.socket.of('s2c.welcome')[0]?.p['campaignId']).toBe(CAMPAIGN);
+  });
+
+  it('diffuse la présence à toute la table quand quelqu’un arrive — Y COMPRIS au nouvel arrivant', async () => {
     const table = new Table();
     const alice = await table.join(ALICE);
     alice.socket.clear();
 
-    await table.join(BOB);
+    const bob = await table.join(BOB);
 
-    const presence = alice.socket.of('s2c.presence').at(-1);
-    const members = presence?.p['members'] as { playerId: string }[];
-    expect([...members].map((member) => member.playerId).sort()).toStrictEqual([ALICE, BOB].sort());
+    const both = [ALICE, BOB].sort();
+    const namesIn = (socket: FakeSocket): string[] =>
+      (socket.of('s2c.presence').at(-1)?.p['members'] as { playerId: string }[])
+        .map((member) => member.playerId)
+        .sort();
+
+    // LA PREMIÈRE SOCKET DE LA SALLE NE SUFFIT PAS. Alice est la première
+    // entrée du `Set` : une diffusion qui s'arrêterait à elle laisserait Bob
+    // sans aucune `s2c.presence`, et c'est le critère mot pour mot — « puis
+    // `s2c.presence` » — qui ne serait pas tenu pour celui qui vient d'arriver.
+    expect(namesIn(alice.socket)).toStrictEqual(both);
+    expect(bob.socket.of('s2c.presence')).toHaveLength(1);
+    expect(namesIn(bob.socket)).toStrictEqual(both);
+  });
+});
+
+describe("le destinataire des lectures — la moitié LECTURE de l'ADR 0008", () => {
+  /**
+   * `src/game/types.ts` l'écrit mot pour mot : « `getSnapshot` et
+   * `getTurnProof` prennent tous deux un `viewerId`, parce que depuis
+   * l'ADR 0008 “ce qui s'est passé” n'a pas de réponse unique : rejouer du
+   * point de vue d'un joueur doit redonner exactement ce que ce joueur a vu ».
+   *
+   * Le serveur ne peut tenir cette identité que d'un endroit : LA SOCKET. Ni
+   * `c2s.hello` ni `c2s.resume` ne portent de joueur — et c'est l'invariant 3.
+   * DEUX ACTEURS À CHAQUE FOIS : à un seul joueur, un serveur qui passerait
+   * n'importe quelle constante rendrait le même instantané.
+   */
+  function twoOaths(table: Table): void {
+    table.service.truthsByViewer.set(ALICE, [
+      { truthId: 'le-serment-d-alice', optionId: 'tenu', customText: null },
+    ]);
+    table.service.truthsByViewer.set(BOB, [
+      { truthId: 'le-serment-de-bob', optionId: 'rompu', customText: null },
+    ]);
+  }
+
+  it("l'accueil sert à chacun l'instantané de SON joueur", async () => {
+    const table = new Table();
+    twoOaths(table);
+
+    const alice = await table.join(ALICE, null);
+    const bob = await table.join(BOB, null);
+
+    expect(table.service.snapshotViewers).toStrictEqual([ALICE, BOB]);
+    expect(truthsOnTheWire(alice.socket)).toStrictEqual(['le-serment-d-alice']);
+    expect(truthsOnTheWire(bob.socket)).toStrictEqual(['le-serment-de-bob']);
+  });
+
+  it('la reprise aussi, sur le repli en instantané', async () => {
+    const table = new Table();
+    twoOaths(table);
+    const alice = await table.join(ALICE, null);
+    const bob = await table.join(BOB, null);
+    alice.socket.clear();
+    bob.socket.clear();
+    table.service.snapshotViewers.length = 0;
+
+    // `9 999` force la branche instantané : le curseur est en avance.
+    const ahead = c2s('c2s.resume', { sinceDeliverySeq: 9_999 }, table.nextFrameId());
+    await alice.connection.receive(ahead);
+    await bob.connection.receive(
+      c2s('c2s.resume', { sinceDeliverySeq: 9_999 }, table.nextFrameId()),
+    );
+
+    expect(table.service.snapshotViewers).toStrictEqual([ALICE, BOB]);
+    expect(truthsOnTheWire(alice.socket)).toStrictEqual(['le-serment-d-alice']);
+    expect(truthsOnTheWire(bob.socket)).toStrictEqual(['le-serment-de-bob']);
   });
 });

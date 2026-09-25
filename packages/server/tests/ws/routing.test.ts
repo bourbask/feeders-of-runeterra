@@ -22,7 +22,7 @@ import type { Intent } from '@for/engine';
 import { describe, expect, it } from 'vitest';
 
 import { ROUTES } from '../../src/ws/handlers.js';
-import { ALICE, Table, c2s } from './support/harness.test.js';
+import { ALICE, BOB, CAMPAIGN, Table, c2s } from './support/harness.test.js';
 
 /** Le chiffre de la fiche, en toutes lettres. */
 const FRAME_COUNT = 8;
@@ -146,6 +146,106 @@ describe('le routage', () => {
   });
 });
 
+describe("ce que le serveur attribue à l'écriture (invariant 3)", () => {
+  /**
+   * ═══ LE SERVEUR EST L'AUTORITÉ : C'EST *LUI* QUI SIGNE L'ÉCRITURE ═════════
+   *
+   * `SubmitIntentInput` porte quatre champs, et trois d'entre eux ne viennent
+   * PAS du client :
+   *
+   *   - `campaignId` et `playerId` viennent de la SESSION DE LA SOCKET, jamais
+   *     de la trame — aucune des huit trames `c2s.*` ne porte de joueur, et
+   *     c'est l'invariant 3 lui-même : « le serveur attribue une écriture au
+   *     joueur authentifié de la socket, jamais le client » ;
+   *   - `intentId` vient de l'`id` de la trame reçue. `src/game/types.ts`
+   *     l'écrit : « Idempotence key, minted by the client. Replaying it must
+   *     not reroll. » Un serveur qui la remplacerait ferait REJOUER TOUS LES
+   *     TOURS — les dés seraient retirés à chaque reprise.
+   *
+   * DEUX APPELANTS POUR UN SEUL `submit` : `c2s.intent` et `c2s.speak`. Et
+   * DEUX ACTEURS : à un seul joueur, une constante passerait.
+   */
+  it("signe l'écriture avec la campagne, le joueur de la socket et l'`id` de la trame — `c2s.intent`", async () => {
+    const table = new Table();
+    const alice = await table.join(ALICE);
+    const bob = await table.join(BOB);
+
+    const aliceFrame = table.nextFrameId();
+    const bobFrame = table.nextFrameId();
+    await alice.connection.receive(
+      c2s('c2s.intent', { intent: { type: 'play_session.begin' } }, aliceFrame),
+    );
+    await bob.connection.receive(
+      c2s('c2s.intent', { intent: { type: 'play_session.begin' } }, bobFrame),
+    );
+
+    expect(table.service.submits).toStrictEqual([
+      {
+        campaignId: CAMPAIGN,
+        playerId: ALICE,
+        intentId: aliceFrame,
+        intent: { type: 'play_session.begin' },
+      },
+      {
+        campaignId: CAMPAIGN,
+        playerId: BOB,
+        intentId: bobFrame,
+        intent: { type: 'play_session.begin' },
+      },
+    ]);
+  });
+
+  it('et la signe de la même façon quand la parole passe par `c2s.speak`', async () => {
+    const table = new Table();
+    const alice = await table.join(ALICE);
+    const bob = await table.join(BOB);
+
+    const aliceFrame = table.nextFrameId();
+    const bobFrame = table.nextFrameId();
+    await alice.connection.receive(
+      c2s('c2s.speak', { channel: 'ic', text: 'Le vent tombe.' }, aliceFrame),
+    );
+    await bob.connection.receive(
+      c2s('c2s.speak', { channel: 'ooc', text: 'Une pause ?' }, bobFrame),
+    );
+
+    expect(table.service.submits).toStrictEqual([
+      {
+        campaignId: CAMPAIGN,
+        playerId: ALICE,
+        intentId: aliceFrame,
+        intent: { type: 'speech.say', channel: 'ic', text: 'Le vent tombe.' },
+      },
+      {
+        campaignId: CAMPAIGN,
+        playerId: BOB,
+        intentId: bobFrame,
+        intent: { type: 'speech.say', channel: 'ooc', text: 'Une pause ?' },
+      },
+    ]);
+  });
+
+  it("la clé d'idempotence change à chaque trame : deux gestes ne sont jamais le même tour", async () => {
+    const table = new Table();
+    const alice = await table.join(ALICE);
+
+    const first = table.nextFrameId();
+    const second = table.nextFrameId();
+    await alice.connection.receive(
+      c2s('c2s.intent', { intent: { type: 'play_session.begin' } }, first),
+    );
+    await alice.connection.receive(
+      c2s('c2s.intent', { intent: { type: 'play_session.begin' } }, second),
+    );
+
+    // Sans cette ligne, un serveur qui figerait `intentId` à une constante
+    // rendrait les deux tours identiques aux yeux du service : le second
+    // serait pris pour une reprise du premier, et jamais joué.
+    expect(first).not.toBe(second);
+    expect(table.service.submits.map((input) => input.intentId)).toStrictEqual([first, second]);
+  });
+});
+
 describe('`c2s.resume_narration`, la couture de M0-29', () => {
   it("répond une erreur nommée tant que le tampon de narration n'est pas branché", async () => {
     const table = new Table();
@@ -161,9 +261,11 @@ describe('`c2s.resume_narration`, la couture de M0-29', () => {
 
   it('rejoue le tampon quand il existe, et ne relance jamais une génération', async () => {
     let calls = 0;
+    const asked: unknown[] = [];
     const table = new Table({
       replay: (input) => {
         calls += 1;
+        asked.push(input);
         return Promise.resolve({
           narrationId: input.narrationId,
           chunk: input.lastChunk + 3,
@@ -185,6 +287,15 @@ describe('`c2s.resume_narration`, la couture de M0-29', () => {
     expect(calls).toBe(1);
     // Rien n'a été soumis au service : une reprise est une lecture.
     expect(table.service.submitCalls).toBe(0);
+
+    // LA QUATRIÈME LECTURE QUI PORTE L'IDENTITÉ DE LA SOCKET. Le tampon de
+    // narration est adressé comme le reste : la campagne et le joueur viennent
+    // de la session, jamais de la trame, qui ne porte que `narrationId` et
+    // `lastChunk`. Sans cette ligne, un serveur qui rejouerait à Alice le
+    // tampon de Bob passerait — c'est le même défaut que sur `getSnapshot`.
+    expect(asked).toStrictEqual([
+      { campaignId: CAMPAIGN, playerId: ALICE, narrationId: 'n-1', lastChunk: 2 },
+    ]);
   });
 
   it("annonce `aborted` quand le tampon n'a plus rien", async () => {

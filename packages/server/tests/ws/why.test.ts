@@ -10,20 +10,29 @@
  * test allume `mutateOnProof` sur le faux service et exige que le compteur
  * bouge : sans lui, « le journal n'a pas grandi » pourrait être vrai parce que
  * rien ne fait jamais grandir ce journal, et l'assertion serait vide.
+ *
+ * LA PREUVE EST CLASSÉE PAR DESTINATAIRE, et c'est le contrat de
+ * `src/game/types.ts` : « `getSnapshot` et `getTurnProof` prennent tous deux
+ * un `viewerId`, parce que depuis l'ADR 0008 “ce qui s'est passé” n'a pas de
+ * réponse unique ». `proofKey` porte donc les trois : campagne, tour,
+ * DESTINATAIRE. Passer autre chose que le joueur de la socket ne rend plus
+ * rien, et toute cette suite tombe — pas seulement le test nommé ci-dessous.
  */
 
 import { APP_ERROR_CODES } from '@for/contracts';
-import type { CampaignId } from '@for/engine';
+import type { CampaignId, PlayerId } from '@for/engine';
 import { describe, expect, it } from 'vitest';
 
 import {
   ALICE,
+  BOB,
   CAMPAIGN,
   OTHER_CAMPAIGN,
   Table,
   aProof,
   aUuid,
   c2s,
+  proofKey,
 } from './support/harness.test.js';
 
 const TURN = aUuid(777);
@@ -34,7 +43,10 @@ const CALLS = 100;
 describe('`c2s.why`', () => {
   it('rend un `s2c.turn_proof` portant le même `correlationId`', async () => {
     const table = new Table();
-    table.service.proofs.set(`${CAMPAIGN}|${TURN}`, { proof: aProof(TURN), truncated: false });
+    table.service.proofs.set(proofKey(CAMPAIGN, TURN, ALICE), {
+      proof: aProof(TURN),
+      truncated: false,
+    });
 
     const alice = await table.join(ALICE);
     alice.socket.clear();
@@ -48,7 +60,10 @@ describe('`c2s.why`', () => {
 
   it('reporte la troncature telle que le service la rend, sans la décider', async () => {
     const table = new Table();
-    table.service.proofs.set(`${CAMPAIGN}|${TURN}`, { proof: aProof(TURN), truncated: true });
+    table.service.proofs.set(proofKey(CAMPAIGN, TURN, ALICE), {
+      proof: aProof(TURN),
+      truncated: true,
+    });
 
     const alice = await table.join(ALICE);
     alice.socket.clear();
@@ -74,7 +89,7 @@ describe('`c2s.why`', () => {
   it("un `correlationId` d'une AUTRE campagne est traité comme inconnu, jamais servi", async () => {
     const table = new Table();
     // La preuve existe — mais dans une autre table.
-    table.service.proofs.set(`${OTHER_CAMPAIGN}|${TURN}`, {
+    table.service.proofs.set(proofKey(OTHER_CAMPAIGN, TURN, ALICE), {
       proof: aProof(TURN),
       truncated: false,
     });
@@ -93,9 +108,15 @@ describe('`c2s.why`', () => {
     const table = new Table();
     const seen: string[] = [];
     const original = table.service.getTurnProof.bind(table.service);
-    table.service.getTurnProof = (campaignId: CampaignId, correlationId: string) => {
+    // LE DOUBLE PREND LES TROIS PARAMÈTRES DU VRAI. Un espion à deux
+    // paramètres compilerait — et effacerait le destinataire pour ce test.
+    table.service.getTurnProof = (
+      campaignId: CampaignId,
+      correlationId: string,
+      viewerId: PlayerId,
+    ) => {
       seen.push(campaignId);
-      return original(campaignId, correlationId);
+      return original(campaignId, correlationId, viewerId);
     };
 
     const alice = await table.join(ALICE);
@@ -106,7 +127,10 @@ describe('`c2s.why`', () => {
 
   it(`ne mute rien après ${String(CALLS)} appels : ni le journal, ni une narration`, async () => {
     const table = new Table();
-    table.service.proofs.set(`${CAMPAIGN}|${TURN}`, { proof: aProof(TURN), truncated: false });
+    table.service.proofs.set(proofKey(CAMPAIGN, TURN, ALICE), {
+      proof: aProof(TURN),
+      truncated: false,
+    });
 
     const alice = await table.join(ALICE);
     const journalBefore = table.service.journal.length;
@@ -127,9 +151,41 @@ describe('`c2s.why`', () => {
     expect(alice.socket.of('s2c.turn_proof')).toHaveLength(CALLS);
   });
 
+  it('demande la preuve DU JOUEUR DE LA SOCKET, et sert la sienne, pas celle du voisin', async () => {
+    const table = new Table();
+    // Le MÊME tour, deux preuves : ADR 0008 — « ce qui s'est passé » n'a pas
+    // de réponse unique. Ce que le serveur sert à Alice doit être celle
+    // d'Alice, et le seul endroit d'où il peut tenir son identité est la
+    // socket : la trame `c2s.why` ne porte qu'un `correlationId`.
+    table.service.proofs.set(proofKey(CAMPAIGN, TURN, ALICE), {
+      proof: aProof(TURN),
+      truncated: false,
+    });
+    table.service.proofs.set(proofKey(CAMPAIGN, TURN, BOB), {
+      proof: aProof(TURN),
+      truncated: true,
+    });
+
+    const alice = await table.join(ALICE);
+    const bob = await table.join(BOB);
+    table.service.proofViewers.length = 0;
+
+    await alice.connection.receive(c2s('c2s.why', { correlationId: TURN }, table.nextFrameId()));
+    await bob.connection.receive(c2s('c2s.why', { correlationId: TURN }, table.nextFrameId()));
+
+    // Le destinataire passé au service, à deux acteurs et dans l'ordre exact.
+    expect(table.service.proofViewers).toStrictEqual([ALICE, BOB]);
+    // Et sur les octets : chacun a reçu SA preuve, distinguées par `truncated`.
+    expect(alice.socket.of('s2c.turn_proof').at(-1)?.p['truncated']).toBe(false);
+    expect(bob.socket.of('s2c.turn_proof').at(-1)?.p['truncated']).toBe(true);
+  });
+
   it('et le compteur mord : une lecture qui écrirait ferait tomber le test précédent', async () => {
     const table = new Table();
-    table.service.proofs.set(`${CAMPAIGN}|${TURN}`, { proof: aProof(TURN), truncated: false });
+    table.service.proofs.set(proofKey(CAMPAIGN, TURN, ALICE), {
+      proof: aProof(TURN),
+      truncated: false,
+    });
     table.service.mutateOnProof = true;
 
     const alice = await table.join(ALICE);

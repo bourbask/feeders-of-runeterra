@@ -21,6 +21,19 @@
  * and `narrationsStarted` are what the "`c2s.why` mutates nothing" criterion
  * reads; a fake that merely returned canned answers could not tell a read
  * from a write.
+ *
+ * AND IT KEEPS WHAT IT IS HANDED, WHICH COUNTING ALONE DOES NOT. An earlier
+ * version of this file declared `getSnapshot(campaignId)` and
+ * `getTurnProof(campaignId, correlationId)` — ONE PARAMETER FEWER THAN THE
+ * INTERFACE. TypeScript accepts that without a word, so `viewerId` did not
+ * exist in the fixture and no assertion could reach it: the READING half of
+ * ADR 0008 was guarded by nothing, and a server that served Alice Bob's
+ * snapshot passed the whole suite. Same for the write: `submitIntent` counted
+ * its calls and threw the input away, so neither the `playerId` the server
+ * attributes the write to (invariant 3) nor the idempotence key was measured
+ * anywhere. The fake now RECORDS every viewer, KEEPS every input, and ANSWERS
+ * PER VIEWER — and `FAKE_SERVICE_ARITIES` below makes a fake that loses a
+ * parameter again a compilation error rather than a silent hole.
  */
 
 import { setImmediate } from 'node:timers';
@@ -298,7 +311,11 @@ export const ALICE_CHARACTER = anId(20);
 
 // ───────────────────────────────────────────────────────────── the service
 
-const EMPTY_STATE = (campaignId: CampaignId, characters: TableStateDto['characters']) =>
+const EMPTY_STATE = (
+  campaignId: CampaignId,
+  characters: TableStateDto['characters'],
+  truths: TableStateDto['truths'] = [],
+) =>
   ({
     campaignId,
     seq: 0,
@@ -313,7 +330,7 @@ const EMPTY_STATE = (campaignId: CampaignId, characters: TableStateDto['characte
       allowForgedChampions: true,
       requireForgeReview: false,
     },
-    truths: [],
+    truths,
     characters,
     tracks: [],
     clocks: [],
@@ -324,14 +341,41 @@ const EMPTY_STATE = (campaignId: CampaignId, characters: TableStateDto['characte
   }) as unknown as TableStateDto;
 
 /**
+ * Where a proof is filed. THE VIEWER IS PART OF THE KEY, on purpose: since
+ * ADR 0008 « what happened » has no single answer, so a store keyed by
+ * campaign alone could not tell Alice's proof from Bob's — and no test could
+ * then catch a server that served the wrong one.
+ */
+export function proofKey(campaignId: string, correlationId: string, viewerId: string): string {
+  return `${campaignId}|${correlationId}|${viewerId}`;
+}
+
+/**
  * The service the hub routes to. It COUNTS, so that a read can be told from a
- * write by something other than good intentions.
+ * write by something other than good intentions — and it REMEMBERS WHO ASKED,
+ * so that the answer can be told from another player's answer.
  */
 export class FakeCampaignService implements CampaignService {
   readonly journal: PersistedEvent[] = [];
 
-  /** Keyed `campaignId|correlationId`: a proof belongs to exactly one table. */
+  /** Keyed by `proofKey`: a proof belongs to one table AND to one viewer. */
   readonly proofs = new Map<string, TurnProofResult>();
+
+  /**
+   * What each viewer's projection answers, read BY VIEWER and never globally.
+   * `truths` is the cheapest field of `zTableState` that carries a list, and
+   * the point is only that the state DEPENDS on who asked for it.
+   */
+  readonly truthsByViewer = new Map<string, TableStateDto['truths']>();
+
+  /** Every `viewerId` handed to `getSnapshot`, in order. */
+  readonly snapshotViewers: string[] = [];
+
+  /** Every `viewerId` handed to `getTurnProof`, in order. */
+  readonly proofViewers: string[] = [];
+
+  /** Every `SubmitIntentInput` the server built, KEPT WHOLE, in order. */
+  readonly submits: SubmitIntentInput[] = [];
 
   submitCalls = 0;
 
@@ -349,8 +393,14 @@ export class FakeCampaignService implements CampaignService {
 
   characters: TableStateDto['characters'] = [];
 
+  /** The last input the server handed over, or `null` if it never wrote. */
+  get lastSubmit(): SubmitIntentInput | null {
+    return this.submits.at(-1) ?? null;
+  }
+
   submitIntent(input: SubmitIntentInput): Promise<Result<SubmitIntentResult, AppError>> {
     this.submitCalls += 1;
+    this.submits.push(input);
     if ((input.intent as { type: string }).type === 'campaign.leave') {
       return Promise.resolve(
         err(new AppError('forbidden_campaign', 403, 'La table te refuse ce geste.')),
@@ -376,10 +426,14 @@ export class FakeCampaignService implements CampaignService {
    */
   suspendSnapshot: (() => Promise<void>) | null = null;
 
-  async getSnapshot(campaignId: CampaignId): Promise<{ state: TableStateDto; lastSeq: number }> {
+  async getSnapshot(
+    campaignId: CampaignId,
+    viewerId: PlayerId,
+  ): Promise<{ state: TableStateDto; lastSeq: number }> {
     this.snapshotCalls += 1;
+    this.snapshotViewers.push(viewerId);
     const frozen = {
-      state: EMPTY_STATE(campaignId, this.characters),
+      state: EMPTY_STATE(campaignId, this.characters, this.truthsByViewer.get(viewerId) ?? []),
       lastSeq: this.journal.length,
     };
     if (this.suspendSnapshot !== null) await this.suspendSnapshot();
@@ -393,12 +447,17 @@ export class FakeCampaignService implements CampaignService {
     );
   }
 
-  getTurnProof(campaignId: CampaignId, correlationId: string): Promise<TurnProofResult | null> {
+  getTurnProof(
+    campaignId: CampaignId,
+    correlationId: string,
+    viewerId: PlayerId,
+  ): Promise<TurnProofResult | null> {
     this.proofCalls += 1;
+    this.proofViewers.push(viewerId);
     if (this.mutateOnProof) {
       this.journal.push(anEvent({ seq: this.journal.length + 1, scope: 'table', campaignId }));
     }
-    return Promise.resolve(this.proofs.get(`${campaignId}|${correlationId}`) ?? null);
+    return Promise.resolve(this.proofs.get(proofKey(campaignId, correlationId, viewerId)) ?? null);
   }
 
   /** Appends straight to the journal, the way a committed turn would. */
@@ -406,6 +465,42 @@ export class FakeCampaignService implements CampaignService {
     for (const event of events) this.journal.push(event);
   }
 }
+
+/**
+ * ═══ LE FAUX REÇOIT-IL TOUT CE QUE LE VRAI REÇOIT ? ════════════════════════
+ *
+ * TypeScript accepte une méthode qui déclare MOINS de paramètres que celle
+ * qu'elle implémente. Un `getSnapshot(campaignId)` satisfait donc
+ * `getSnapshot(campaignId, viewerId)` sans un mot, et le paramètre absent
+ * cesse d'exister pour toute la suite : aucune assertion ne peut plus porter
+ * dessus. Mesuré : `viewerId` et `playerId` remplacés par une chaîne vide dans
+ * le code de production laissaient 153 tests verts.
+ *
+ * DEUX FILETS, parce qu'ils n'ont pas la même maille : celui-ci rougit à la
+ * COMPILATION (`pnpm typecheck:tests`, job 4 de la CI) dès qu'une arité
+ * diverge ; celui du pied de ce fichier la relit à l'EXÉCUTION.
+ */
+type Arity<F> = F extends (...args: infer A) => unknown ? A['length'] : never;
+
+type Exactly<A, B> = [A] extends [B] ? ([B] extends [A] ? true : never) : never;
+
+export type DoubleArities = [
+  Exactly<Arity<FakeCampaignService['submitIntent']>, Arity<CampaignService['submitIntent']>>,
+  Exactly<Arity<FakeCampaignService['getSnapshot']>, Arity<CampaignService['getSnapshot']>>,
+  Exactly<Arity<FakeCampaignService['readEventsSince']>, Arity<CampaignService['readEventsSince']>>,
+  Exactly<Arity<FakeCampaignService['getTurnProof']>, Arity<CampaignService['getTurnProof']>>,
+  Exactly<Arity<AccessStub['check']>, Arity<CampaignAccess['check']>>,
+  Exactly<Arity<FakeSocket['send']>, Arity<WsSocket['send']>>,
+  Exactly<Arity<FakeSocket['close']>, Arity<WsSocket['close']>>,
+  Exactly<Arity<RecordingLogger['warn']>, Arity<WsLogger['warn']>>,
+];
+
+/**
+ * Une arité qui diverge rend un `never` ci-dessus, et cette ligne ne compile
+ * plus. LES HUIT SONT CELLES QUI PEUVENT PERDRE QUELQUE CHOSE : `now()` et
+ * `next()` ne prennent aucun paramètre, il n'y a rien à y oublier.
+ */
+export const DOUBLE_ARITIES: DoubleArities = [true, true, true, true, true, true, true, true];
 
 /** A minimal proof, valid against `zTurnProof`. */
 export function aProof(correlationId: string): TurnProofDto {
@@ -427,10 +522,23 @@ export function aProof(correlationId: string): TurnProofDto {
 
 // ──────────────────────────────────────────────────────────── the table
 
+/**
+ * The auth layer (M0-23), as the handshake sees it.
+ *
+ * IL RETIENT CE QU'ON LUI DEMANDE. Un `check()` sans paramètre — ce qu'il
+ * était — satisfait `check(campaignId, playerId)` sans un mot, et la question
+ * posée à l'autorisation cesse alors d'exister pour la suite : mesuré,
+ * `access.check('', '')` dans `authorizeHandshake` laissait 189 tests verts.
+ * C'est l'invariant 3 à la porte d'entrée, donc il se mesure.
+ */
 export class AccessStub implements CampaignAccess {
   verdict: 'ok' | 'forbidden' | 'not_found' = 'ok';
 
-  check(): Promise<'ok' | 'forbidden' | 'not_found'> {
+  /** Chaque couple (campagne, joueur) soumis à l'autorisation, dans l'ordre. */
+  readonly asked: { campaignId: string; playerId: string }[] = [];
+
+  check(campaignId: string, playerId: string): Promise<'ok' | 'forbidden' | 'not_found'> {
+    this.asked.push({ campaignId, playerId });
     return Promise.resolve(this.verdict);
   }
 }
@@ -565,7 +673,7 @@ describe('le harnais des suites WebSocket', () => {
     const gate = new Gate();
     service.suspendSnapshot = () => gate.closed;
 
-    const inFlight = service.getSnapshot(CAMPAIGN);
+    const inFlight = service.getSnapshot(CAMPAIGN, ALICE);
     await letAwaitsRun();
     // L'état est figé — `lastSeq` vaut 0 — mais rien n'est rendu encore.
     expect(service.snapshotCalls).toBe(1);
@@ -586,8 +694,61 @@ describe('le harnais des suites WebSocket', () => {
     expect(service.journal).toHaveLength(1);
     expect(service.narrationsStarted).toBe(1);
 
-    await service.getTurnProof(CAMPAIGN, aUuid(9));
+    await service.getTurnProof(CAMPAIGN, aUuid(9), ALICE);
     expect(service.journal).toHaveLength(1);
     expect(service.narrationsStarted).toBe(1);
+
+    // Et il RETIENT ce qu'on lui a passé : sans cette ligne, « le serveur a
+    // écrit » et « le serveur a écrit CECI » resteraient le même test.
+    expect(service.lastSubmit).toStrictEqual({
+      campaignId: CAMPAIGN,
+      playerId: ALICE,
+      intentId: aUuid(1),
+      intent: { type: 'play_session.begin' },
+    });
+  });
+
+  it("déclare exactement les paramètres de l'interface, jamais un de moins", () => {
+    const fake = new FakeCampaignService();
+
+    // LES QUATRE ARITÉS VIENNENT DE `src/game/types.ts`, écrites en toutes
+    // lettres : c'est la déclaration de l'interface, et elle n'existe nulle
+    // part ailleurs sous une forme qu'un test puisse lire à l'exécution.
+    // `Function.prototype.length` compte les paramètres déclarés.
+    expect(fake.submitIntent.length).toBe(1);
+    expect(fake.getSnapshot.length).toBe(2);
+    expect(fake.readEventsSince.length).toBe(2);
+    expect(fake.getTurnProof.length).toBe(3);
+
+    // `CampaignAccess.check(campaignId, playerId)`, `WsSocket.send(data,
+    // onFlushed?)` et `close(code, reason?)`, `WsLogger.warn(context, message)`.
+    expect(new AccessStub().check.length).toBe(2);
+    expect(new FakeSocket().send.length).toBe(2);
+    expect(new FakeSocket().close.length).toBe(2);
+    expect(new RecordingLogger().warn.length).toBe(2);
+
+    // Le filet de compilation, relu ici pour qu'il ne soit pas du code mort.
+    expect(DOUBLE_ARITIES).toStrictEqual(Array.from({ length: 8 }, () => true));
+  });
+
+  it('rend un état ET une preuve qui dépendent du destinataire', async () => {
+    const service = new FakeCampaignService();
+    const turn = aUuid(9);
+    service.truthsByViewer.set(ALICE, [
+      { truthId: 'la-veille-d-alice', optionId: 'oui', customText: null },
+    ]);
+    service.proofs.set(proofKey(CAMPAIGN, turn, BOB), { proof: aProof(turn), truncated: false });
+
+    // Deux destinataires, deux réponses. Sans cette dépendance, remplacer le
+    // destinataire par n'importe quoi rendrait exactement le même état.
+    expect((await service.getSnapshot(CAMPAIGN, ALICE)).state.truths).toStrictEqual([
+      { truthId: 'la-veille-d-alice', optionId: 'oui', customText: null },
+    ]);
+    expect((await service.getSnapshot(CAMPAIGN, BOB)).state.truths).toStrictEqual([]);
+    expect(await service.getTurnProof(CAMPAIGN, turn, BOB)).not.toBeNull();
+    expect(await service.getTurnProof(CAMPAIGN, turn, ALICE)).toBeNull();
+
+    expect(service.snapshotViewers).toStrictEqual([ALICE, BOB]);
+    expect(service.proofViewers).toStrictEqual([BOB, ALICE]);
   });
 });

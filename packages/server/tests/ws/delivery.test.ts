@@ -327,6 +327,108 @@ describe("le curseur porté par l'instantané (ADR 0010 décision 1)", () => {
   });
 });
 
+describe('un lot vide est une réponse, pas un silence', () => {
+  /**
+   * L'EN-TÊTE DE `sendBatch` L'ÉCRIT EN CAPITALES — « ALWAYS SENDS AT LEAST
+   * ONE FRAME, empty batch included » — et c'est le critère d'acceptation :
+   * après `c2s.hello`, « un rattrapage OU un instantané ». « Tu n'avais rien
+   * manqué » est un rattrapage vide, pas une absence de réponse.
+   *
+   * LE CAS EST CELUI DU CURSEUR EXACTEMENT À JOUR, et il n'est pas exotique :
+   * c'est ce que porte toute reconnexion propre. Trois façons de le casser,
+   * chacune reprise par ces deux tests : le repli en instantané sur l'égalité
+   * (`since > head` devenu `>=`), le rattrapage tu quand il est vide, et la
+   * trame de lot qu'on n'émet plus faute d'entrées.
+   *
+   * ON ASSERTE LES TYPES DE TRAMES EXACTS, pas « au moins une » : un silence
+   * et une réponse vide ne se distinguent que là.
+   */
+  function aJournalOfTwo(table: Table): void {
+    table.service.commit([
+      anEvent({ seq: 1, scope: 'table' }),
+      anEvent({ seq: 2, scope: 'table' }),
+    ]);
+  }
+
+  it('`c2s.hello` avec un curseur exactement à jour répond un lot VIDE, pas un instantané', async () => {
+    const table = new Table();
+    aJournalOfTwo(table);
+
+    // Le client a tout reçu : son curseur vaut la tête du flux.
+    const alice = await table.join(ALICE, 2);
+
+    expect(table.hub.deliveryHead(CAMPAIGN, ALICE)).toBe(2);
+    expect(alice.socket.types()).toStrictEqual(['s2c.welcome', 's2c.events_batch', 's2c.presence']);
+    expect(alice.socket.of('s2c.events_batch')[0]?.p['events']).toStrictEqual([]);
+  });
+
+  it('`c2s.resume` avec un curseur exactement à jour répond un lot VIDE, pas un silence', async () => {
+    const table = new Table();
+    aJournalOfTwo(table);
+    const alice = await table.join(ALICE, 2);
+    alice.socket.clear();
+
+    await alice.connection.receive(c2s('c2s.resume', { sinceDeliverySeq: 2 }, table.nextFrameId()));
+
+    expect(alice.socket.types()).toStrictEqual(['s2c.events_batch']);
+    expect(alice.socket.of('s2c.events_batch')[0]?.p['events']).toStrictEqual([]);
+  });
+});
+
+describe('la fenêtre retenue, prise exactement à sa borne', () => {
+  /**
+   * `WS_DELIVERY_TAIL_MAX` N'EST PAS UN CHIFFRE DE CRITÈRE : la fiche ne
+   * quantifie pas « trop ancien », et `hub.ts` le dit — « MINE, AND SAID SO ».
+   * Il n'y a donc rien à écrire en toutes lettres ici, et ce test ne compare
+   * pas un nombre à lui-même : il mesure OÙ SE TROUVE LA BORNE, dans les deux
+   * sens, à travers la couture publique. Un rattrapage exactement à la borne
+   * est servi ; un cran au-delà retombe sur un instantané.
+   */
+  it('sert le curseur qui est juste à la borne, et refuse celui qui est un cran derrière', async () => {
+    const table = new Table();
+    await table.join(ALICE);
+    table.hub.broadcast(
+      CAMPAIGN,
+      Array.from({ length: WS_DELIVERY_TAIL_MAX + 50 }, (_, i) =>
+        anEvent({ seq: i + 1, scope: 'table' }),
+      ),
+    );
+    const head = table.hub.deliveryHead(CAMPAIGN, ALICE);
+
+    const served = table.hub.catchUpFrom(CAMPAIGN, ALICE, head - WS_DELIVERY_TAIL_MAX);
+    expect(served.kind).toBe('batch');
+    expect(served.kind === 'batch' ? served.entries : []).toHaveLength(WS_DELIVERY_TAIL_MAX);
+
+    expect(table.hub.catchUpFrom(CAMPAIGN, ALICE, head - WS_DELIVERY_TAIL_MAX - 1)).toStrictEqual({
+      kind: 'snapshot',
+      reason: 'curseur trop ancien',
+    });
+  });
+});
+
+describe("l'hydratation du flux ne relit le journal qu'une fois", () => {
+  it('un second `c2s.hello` ne recoûte pas une lecture intégrale — et chaque joueur a la sienne', async () => {
+    const table = new Table();
+    table.service.commit([anEvent({ seq: 1, scope: 'table' })]);
+
+    const alice = await table.join(ALICE);
+    expect(table.service.readCalls).toBe(1);
+
+    // Le même joueur redit bonjour : son flux existe, rien n'est relu.
+    await alice.connection.receive(
+      c2s('c2s.hello', { clientVersion: '0.0.0-test', lastDeliverySeq: null }, table.nextFrameId()),
+    );
+    expect(table.service.readCalls).toBe(1);
+
+    // DEUX ACTEURS : le court-circuit est par JOUEUR, pas par campagne. Sans
+    // cette ligne, un hub qui n'hydraterait qu'un flux par salle passerait,
+    // et le second joueur n'aurait jamais de numérotation.
+    await table.join(BOB);
+    expect(table.service.readCalls).toBe(2);
+    expect(table.hub.deliveryHead(CAMPAIGN, BOB)).toBe(1);
+  });
+});
+
 describe('le fractionnement du rattrapage', () => {
   it('découpe un rattrapage trop lourd en plusieurs trames de moins de 256 Kio', async () => {
     const table = new Table();
