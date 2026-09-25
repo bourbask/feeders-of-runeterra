@@ -432,6 +432,32 @@ function writeProjections(
   }
 }
 
+/**
+ * Zone C of one campaign, rewritten from a replay the CALLER already has.
+ *
+ * WHY THIS IS EXPORTED, and why the live write path must not grow its own
+ * projection writer. ARCHITECTURE.md section 9, risk 6: "une projection mutee
+ * hors du reducteur fait diverger la reconstruction SILENCIEUSEMENT", and
+ * control 9 of `db:check` is the only thing that catches it. Two writers means
+ * two ways of turning a `CampaignState` into rows, and the day they disagree
+ * the rebuild is the one that looks wrong. So `intent-pipeline.ts` in
+ * `@for/server` calls THIS — the same `deleteProjections` and the same
+ * `writeProjections` that `rebuildCampaign` runs — inside its own write
+ * transaction.
+ *
+ * It takes NO transaction and NO rebuild lock, on purpose: the caller is
+ * already inside `BEGIN IMMEDIATE` and is not rebuilding anything, it is
+ * writing the turn it just appended.
+ */
+export function writeProjectionsFrom(
+  connection: SqliteConnection,
+  campaignId: string,
+  replay: ReplayResult,
+): void {
+  deleteProjections(connection, campaignId);
+  writeProjections(connection, campaignId, replay);
+}
+
 export interface RebuildReport {
   readonly campaignId: string;
   /** Entries read, cancelled ones included. */

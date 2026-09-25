@@ -1375,6 +1375,16 @@ transaction — demander à l'IA d'habiller le fait déjà acquis.
 **Fichiers touchés** : `packages/server/src/game/{campaign-service,intent-pipeline,write-queue,snapshots,chronicle,revert,turn-proof,index}.ts`,
 `packages/server/src/ai/narrator.ts`, `packages/server/tests/game/**`
 
+**Cinq fichiers de plus sous `src/game/`, et pourquoi** *(livré)* :
+
+| Fichier | Ce qu'il porte, et pourquoi il n'est pas dans un autre |
+|---|---|
+| `content.ts` | l'adaptateur `ContentRegistry` → `EngineContent`, qui n'existait nulle part : M0-14 a livré le registre, M0-13 le port, personne ne les avait joints |
+| `journal.ts` | relire une entrée du journal en valeur du moteur (upcast + `zGameEvent`), une fois pour les trois lecteurs — fenêtre, preuve, annulation |
+| `burn-window.ts` | la fenêtre de brûlure **dérivée du journal**, ce que l'invariant 4 exige et ce qui la fait revenir seule après une annulation |
+| `table-state.ts` | `project(CampaignState, viewerId)`, appelé par `getSnapshot` |
+| `dispositions.ts` | la conversion des cinq dispositions proposables vers les quatre du moteur, **qui refuse** les deux qui n'ont pas d'équivalent |
+
 ---
 
 ### M0-25 · Serveur : hub WebSocket
