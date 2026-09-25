@@ -46,12 +46,22 @@
  * incremental state has already applied the entries the cancellation takes
  * back, so after a revert the director throws its state away and replays the
  * journal from the database — the same path `db:rebuild` takes.
+ *
+ * ── THE UNFINISHED TURN, AND WHY IT IS NOT A FIXTURE'S BUSINESS ──────────
+ * Since M0-34 a roll that may be burned does not finish: `decide()` writes the
+ * dice and hands the rest back in `Decision.pending`. This file TAKES that
+ * value; it does not rebuild one. It used to, by re-reading
+ * `roll.action_resolved` — engine state copied into a fixture, which is the
+ * line above drawn the wrong way round — and the copy went stale the day the
+ * window started carrying its plan, its group and its declaration. It broke
+ * `develop` rather than a branch, because neither M0-34 nor M0-26 held both
+ * halves.
  */
 
 import type { SqliteConnection } from '../client.js';
 import { replayCampaign } from '../rebuild.js';
 import type { AppendableEvent } from '../repositories/events.js';
-import { appendEvents } from '../repositories/events.js';
+import { appendEvents, readGroup } from '../repositories/events.js';
 import type { JournalEvent } from '../repositories/rows.js';
 import { demoCorrelationId } from './ids.js';
 
@@ -262,8 +272,14 @@ export class Director {
   #turn = 0;
   #session: PlaySessionId | null = null;
   #burnWindow: BurnWindow | null = null;
+  /**
+   * The group the open window's dice are already written under, in the SEED's
+   * own numbering. `BurnWindow.correlationId` carries the engine's, which the
+   * director re-stamps (header, « what it re-stamps »), so the two halves of a
+   * burned turn need this one to land together.
+   */
+  #burnGroup: string | null = null;
   readonly #options: DirectorOptions;
-  readonly #groups = new Map<string, number[]>();
   readonly #played = new Set<GameEventType>();
   readonly #written = new Set<GameEventType>();
 
@@ -297,18 +313,36 @@ export class Director {
     return [...this.#written].sort();
   }
 
-  /** The roll a `momentum.burn` may still revise, as the journal leaves it. */
+  /**
+   * The roll a `momentum.burn` may still revise — TAKEN FROM `decide()`.
+   *
+   * It is `Decision.pending` verbatim, never rebuilt from the journal. The
+   * director used to fabricate one by re-reading `roll.action_resolved`, which
+   * is engine state copied into a fixture: the invariant-1 line this file
+   * draws between `play()` and `write()` forbids exactly that, and the copy
+   * went stale the day the engine gave the window its plan, its group and its
+   * declaration (M0-34) — `tsc` caught it only once both branches were on
+   * `develop`, because neither branch alone held the two halves.
+   */
   get burnWindow(): BurnWindow | null {
     return this.#burnWindow;
   }
 
-  /** Journal sequences written under one correlation identifier. */
+  /**
+   * Journal sequences written under one correlation identifier, READ BACK.
+   *
+   * It used to be a map the director filled as it wrote, and that map was a
+   * copy of what the journal already holds: two writes under one identifier —
+   * which is exactly what a burned turn is — replaced the first half instead
+   * of extending it, and `system.reverted` would have taken the consequences
+   * back without the dice. The journal is the only list that cannot drift.
+   */
   group(correlationId: string): readonly number[] {
-    const found = this.#groups.get(correlationId);
-    if (found === undefined) {
+    const events = readGroup(this.#options.connection, this.#options.campaignId, correlationId);
+    if (events.length === 0) {
       throw new DemoScriptInconsistent(`groupe de corrélation ${correlationId} inconnu`);
     }
-    return found;
+    return events.map((event) => event.seq);
   }
 
   openSession(playSessionId: PlaySessionId): void {
@@ -338,7 +372,46 @@ export class Director {
 
   /** Stops the script here when the seed was asked for the minimal base. */
   mark(name: string): void {
-    if (this.#options.stopAt === name) throw new DemoStopped(name);
+    if (this.#options.stopAt !== name) return;
+    this.settle();
+    throw new DemoStopped(name);
+  }
+
+  /**
+   * THE SAFETY NET OF 03-donnees.md section 3.4, held where the SERVER holds
+   * it (contract of M0-24): an open window is closed by `momentum.keep` before
+   * anything else is written.
+   *
+   * It exists because a window is not a flag, it is an UNFINISHED TURN: the
+   * dice are journalled and their consequences are still owed. Dropping it
+   * would leave `move.declared` and `roll.action_resolved` with no
+   * `move.resolved` and no effect — measured on this very seed the day M0-34
+   * landed, on Ashe's `gather-information`: the turn stayed half-written and
+   * the journal lost two entries without a single test going red.
+   *
+   * STRICTER THAN THE RULE, AND SAID SO. `burnWindowClosedBy` closes on the
+   * next entry about the SAME character, whenever it comes; `play` closes at
+   * the end of its own beat, so a turn never stays open across somebody else's.
+   * Holding a window across beats is a server behaviour, not a fixture one, and
+   * the real net lives in `CampaignService` (M0-24). The script therefore burns
+   * on the beat that follows its roll, or not at all — and `write` refuses
+   * while one is open rather than closing it behind the caller's back.
+   *
+   * Called directly at the end of the campaign and at the `--minimal` mark, so
+   * that no base ever ends on a half-written turn.
+   */
+  settle(): void {
+    const pending = this.#burnWindow;
+    if (pending === null) return;
+    this.#closeByKeep(pending);
+  }
+
+  #closeByKeep(pending: BurnWindow): { readonly events: readonly JournalEvent[] } {
+    return this.#playOnce(
+      pending.characterId,
+      { type: 'momentum.keep', rollId: pending.roll.rollId },
+      'filet de sécurité : la fenêtre de brûlure se ferme sans dépense',
+    );
   }
 
   /**
@@ -347,34 +420,80 @@ export class Director {
    * Returns what the engine produced, WITH its allocated sequences, so the
    * script can hang a scene or a chronicle off a track the rules just opened
    * — without ever inventing its identifier.
+   *
+   * ── TWO INTENTS, ONE TURN ────────────────────────────────────────────────
+   * A burned turn is TWO calls to `decide()` and it stays ONE correlation
+   * group (03-donnees.md sections 0.5 and 3.7): `system.reverted` cancels a
+   * group, so a second group would take the dice back without their
+   * consequences, and `buildTurnProof` reads one group, so the « Pourquoi ? »
+   * proof would show the dice on one side and the effects on the other.
+   *
+   * The engine already holds that rule through `BurnWindow.correlationId`, and
+   * the closing entries come out stamped with it. The director imposes its own
+   * identifiers (`demoCorrelationId`, see `ids.ts`), so it READS the engine's
+   * verdict off the events rather than retyping the rule: same group as the
+   * open window means the same turn, so the closing rejoins `#burnGroup` and
+   * the turn counter does not advance.
    */
   play(
     actorId: CharacterId,
     intent: Intent,
     note: string,
   ): { readonly events: readonly JournalEvent[]; readonly correlationId: string } {
+    const opened = this.#playOnce(actorId, intent, note);
+    const pending = this.#burnWindow;
+    if (pending === null) return opened;
+    const closed = this.#closeByKeep(pending);
+    return {
+      events: [...opened.events, ...closed.events],
+      correlationId: opened.correlationId,
+    };
+  }
+
+  /**
+   * The roll of a turn the script MEANS to burn on: the window stays open.
+   *
+   * The only caller is the two-step burn of `script.ts`, which plays
+   * `momentum.burn` on the next beat. Any other caller gets the safety net at
+   * the next beat, which is `momentum.keep` — never a dropped turn.
+   */
+  playHoldingWindow(
+    actorId: CharacterId,
+    intent: Intent,
+    note: string,
+  ): { readonly events: readonly JournalEvent[]; readonly correlationId: string } {
+    return this.#playOnce(actorId, intent, note);
+  }
+
+  #playOnce(
+    actorId: CharacterId,
+    intent: Intent,
+    note: string,
+  ): { readonly events: readonly JournalEvent[]; readonly correlationId: string } {
     const seqBase = this.#state.seq + 1;
+    const pending = this.#burnWindow;
     const ctx: DecisionContext = {
       rng: turnRng(this.#options.seed, seqBase),
       ids: this.#options.ids,
       now: this.#now,
       actorId,
       content: this.#options.content,
-      burnWindow: this.#burnWindow,
+      burnWindow: pending,
     };
     const decision = decide(this.#state, intent, ctx);
     if (isErr(decision)) {
       throw new DemoIntentRefused(note, decision.error.code, decision.error.details);
     }
-    const correlationId = demoCorrelationId(this.#turn);
-    this.#turn += 1;
+    const rejoined = this.#continuedGroup(pending, decision.value.events);
+    const correlationId = rejoined ?? demoCorrelationId(this.#turn);
+    if (rejoined === null) this.#turn += 1;
     const written = this.#append(
       decision.value.events.map((event) => this.#toAppendable(event, correlationId)),
     );
     this.#apply(decision.value.events);
-    this.#groups.set(correlationId, [...written.map((event) => event.seq)]);
     for (const event of decision.value.events) this.#played.add(event.type);
-    this.#rememberBurnWindow(decision.value.events);
+    this.#burnWindow = decision.value.pending;
+    this.#burnGroup = decision.value.pending === null ? null : correlationId;
     this.#now += this.#options.step;
     return { events: written, correlationId };
   }
@@ -384,6 +503,21 @@ export class Director {
     readonly events: readonly JournalEvent[];
     readonly correlationId: string;
   } {
+    // NOT THE NET HERE, AND THAT IS DELIBERATE. A hand-written entry must not
+    // slip between the dice and the consequences they still owe — but closing
+    // the window at this point would be SILENT, and several payloads of
+    // `script.ts` are built with `director.state.seq + 1` BEFORE this call
+    // runs (`facts()`, `session.closed.lastSeq`). Appending a closing here
+    // would move the sequence those payloads already predicted, and nothing
+    // would go red. A script that holds a window owes it a `momentum.burn` on
+    // the very next beat, or a `settle()`; anything else is a script bug and
+    // says so.
+    if (this.#burnWindow !== null) {
+      throw new DemoScriptInconsistent(
+        `fenêtre de brûlure encore ouverte sur le jet ${String(this.#burnWindow.rollSeq)} : ` +
+          'la fermer par « momentum.burn » ou « settle() » avant d’écrire',
+      );
+    }
     const correlationId = demoCorrelationId(this.#turn);
     this.#turn += 1;
     const seqBase = this.#state.seq;
@@ -394,7 +528,6 @@ export class Director {
       built.map((event) => this.#toAppendable(event, correlationId, event.recipients)),
     );
     this.#apply(built);
-    this.#groups.set(correlationId, [...written.map((event) => event.seq)]);
     for (const event of events) this.#written.add(event.type);
     this.#now += this.#options.step;
     return { events: written, correlationId };
@@ -453,6 +586,7 @@ export class Director {
   resync(): void {
     this.#state = replayCampaign(this.#options.connection, this.#options.campaignId).state;
     this.#burnWindow = null;
+    this.#burnGroup = null;
   }
 
   #append(events: readonly AppendableEvent[]): readonly JournalEvent[] {
@@ -517,28 +651,17 @@ export class Director {
   }
 
   /**
-   * The window a `momentum.burn` may still use.
+   * The seed's group for a turn that CONTINUES the open window, or `null`.
    *
-   * STRICTER THAN THE RULE, AND SAID SO. ARCHITECTURE.md section 4.4 closes
-   * the window "au premier événement suivant du même personnage"; this closes
-   * it at the next BEAT, whoever plays it. A seed only ever burns on the beat
-   * right after the roll, so the difference never shows here — but a caller
-   * who read this as the real rule would be wrong, and the real window belongs
-   * to `CampaignService` (M0-24), not to a fixture.
+   * The test is the engine's own answer, not a copy of its rule: `decide()`
+   * stamps a continued turn with `window.correlationId` (`createTurn`, via
+   * `closeBurnWindow`) and mints a fresh one otherwise. So a produced turn
+   * whose identifier is the window's IS the closing, whatever the intent was
+   * called and whatever the rules made of it.
    */
-  #rememberBurnWindow(events: readonly GameEvent[]): void {
-    let window: BurnWindow | null = null;
-    for (const event of events) {
-      if (event.type === 'roll.action_resolved' && event.payload.burnWindow) {
-        window = {
-          rollId: event.payload.rollId,
-          rollSeq: event.seq,
-          characterId: event.payload.characterId,
-          total: event.payload.total,
-          challengeDice: [event.payload.challengeDice[0], event.payload.challengeDice[1]],
-        };
-      }
-    }
-    this.#burnWindow = window;
+  #continuedGroup(pending: BurnWindow | null, events: readonly GameEvent[]): string | null {
+    if (pending === null || this.#burnGroup === null) return null;
+    if (events[0]?.correlationId !== pending.correlationId) return null;
+    return this.#burnGroup;
   }
 }

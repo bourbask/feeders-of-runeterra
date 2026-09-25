@@ -278,11 +278,102 @@ describe('la campagne de démonstration', () => {
       expect(kept.n).toBe(payload.targetSeqs.length);
       expect(Math.max(...payload.targetSeqs)).toBeLessThan(reverted[0]?.seq ?? 0);
 
+      // THE WHOLE TURN, NOT A LINE OF IT (03-donnees.md section 3.7): the
+      // cancellation names the entire correlation group. Measured from the
+      // other side — the `correlation_id` column of the entries it names,
+      // then every entry that column covers — so a `targetSeqs` truncated to
+      // its last line goes red. It did not, before this assertion existed:
+      // `readGroup` returning `rows.slice(-1)` left all 35 tests green.
+      const groups = connection
+        .prepare(
+          `SELECT DISTINCT correlation_id AS correlation FROM events
+            WHERE seq IN (${payload.targetSeqs.join(',')})`,
+        )
+        .all() as { correlation: string }[];
+      expect(groups).toHaveLength(1);
+      const whole = connection
+        .prepare(`SELECT seq FROM events WHERE correlation_id = ? ORDER BY seq`)
+        .all(groups[0]?.correlation ?? '') as { seq: number }[];
+      expect([...payload.targetSeqs].sort((a, b) => a - b)).toEqual(whole.map((row) => row.seq));
+
       // And the character the cancelled turn was about is alive.
       const braum = connection
         .prepare(`SELECT status FROM characters WHERE champion_id = 'braum'`)
         .get() as { status: string };
       expect(braum.status).toBe('active');
+    });
+  });
+
+  it('tient le tour brûlé en UN SEUL groupe de corrélation, des dés aux conséquences', () => {
+    // 03-donnees.md sections 0.5 and 3.7, measured on the only burned turn of
+    // the demo. A burn is TWO calls to `decide()` and it must stay ONE group:
+    // `system.reverted` cancels a group, so a second one would take the dice
+    // back without the `character.gauge_changed` they caused, and
+    // `buildTurnProof` reads ONE group, so the « Pourquoi ? » proof would show
+    // the dice on one side and the consequences on the other.
+    //
+    // WHAT MAKES IT GO RED. If the closing opened its own group, the array
+    // below would stop at `roll.action_resolved` — measured by returning
+    // `null` from `Director.#continuedGroup`.
+    withBase(full, (connection) => {
+      const burned = connection
+        .prepare(
+          `SELECT correlation_id AS correlation FROM events
+            WHERE type = 'character.momentum_burned'`,
+        )
+        .all() as { correlation: string }[];
+      expect(burned).toHaveLength(1);
+      const correlation = burned[0]?.correlation ?? '';
+
+      const group = connection
+        .prepare(
+          `SELECT seq, id, type, causation_id AS causation, payload_json AS payload
+             FROM events WHERE correlation_id = ? ORDER BY seq`,
+        )
+        .all(correlation) as {
+        seq: number;
+        id: string;
+        type: string;
+        causation: string | null;
+        payload: string;
+      }[];
+
+      // The EXACT array, in order: the dice, the revision and the effects of
+      // the REVISED outcome, all under one identifier. Two steps, one turn.
+      expect(group.map((row) => row.type)).toEqual([
+        'move.declared',
+        'roll.action_resolved',
+        'character.momentum_burned',
+        'roll.action_revised',
+        'character.momentum_changed',
+        'move.resolved',
+      ]);
+
+      // The causation chain, entire: everything hangs off the declaration, and
+      // the declaration hangs off nothing.
+      const declaration = group[0];
+      expect(declaration?.causation).toBeNull();
+      expect(group.slice(1).map((row) => row.causation)).toEqual(
+        group.slice(1).map(() => declaration?.id),
+      );
+
+      // A SECOND OPERAND, read the other way round: over the span of the turn,
+      // from the declaration to the resolution, the journal knows exactly one
+      // correlation identifier. Counting from the sequences rather than from
+      // the group catches a foreign entry slipped between the two steps.
+      const first = declaration?.seq ?? 0;
+      const last = group.at(-1)?.seq ?? 0;
+      const spanned = connection
+        .prepare(`SELECT count(DISTINCT correlation_id) AS n FROM events WHERE seq BETWEEN ? AND ?`)
+        .get(first, last) as { n: number };
+      expect(spanned.n).toBe(1);
+
+      // And the proof reads as one: `move.resolved` points at the ROLL, not at
+      // the revision, and both are inside the group.
+      const resolved = JSON.parse(group.at(-1)?.payload ?? '{}') as { rollSeq: number };
+      const revised = JSON.parse(group[3]?.payload ?? '{}') as { revisedFromSeq: number };
+      expect(resolved.rollSeq).toBe(group[1]?.seq);
+      expect(revised.revisedFromSeq).toBe(group[1]?.seq);
     });
   });
 

@@ -1483,7 +1483,7 @@ function sessionTwoPlay(
   // The script arranges the conditions and checks that they held: a low move
   // against a high momentum. If the window did not open, the demo would
   // silently lose two of the seventy-one types, so it STOPS instead.
-  director.play(
+  director.playHoldingWindow(
     characterOf(stage, 'ashe'),
     {
       type: 'move.probe_a_soul',
@@ -1501,7 +1501,7 @@ function sessionTwoPlay(
   }
   director.play(
     characterOf(stage, 'ashe'),
-    { type: 'momentum.burn', rollId: window.rollId },
+    { type: 'momentum.burn', rollId: window.roll.rollId },
     'Ashe brûle son souffle sur le jet qu’elle vient de voir',
   );
 
