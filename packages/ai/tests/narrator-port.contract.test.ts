@@ -18,7 +18,13 @@
  * different. It is written once, and `it.each` does the rest.
  */
 
-import { NarratorError, type NarratorPort } from '@for/contracts';
+import {
+  NarratorError,
+  TOOL_INPUT_SCHEMAS,
+  type NarrateEvent,
+  type NarrateResult,
+  type NarratorPort,
+} from '@for/contracts';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
@@ -28,7 +34,7 @@ import { createOpenAiCompatibleNarrator } from '../src/narrator/adapters/openai-
 import { createStubNarrator } from '../src/narrator/adapters/stub.js';
 import { selectNarrator } from '../src/narrator/select.js';
 import { firstBalancedObject } from '../src/narrator/structured.js';
-import { TOOL_DEFINITIONS } from '../src/tools/definitions.js';
+import { TOOL_DEFINITIONS, TOOL_DEFINITIONS_BY_NAME } from '../src/tools/definitions.js';
 import { collect, configFor, ndjson, scriptedFetch, sse, streamResponse } from './support.js';
 
 const request = (over: Record<string, unknown> = {}) => ({
@@ -204,11 +210,56 @@ describe.each(CASES.filter((testCase) => testCase.failing !== undefined))(
 );
 
 describe('le stub, qui est le seul à n’ouvrir aucune socket', () => {
+  /**
+   * THE CLOCK IS INJECTED, AND THAT IS THE WHOLE POINT OF THIS TEST.
+   *
+   * This is the test that proves invariant 4 on the stub — same turn replayed,
+   * same text. Written without `now`, it compared the WHOLE serialised stream,
+   * and that stream carries `result.latencyMs`, which `driveStream` reads from
+   * `Date.now()`. Measured over 3 000 identical calls: 0 ms 2 977 times, 1 ms
+   * 21 times, 2 ms twice. So the one field that is non-deterministic BY
+   * CONSTRUCTION was deciding the verdict of the determinism test — a flake of
+   * about one and a half per cent in job 6, on pull requests that changed
+   * nothing. `StubNarratorOptions.now` existed and was simply not passed.
+   */
   it('rend le même texte pour le même requestId', async () => {
-    const port = createStubNarrator(configFor('stub'), { texts: ['un', 'deux', 'trois'] });
+    const port = createStubNarrator(configFor('stub'), {
+      texts: ['un', 'deux', 'trois'],
+      now: () => 0,
+    });
     const first = await collect(port.narrer(request({ requestId: 'nar_42' })));
     const second = await collect(port.narrer(request({ requestId: 'nar_42' })));
     expect(JSON.stringify(first)).toBe(JSON.stringify(second));
+  });
+
+  /**
+   * And the other half: what is deterministic is the TEXT, not the latency.
+   * With a clock that advances, the two runs still carry the same deltas and
+   * the same `result.text` while `latencyMs` differs — which is the measured
+   * reason the assertion above may not read it.
+   */
+  it('et c’est le texte qui est déterministe, pas la latence', async () => {
+    // `driveStream` reads the clock twice per call, start then end. Two runs,
+    // two durations: 1 ms, then 5 ms — the spread the 3 000-call measurement saw.
+    const stamps = [0, 1, 0, 5];
+    let at = 0;
+    const port = createStubNarrator(configFor('stub'), {
+      texts: ['un', 'deux', 'trois'],
+      now: () => stamps[at++] ?? 0,
+    });
+    const first = await collect(port.narrer(request({ requestId: 'nar_42' })));
+    const second = await collect(port.narrer(request({ requestId: 'nar_42' })));
+    const textsOf = (events: NarrateEvent[]): readonly string[] =>
+      events.filter((event) => event.type === 'delta').map((event) => event.text);
+    const endOf = (events: NarrateEvent[]): NarrateResult => {
+      const end = events.at(-1);
+      if (end?.type !== 'end') throw new Error('pas de end');
+      return end.result;
+    };
+    expect(textsOf(first)).toStrictEqual(textsOf(second));
+    expect(endOf(first).text).toBe(endOf(second).text);
+    expect(endOf(first).latencyMs).toBe(1);
+    expect(endOf(second).latencyMs).toBe(5);
   });
 
   it('annonce toutes ses capacités à faux sauf le flux (§0.6)', () => {
@@ -258,6 +309,48 @@ describe('selectNarrator', () => {
 
   it('n’a besoin d’aucun transport pour le stub', () => {
     expect(selectNarrator(configFor('stub')).providerId).toBe('stub');
+  });
+
+  /**
+   * `ambientFetch`, the branch nothing exercised — measured at 53,84 % of
+   * branches and 50 % of functions on this file before this test. With no
+   * transport handed in, a networked adapter takes the ambient `fetch`; where
+   * there is none, the port REFUSES at selection time rather than handing back
+   * a port that throws a `TypeError` on the first turn of a real game. The
+   * stub is the exception by definition: it opens nothing, ever.
+   */
+  it('refuse un fournisseur en réseau quand il n’y a pas de fetch ambiant', () => {
+    const ambient = globalThis.fetch;
+    try {
+      (globalThis as { fetch?: unknown }).fetch = undefined;
+      const refusals = (['anthropic', 'openai-compatible', 'ollama'] as const).map((provider) => {
+        try {
+          selectNarrator(configFor(provider));
+          return { provider, code: 'aucune erreur' };
+        } catch (cause) {
+          return {
+            provider,
+            code: cause instanceof NarratorError ? cause.code : 'pas un NarratorError',
+          };
+        }
+      });
+      expect(refusals).toStrictEqual([
+        { provider: 'anthropic', code: 'unsupported' },
+        { provider: 'openai-compatible', code: 'unsupported' },
+        { provider: 'ollama', code: 'unsupported' },
+      ]);
+      expect(selectNarrator(configFor('stub')).providerId).toBe('stub');
+    } finally {
+      globalThis.fetch = ambient;
+    }
+  });
+
+  /** The other direction: with an ambient `fetch` present, the three are built. */
+  it('et le prend quand il existe, sans jamais l’appeler ici', () => {
+    expect(typeof globalThis.fetch).toBe('function');
+    for (const provider of ['anthropic', 'openai-compatible', 'ollama'] as const) {
+      expect(selectNarrator(configFor(provider)).providerId).toBe(provider);
+    }
   });
 
   /**
@@ -346,6 +439,209 @@ describe('structurer, sur les trois adaptateurs en réseau', () => {
       await expect(
         build(name, envelope(name, 'je préfère ne pas')).structurer(request()),
       ).rejects.toMatchObject({ code: 'invalid_output' });
+    },
+  );
+});
+
+/**
+ * A TOOL CALL, FROM THE WIRE TO THE FROZEN SURFACE.
+ *
+ * ── WHY THIS WAS MISSING, AND WHY IT MATTERS ────────────────────────────────
+ * `tests/tool-surface.test.ts` freezes the twelve tools and pins which side of
+ * the read / proposal frontier each one lands on, but it starts from a
+ * `NarratorToolUseBlock` already built by hand. NOTHING exercised the step
+ * before that: turning a provider's wire frames into that block. Measured on
+ * the coverage report of this package — the whole `case 'tool_call'` of
+ * `driveStream` (`common.ts` 91-94), the `content_block_start` /
+ * `input_json_delta` / `content_block_stop` path of `anthropic.ts` (277-320),
+ * the `tool_calls` accumulation of `openai-compatible.ts` (259-286) and the
+ * `tool_calls` loop of `ollama.ts` (175-188) were all at zero.
+ *
+ * That is the first half of invariant 1 on this side of the port: a tool call
+ * the adapter mis-decodes is a call the handler never gets to route.
+ *
+ * ── WHAT IT FOUND ───────────────────────────────────────────────────────────
+ * `ollama` read "has there been a tool call" from the CURRENT ndjson line,
+ * while this server puts `tool_calls` on a message line and `done` on a later
+ * one, `done_reason: 'stop'` either way. So the stream ended `complete`, and
+ * `driveStream` keeps `result.toolCalls` only when the finish IS `tool_call` —
+ * the call reached the caller as an event and as an empty list at the same
+ * time, which is exactly the "never two truths about the same thing" the four
+ * properties above exist to forbid. Fixed in the adapter, pinned here.
+ */
+describe('un appel d’outil décodé depuis le fil', () => {
+  /** One `roll_oracle` call, valid against the frozen input schema. */
+  const ORACLE_INPUT = {
+    table_id: 'yes-no',
+    question: 'La corde tient-elle ?',
+    likelihood: 'incertain',
+  };
+  const ARGS = JSON.stringify(ORACLE_INPUT);
+  /** Split in two, because every provider streams tool arguments in pieces. */
+  const CUT = 18;
+
+  /** The call id each adapter is expected to produce — `ollama` sends none. */
+  const EXPECTED_CALL_ID: Record<string, string> = {
+    anthropic: 'toolu_1',
+    'openai-compatible': 'call_1',
+    ollama: 'roll_oracle',
+  };
+
+  const toolPort = (name: string, args: string): NarratorPort => {
+    if (name === 'anthropic') {
+      return createAnthropicNarrator(configFor('anthropic'), {
+        fetch: scriptedFetch(() =>
+          streamResponse(
+            sse([
+              { type: 'message_start', message: { model: 'wire-model', usage: {} } },
+              {
+                type: 'content_block_start',
+                index: 0,
+                content_block: { type: 'tool_use', id: 'toolu_1', name: 'roll_oracle' },
+              },
+              {
+                type: 'content_block_delta',
+                index: 0,
+                delta: { type: 'input_json_delta', partial_json: args.slice(0, CUT) },
+              },
+              {
+                type: 'content_block_delta',
+                index: 0,
+                delta: { type: 'input_json_delta', partial_json: args.slice(CUT) },
+              },
+              { type: 'content_block_stop', index: 0 },
+              {
+                type: 'message_delta',
+                delta: { stop_reason: 'tool_use' },
+                usage: { input_tokens: 11, output_tokens: 7 },
+              },
+            ]),
+          ),
+        ),
+      });
+    }
+    if (name === 'ollama') {
+      // This one hands arguments over as an object, so there is nothing to cut.
+      return createOllamaNarrator(configFor('ollama', { tools: 'on' }), {
+        fetch: scriptedFetch(() =>
+          streamResponse(
+            ndjson([
+              {
+                model: 'wire-model',
+                message: {
+                  content: '',
+                  tool_calls: [
+                    { function: { name: 'roll_oracle', arguments: JSON.parse(args) as unknown } },
+                  ],
+                },
+              },
+              { done: true, done_reason: 'stop', prompt_eval_count: 9, eval_count: 5 },
+            ]),
+          ),
+        ),
+      });
+    }
+    return createOpenAiCompatibleNarrator(configFor('openai-compatible', { tools: 'on' }), {
+      fetch: scriptedFetch(() =>
+        streamResponse(
+          sse([
+            {
+              model: 'wire-model',
+              choices: [
+                {
+                  index: 0,
+                  delta: {
+                    tool_calls: [
+                      {
+                        index: 0,
+                        id: 'call_1',
+                        function: { name: 'roll_oracle', arguments: args.slice(0, CUT) },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+            {
+              choices: [
+                {
+                  index: 0,
+                  delta: { tool_calls: [{ index: 0, function: { arguments: args.slice(CUT) } }] },
+                },
+              ],
+            },
+            { choices: [{ index: 0, delta: {}, finish_reason: 'tool_calls' }], usage: {} },
+          ]),
+        ),
+      ),
+    });
+  };
+
+  it.each(['anthropic', 'openai-compatible', 'ollama'])(
+    'rend le bloc exact que le registre attend — %s',
+    async (name) => {
+      const events = await collect(toolPort(name, ARGS).narrer(request()));
+      const calls = events.filter((event) => event.type === 'tool_call').map((event) => event.call);
+      expect(calls).toStrictEqual([
+        {
+          type: 'tool_use',
+          callId: EXPECTED_CALL_ID[name],
+          tool: 'roll_oracle',
+          input: ORACLE_INPUT,
+        },
+      ]);
+    },
+  );
+
+  /**
+   * The event stream and `result.toolCalls` are ONE truth, not two — and the
+   * finish is what tells the caller to run the loop of section 3.1.
+   */
+  it.each(['anthropic', 'openai-compatible', 'ollama'])(
+    'annonce tool_call et reporte les mêmes appels dans le résultat — %s',
+    async (name) => {
+      const events = await collect(toolPort(name, ARGS).narrer(request()));
+      const calls = events.filter((event) => event.type === 'tool_call').map((event) => event.call);
+      const end = events.at(-1);
+      expect(end?.type).toBe('end');
+      if (end?.type !== 'end') return;
+      expect(end.result.finish).toBe('tool_call');
+      expect(end.result.toolCalls).toStrictEqual(calls);
+    },
+  );
+
+  /**
+   * And what comes off the wire is accepted by the FROZEN surface: the name is
+   * one of the twelve, and the decoded arguments validate against the very
+   * schema `runToolCall` revalidates with. A decode that drifted would produce
+   * a call the handler drops as `invalid_arguments`, silently.
+   */
+  it.each(['anthropic', 'openai-compatible', 'ollama'])(
+    'et ce qu’il décode est recevable par la surface gelée — %s',
+    async (name) => {
+      const events = await collect(toolPort(name, ARGS).narrer(request()));
+      const call = events.find((event) => event.type === 'tool_call');
+      expect(call?.type).toBe('tool_call');
+      if (call?.type !== 'tool_call') return;
+      expect(Object.hasOwn(TOOL_DEFINITIONS_BY_NAME, call.call.tool)).toBe(true);
+      expect(TOOL_INPUT_SCHEMAS.roll_oracle.safeParse(call.call.input).success).toBe(true);
+    },
+  );
+
+  /**
+   * Section 0.2: a tool call whose arguments do not parse is DROPPED, never
+   * repaired into something plausible. The two adapters that receive arguments
+   * as a string are the two that can see a truncation.
+   */
+  it.each(['anthropic', 'openai-compatible'])(
+    'abandonne un appel aux arguments tronqués, sans rien inventer — %s',
+    async (name) => {
+      const events = await collect(toolPort(name, ARGS.slice(0, -4)).narrer(request()));
+      expect(events.filter((event) => event.type === 'tool_call')).toStrictEqual([]);
+      const end = events.at(-1);
+      expect(end?.type).toBe('end');
+      if (end?.type !== 'end') return;
+      expect(end.result.toolCalls).toStrictEqual([]);
     },
   );
 });

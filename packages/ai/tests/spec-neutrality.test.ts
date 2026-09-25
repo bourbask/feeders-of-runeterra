@@ -11,15 +11,16 @@
  * exempt in a NAMED, CLOSED list of sections: a `providerId` has to be written
  * somewhere, and the `adapters/<id>.ts` paths have to be readable in the tree.
  *
- * ── A DEVIATION, REPORTED RATHER THAN PAPERED OVER ──────────────────────────
- * Section 0.7 writes N1's scope as "partout sauf §0.3 à §0.6". Applied to the
- * letter, N1 is RED BY CONSTRUCTION: the rule's own table, which lives in
- * §0.7, necessarily spells the ten forbidden patterns — it IS the rule. The
- * section's closing paragraph makes the argument itself ("un test rouge par
- * construction est un test qu'on désactive dans la semaine"), so §0.7 is
- * exempt from N1 here as it already is from N2. Measured: it is the only line
- * outside §0.3–§0.6 that matches N1. Flagged in the pull request; the fix
- * belongs in the specification's table, not in this file.
+ * ── WHY §0.7 IS EXEMPT FROM N1 TOO ──────────────────────────────────────────
+ * Section 0.7 used to write N1's scope as "partout sauf §0.3 à §0.6". Applied
+ * to the letter, N1 was RED BY CONSTRUCTION: the rule's own table, which lives
+ * in §0.7, necessarily spells the ten forbidden patterns — it IS the rule.
+ * Measured: that table's line is the ONLY one outside §0.3–§0.6 that matches
+ * N1. The section's closing paragraph already made the argument ("un test
+ * rouge par construction est un test qu'on désactive dans la semaine"), so the
+ * SPECIFICATION's table was corrected in this pull request rather than this
+ * file bending around it, and the two now say the same thing. The exemption is
+ * nominative and closed, like N2's.
  */
 
 import { readFileSync } from 'node:fs';
@@ -37,7 +38,7 @@ const N1 =
 /** N2 — vendor names. Section 0.7's list, typed out. */
 const N2 = /anthropic|openai|ollama|openrouter|groq|together/i;
 
-/** The adapter block, and it alone. */
+/** The adapter block, and §0.7's own table, which has to spell the patterns. */
 const N1_EXEMPT = new Set(['0.3', '0.4', '0.5', '0.6', '0.7']);
 /** Named and closed: the port's own vocabulary, the adapters, the rule, the tree, the arbitrations. */
 const N2_EXEMPT = new Set(['0.1', '0.3', '0.4', '0.5', '0.6', '0.7', '10', '11']);

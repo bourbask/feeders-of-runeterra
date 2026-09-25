@@ -13,6 +13,12 @@
  * `tests/scene-channel.test.ts` proves it from the outside: a fact present in
  * the state but absent from the list does not appear in the rendered prompt.
  *
+ * It also reads the PARAMETER LIST of this function, and not its arity:
+ * `Function.length` stops counting at the first parameter with a default
+ * value, which is exactly the shape a second parameter would take — it leaves
+ * every existing call compiling. Measured: a state parameter with a default,
+ * concatenated to `perceivableFacts`, left that file entirely green.
+ *
  * ── WHY IT IS DATA AND NOT PROSE ────────────────────────────────────────────
  * Section 4.7: the prototype fed the last journal entries as PROSE, and a
  * model handed a story continues it, tidies it and reinterprets it. Three

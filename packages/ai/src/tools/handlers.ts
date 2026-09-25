@@ -24,6 +24,7 @@
  */
 
 import {
+  READ_ONLY_TOOL_NAMES,
   TOOL_INPUT_SCHEMAS,
   TOOL_OUTPUT_SCHEMAS,
   type NarratorToolResultBlock,
@@ -78,13 +79,23 @@ export interface ToolRuntime {
   readonly proposals: ToolProposalSink;
 }
 
-const READ_NAMES = new Set<string>([
-  'get_state',
-  'get_lore',
-  'get_chronicle',
-  'check_name_allowed',
-  'roll_oracle',
-]);
+/**
+ * THE READ / PROPOSAL FRONTIER — one definition, never a second copy.
+ *
+ * This set is what decides whether a call from the model is executed as a read
+ * or handed to the proposal sink, which is the invariant-1 boundary on this
+ * side of the port. It used to RETYPE the five names, and nothing compared the
+ * copy to the tuple: measured in the M0-18 acceptance pass, deleting
+ * `'roll_oracle'` from the literal left 127 tests out of 127 green, and sent
+ * the one read tool that WRITES to the journal into `proposals.propose` where
+ * no test looks. Emptying the whole literal failed a single test.
+ *
+ * It is built from `READ_ONLY_TOOL_NAMES` now, so there is nothing left to
+ * drift from, and `tests/tool-surface.test.ts` walks all twelve tools through
+ * `runToolCall` and pins the side each one lands on — the set and the routing
+ * are both guarded, from two directions.
+ */
+const READ_NAMES: ReadonlySet<string> = new Set<string>(READ_ONLY_TOOL_NAMES);
 
 /** Deterministic JSON: object keys sorted at every depth, no whitespace. */
 export function stableJson(value: unknown): string {

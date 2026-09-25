@@ -58,6 +58,49 @@ const brief = (facts: readonly Fact[]): NarrationBriefDto =>
  */
 const SCENE_PRESENT_NAMES = ['Braum', 'Sejuani', 'Ulrun'];
 
+/**
+ * The parameter list of a function, AS WRITTEN — defaults, rest and
+ * destructuring included. `Function.length` cannot be used for this: it counts
+ * only up to the first parameter with a default, which is the exact shape a
+ * widening of this channel would take.
+ */
+function parameterList(fn: (...args: never[]) => unknown): readonly string[] {
+  const source = fn.toString();
+  const open = source.indexOf('(');
+  if (open === -1) throw new Error(`pas de liste de paramètres lisible : ${source.slice(0, 80)}`);
+  let depth = 0;
+  let close = -1;
+  for (let at = open; at < source.length; at += 1) {
+    const ch = source[at];
+    if (ch === '(' || ch === '[' || ch === '{') depth += 1;
+    else if (ch === ')' || ch === ']' || ch === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        close = at;
+        break;
+      }
+    }
+  }
+  if (close === -1) throw new Error('liste de paramètres non fermée');
+  const inside = source.slice(open + 1, close).trim();
+  if (inside.length === 0) return [];
+  const parts: string[] = [];
+  let level = 0;
+  let current = '';
+  for (const ch of inside) {
+    if (ch === '(' || ch === '[' || ch === '{') level += 1;
+    if (ch === ')' || ch === ']' || ch === '}') level -= 1;
+    if (ch === ',' && level === 0) {
+      parts.push(current.trim());
+      current = '';
+      continue;
+    }
+    current += ch;
+  }
+  parts.push(current.trim());
+  return parts;
+}
+
 describe('le bloc <scene> se construit depuis brief.perceivableFacts', () => {
   it('rend ce que la liste porte, dans l’ordre où elle le porte', () => {
     const rendered = buildSceneBlock(
@@ -110,12 +153,31 @@ describe('le bloc <scene> se construit depuis brief.perceivableFacts', () => {
   });
 
   /**
-   * The signature is the guard. `buildSceneBlock` takes the brief and nothing
-   * else, so adding a `SceneState` parameter is a change a reviewer sees.
-   * Asserted mechanically because "it takes one argument" is exactly the kind
-   * of claim that survives the refactor that breaks it.
+   * THE SIGNATURE IS THE GUARD — AND IT IS READ AS A PARAMETER LIST.
+   *
+   * `buildSceneBlock` takes the brief and nothing else, so adding a
+   * `SceneState` parameter is a change a reviewer sees. Asserted mechanically
+   * because "it takes one argument" is exactly the kind of claim that survives
+   * the refactor that breaks it — and the FIRST mechanical form of the claim
+   * survived it: `Function.length` stops counting at the first parameter that
+   * has a default value, and a default is precisely the shape an addition
+   * would take, since it leaves every existing call compiling. Measured: a
+   * second state parameter WITH a default, concatenated to `perceivableFacts`,
+   * left this file 5 green out of 5 while the perception channel was open.
+   *
+   * So what is read here is the parameter list the function itself carries,
+   * defaults and rest included, taken from its own source text.
    */
   it('ne prend qu’un seul paramètre, et c’est le brief', () => {
+    expect(parameterList(buildSceneBlock)).toStrictEqual(['brief']);
+  });
+
+  /**
+   * `Function.length` is kept, and kept HONEST: it is the arity a caller sees,
+   * not the parameter list. It is asserted beside the list, never in its
+   * place — on its own it is the measured leak above, not a guard.
+   */
+  it('et son arité déclarée est un, ce qui est plus faible et se dit', () => {
     expect(buildSceneBlock.length).toBe(1);
   });
 });

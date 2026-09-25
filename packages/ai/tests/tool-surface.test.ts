@@ -28,6 +28,7 @@ import { readFileSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
 
+import { estimateTokens } from '../src/prompts/estimate.js';
 import {
   TOOL_DEFINITIONS,
   TOOL_DEFINITIONS_BY_NAME,
@@ -369,5 +370,247 @@ describe('l’exécution d’un appel d’outil', () => {
     expect(outcome.kind).toBe('result');
     if (outcome.kind !== 'result') return;
     expect(outcome.block.content).toContain('tool_output_invalid');
+  });
+});
+
+/**
+ * THE READ / PROPOSAL FRONTIER, WALKED TOOL BY TOOL.
+ *
+ * `runToolCall` sorts the twelve calls into two piles, and the set it sorts
+ * with used to RETYPE the five read names by hand. Nothing compared that copy
+ * to anything: measured, deleting `'roll_oracle'` from it left 127 tests out
+ * of 127 green while the one read tool that WRITES to the journal went off to
+ * `proposals.propose`, and emptying the copy entirely failed one test. The set
+ * is derived from `READ_ONLY_TOOL_NAMES` now; below is the behavioural half of
+ * the guard, the one that fails whichever way the frontier moves.
+ *
+ * Written as an EXACT TABLE and not as a loop over the same tuple the code
+ * sorts with — otherwise both operands would come from one definition and the
+ * assertion would compare a list with itself (ADR 0007).
+ */
+describe('la frontière lecture / proposition, parcourue outil par outil', () => {
+  /** One valid call per tool: the routing is only reached once arguments validate. */
+  const VALID_INPUT: Record<string, unknown> = {
+    get_state: { scope: 'clocks', character_id: null },
+    get_lore: { query: 'le col', kind: 'place', limit: 3 },
+    get_chronicle: { section: 'arcs', subject_id: null, limit: 5 },
+    check_name_allowed: { name: 'Ulrun' },
+    roll_oracle: { table_id: 'yes-no', question: 'La corde tient-elle ?', likelihood: 'incertain' },
+    propose_npc_introduce: {
+      name: 'Ulrun',
+      role: 'éclaireur',
+      one_line: 'il connaît le col',
+      place_id: 'plc_1',
+      disposition: 'neutre',
+    },
+    propose_clock_create: {
+      name: 'La tempête',
+      segments: 6,
+      kind: 'menace',
+      rationale: 'le vent se lève',
+    },
+    propose_clock_advance: { clock_id: 'clk_1', segments: 2, rationale: 'la neige monte' },
+    propose_thread_open: {
+      title: 'La dette du col',
+      summary: 'Ulrun attend une réponse.',
+      tied_to_kind: 'none',
+      tied_to_id: '',
+    },
+    propose_lore_fact: {
+      statement: 'Le clan laisse une offrande au col.',
+      tied_to_kind: 'place',
+      tied_to_id: 'plc_1',
+    },
+    propose_scene_transition: { to_place_id: 'plc_2', new_place_name: '' },
+    propose_vow_hook: { title: 'Ramener Keld', rank: 'dangereux', why_now: 'le col se ferme' },
+  };
+
+  /** The side of the frontier each of the twelve must land on, typed out. */
+  const EXPECTED_SIDES: readonly (readonly [string, string])[] = [
+    ['get_state', 'read'],
+    ['get_lore', 'read'],
+    ['get_chronicle', 'read'],
+    ['check_name_allowed', 'read'],
+    ['roll_oracle', 'read'],
+    ['propose_npc_introduce', 'proposal'],
+    ['propose_clock_create', 'proposal'],
+    ['propose_clock_advance', 'proposal'],
+    ['propose_thread_open', 'proposal'],
+    ['propose_lore_fact', 'proposal'],
+    ['propose_scene_transition', 'proposal'],
+    ['propose_vow_hook', 'proposal'],
+  ];
+
+  /** A runtime that records WHICH side answered, and answers validly on both. */
+  function spyRuntime(): {
+    readonly runtime: Parameters<typeof runToolCall>[1];
+    readonly landed: { name: string; side: string }[];
+  } {
+    const landed: { name: string; side: string }[] = [];
+    const note = (name: string, side: string): void => void landed.push({ name, side });
+    return {
+      landed,
+      runtime: {
+        reads: {
+          get_state: () => {
+            note('get_state', 'read');
+            return Promise.resolve({
+              scope: 'clocks' as const,
+              clocks: [],
+              as_of_event_seq: 1482,
+            });
+          },
+          get_lore: () => {
+            note('get_lore', 'read');
+            return Promise.resolve({ results: [], filtered_count: 0 });
+          },
+          get_chronicle: () => {
+            note('get_chronicle', 'read');
+            return Promise.resolve({
+              section: 'arcs' as const,
+              entries: [],
+              chronicle_version: 17,
+            });
+          },
+          check_name_allowed: () => {
+            note('check_name_allowed', 'read');
+            return Promise.resolve({
+              name: 'Ulrun',
+              allowed: true,
+              reason: null,
+              suggestion: null,
+            });
+          },
+          roll_oracle: () => {
+            note('roll_oracle', 'read');
+            return Promise.resolve({
+              table_id: 'yes-no' as const,
+              value: 61,
+              answer: 'non' as const,
+              is_extreme: false,
+              event_seq: 1483,
+            });
+          },
+        },
+        proposals: {
+          propose: (tool: string) => {
+            note(tool, 'proposal');
+            return Promise.resolve({ status: 'applied' as const, reason: null, applied: {} });
+          },
+        },
+      },
+    };
+  }
+
+  it('envoie chacun des douze du côté où il doit aller, et rend un tool_result', async () => {
+    const { runtime, landed } = spyRuntime();
+    const dropped: string[] = [];
+    for (const name of TWELVE_IN_FULL_LETTERS) {
+      const outcome = await runToolCall(
+        { type: 'tool_use', callId: `c_${name}`, tool: name, input: VALID_INPUT[name] },
+        runtime,
+      );
+      if (outcome.kind !== 'result') dropped.push(name);
+    }
+    expect(dropped).toStrictEqual([]);
+    expect(landed.map((entry) => [entry.name, entry.side])).toStrictEqual(
+      EXPECTED_SIDES.map((entry) => [...entry]),
+    );
+  });
+
+  /**
+   * `roll_oracle` is the read tool that APPENDS to the journal
+   * (`ReadOnlyTool.journalOnly`, P12). Routed to the proposal sink it would
+   * become a write path standing outside the invariant-1 guard, which is
+   * exactly what the untested hand-typed set allowed.
+   */
+  it('roll_oracle atteint reads.roll_oracle, et jamais le puits de propositions', async () => {
+    const { runtime, landed } = spyRuntime();
+    const outcome = await runToolCall(
+      {
+        type: 'tool_use',
+        callId: 'c_oracle',
+        tool: 'roll_oracle',
+        input: VALID_INPUT['roll_oracle'],
+      },
+      runtime,
+    );
+    expect(landed).toStrictEqual([{ name: 'roll_oracle', side: 'read' }]);
+    expect(outcome.kind).toBe('result');
+    if (outcome.kind !== 'result') return;
+    expect(outcome.block.isError).toBe(false);
+    expect(outcome.block.content).toContain('"event_seq":1483');
+  });
+});
+
+/**
+ * WHAT THE TOOL TABLE WEIGHS — measured, because section 4.3 says it is.
+ *
+ * ── WHY THIS TEST EXISTS AT ALL ─────────────────────────────────────────────
+ * Section 4.3 gives the `tools` segment a hard ceiling of 900 tokens and
+ * writes "figé, mesuré en CI" beside it. Nothing measured it. The table is
+ * rendered at position 0 of EVERY request of every campaign (section 4.2), so
+ * it is the one segment nobody can trim at run time — the truncation ladder of
+ * section 4.4 has no level for it.
+ *
+ * ── WHAT IS MEASURED ────────────────────────────────────────────────────────
+ * The provider-neutral rendering, `JSON.stringify(TOOL_DEFINITIONS)`, with the
+ * local estimator of section 4.3 — the same one `prompt-size.test.ts` uses,
+ * because two estimators is how a budget and a size test start disagreeing
+ * about the same bytes. Each adapter then wraps it in its own envelope, which
+ * only ADDS: this figure is a floor on what is actually sent, never a ceiling.
+ *
+ * ── REPORTED, NOT WORKED AROUND ─────────────────────────────────────────────
+ * The table weighs 2 112 estimated tokens against a ceiling of 900. The
+ * overrun is 1 212 tokens, and it is not this task's to arbitrate: with
+ * `system[0]` measured at 4 279 against 2 400 (see `prompt-size.test.ts` and
+ * the pull request), section 4.3 is over by about 3 091 tokens before a single
+ * variable block. So the measurement is PINNED rather than asserted green: the
+ * day the table fits, or the day the ceiling is re-arbitrated, the assertion
+ * below goes red and forces the reference and the flag to be redone
+ * deliberately. Escalated to the lead, for M0-22.
+ */
+describe('ce que pèse la table d’outils', () => {
+  /** Section 4.3's `tools` ceiling, in full letters. Never read from `src/`. */
+  const TOOLS_CEILING_TOKENS = 900;
+  /** Section 4.3's stated tolerance on the local estimator. */
+  const REFERENCE_TOLERANCE_PCT = 8;
+  /** The overrun as measured today, in full letters. */
+  const MEASURED_OVERRUN_TOKENS = 1212;
+
+  interface Reference {
+    readonly toolsVersion: string;
+    readonly estimatedTokens: number;
+    readonly chars: number;
+    readonly recordedAt: string;
+  }
+
+  const reference = JSON.parse(
+    readFileSync(new URL('./tools-size.reference.json', import.meta.url), 'utf8'),
+  ) as Reference;
+
+  const serialised = JSON.stringify(TOOL_DEFINITIONS);
+
+  it('correspond à la référence commitée, à huit pour cent près', () => {
+    const measured = estimateTokens(serialised);
+    const drift = Math.abs(measured - reference.estimatedTokens) / reference.estimatedTokens;
+    expect(drift * 100).toBeLessThanOrEqual(REFERENCE_TOLERANCE_PCT);
+  });
+
+  it('et la référence porte la version de surface qu’elle a mesurée', () => {
+    expect(reference.toolsVersion).toBe(TOOLS_VERSION);
+  });
+
+  it('rougit si l’on en retire un tiers — mesuré ici, pas supposé', () => {
+    const amputated = JSON.stringify(TOOL_DEFINITIONS.slice(0, 8));
+    const measured = estimateTokens(amputated);
+    const drift = Math.abs(measured - reference.estimatedTokens) / reference.estimatedTokens;
+    expect(drift * 100).toBeGreaterThan(REFERENCE_TOLERANCE_PCT);
+  });
+
+  it('dépasse le plafond de 900 du §4.3 — écart mesuré et signalé, jamais maquillé', () => {
+    const measured = estimateTokens(serialised);
+    expect(measured).toBeGreaterThan(TOOLS_CEILING_TOKENS);
+    expect(measured - TOOLS_CEILING_TOKENS).toBe(MEASURED_OVERRUN_TOKENS);
   });
 });

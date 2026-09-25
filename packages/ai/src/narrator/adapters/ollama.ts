@@ -152,6 +152,18 @@ export function createOllamaNarrator(
         ...(options.now === undefined ? {} : { now: options.now }),
         frames: async function* frames(): AsyncGenerator<ProviderEvent> {
           const response = await post(body, req.abortSignal);
+          /**
+           * WHETHER A TOOL CALL WAS SEEN IS A PROPERTY OF THE STREAM, NOT OF A
+           * LINE. This server puts `tool_calls` on a message line and `done`
+           * on a LATER one, with `done_reason: 'stop'` either way. Read per
+           * line, the finish came out `complete` while a call had just been
+           * decoded — and `driveStream` then drops `result.toolCalls`, which
+           * is how a decoded call reached the caller as an event and as an
+           * empty list at the same time. Measured: nothing exercised this path
+           * at all (`common.ts` lines 91-94, the whole `tool_call` case, were
+           * uncovered).
+           */
+          let sawToolCall = false;
           for await (const raw of readNdjson(response)) {
             const payload = raw as Record<string, unknown>;
             const error = payload['error'];
@@ -176,6 +188,7 @@ export function createOllamaNarrator(
             for (const call of calls ?? []) {
               const fn = call['function'] as Record<string, unknown> | undefined;
               if (fn === undefined) continue;
+              sawToolCall = true;
               yield {
                 type: 'tool_call',
                 call: {
@@ -199,12 +212,7 @@ export function createOllamaNarrator(
             const reason = payload['done_reason'];
             yield {
               type: 'finish',
-              finish:
-                reason === 'length'
-                  ? 'truncated'
-                  : (calls ?? []).length > 0
-                    ? 'tool_call'
-                    : 'complete',
+              finish: reason === 'length' ? 'truncated' : sawToolCall ? 'tool_call' : 'complete',
             };
           }
         },
