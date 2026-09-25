@@ -63,7 +63,9 @@ import type { AttributeId } from './types/attributes.js';
 import { ATTRIBUTE_MAX, ATTRIBUTE_MIN } from './types/attributes.js';
 import type {
   BriefAppliedEffect,
+  BriefAudience,
   BriefImposedPrice,
+  BriefPerceivableFact,
   BriefPresage,
   BriefRollDetail,
   NarrationBrief,
@@ -86,6 +88,7 @@ import type { MoveId, Outcome } from './types/moves.js';
 import { LIKELIHOOD_THRESHOLDS } from './types/moves.js';
 import type { ProgressRank, TrackState } from './types/progress.js';
 import { TICKS_PER_MILESTONE } from './types/progress.js';
+import type { SceneState } from './types/scene.js';
 import type { RuleViolation } from './types/violations.js';
 
 // ------------------------------------------------------------------ context
@@ -856,6 +859,75 @@ function requireRollableActor(
 
 // ------------------------------------------------------------------- the brief
 
+/**
+ * The (scope, recipients) pair of a brief, built in ONE place.
+ *
+ * THE INVARIANT, and the only reason this function exists instead of an object
+ * literal at each call site: `recipients` is `null` EXACTLY WHEN `scope` is
+ * `'table'`. Two fields that must agree, written in two places, drift — that
+ * is how `recipients: []` at table scope, or `recipients: null` on a private
+ * fact, gets into a journal nobody re-reads. ADR 0008 decision 1.
+ */
+export function briefAudience(scope: EventScope, recipients: readonly PlayerId[]): BriefAudience {
+  if (scope === 'table') return { scope, recipients: null };
+  return { scope, recipients: [...recipients] };
+}
+
+/** Sorted by `ref.id`, then by `kind` so a ref in both lists still has one order. */
+function compareFacts(a: BriefPerceivableFact, b: BriefPerceivableFact): number {
+  const byRef = a.ref.id.localeCompare(b.ref.id);
+  return byRef === 0 ? a.kind.localeCompare(b.kind) : byRef;
+}
+
+/** The scene's two lists, flattened into the one shape the brief carries. */
+function sceneFacts(scene: SceneState): readonly BriefPerceivableFact[] {
+  return [
+    ...scene.present.map((presence): BriefPerceivableFact => ({
+      kind: 'present',
+      ref: presence.ref,
+      name: presence.name,
+      detail: presence.state,
+      sinceSeq: presence.sinceSeq,
+    })),
+    ...scene.absent.map((absence): BriefPerceivableFact => ({
+      kind: 'absent',
+      ref: absence.ref,
+      name: absence.name,
+      detail: absence.cause,
+      sinceSeq: absence.sinceSeq,
+    })),
+  ];
+}
+
+/**
+ * WHAT ONE AUDIENCE PERCEIVES — ADR 0008 decision 3, and THE FUNCTION M1 WILL
+ * CHANGE. Named and exported for exactly that reason: a filter written inline
+ * inside `buildBrief` would have to be found again before it could be replaced.
+ *
+ * WHAT IT DOES IN M0, said plainly rather than left to be discovered:
+ *
+ *   - at `'table'` scope — the only scope `DEFAULT_SCOPE` produces, because the
+ *     party stays grouped until M1 (ADR 0008 decision 1) — the filter is THE
+ *     IDENTITY: every fact of the scene reaches every recipient. That is the
+ *     whole M0 perimeter, and it is correct;
+ *   - at any other scope, it returns NOTHING. M0 has no per-group rule to
+ *     apply, and the failure this list exists to prevent is over-disclosure:
+ *     handing a splinter group the whole scene would make perception
+ *     decorative, which is the sentence ADR 0008 decision 3 is built on.
+ *     Nothing in M0 reaches this branch; M1 replaces it with the real rule.
+ *
+ * Derived from `scene`, never stored: there is no second copy of the presence
+ * facts to keep in step (02-mj-ia.md section 4.7).
+ */
+export function perceivableFactsFor(
+  scene: SceneState | null,
+  audience: BriefAudience,
+): readonly BriefPerceivableFact[] {
+  if (scene === null) return [];
+  if (audience.scope !== 'table') return [];
+  return [...sceneFacts(scene)].sort(compareFacts);
+}
+
 function buildBrief(
   state: CampaignState,
   turn: Turn,
@@ -868,9 +940,12 @@ function buildBrief(
     readonly playerInput: string;
   },
 ): NarrationBrief {
+  const audience = briefAudience(DEFAULT_SCOPE, state.party.memberPlayerIds);
   return {
     correlationId: turn.correlationId,
     sceneId: state.scene?.sceneId ?? null,
+    audience,
+    perceivableFacts: perceivableFactsFor(state.scene, audience),
     actorCharacterId: ctx.actorId,
     moveId: fields.moveId,
     outcome: fields.outcome,

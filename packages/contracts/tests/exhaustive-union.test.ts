@@ -31,6 +31,7 @@ import {
   ATTRIBUTE_MIN,
   ATTRIBUTE_SPREAD,
   ATTRIBUTES,
+  BRIEF_PERCEIVABLE_FACTS_MAX,
   CAMPAIGN_STATUSES,
   CHAMPION_LOCK_KINDS,
   CHARACTER_STATUSES,
@@ -60,6 +61,7 @@ import {
   OUTCOMES,
   PARTY_ROLES,
   PAY_PRICE_MODES,
+  PERCEIVABLE_FACT_KINDS,
   PROGRESS_RANKS,
   PROGRESS_TRACK_KINDS,
   PROGRESS_TRACK_STATUSES,
@@ -73,6 +75,10 @@ import {
 } from '@for/engine';
 import { describe, expect, it } from 'vitest';
 
+import {
+  BRIEF_PERCEIVABLE_FACTS_MAX as contractsBriefPerceivableFactsMax,
+  zBriefAudience,
+} from '../src/ai/narration.js';
 import { RANK_TICKS } from '../src/content/common.js';
 import { likelihoodKeysOfSchema, YESNO_THRESHOLDS } from '../src/content/oracle.js';
 import {
@@ -105,6 +111,7 @@ import {
   zMoveId,
   zOutcome,
   zPartyRole,
+  zPerceivableFactKind,
   zProgressRank,
   zProgressTrackKind,
   zProgressTrackStatus,
@@ -188,6 +195,17 @@ describe('exhaustivité des unions', () => {
   // est devenue fausse le jour où le contenu en a eu besoin, et une
   // justification périmée est exactement ce que cette liste doit empêcher.
   //
+  // M0-33 AJOUTE DEUX LIGNES (ADR 0008 décision 3) :
+  //   PERCEIVABLE_FACT_KINDS ... recopié en `zPerceivableFactKind` → comparé
+  //   BRIEF_PERCEIVABLE_FACTS_MAX  recopié en chiffre → comparé aux scalaires
+  //
+  // ET SIGNALE UN DÉFAUT QU'IL NE CORRIGE PAS : le recensement « 47 constantes,
+  // 6 fonctions » ci-dessus est PÉRIMÉ. Le barrel construit en compte 79 et 64
+  // (`node -e "import('./packages/engine/dist/index.js')"`). Le remettre à jour
+  // exige de justifier une par une les constantes non comparées, ce qui est une
+  // passe à part entière et n'appartient pas à M0-33 ; la règle opératoire
+  // d'ADR 0007 en dépend, donc c'est dit ici plutôt que laissé à trouver.
+  //
   // La règle : une constante non recopiée n'a pas de miroir à garder. Une
   // constante recopiée en a un, et il figure ici. Si un export apparaît dans
   // @for/engine sans être dans cette liste, cette liste est périmée.
@@ -218,6 +236,12 @@ describe('exhaustivité des unions', () => {
     ['MAX_PROGRESS_BOXES', MAX_PROGRESS_BOXES, contractsMaxProgressBoxes],
     ['MAX_PROGRESS_TICKS', MAX_PROGRESS_TICKS, contractsMaxProgressTicks],
     ['SCENE_PRESENCE_MAX', SCENE_PRESENCE_MAX, contractsScenePresenceMax],
+    // ADR 0008 décision 3, M0-33. Le plafond des faits perceptibles est DÉRIVÉ
+    // du moteur (`SCENE_PRESENCE_MAX * 2`, les deux listes de `SceneState` au
+    // maximum) et RECOPIÉ ici en chiffre. Sans cette ligne, déplacer le
+    // plafond de scène laisserait `z.array(...).max(16)` refuser un brief que
+    // le moteur produit.
+    ['BRIEF_PERCEIVABLE_FACTS_MAX', BRIEF_PERCEIVABLE_FACTS_MAX, contractsBriefPerceivableFactsMax],
   ])('%s : la recopie des contrats vaut la constante du moteur', (_name, engine, mirror) => {
     expect(mirror).toBe(engine);
   });
@@ -231,6 +255,7 @@ describe('exhaustivité des unions', () => {
     ['PROGRESS_RANKS', [...PROGRESS_RANKS], zProgressRank.options],
     ['ENTITY_KINDS', [...ENTITY_KINDS], zEntityKind.options],
     ['SCENE_ABSENCE_CAUSES', [...SCENE_ABSENCE_CAUSES], zSceneAbsenceCause.options],
+    ['PERCEIVABLE_FACT_KINDS', [...PERCEIVABLE_FACT_KINDS], zPerceivableFactKind.options],
     ['RULE_VIOLATION_CODES', [...RULE_VIOLATION_CODES], zRuleViolationCode.options],
     // ADR 0006 + ADR 0007. Le littéral `z.literal('roll')` de contracts ne
     // gardait que la COPIE ; le tuple du moteur, qui définit `PayPriceMode` et
@@ -319,6 +344,23 @@ describe('exhaustivité des unions', () => {
   // `core/enums.ts` reste donc gardée par la seule paire
   // `satisfies` + `AssertNever`, qui couvre membre en trop et membre manquant
   // à la compilation. À rouvrir si le moteur publie un jour le tuple.
+
+  // ────────────────────────────────────────────────────────────────────────
+  // ADR 0008 DÉCISION 1 — la règle que `satisfies` ne peut pas porter.
+  //
+  // `recipients` est null EXACTEMENT quand `scope` vaut 'table'. C'est une
+  // relation entre deux champs : aucun type TypeScript mirroité ne l'exprime,
+  // donc c'est un raffinement d'exécution, et il se prouve DANS LES DEUX SENS.
+  it('zBriefAudience : recipients null exactement à la portée table', () => {
+    const player = '01J8Z9QKT4E6WQKQ2H2GJ2Q3ZA';
+    expect(zBriefAudience.safeParse({ scope: 'table', recipients: null }).success).toBe(true);
+    expect(zBriefAudience.safeParse({ scope: 'subset', recipients: [player] }).success).toBe(true);
+    expect(zBriefAudience.safeParse({ scope: 'private', recipients: [player] }).success).toBe(true);
+    // Les deux violations, une par sens.
+    expect(zBriefAudience.safeParse({ scope: 'table', recipients: [player] }).success).toBe(false);
+    expect(zBriefAudience.safeParse({ scope: 'subset', recipients: null }).success).toBe(false);
+    expect(zBriefAudience.safeParse({ scope: 'private', recipients: null }).success).toBe(false);
+  });
 
   it('le flux RNG est une union fermée, pas une chaîne libre', () => {
     // 03-donnees.md §3.1 écrit `z.string().nullable()`. Le moteur est canonique.

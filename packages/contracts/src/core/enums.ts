@@ -39,6 +39,7 @@ import type {
   MoveId,
   Outcome,
   PartyRole,
+  PerceivableFactKind,
   ProgressRank,
   ProgressTrackKind,
   ProgressTrackStatus,
@@ -290,6 +291,21 @@ export type SceneAbsenceCausesAreComplete = AssertNever<
   Exclude<SceneAbsenceCause, (typeof SCENE_ABSENCE_CAUSES)[number]>
 >;
 export const zSceneAbsenceCause = z.enum(SCENE_ABSENCE_CAUSES);
+
+/**
+ * ADR 0008 décision 3 — les deux formes d'un fait perceptible, qui sont les
+ * deux listes de `SceneState`. En anglais : ce ne sont pas des valeurs de
+ * mécanique lues par un joueur, ce sont les noms des champs `present` et
+ * `absent` (ARCHITECTURE.md §4.2).
+ */
+const PERCEIVABLE_FACT_KINDS = [
+  'present',
+  'absent',
+] as const satisfies readonly PerceivableFactKind[];
+export type PerceivableFactKindsAreComplete = AssertNever<
+  Exclude<PerceivableFactKind, (typeof PERCEIVABLE_FACT_KINDS)[number]>
+>;
+export const zPerceivableFactKind = z.enum(PERCEIVABLE_FACT_KINDS);
 
 // ------------------------------------------------------------------ effects
 
