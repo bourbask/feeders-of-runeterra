@@ -8,6 +8,9 @@
   "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "dist"],
   "references": [
     {
+      "path": "../content"
+    },
+    {
       "path": "../contracts"
     },
     {
