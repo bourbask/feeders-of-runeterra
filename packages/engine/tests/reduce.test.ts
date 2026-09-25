@@ -512,6 +512,35 @@ describe('the branches that are easy to get wrong', () => {
     expect(twice.truths[0]?.optionId).toBe('le-froid-epargne');
   });
 
+  /**
+   * The sort in `withTruth`, which nothing guarded before (M0-17).
+   *
+   * TWO truths, and they are answered in DESCENDING order: with one truth, or
+   * with two answered in ascending order, this test would pass with the sort
+   * removed and prove nothing. `toEqual` on the whole array rather than a
+   * length or a member — the claim is about the ORDER, so the order is what is
+   * written out.
+   */
+  it('keeps truths in truthId order, whatever order they were answered in', () => {
+    const answered = reduceAll(anInitialState(), [
+      anEvent({
+        seq: 1,
+        type: 'campaign.truth_set',
+        payload: { truthId: 'les-esprits', optionId: 'les-esprits-veillent' },
+      }),
+      anEvent({
+        seq: 2,
+        type: 'campaign.truth_set',
+        payload: { truthId: 'le-froid', optionId: 'le-froid-tue' },
+      }),
+    ]);
+
+    expect(answered.truths).toEqual([
+      { truthId: 'le-froid', optionId: 'le-froid-tue', customText: null },
+      { truthId: 'les-esprits', optionId: 'les-esprits-veillent', customText: null },
+    ]);
+  });
+
   it('saturates a gauge rather than refusing the entry', () => {
     const out = reduce(
       base,
