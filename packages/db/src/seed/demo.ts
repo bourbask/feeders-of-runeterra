@@ -233,6 +233,10 @@ export function seedDemo(connection: SqliteConnection, options: SeedOptions = {}
 
   try {
     playDemoCampaign(stage);
+    // A campaign never ends on an unfinished turn: if the last beat opened a
+    // burn window, the safety net closes it here (`Director.settle`). The
+    // `--minimal` path is covered by `mark()`, which settles before it throws.
+    director.settle();
   } catch (error) {
     if (!(error instanceof DemoStopped)) throw error;
   }
