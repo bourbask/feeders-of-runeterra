@@ -66,6 +66,7 @@ import {
   writeProjectionsFrom,
 } from '@for/db';
 import {
+  MOVE_BY_INTENT,
   assertNotAiAuthored,
   burnWindowClosedBy,
   decide,
@@ -73,9 +74,14 @@ import {
   isErr,
 } from '@for/engine';
 
-import { findOpenBurnWindow, isBurnClosingIntent, isMoveIntent } from './burn-window.js';
+import {
+  findOpenBurnWindows,
+  isBurnClosingIntent,
+  isMoveIntent,
+  windowTargetedBy,
+} from './burn-window.js';
 import { readJournalSince, toGameEvent } from './journal.js';
-import { loadReplay, snapshotDue, writeSnapshot } from './snapshots.js';
+import { loadReplay, loadState, snapshotDue, writeSnapshot } from './snapshots.js';
 
 import type { NarratorPort } from '@for/contracts';
 import type { AppendableEvent, SqliteConnection } from '@for/db';
@@ -89,6 +95,8 @@ import type {
   GameEvent,
   IdFactory,
   Intent,
+  MoveIntent,
+  MovePlan,
   NarrationBrief,
   PlayerId,
   RuleViolation,
@@ -222,11 +230,6 @@ function intentForSeq(connection: SqliteConnection, campaignId: string, rollSeq:
   };
 }
 
-/** The `correlation_id` of the turn the open roll belongs to. */
-function correlationOf(events: readonly GameEvent[], seq: number): string | null {
-  return events.find((event) => event.seq === seq)?.correlationId ?? null;
-}
-
 // ------------------------------------------------------------- persistence
 
 /**
@@ -336,22 +339,64 @@ function appendServerTurn(
 
 // -------------------------------------------------------------- the window
 
-interface OpenWindow {
-  readonly window: BurnWindow;
-  /** The group of the turn that opened it, so the closing entries join it. */
-  readonly correlationId: string | null;
-}
-
-function openWindow(
+/**
+ * The plan the engine made AT DECLARATION TIME, rebuilt from the journal.
+ *
+ * 03-donnees.md section 3.4: "le plan du mouvement est porte par la fenetre,
+ * jamais recalcule a la fermeture". The window this server hands back is
+ * DERIVED and not stored (see `burn-window.ts`), so "carried" is spelled here
+ * as "replayed from the prefix that produced it": the journal up to the
+ * `move.declared`, reduced, and `handler.plan` applied to THAT state. The
+ * function is pure in `(state, character, definition, intent)`, and an
+ * append-only log has one prefix at a sequence, so the plan that comes back is
+ * the plan the engine gave — not a fresh reading of a state that has moved on.
+ *
+ * WHICH IS THE WHOLE POINT: a scene closed between the dice and the decision
+ * cannot strand the window, because the state being planned against is the one
+ * where the scene was still open. Measured in `tests/game/burn.test.ts`.
+ *
+ * `loadState` rather than `loadReplay` on purpose: this needs a
+ * `CampaignState` and nothing else, so the snapshot cache bounds the replay.
+ * The two maps `loadReplay` adds are for writing zone C, and nothing is
+ * written here.
+ */
+function planAtDeclaration(
   deps: GameDeps,
   campaignId: string,
   journal: readonly GameEvent[],
-): OpenWindow | null {
-  const window = findOpenBurnWindow(journal, (rollSeq) =>
-    intentForSeq(deps.connection, campaignId, rollSeq)(),
+  declarationSeq: number,
+  intent: MoveIntent,
+  characterId: CharacterId,
+): MovePlan | null {
+  const before = loadState(deps.connection, campaignId, declarationSeq - 1, (afterSeq) =>
+    journal.filter((event) => event.seq > afterSeq && event.seq < declarationSeq),
   );
-  if (window === null) return null;
-  return { window, correlationId: correlationOf(journal, window.rollSeq) };
+  const character = before.characters[characterId];
+  if (character === undefined) return null;
+  const handler = MOVE_BY_INTENT[intent.type];
+  const definition = deps.content.moves[handler.id];
+  if (definition === undefined) return null;
+  const planned = handler.plan({ state: before, character, definition, intent });
+  return isErr(planned) ? null : planned.value;
+}
+
+/**
+ * Every roll of this campaign still waiting for a burn decision.
+ *
+ * Exported so the tests read the window the SERVER reads — the real `intents`
+ * row and the real replayed plan — instead of a stub that answers whatever the
+ * test wanted to hear.
+ */
+export function openBurnWindows(
+  deps: GameDeps,
+  campaignId: string,
+  journal: readonly GameEvent[],
+): readonly BurnWindow[] {
+  return findOpenBurnWindows(journal, {
+    intentFor: (rollSeq) => intentForSeq(deps.connection, campaignId, rollSeq)(),
+    planFor: (declarationSeq, intent, characterId) =>
+      planAtDeclaration(deps, campaignId, journal, declarationSeq, intent, characterId),
+  });
 }
 
 /**
@@ -366,20 +411,53 @@ function closeWindowAsKeep(
   deps: GameDeps,
   campaignId: string,
   state: CampaignState,
-  open: OpenWindow,
+  window: BurnWindow,
 ): RuleViolation | null {
-  if (open.correlationId === null) {
-    // A roll whose entries carry no group: nothing written by this pipeline
-    // looks like that, so it is a journal that came from somewhere else. The
-    // window is left open rather than closed into a group of its own, which
-    // would split one turn in two for the proof.
-    return { code: 'no_burn_window', details: { rollSeq: open.window.rollSeq } };
-  }
-  const ctx = decisionContext(deps, state, open.window.characterId, open.window);
-  const decision = decide(state, { type: 'momentum.keep', rollId: open.window.roll.rollId }, ctx);
+  const ctx = decisionContext(deps, state, window.characterId, window);
+  const decision = decide(state, { type: 'momentum.keep', rollId: window.roll.rollId }, ctx);
   if (isErr(decision)) return decision.error;
-  appendServerTurn(deps, campaignId, decision.value.events, open.correlationId);
+  // The group comes from the WINDOW, which read it off the journal: the
+  // closing entries join the turn the dice are in rather than opening a
+  // second one (03-donnees.md sections 0.5 and 3.7).
+  appendServerTurn(deps, campaignId, decision.value.events, window.correlationId);
   return null;
+}
+
+/**
+ * Closes EVERY open window of this campaign as `momentum.keep`, and answers
+ * what could not be closed.
+ *
+ * THE SERVER'S HALF OF "A WINDOW MUST ALWAYS BE ABLE TO CLOSE"
+ * (03-donnees.md section 3.4). The engine holds two thirds of that promise:
+ * the window carries the move's plan, so a scene closed between the dice and
+ * the decision cannot strand it, and `burnWindowClosedBy` shuts a window on
+ * death, retirement or departure, those entries carrying the character as
+ * their subject. The third is beyond the engine's reach: a campaign that is
+ * no longer `active` refuses EVERYTHING, a closing included —
+ * `requireActiveCampaign` is the first thing `decide()` asks. Pausing a table
+ * with a window open would therefore leave a turn whose dice are read, whose
+ * consequences are never applied, and which nothing can ever finish.
+ *
+ * So the clause is: CALL THIS BEFORE WRITING `campaign.status_changed`. It is
+ * a function rather than a sentence in a document because the pause path
+ * (admin, M0-27) is not written here, and a rule retyped at its call site is
+ * a rule with a hole. Pausing is a human intention serialised on the same
+ * write queue (03-donnees.md section 0.3), so there is no moment between this
+ * call and the status entry where a new window could open.
+ *
+ * An empty answer means every window closed. A non-empty one names what
+ * stopped it, and the caller must NOT write the status change.
+ */
+export function closeAllBurnWindows(deps: GameDeps, campaignId: string): readonly RuleViolation[] {
+  const failures: RuleViolation[] = [];
+  for (const window of openBurnWindows(deps, campaignId, journalOf(deps, campaignId))) {
+    // Reloaded per window: each closing writes, and the next one decides
+    // against the state that closing produced.
+    const state = loadReplay(deps.connection, campaignId).state;
+    const failed = closeWindowAsKeep(deps, campaignId, state, window);
+    if (failed !== null) failures.push(failed);
+  }
+  return failures;
 }
 
 // ------------------------------------------------------------ the narration
@@ -538,7 +616,7 @@ export async function runIntent(deps: GameDeps, input: PipelineInput): Promise<P
   }
   const intent = parsed.data;
 
-  let journal = journalOf(deps, campaignId);
+  const journal = journalOf(deps, campaignId);
   let state = loadReplay(deps.connection, campaignId).state;
   const actorId = resolveActor(state, playerId, intent);
   if (actorId === null) {
@@ -548,33 +626,60 @@ export async function runIntent(deps: GameDeps, input: PipelineInput): Promise<P
     };
   }
 
-  let open = openWindow(deps, campaignId, journal);
+  const windows = openBurnWindows(deps, campaignId, journal);
 
-  if (open !== null && !isBurnClosingIntent(intent)) {
-    const sameCharacter = open.window.characterId === actorId;
-    if (sameCharacter && isMoveIntent(intent)) {
+  /**
+   * The window this call is about, and ONLY this one.
+   *
+   * A closing intent names its roll; anything else concerns the actor's own
+   * window, or the window of whoever it writes about. "The last window of the
+   * journal" is the one answer that is never right: two players waiting on a
+   * burn decision at the same time is the normal state of a free table
+   * (ARCHITECTURE.md section 4.4), and answering the wrong one lost the first
+   * player's turn in silence — both closings refused `no_burn_window`, no
+   * `move.resolved`, no effects, no price.
+   */
+  const targeted = windowTargetedBy(windows, intent);
+
+  if (!isBurnClosingIntent(intent)) {
+    const own = windows.find((candidate) => candidate.characterId === actorId) ?? null;
+    if (own !== null && isMoveIntent(intent)) {
       // The actor's own roll is still undecided. NOT a turn lock: the rest of
       // the table is free, and this player has exactly one thing to do first.
       return {
         kind: 'rejected',
         violation: {
           code: 'move_in_progress',
-          details: { rollId: open.window.roll.rollId, rollSeq: open.window.rollSeq },
+          details: { rollId: own.roll.rollId, rollSeq: own.rollSeq },
         },
       };
     }
-    if (sameCharacter || wouldClose(deps, state, actorId, intent, open.window)) {
-      const failed = closeWindowAsKeep(deps, campaignId, state, open);
+    // THE SAFETY NET, window by window. It aims at the window of the character
+    // CONCERNED — the actor's own, and any other this intent would write
+    // about — never at the most recent one.
+    //
+    // The dry decision is taken ONCE, whatever the number of open windows, and
+    // only when there is a window that is not the actor's own: it is the only
+    // thing in this path that costs a full `decide()`, and asking it per
+    // window would multiply that cost by the size of the table.
+    const written = windows.some((candidate) => candidate.characterId !== actorId)
+      ? dryEvents(deps, state, actorId, intent)
+      : [];
+    const doomed = windows.filter(
+      (candidate) =>
+        candidate.characterId === actorId ||
+        written.some((event) => burnWindowClosedBy(candidate, event)),
+    );
+    for (const candidate of doomed) {
+      const failed = closeWindowAsKeep(deps, campaignId, state, candidate);
       if (failed !== null) return { kind: 'rejected', violation: failed };
-      journal = journalOf(deps, campaignId);
       state = loadReplay(deps.connection, campaignId).state;
-      open = null;
     }
   }
 
-  const window = open?.window ?? null;
+  const window = targeted;
   /** Non-null when this call FINISHES a turn an earlier one opened. */
-  const continues = isBurnClosingIntent(intent) ? (open?.correlationId ?? null) : null;
+  const continues = targeted?.correlationId ?? null;
   /** The group every entry of this call joins. See `toAppendable`. */
   const turnCorrelation = continues ?? intentId;
 
@@ -701,7 +806,24 @@ export function wouldClose(
   intent: Intent,
   window: BurnWindow,
 ): boolean {
+  return dryEvents(deps, state, actorId, intent).some((event) => burnWindowClosedBy(window, event));
+}
+
+/**
+ * The entries this intent WOULD write, decided against the state as it stands
+ * and then thrown away.
+ *
+ * It writes nothing and consumes no draw index: an index is consumed by an
+ * entry that reaches the journal, and no entry is appended here. A refusal
+ * answers "nothing", which is the right answer — an intent that cannot be
+ * decided shuts no window.
+ */
+function dryEvents(
+  deps: GameDeps,
+  state: CampaignState,
+  actorId: CharacterId,
+  intent: Intent,
+): readonly GameEvent[] {
   const dry = decide(state, intent, decisionContext(deps, state, actorId, null));
-  if (isErr(dry)) return false;
-  return dry.value.events.some((event) => burnWindowClosedBy(window, event));
+  return isErr(dry) ? [] : dry.value.events;
 }

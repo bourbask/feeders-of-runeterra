@@ -165,7 +165,10 @@ export function createCampaignService(options: CampaignServiceOptions): Campaign
       if (group.length === 0) return Promise.resolve(null);
       const proof = buildTurnProof(group, viewerId);
       if (proof === null) return Promise.resolve(null);
-      return Promise.resolve({ proof, truncated: wasTruncated(group, proof.effects.length) });
+      return Promise.resolve({
+        proof,
+        truncated: wasTruncated(group, viewerId, proof.effects.length),
+      });
     },
   };
 }
@@ -173,12 +176,15 @@ export function createCampaignService(options: CampaignServiceOptions): Campaign
 /**
  * Did the bound of the DTO drop something?
  *
- * TWO OPERANDS, TWO ORIGINS: the consequences the GROUP holds, counted by
- * `turn-proof.ts`, against the entries the PROOF carries. The proof's own list
- * measured against itself would have answered `false` for ever.
+ * TWO OPERANDS, TWO ORIGINS: the consequences the GROUP holds FOR THIS VIEWER,
+ * counted by `turn-proof.ts`, against the entries the PROOF carries. The
+ * proof's own list measured against itself would have answered `false` for
+ * ever — and the group counted without the viewer answered `true` for a turn
+ * nothing had been cut from, which told the viewer that an entry they may not
+ * see exists (ADR 0008).
  */
-function wasTruncated(group: readonly GameEvent[], carried: number): boolean {
-  return proofEffectCandidates(group).length > carried;
+function wasTruncated(group: readonly GameEvent[], viewerId: PlayerId, carried: number): boolean {
+  return proofEffectCandidates(group, viewerId).length > carried;
 }
 
 export type { TurnProofResult };

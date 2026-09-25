@@ -228,6 +228,14 @@ export function fallbacks(): FallbackTemplates {
         partielle: ['Ça passe, mal.'],
         echec: ['Ça ne passe pas.'],
       },
+      // `strike` est le seul mouvement du lot dont le plan dépende de la
+      // scène : c'est lui qui mesure qu'une fenêtre reste fermable quand la
+      // scène s'est close entre les dés et la décision.
+      strike: {
+        franche: ['Le coup porte.'],
+        partielle: ['Le coup porte, et il coûte.'],
+        echec: ['Le coup rate.'],
+      },
       default: { franche: ['Rien à dire.'] },
     },
   };

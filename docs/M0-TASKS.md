@@ -1330,6 +1330,11 @@ transaction — demander à l'IA d'habiller le fait déjà acquis.
   appelle cette fonction.
 - `src/game/snapshots.ts` (tous les 200 événements + jalons), `src/game/chronicle.ts`
   (déclenchement, sans le travailleur).
+- `intent-pipeline.closeAllBurnWindows(deps, campaignId)` : la **clause du statut de campagne**
+  que M0-34 laisse au serveur (`03-donnees.md` §3.4). Une campagne qui n'est plus `active`
+  refuse tout, fermeture comprise, donc le chemin d'administration qui écrira
+  `campaign.status_changed` (M0-27) **appelle cette fonction d'abord** ; une réponse non vide
+  nomme ce qui a empêché, et le statut ne s'écrit pas.
 - `tests/game/*.test.ts`.
 
 **Critères d'acceptation**
@@ -1353,7 +1358,12 @@ transaction — demander à l'IA d'habiller le fait déjà acquis.
   est impossible : `revertTurn` ne prend pas de liste de `seq`, seulement un `correlation_id`.
 - Un test vérifie la fenêtre de brûlure du souffle en deux temps : `roll.action_resolved
   { burnWindow: true }` → `momentum.burn` → `character.momentum_burned` + `roll.action_revised`,
-  sans jamais réécrire le premier jet. Le moteur en livre la mécanique en **M0-34** ; ce qui se
+  sans jamais réécrire le premier jet.
+- **La table est libre, donc DEUX fenêtres ouvertes à la fois sont l'état normal** et non un cas
+  limite (`ARCHITECTURE.md` §4.4 : « ordre du tour : aucun »). Un test nommé ouvre une fenêtre
+  pour A puis une pour B, et chacun ferme la sienne : la fenêtre se cherche par le `rollId` que
+  l'intention vise, ou par le personnage concerné — **jamais « la dernière du journal »**, qui
+  perd le tour du premier joueur en silence. Le moteur en livre la mécanique en **M0-34** ; ce qui se
   vérifie **ici** est la part du serveur : `Decision.pending` persisté, **aucun appel au
   conteur** tant que la fenêtre est ouverte, la fenêtre rendue en `ctx.burnWindow` sur
   l'intention de fermeture, et le filet de sécurité branché sur `burnWindowClosedBy` — une

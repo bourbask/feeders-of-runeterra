@@ -15,8 +15,7 @@
 import { canonicalJson } from '@for/db';
 import { describe, expect, it } from 'vitest';
 
-import { findOpenBurnWindow } from '../../src/game/burn-window.js';
-import { runIntent } from '../../src/game/intent-pipeline.js';
+import { openBurnWindows, runIntent } from '../../src/game/intent-pipeline.js';
 import { readJournalSince } from '../../src/game/journal.js';
 import { revertTurn } from '../../src/game/revert.js';
 import { loadReplay, writeSnapshot } from '../../src/game/snapshots.js';
@@ -149,11 +148,12 @@ describe('revertTurn', () => {
         intentId: uuidAt(1),
         intent: FACE_DANGER,
       });
-      const open = findOpenBurnWindow(
+      const open = openBurnWindows(
+        table.deps,
+        CAMPAIGN_ID,
         readJournalSince(table.connection, CAMPAIGN_ID, 0),
-        () => FACE_DANGER,
       );
-      expect(open).not.toBeNull();
+      expect(open).toHaveLength(1);
 
       revertTurn(table.connection, {
         campaignId: CAMPAIGN_ID,
@@ -167,8 +167,12 @@ describe('revertTurn', () => {
       // AUCUNE LISTE DE CHAMPS À RESTAURER À LA MAIN : la fenêtre était dérivée
       // du journal, et l'entrée qui la portait est sautée au rejeu.
       expect(
-        findOpenBurnWindow(readJournalSince(table.connection, CAMPAIGN_ID, 0), () => FACE_DANGER),
-      ).toBeNull();
+        openBurnWindows(
+          table.deps,
+          CAMPAIGN_ID,
+          readJournalSince(table.connection, CAMPAIGN_ID, 0),
+        ),
+      ).toEqual([]);
     } finally {
       table.close();
     }

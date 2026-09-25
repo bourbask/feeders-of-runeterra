@@ -4,7 +4,7 @@
  * removed.
  */
 
-import { canonicalJson, readSince } from '@for/db';
+import { addMember, canonicalJson, readSince, upsertPlayer, withRebuildLock } from '@for/db';
 import { assertNotAiAuthored, reduce } from '@for/engine';
 import { describe, expect, it } from 'vitest';
 
@@ -21,7 +21,7 @@ import {
   uuidAt,
 } from './support.test.js';
 
-import type { GameEvent, Intent, PlayerId, RollId } from '@for/engine';
+import type { CampaignId, GameEvent, Intent, PlayerId, RollId } from '@for/engine';
 
 /** A clean success: score 7 against 1 and 2. No price, no presage, no window. */
 function aCleanSuccess(): readonly number[] {
@@ -174,6 +174,47 @@ describe('le chemin d’une intention', () => {
     }
   });
 
+  it('sérialise deux écritures de la MÊME table, dans l’ordre où elles sont entrées', async () => {
+    const { createWriteQueue } = await import('../../src/game/write-queue.js');
+    const queue = createWriteQueue();
+    const trace: string[] = [];
+
+    /**
+     * Un travail qui REND LA MAIN au milieu. C'est tout l'enjeu : aujourd'hui
+     * `runIntent` est synchrone jusqu'à l'appel au conteur, donc la boucle
+     * d'événements sérialise toute seule et la file peut être débranchée sans
+     * qu'un seul test tombe. Elle se mesure donc ici, sur un travail qui
+     * s'interrompt — ce que `runIntent` deviendra le jour où un `await` entre
+     * dans la section critique.
+     */
+    const job = (name: string, ticks: number) => async (): Promise<string> => {
+      trace.push(`${name}:début`);
+      for (let index = 0; index < ticks; index += 1) await Promise.resolve();
+      trace.push(`${name}:fin`);
+      return name;
+    };
+
+    // « A » cède la main trois fois, « B » aucune : sans la file, B passe
+    // entièrement pendant que A attend. L'ordre attendu n'est donc ni celui
+    // des durées ni celui d'un tri.
+    const first = queue.run('table-a', job('A', 3));
+    const second = queue.run('table-a', job('B', 0));
+    await expect(Promise.all([first, second])).resolves.toEqual(['A', 'B']);
+
+    // LE TABLEAU EXACT : quatre étapes, aucun entrelacement.
+    expect(trace).toEqual(['A:début', 'A:fin', 'B:début', 'B:fin']);
+    expect(queue.size()).toBe(0);
+  });
+
+  it('ne laisse pas un travail en échec coincer la table', async () => {
+    const { createWriteQueue } = await import('../../src/game/write-queue.js');
+    const queue = createWriteQueue();
+    const failed = queue.run('table-a', () => Promise.reject(new Error('boum')));
+    await expect(failed).rejects.toThrow('boum');
+    // La file continue : une intention refusée ne ferme pas la table.
+    await expect(queue.run('table-a', () => Promise.resolve('après'))).resolves.toBe('après');
+  });
+
   it('laisse passer deux campagnes en parallèle', async () => {
     const first = aTable();
     const second = aTable();
@@ -234,6 +275,152 @@ describe('le chemin d’une intention', () => {
       expect(result.value.accepted).toBe(false);
       expect(result.value.rejection?.code).toBe('no_burn_window');
       expect(result.value.events).toHaveLength(0);
+    } finally {
+      table.close();
+    }
+  });
+
+  /**
+   * LES DEUX DERNIERS CODES DE L'UNION FERMÉE, que la couverture a désignés :
+   * `campaign_not_found` et `campaign_rebuilding` n'étaient construits par
+   * aucun test, alors que M0-25 les traduit en fermeture de socket. Un code
+   * jamais produit est un code dont on ne sait pas s'il sort.
+   */
+  it('refuse une table qui n’existe pas, en 404 et sans exception', async () => {
+    const table = aTable();
+    try {
+      const service = createCampaignService({ deps: table.deps });
+      const result = await service.submitIntent({
+        campaignId: '0000000000000000000000NOPE' as CampaignId,
+        playerId: PLAYER_ID,
+        intentId: uuidAt(1),
+        intent: FACE_DANGER,
+      });
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect([result.error.code, result.error.httpStatus]).toEqual(['campaign_not_found', 404]);
+    } finally {
+      table.close();
+    }
+  });
+
+  it('refuse en 409 pendant que CETTE table se reconstruit, et sert les autres', async () => {
+    const table = aTable();
+    try {
+      // La file est court-circuitée pour que la garde soit franchie DANS le
+      // verrou : `assertAcceptsIntents` est la première instruction de
+      // `runIntent`, avant toute attente.
+      const service = createCampaignService({
+        deps: table.deps,
+        queue: { run: (_campaignId, job) => job(), size: () => 0 },
+      });
+      const refused = withRebuildLock(CAMPAIGN_ID, () =>
+        service.submitIntent({
+          campaignId: CAMPAIGN_ID,
+          playerId: PLAYER_ID,
+          intentId: uuidAt(1),
+          intent: FACE_DANGER,
+        }),
+      );
+      const outcome = await refused;
+      expect(outcome.ok).toBe(false);
+      if (outcome.ok) return;
+      expect([outcome.error.code, outcome.error.httpStatus]).toEqual(['campaign_rebuilding', 409]);
+
+      // UNE SEULE TABLE EST REFUSÉE : le verrou nomme la campagne. Hors
+      // verrou, la même intention passe.
+      table.rng.script('action', aCleanSuccess());
+      const after = await service.submitIntent({
+        campaignId: CAMPAIGN_ID,
+        playerId: PLAYER_ID,
+        intentId: uuidAt(2),
+        intent: FACE_DANGER,
+      });
+      expect(after.ok).toBe(true);
+    } finally {
+      table.close();
+    }
+  });
+
+  it('refuse en `character_not_in_campaign` un membre qui n’a pas de personnage', async () => {
+    const table = aTable();
+    try {
+      // Membre de la table, mais aucune fiche à son nom : la forge est M0-29,
+      // donc en M0 un personnage naît de l'amorce et non d'un joueur. Le trou
+      // est signalé avec la tâche ; ce qui se mesure ici, c'est que le serveur
+      // refuse par une VALEUR de l'union fermée au lieu de lever.
+      const orphan = '0000000000000000000000PYRC' as PlayerId;
+      upsertPlayer(table.connection, {
+        id: orphan,
+        discordUserId: 'discord-orphan',
+        discordUsername: 'Sans fiche',
+        createdAt: 0,
+      });
+      addMember(table.connection, {
+        id: `${orphan}-member`,
+        campaignId: CAMPAIGN_ID,
+        playerId: orphan,
+        joinedAt: 0,
+      });
+
+      const before = journal(table.connection).length;
+      const outcome = await runIntent(table.deps, {
+        campaignId: CAMPAIGN_ID,
+        playerId: orphan,
+        intentId: uuidAt(1),
+        intent: FACE_DANGER,
+      });
+      expect(outcome.kind).toBe('rejected');
+      if (outcome.kind !== 'rejected') return;
+      expect(outcome.violation.code).toBe('character_not_in_campaign');
+      // Et RIEN N'A ÉTÉ AJOUTÉ : le refus tombe avant les dés, dont le script
+      // est resté vide — un tirage aurait levé `ScriptExhausted`.
+      expect(journal(table.connection)).toHaveLength(before);
+    } finally {
+      table.close();
+    }
+  });
+
+  /**
+   * UNE PANNE DU CONTEUR NE PERD JAMAIS UNE PARTIE (`02-mj-ia.md` §0.2 : « on
+   * dégrade la prose, jamais l'équité »). L'état était déjà juste et déjà
+   * durable avant que le port ne soit appelé ; ce qui se mesure ici est que
+   * l'incident est INSCRIT — `narration.gm_failed` — et que la phrase du
+   * moteur part quand même, marquée `source: 'engine'`.
+   */
+  it('inscrit la panne du conteur et sert la phrase du moteur', async () => {
+    const table = aTable({ momentum: 2 });
+    try {
+      table.rng.script('action', aCleanSuccess());
+      const broken = {
+        ...table.deps,
+        narrator: {
+          ...table.deps.narrator,
+          narrer: () => {
+            throw new Error('le fournisseur ne répond pas');
+          },
+        },
+      };
+      const outcome = await runIntent(broken, {
+        campaignId: CAMPAIGN_ID,
+        playerId: PLAYER_ID,
+        intentId: uuidAt(1),
+        intent: FACE_DANGER,
+      });
+      expect(outcome.kind).toBe('accepted');
+
+      const types = journal(table.connection).map((row) => row.type);
+      // LES DEUX ENTRÉES, DANS CET ORDRE : l'incident, puis la phrase.
+      expect(types.slice(-2)).toEqual(['narration.gm_failed', 'narration.gm_message']);
+
+      const written = readSince(table.connection, CAMPAIGN_ID, 0);
+      const failed = written.find((event) => event.type === 'narration.gm_failed');
+      const spoken = written.find((event) => event.type === 'narration.gm_message');
+      expect(failed?.payload).toMatchObject({ errorKind: 'api_error' });
+      // La phrase de repli est celle du moteur, et elle le dit.
+      expect(spoken?.payload).toMatchObject({ source: 'engine' });
+      // Le tour, lui, s'est résolu : la panne n'a rien coûté à la partie.
+      expect(types).toContain('move.resolved');
     } finally {
       table.close();
     }

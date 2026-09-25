@@ -8,6 +8,8 @@ import { staticContent } from '@for/content';
 import { ENTITY_DISPOSITIONS, MOVE_IDS } from '@for/engine';
 import { describe, expect, it } from 'vitest';
 
+import { buildNarrator } from '../../src/ai/narrator.js';
+import { readEnv } from '../../src/env.js';
 import { createCampaignService } from '../../src/game/campaign-service.js';
 import { CHRONICLE_VOLUME_THRESHOLD, chronicleTrigger } from '../../src/game/chronicle.js';
 import { toEngineContent } from '../../src/game/content.js';
@@ -28,6 +30,7 @@ import {
   uuidAt,
 } from './support.test.js';
 
+import type { NarrateEvent, NarratorPort } from '@for/contracts';
 import type { CampaignState, GameEvent, PlayerId } from '@for/engine';
 
 /** An entry with just enough envelope for the policy to read it. */
@@ -313,5 +316,95 @@ describe('la projection par spectateur', () => {
     } finally {
       table.close();
     }
+  });
+});
+
+/**
+ * LE PORT DU CONTEUR, désigné par la couverture : `buildNarrator` n'était
+ * exercé que par le chemin heureux du `stub`, et les deux refus du port —
+ * `unsupported` pour une sortie structurée que le `stub` ne sait pas rendre,
+ * `unavailable` pour un fournisseur dont l'adaptateur n'existe pas encore —
+ * n'étaient lus par personne. Ce sont pourtant les deux endroits où
+ * « on dégrade la prose, jamais l'équité » (`02-mj-ia.md` §0.2) se tient ou
+ * ne se tient pas.
+ */
+describe('le port du conteur', () => {
+  /** Tout ce qu'un serveur exige, et qui ne parle pas du conteur. */
+  function vars(overrides: Record<string, string> = {}): Record<string, string> {
+    return {
+      PUBLIC_URL: 'http://localhost:5173',
+      SESSION_SECRET: 'a'.repeat(32),
+      DISCORD_CLIENT_ID: 'client-id',
+      DISCORD_CLIENT_SECRET: 'client-secret',
+      DISCORD_REDIRECT_URI: 'http://localhost:8787/api/auth/discord/callback',
+      ...overrides,
+    };
+  }
+
+  it('rend un `stub` qui ne dit RIEN, et qui l’annonce dans ses capacités', async () => {
+    const port = buildNarrator(readEnv(vars({ NARRATOR_PROVIDER: 'stub' })));
+    expect(port.providerId).toBe('stub');
+    // Une phrase inventée ici mettrait du français dans `@for/server`
+    // (`ARCHITECTURE.md` §4.3) et ferait mentir `source: 'ai'`.
+    const seen: NarrateEvent[] = [];
+    for await (const event of port.narrer({
+      purpose: 'scene',
+      messages: [],
+    } as unknown as Parameters<NarratorPort['narrer']>[0])) {
+      seen.push(event);
+    }
+    // LE TABLEAU EXACT : un seul événement, et c'est la fin.
+    expect(seen.map((event) => event.type)).toEqual(['end']);
+    expect(seen.map((event) => (event.type === 'end' ? event.result.text : event.type))).toEqual([
+      '',
+    ]);
+    expect(port.capabilities.structuredOutput).toBe(false);
+  });
+
+  it('refuse `structurer` au lieu d’inventer une forme', async () => {
+    const port = buildNarrator(readEnv(vars({ NARRATOR_PROVIDER: 'stub' })));
+    // Une réponse vide fabriquée passerait la validation de l'appelant et
+    // serait portée comme un fait. La forge et la chronique doivent l'apprendre.
+    await expect(
+      Promise.resolve().then(() =>
+        port.structurer({ schemaName: 'ChroniqueDigest' } as unknown as Parameters<
+          NarratorPort['structurer']
+        >[0]),
+      ),
+    ).rejects.toMatchObject({ code: 'unsupported', providerId: 'stub' });
+  });
+
+  it('démarre quand même sans adaptateur, et lève À L’APPEL', async () => {
+    // `anthropic` n'a pas d'adaptateur avant M0-18. Refuser de démarrer
+    // mettrait un déploiement à terre pour la seule chose qui a le droit de
+    // se dégrader.
+    const port = buildNarrator(
+      readEnv(vars({ NARRATOR_PROVIDER: 'anthropic', NARRATOR_API_KEY: 'k' })),
+    );
+    expect(port.providerId).toBe('anthropic');
+    expect(port.capabilities.streaming).toBe(false);
+    expect(() => port.narrer({} as unknown as Parameters<NarratorPort['narrer']>[0])).toThrow(
+      /anthropic/,
+    );
+    await expect(
+      Promise.resolve().then(() =>
+        port.structurer({} as unknown as Parameters<NarratorPort['structurer']>[0]),
+      ),
+    ).rejects.toMatchObject({ code: 'unavailable', providerId: 'anthropic' });
+  });
+
+  it('prend le sélecteur qu’on lui donne, ce qui est la couture de M0-18', () => {
+    const mine = { providerId: 'ollama' } as unknown as NarratorPort;
+    const seenConfigs: string[] = [];
+    // Le jour où `@for/ai` exporte `selectNarrator`, le branchement est cet
+    // argument-là, à l'unique appelant. Ce fichier ne se rouvre pas.
+    expect(
+      buildNarrator(readEnv(vars({ NARRATOR_PROVIDER: 'stub' })), (config) => {
+        seenConfigs.push(config.provider);
+        return mine;
+      }),
+    ).toBe(mine);
+    // Et il a reçu la configuration que `env.ts` a bâtie, une seule fois.
+    expect(seenConfigs).toEqual(['stub']);
   });
 });

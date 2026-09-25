@@ -144,21 +144,45 @@ function effectLabel(event: GameEvent): string {
 }
 
 /**
- * The entries of a group that are consequences, before the bound is applied.
+ * The consequences of a group THIS VIEWER RECEIVED, before the bound is
+ * applied.
  *
  * Exported because the caller has to answer `truncated`, and the only honest
  * way to answer it is to compare this count with the length of the list the
  * proof carries — TWO OPERANDS, TWO ORIGINS. A `truncated` flag set by the
  * same code that did the cutting would be a number compared with itself.
+ *
+ * ── WHY `viewerId` IS A PARAMETER AND NOT AN OMISSION ────────────────────
+ * It used to count the WHOLE group while the proof carried only what the
+ * viewer could see, and that was an information leak, not an off-by-one: on a
+ * turn of two consequences where one was `private` to another player, the
+ * viewer got one effect and `truncated: true` — with the bound of 32 nowhere
+ * near. The flag lied, AND it told them an entry exists that they have no
+ * right to see. ADR 0008 says a replay from a player's point of view gives
+ * exactly what that player saw, "ni plus ni moins", and a count is something
+ * seen. So the same visibility rule applies HERE, before the counting, and
+ * `truncated` then means the one thing it claims: the bound dropped something.
+ *
+ * Latent in M0, where the engine writes only `('table', null)`; real from M1,
+ * when the rule that splits the pair arrives.
  */
-export function proofEffectCandidates(events: readonly GameEvent[]): readonly GameEvent[] {
+export function proofEffectCandidates(
+  events: readonly GameEvent[],
+  viewerId: PlayerId,
+): readonly GameEvent[] {
   return events.filter(
-    (event) => !STRUCTURAL_TYPES.has(event.type) && !event.type.startsWith('narration.'),
+    (event) =>
+      visibleTo(event, viewerId) &&
+      !STRUCTURAL_TYPES.has(event.type) &&
+      !event.type.startsWith('narration.'),
   );
 }
 
-function effectsOf(events: readonly GameEvent[]): readonly TurnProofEffectDto[] {
-  return proofEffectCandidates(events)
+function effectsOf(
+  events: readonly GameEvent[],
+  viewerId: PlayerId,
+): readonly TurnProofEffectDto[] {
+  return proofEffectCandidates(events, viewerId)
     .slice(0, TURN_PROOF_MAX_EFFECTS)
     .map((event) => ({ eventSeq: event.seq, type: event.type, label: label(effectLabel(event)) }));
 }
@@ -239,7 +263,7 @@ export function buildTurnProof(
                 ` (jet ${String(revised.payload.revisedFromSeq)})`,
             ),
           },
-    effects: [...effectsOf(visible)],
+    effects: [...effectsOf(visible, viewerId)],
     price:
       priced === undefined
         ? null
