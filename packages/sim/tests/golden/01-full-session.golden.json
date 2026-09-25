@@ -1,0 +1,701 @@
+{
+  "journal": [
+    {
+      "seq": 1,
+      "type": "campaign.created"
+    },
+    {
+      "seq": 2,
+      "type": "campaign.status_changed"
+    },
+    {
+      "seq": 3,
+      "type": "party.member_joined"
+    },
+    {
+      "seq": 4,
+      "type": "party.member_joined"
+    },
+    {
+      "seq": 5,
+      "type": "character.created"
+    },
+    {
+      "seq": 6,
+      "type": "character.created"
+    },
+    {
+      "seq": 7,
+      "type": "party.champion_locked"
+    },
+    {
+      "seq": 8,
+      "type": "party.champion_locked"
+    },
+    {
+      "seq": 9,
+      "type": "entity.introduced"
+    },
+    {
+      "seq": 10,
+      "type": "scene.started"
+    },
+    {
+      "seq": 11,
+      "type": "narration.gm_message"
+    },
+    {
+      "seq": 12,
+      "type": "narration.player_message"
+    },
+    {
+      "seq": 13,
+      "type": "narration.gm_message"
+    },
+    {
+      "seq": 14,
+      "type": "narration.player_message"
+    },
+    {
+      "seq": 15,
+      "type": "narration.gm_message"
+    },
+    {
+      "seq": 16,
+      "type": "move.declared"
+    },
+    {
+      "seq": 17,
+      "type": "roll.action_resolved"
+    },
+    {
+      "seq": 18,
+      "type": "character.momentum_changed"
+    },
+    {
+      "seq": 19,
+      "type": "move.resolved"
+    },
+    {
+      "seq": 20,
+      "type": "narration.gm_message"
+    },
+    {
+      "seq": 21,
+      "type": "move.declared"
+    },
+    {
+      "seq": 22,
+      "type": "roll.action_resolved"
+    },
+    {
+      "seq": 23,
+      "type": "character.momentum_changed"
+    },
+    {
+      "seq": 24,
+      "type": "move.resolved"
+    },
+    {
+      "seq": 25,
+      "type": "narration.gm_message"
+    },
+    {
+      "seq": 26,
+      "type": "move.declared"
+    },
+    {
+      "seq": 27,
+      "type": "roll.action_resolved"
+    },
+    {
+      "seq": 28,
+      "type": "character.momentum_changed"
+    },
+    {
+      "seq": 29,
+      "type": "move.resolved"
+    },
+    {
+      "seq": 30,
+      "type": "narration.gm_message"
+    },
+    {
+      "seq": 31,
+      "type": "move.declared"
+    },
+    {
+      "seq": 32,
+      "type": "roll.action_resolved"
+    },
+    {
+      "seq": 33,
+      "type": "character.gauge_changed"
+    },
+    {
+      "seq": 34,
+      "type": "move.resolved"
+    },
+    {
+      "seq": 35,
+      "type": "narration.gm_message"
+    },
+    {
+      "seq": 36,
+      "type": "system.note"
+    },
+    {
+      "seq": 37,
+      "type": "narration.gm_message"
+    }
+  ],
+  "rng": {
+    "draws": {
+      "action": 4
+    },
+    "seed": "sim-01"
+  },
+  "state": {
+    "campaignId": "00000000000000000000CAMP01",
+    "championLocks": [
+      {
+        "championId": "ashe",
+        "lockKind": "reserved_pc",
+        "reason": "personnage de Alice",
+        "setSeq": 7
+      },
+      {
+        "championId": "braum",
+        "lockKind": "reserved_pc",
+        "reason": "personnage de Bruno",
+        "setSeq": 8
+      }
+    ],
+    "characters": [
+      {
+        "assets": [],
+        "attributes": {
+          "coeur": 2,
+          "esprit": 3,
+          "fer": 2,
+          "ombre": 1,
+          "vif": 2
+        },
+        "championId": "ashe",
+        "conditions": [],
+        "createdSeq": 5,
+        "displayName": "Ashe",
+        "gauges": {
+          "ame": 5,
+          "vigueur": 5,
+          "vivres": 5
+        },
+        "id": "0000000000000000000000CHRA",
+        "momentum": 5,
+        "momentumBounds": {
+          "max": 10,
+          "min": -6,
+          "reset": 2
+        },
+        "playerId": "0000000000000000000000PYRA",
+        "sheet": {
+          "championId": "ashe",
+          "ref": "ashe",
+          "source": "handwritten"
+        },
+        "status": "active",
+        "updatedSeq": 28,
+        "xpEarned": 0,
+        "xpSpent": 0
+      },
+      {
+        "assets": [],
+        "attributes": {
+          "coeur": 3,
+          "esprit": 2,
+          "fer": 3,
+          "ombre": 1,
+          "vif": 1
+        },
+        "championId": "braum",
+        "conditions": [],
+        "createdSeq": 6,
+        "displayName": "Braum",
+        "gauges": {
+          "ame": 5,
+          "vigueur": 5,
+          "vivres": 4
+        },
+        "id": "0000000000000000000000CHRB",
+        "momentum": 4,
+        "momentumBounds": {
+          "max": 10,
+          "min": -6,
+          "reset": 2
+        },
+        "playerId": "0000000000000000000000PYRB",
+        "sheet": {
+          "championId": "braum",
+          "ref": "braum",
+          "source": "handwritten"
+        },
+        "status": "active",
+        "updatedSeq": 33,
+        "xpEarned": 0,
+        "xpSpent": 0
+      }
+    ],
+    "clocks": [],
+    "contentPackHash": "24d030b6ef069dc6d4c7f4b8ddba84846af4e8ea944e5cb541f0d1a8a927c5d0",
+    "entities": [
+      {
+        "championId": null,
+        "details": {},
+        "disposition": "hostile",
+        "firstSeenSeq": 9,
+        "id": "0000000000000000000000ENTA",
+        "kind": "npc",
+        "lastSeenSeq": 9,
+        "name": "Katla la passeuse",
+        "regionId": null,
+        "slug": "enta",
+        "status": "active",
+        "summary": "Katla la passeuse"
+      }
+    ],
+    "party": {
+      "memberPlayerIds": [
+        "0000000000000000000000PYRA",
+        "0000000000000000000000PYRB"
+      ],
+      "ownerPlayerId": "0000000000000000000000PYRA"
+    },
+    "scene": {
+      "absent": [],
+      "placeId": "",
+      "placeName": "Le col battu par la tempête",
+      "present": [
+        {
+          "name": "Ashe",
+          "ref": {
+            "id": "0000000000000000000000CHRA",
+            "kind": "character"
+          },
+          "sinceSeq": 10,
+          "state": ""
+        },
+        {
+          "name": "Braum",
+          "ref": {
+            "id": "0000000000000000000000CHRB",
+            "kind": "character"
+          },
+          "sinceSeq": 10,
+          "state": ""
+        },
+        {
+          "name": "Katla la passeuse",
+          "ref": {
+            "id": "0000000000000000000000ENTA",
+            "kind": "entity"
+          },
+          "sinceSeq": 10,
+          "state": ""
+        }
+      ],
+      "sceneId": "000000000000000000000SCN01",
+      "timeOfDay": "",
+      "updatedSeq": 10
+    },
+    "seq": 37,
+    "settings": {
+      "allowForgedChampions": false,
+      "gmVerbosity": "standard",
+      "models": {
+        "narration": null,
+        "structured": null
+      },
+      "oracleBias": "neutre",
+      "requireForgeReview": true,
+      "safety": {
+        "lines": [],
+        "veils": []
+      },
+      "schemaVersion": 1
+    },
+    "status": "active",
+    "tracks": [],
+    "truths": []
+  },
+  "threads": {
+    "PYRA": [
+      {
+        "deliverySeq": 1,
+        "seq": 1,
+        "type": "campaign.created"
+      },
+      {
+        "deliverySeq": 2,
+        "seq": 2,
+        "type": "campaign.status_changed"
+      },
+      {
+        "deliverySeq": 3,
+        "seq": 3,
+        "type": "party.member_joined"
+      },
+      {
+        "deliverySeq": 4,
+        "seq": 4,
+        "type": "party.member_joined"
+      },
+      {
+        "deliverySeq": 5,
+        "seq": 5,
+        "type": "character.created"
+      },
+      {
+        "deliverySeq": 6,
+        "seq": 6,
+        "type": "character.created"
+      },
+      {
+        "deliverySeq": 7,
+        "seq": 7,
+        "type": "party.champion_locked"
+      },
+      {
+        "deliverySeq": 8,
+        "seq": 8,
+        "type": "party.champion_locked"
+      },
+      {
+        "deliverySeq": 9,
+        "seq": 9,
+        "type": "entity.introduced"
+      },
+      {
+        "deliverySeq": 10,
+        "seq": 10,
+        "type": "scene.started"
+      },
+      {
+        "deliverySeq": 11,
+        "seq": 11,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 12,
+        "seq": 12,
+        "type": "narration.player_message"
+      },
+      {
+        "deliverySeq": 13,
+        "seq": 13,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 14,
+        "seq": 14,
+        "type": "narration.player_message"
+      },
+      {
+        "deliverySeq": 15,
+        "seq": 15,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 16,
+        "seq": 16,
+        "type": "move.declared"
+      },
+      {
+        "deliverySeq": 17,
+        "seq": 17,
+        "type": "roll.action_resolved"
+      },
+      {
+        "deliverySeq": 18,
+        "seq": 18,
+        "type": "character.momentum_changed"
+      },
+      {
+        "deliverySeq": 19,
+        "seq": 19,
+        "type": "move.resolved"
+      },
+      {
+        "deliverySeq": 20,
+        "seq": 20,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 21,
+        "seq": 21,
+        "type": "move.declared"
+      },
+      {
+        "deliverySeq": 22,
+        "seq": 22,
+        "type": "roll.action_resolved"
+      },
+      {
+        "deliverySeq": 23,
+        "seq": 23,
+        "type": "character.momentum_changed"
+      },
+      {
+        "deliverySeq": 24,
+        "seq": 24,
+        "type": "move.resolved"
+      },
+      {
+        "deliverySeq": 25,
+        "seq": 25,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 26,
+        "seq": 26,
+        "type": "move.declared"
+      },
+      {
+        "deliverySeq": 27,
+        "seq": 27,
+        "type": "roll.action_resolved"
+      },
+      {
+        "deliverySeq": 28,
+        "seq": 28,
+        "type": "character.momentum_changed"
+      },
+      {
+        "deliverySeq": 29,
+        "seq": 29,
+        "type": "move.resolved"
+      },
+      {
+        "deliverySeq": 30,
+        "seq": 30,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 31,
+        "seq": 31,
+        "type": "move.declared"
+      },
+      {
+        "deliverySeq": 32,
+        "seq": 32,
+        "type": "roll.action_resolved"
+      },
+      {
+        "deliverySeq": 33,
+        "seq": 33,
+        "type": "character.gauge_changed"
+      },
+      {
+        "deliverySeq": 34,
+        "seq": 34,
+        "type": "move.resolved"
+      },
+      {
+        "deliverySeq": 35,
+        "seq": 35,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 36,
+        "seq": 36,
+        "type": "system.note"
+      },
+      {
+        "deliverySeq": 37,
+        "seq": 37,
+        "type": "narration.gm_message"
+      }
+    ],
+    "PYRB": [
+      {
+        "deliverySeq": 1,
+        "seq": 1,
+        "type": "campaign.created"
+      },
+      {
+        "deliverySeq": 2,
+        "seq": 2,
+        "type": "campaign.status_changed"
+      },
+      {
+        "deliverySeq": 3,
+        "seq": 3,
+        "type": "party.member_joined"
+      },
+      {
+        "deliverySeq": 4,
+        "seq": 4,
+        "type": "party.member_joined"
+      },
+      {
+        "deliverySeq": 5,
+        "seq": 5,
+        "type": "character.created"
+      },
+      {
+        "deliverySeq": 6,
+        "seq": 6,
+        "type": "character.created"
+      },
+      {
+        "deliverySeq": 7,
+        "seq": 7,
+        "type": "party.champion_locked"
+      },
+      {
+        "deliverySeq": 8,
+        "seq": 8,
+        "type": "party.champion_locked"
+      },
+      {
+        "deliverySeq": 9,
+        "seq": 9,
+        "type": "entity.introduced"
+      },
+      {
+        "deliverySeq": 10,
+        "seq": 10,
+        "type": "scene.started"
+      },
+      {
+        "deliverySeq": 11,
+        "seq": 11,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 12,
+        "seq": 12,
+        "type": "narration.player_message"
+      },
+      {
+        "deliverySeq": 13,
+        "seq": 13,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 14,
+        "seq": 14,
+        "type": "narration.player_message"
+      },
+      {
+        "deliverySeq": 15,
+        "seq": 15,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 16,
+        "seq": 16,
+        "type": "move.declared"
+      },
+      {
+        "deliverySeq": 17,
+        "seq": 17,
+        "type": "roll.action_resolved"
+      },
+      {
+        "deliverySeq": 18,
+        "seq": 18,
+        "type": "character.momentum_changed"
+      },
+      {
+        "deliverySeq": 19,
+        "seq": 19,
+        "type": "move.resolved"
+      },
+      {
+        "deliverySeq": 20,
+        "seq": 20,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 21,
+        "seq": 21,
+        "type": "move.declared"
+      },
+      {
+        "deliverySeq": 22,
+        "seq": 22,
+        "type": "roll.action_resolved"
+      },
+      {
+        "deliverySeq": 23,
+        "seq": 23,
+        "type": "character.momentum_changed"
+      },
+      {
+        "deliverySeq": 24,
+        "seq": 24,
+        "type": "move.resolved"
+      },
+      {
+        "deliverySeq": 25,
+        "seq": 25,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 26,
+        "seq": 26,
+        "type": "move.declared"
+      },
+      {
+        "deliverySeq": 27,
+        "seq": 27,
+        "type": "roll.action_resolved"
+      },
+      {
+        "deliverySeq": 28,
+        "seq": 28,
+        "type": "character.momentum_changed"
+      },
+      {
+        "deliverySeq": 29,
+        "seq": 29,
+        "type": "move.resolved"
+      },
+      {
+        "deliverySeq": 30,
+        "seq": 30,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 31,
+        "seq": 31,
+        "type": "move.declared"
+      },
+      {
+        "deliverySeq": 32,
+        "seq": 32,
+        "type": "roll.action_resolved"
+      },
+      {
+        "deliverySeq": 33,
+        "seq": 33,
+        "type": "character.gauge_changed"
+      },
+      {
+        "deliverySeq": 34,
+        "seq": 34,
+        "type": "move.resolved"
+      },
+      {
+        "deliverySeq": 35,
+        "seq": 35,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 36,
+        "seq": 37,
+        "type": "narration.gm_message"
+      }
+    ]
+  }
+}

@@ -1,0 +1,421 @@
+{
+  "journal": [
+    {
+      "seq": 1,
+      "type": "campaign.created"
+    },
+    {
+      "seq": 2,
+      "type": "campaign.status_changed"
+    },
+    {
+      "seq": 3,
+      "type": "party.member_joined"
+    },
+    {
+      "seq": 4,
+      "type": "character.created"
+    },
+    {
+      "seq": 5,
+      "type": "party.champion_locked"
+    },
+    {
+      "seq": 6,
+      "type": "entity.introduced"
+    },
+    {
+      "seq": 7,
+      "type": "scene.started"
+    },
+    {
+      "seq": 8,
+      "type": "move.declared"
+    },
+    {
+      "seq": 9,
+      "type": "roll.action_resolved"
+    },
+    {
+      "seq": 10,
+      "type": "character.momentum_changed"
+    },
+    {
+      "seq": 11,
+      "type": "move.resolved"
+    },
+    {
+      "seq": 12,
+      "type": "narration.gm_message"
+    },
+    {
+      "seq": 13,
+      "type": "move.declared"
+    },
+    {
+      "seq": 14,
+      "type": "character.gauge_changed"
+    },
+    {
+      "seq": 15,
+      "type": "roll.action_resolved"
+    },
+    {
+      "seq": 16,
+      "type": "character.condition_added"
+    },
+    {
+      "seq": 17,
+      "type": "roll.price_paid"
+    },
+    {
+      "seq": 18,
+      "type": "character.momentum_changed"
+    },
+    {
+      "seq": 19,
+      "type": "move.resolved"
+    },
+    {
+      "seq": 20,
+      "type": "narration.gm_message"
+    },
+    {
+      "seq": 21,
+      "type": "move.declared"
+    },
+    {
+      "seq": 22,
+      "type": "roll.action_resolved"
+    },
+    {
+      "seq": 23,
+      "type": "character.gauge_changed"
+    },
+    {
+      "seq": 24,
+      "type": "move.resolved"
+    },
+    {
+      "seq": 25,
+      "type": "narration.gm_message"
+    },
+    {
+      "seq": 26,
+      "type": "move.declared"
+    },
+    {
+      "seq": 27,
+      "type": "character.gauge_changed"
+    },
+    {
+      "seq": 28,
+      "type": "roll.action_resolved"
+    },
+    {
+      "seq": 29,
+      "type": "character.momentum_changed"
+    },
+    {
+      "seq": 30,
+      "type": "move.resolved"
+    },
+    {
+      "seq": 31,
+      "type": "narration.gm_message"
+    }
+  ],
+  "rng": {
+    "draws": {
+      "action": 4,
+      "price": 1
+    },
+    "seed": "sim-03"
+  },
+  "state": {
+    "campaignId": "00000000000000000000CAMP03",
+    "championLocks": [
+      {
+        "championId": "sejuani",
+        "lockKind": "reserved_pc",
+        "reason": "personnage de Alice",
+        "setSeq": 5
+      }
+    ],
+    "characters": [
+      {
+        "assets": [],
+        "attributes": {
+          "coeur": 1,
+          "esprit": 2,
+          "fer": 3,
+          "ombre": 1,
+          "vif": 2
+        },
+        "championId": "sejuani",
+        "conditions": [
+          {
+            "conditionId": "blesse",
+            "label": "Blessé",
+            "sinceSeq": 16,
+            "source": "engine"
+          }
+        ],
+        "createdSeq": 4,
+        "displayName": "Sejuani",
+        "gauges": {
+          "ame": 4,
+          "vigueur": 0,
+          "vivres": 1
+        },
+        "id": "0000000000000000000000CHRA",
+        "momentum": 3,
+        "momentumBounds": {
+          "max": 10,
+          "min": -6,
+          "reset": 2
+        },
+        "playerId": "0000000000000000000000PYRA",
+        "sheet": {
+          "championId": "sejuani",
+          "ref": "sejuani",
+          "source": "handwritten"
+        },
+        "status": "active",
+        "updatedSeq": 29,
+        "xpEarned": 0,
+        "xpSpent": 0
+      }
+    ],
+    "clocks": [],
+    "contentPackHash": "24d030b6ef069dc6d4c7f4b8ddba84846af4e8ea944e5cb541f0d1a8a927c5d0",
+    "entities": [
+      {
+        "championId": null,
+        "details": {},
+        "disposition": "hostile",
+        "firstSeenSeq": 6,
+        "id": "0000000000000000000000ENTB",
+        "kind": "beast",
+        "lastSeenSeq": 6,
+        "name": "La meute de la Griffe",
+        "regionId": null,
+        "slug": "entb",
+        "status": "active",
+        "summary": "La meute de la Griffe"
+      }
+    ],
+    "party": {
+      "memberPlayerIds": [
+        "0000000000000000000000PYRA"
+      ],
+      "ownerPlayerId": "0000000000000000000000PYRA"
+    },
+    "scene": {
+      "absent": [],
+      "placeId": "",
+      "placeName": "Le ravin de la Griffe",
+      "present": [
+        {
+          "name": "Sejuani",
+          "ref": {
+            "id": "0000000000000000000000CHRA",
+            "kind": "character"
+          },
+          "sinceSeq": 7,
+          "state": ""
+        },
+        {
+          "name": "La meute de la Griffe",
+          "ref": {
+            "id": "0000000000000000000000ENTB",
+            "kind": "entity"
+          },
+          "sinceSeq": 7,
+          "state": ""
+        }
+      ],
+      "sceneId": "000000000000000000000SCN03",
+      "timeOfDay": "",
+      "updatedSeq": 7
+    },
+    "seq": 31,
+    "settings": {
+      "allowForgedChampions": false,
+      "gmVerbosity": "standard",
+      "models": {
+        "narration": null,
+        "structured": null
+      },
+      "oracleBias": "neutre",
+      "requireForgeReview": true,
+      "safety": {
+        "lines": [],
+        "veils": []
+      },
+      "schemaVersion": 1
+    },
+    "status": "active",
+    "tracks": [],
+    "truths": []
+  },
+  "threads": {
+    "PYRA": [
+      {
+        "deliverySeq": 1,
+        "seq": 1,
+        "type": "campaign.created"
+      },
+      {
+        "deliverySeq": 2,
+        "seq": 2,
+        "type": "campaign.status_changed"
+      },
+      {
+        "deliverySeq": 3,
+        "seq": 3,
+        "type": "party.member_joined"
+      },
+      {
+        "deliverySeq": 4,
+        "seq": 4,
+        "type": "character.created"
+      },
+      {
+        "deliverySeq": 5,
+        "seq": 5,
+        "type": "party.champion_locked"
+      },
+      {
+        "deliverySeq": 6,
+        "seq": 6,
+        "type": "entity.introduced"
+      },
+      {
+        "deliverySeq": 7,
+        "seq": 7,
+        "type": "scene.started"
+      },
+      {
+        "deliverySeq": 8,
+        "seq": 8,
+        "type": "move.declared"
+      },
+      {
+        "deliverySeq": 9,
+        "seq": 9,
+        "type": "roll.action_resolved"
+      },
+      {
+        "deliverySeq": 10,
+        "seq": 10,
+        "type": "character.momentum_changed"
+      },
+      {
+        "deliverySeq": 11,
+        "seq": 11,
+        "type": "move.resolved"
+      },
+      {
+        "deliverySeq": 12,
+        "seq": 12,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 13,
+        "seq": 13,
+        "type": "move.declared"
+      },
+      {
+        "deliverySeq": 14,
+        "seq": 14,
+        "type": "character.gauge_changed"
+      },
+      {
+        "deliverySeq": 15,
+        "seq": 15,
+        "type": "roll.action_resolved"
+      },
+      {
+        "deliverySeq": 16,
+        "seq": 16,
+        "type": "character.condition_added"
+      },
+      {
+        "deliverySeq": 17,
+        "seq": 17,
+        "type": "roll.price_paid"
+      },
+      {
+        "deliverySeq": 18,
+        "seq": 18,
+        "type": "character.momentum_changed"
+      },
+      {
+        "deliverySeq": 19,
+        "seq": 19,
+        "type": "move.resolved"
+      },
+      {
+        "deliverySeq": 20,
+        "seq": 20,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 21,
+        "seq": 21,
+        "type": "move.declared"
+      },
+      {
+        "deliverySeq": 22,
+        "seq": 22,
+        "type": "roll.action_resolved"
+      },
+      {
+        "deliverySeq": 23,
+        "seq": 23,
+        "type": "character.gauge_changed"
+      },
+      {
+        "deliverySeq": 24,
+        "seq": 24,
+        "type": "move.resolved"
+      },
+      {
+        "deliverySeq": 25,
+        "seq": 25,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 26,
+        "seq": 26,
+        "type": "move.declared"
+      },
+      {
+        "deliverySeq": 27,
+        "seq": 27,
+        "type": "character.gauge_changed"
+      },
+      {
+        "deliverySeq": 28,
+        "seq": 28,
+        "type": "roll.action_resolved"
+      },
+      {
+        "deliverySeq": 29,
+        "seq": 29,
+        "type": "character.momentum_changed"
+      },
+      {
+        "deliverySeq": 30,
+        "seq": 30,
+        "type": "move.resolved"
+      },
+      {
+        "deliverySeq": 31,
+        "seq": 31,
+        "type": "narration.gm_message"
+      }
+    ]
+  }
+}

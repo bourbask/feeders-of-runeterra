@@ -21,7 +21,7 @@
     "check:workspace": "tsx scripts/check-workspace.ts",
     "test:golden": "turbo run build --filter @for/testkit && vitest run tests/golden",
     "golden:update": "GOLDEN_UPDATE=1 pnpm test:golden",
-    "sim": "node scripts/pas-encore.mjs M0-28 \"simulateur de table headless\"",
+    "sim": "tsx packages/sim/src/cli.ts",
     "db:generate": "pnpm --filter @for/db exec drizzle-kit generate",
     "db:check-schema": "tsx packages/db/src/cli/check-schema.ts",
     "db:migrate": "tsx packages/db/src/cli/migrate.ts",
