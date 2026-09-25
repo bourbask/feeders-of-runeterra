@@ -16,6 +16,7 @@ import {
   aSceneAbsence,
   aScenePresence,
   aTableState,
+  anEvent,
   anId,
   counterIds,
   scriptedRng,
@@ -31,10 +32,13 @@ import {
 } from '../tests/support/engine-content.test.js';
 import type {
   BriefPerceivableFact,
+  BurnWindow,
   CampaignState,
+  CharacterId,
   DecisionContext,
   GameEvent,
   Intent,
+  NarrationBrief,
   Rng,
   RngStream,
   RuleViolation,
@@ -49,6 +53,7 @@ import {
   PROGRESS_RANKS,
   SCENE_PRESENCE_MAX,
   briefAudience,
+  burnWindowClosedBy,
   createSeededRng,
   decide,
   fallbackTemplateId,
@@ -56,6 +61,7 @@ import {
   isExtremeAnswer,
   isOk,
   perceivableFactsFor,
+  reduceAll,
 } from './index.js';
 
 const HERO = anId('character');
@@ -663,10 +669,22 @@ describe('the eleven moves', () => {
   });
 
   it('resets momentum through the ordinary momentum entry', () => {
+    // High momentum on a failed roll opens the burn window, so the reset the
+    // `echec` branch declares only lands once the window is shut — here by
+    // saying no. That IS the rule now: a consequence never runs before the
+    // player has decided.
     const state = aPlayableState({
       characters: [aCharacter({ id: HERO, playerId: PLAYER, momentum: 8 })],
     });
-    const result = decide(state, { type: 'move.endure_harm' }, aCtx(MISS));
+    const opened = decide(state, { type: 'move.endure_harm' }, aCtx(MISS));
+    if (isErr(opened)) throw new Error(opened.error.code);
+    const window = opened.value.pending;
+    if (window === null) throw new Error('the window did not open');
+    const result = decide(
+      state,
+      { type: 'momentum.keep', rollId: window.roll.rollId },
+      aCtx([], {}, { burnWindow: window }),
+    );
     if (isErr(result)) throw new Error(result.error.code);
     const reset = result.value.events.find((event) => event.type === 'character.momentum_changed');
     if (reset?.type !== 'character.momentum_changed') throw new Error('no reset');
@@ -922,72 +940,512 @@ describe('the eleven moves', () => {
 
 // ------------------------------------------------------------- burning elan
 
+/**
+ * THE TWO-STEP BURN, measured on the chain and not on a hand-made window.
+ *
+ * Every window below comes out of a real `decide()` on a real move, because the
+ * defect this suite exists for was exactly a window that existed and closed
+ * nothing: before this, `decide` applied the consequences the moment it wrote
+ * `roll.action_resolved`, so burning emptied the rarest resource in the game
+ * and the player took the damage anyway.
+ *
+ * THE DICE: an action die of 1 on `fer` 2 gives a score of 3, which beats
+ * neither a 6 nor a 7 — `echec`. Momentum 8 beats both — `franche`. So the
+ * same roll settles two different ways depending on one decision the player
+ * takes AFTER seeing the dice, and the two ways are told apart by the
+ * consequences: the price of the failure, or the elan of the clean success.
+ */
 describe('burning momentum, in two steps', () => {
-  const state = aPlayableState({
+  const HOT = aPlayableState({
     characters: [aCharacter({ id: HERO, playerId: PLAYER, momentum: 8 })],
   });
-  const rollId = anId('roll');
-  const burnWindow = {
-    rollId,
-    rollSeq: 9,
-    characterId: HERO,
-    total: 5,
-    challengeDice: [6, 7] as const,
+  /** Score 3 against a 6 and a 7: a failure a burn of 8 turns into a clean hit. */
+  const BURNABLE_MISS = [1, 6, 7];
+  const faceDanger: Intent = {
+    type: 'move.face_danger',
+    attribute: 'fer',
+    description: 'je saute',
   };
 
-  it('refuses a burn with no window open', () => {
-    const result = decide(state, { type: 'momentum.burn', rollId }, aCtx([]));
-    expect(violationOf(result).code).toBe('no_burn_window');
-  });
-
-  it('refuses a burn aimed at another roll', () => {
-    const ctx = aCtx([], {}, { burnWindow });
-    const result = decide(state, { type: 'momentum.burn', rollId: anId('roll', 2) }, ctx);
-    expect(violationOf(result).code).toBe('no_burn_window');
-  });
-
-  it('refuses a burn that would not improve the score', () => {
-    const weak = aPlayableState({
-      characters: [aCharacter({ id: HERO, playerId: PLAYER, momentum: 1 })],
-    });
-    const result = decide(weak, { type: 'momentum.burn', rollId }, aCtx([], {}, { burnWindow }));
-    expect(violationOf(result).code).toBe('momentum_too_low');
-  });
-
-  it('adds a revision rather than rewriting the first roll', () => {
-    const result = decide(state, { type: 'momentum.burn', rollId }, aCtx([], {}, { burnWindow }));
+  /**
+   * The roll that opens the window. The `price` stream is left UNSCRIPTED: an
+   * exhausted scripted generator throws, so if the failure's `pay_price` ran
+   * here this helper would not return at all.
+   */
+  function anOpenWindow(state: CampaignState = HOT): {
+    readonly events: readonly GameEvent[];
+    readonly window: BurnWindow;
+  } {
+    const result = decide(state, faceDanger, aCtx(BURNABLE_MISS));
     if (isErr(result)) throw new Error(result.error.code);
-    expect(typesOf(result.value.events)).toEqual([
+    const { pending } = result.value;
+    if (pending === null) throw new Error('the window did not open');
+    return { events: result.value.events, window: pending };
+  }
+
+  it('writes the dice and stops there: no consequence, no move.resolved', () => {
+    const { events, window } = anOpenWindow();
+    expect(typesOf(events)).toEqual(['move.declared', 'roll.action_resolved']);
+    const roll = events[1];
+    if (roll?.type !== 'roll.action_resolved') throw new Error('not a roll');
+    expect(roll.payload.burnWindow).toBe(true);
+    expect(roll.payload.outcome).toBe('echec');
+    expect(window.roll.rollId).toBe(roll.payload.rollId);
+    expect(window.rollSeq).toBe(roll.seq);
+    expect(window.outcome).toBe('echec');
+  });
+
+  it('does not make the player pay the price of an outcome they may revise', () => {
+    // The measured symptom of M0-13, in one assertion: the `pay_price` of the
+    // `echec` branch used to run before anybody could decide anything.
+    const { events } = anOpenWindow();
+    expect(typesOf(events)).not.toContain('roll.price_paid');
+    expect(typesOf(events)).not.toContain('move.resolved');
+  });
+
+  it('leaves the turn shut when the move forbids the burn', () => {
+    const state = aPlayableState({
+      characters: [aCharacter({ id: HERO, playerId: PLAYER, momentum: 9 })],
+      tracks: [{ ...aTrackFixture(), ticks: 4 }],
+    });
+    const result = decide(state, { type: 'move.fulfill_your_vow', trackId: TRACK }, aCtx([1, 9]));
+    if (isErr(result)) throw new Error(result.error.code);
+    expect(result.value.pending).toBeNull();
+    expect(typesOf(result.value.events)).toContain('move.resolved');
+  });
+
+  it('rewrites the outcome, and applies the REVISED outcome’s effects', () => {
+    const { window } = anOpenWindow();
+    const closed = decide(
+      HOT,
+      { type: 'momentum.burn', rollId: window.roll.rollId },
+      aCtx([], {}, { burnWindow: window }),
+    );
+    if (isErr(closed)) throw new Error(closed.error.code);
+    expect(typesOf(closed.value.events)).toEqual([
       'character.momentum_burned',
       'roll.action_revised',
+      'character.momentum_changed',
+      'move.resolved',
     ]);
-    const revised = result.value.events[1];
+    const revised = closed.value.events[1];
     if (revised?.type !== 'roll.action_revised') throw new Error('no revision');
-    expect(revised.payload.total).toBe(8);
     expect(revised.payload.outcome).toBe('franche');
-    expect(revised.payload.revisedFromSeq).toBe(9);
+    expect(revised.payload.total).toBe(8);
+    const resolved = closed.value.events[3];
+    if (resolved?.type !== 'move.resolved') throw new Error('not resolved');
+    // The two assertions that say "the revised outcome is the one that counts":
+    // the clean success's `{ op: 'momentum', delta: 1 }` ran, and the failure's
+    // price never did.
+    expect(resolved.payload.outcome).toBe('franche');
+    expect(resolved.payload.effectsApplied).toEqual([{ op: 'momentum', delta: 1 }]);
+    expect(typesOf(closed.value.events)).not.toContain('roll.price_paid');
   });
 
-  it('drops momentum to the character bound, not to a constant', () => {
-    const result = decide(state, { type: 'momentum.burn', rollId }, aCtx([], {}, { burnWindow }));
-    if (isErr(result)) throw new Error(result.error.code);
-    const burned = result.value.events[0];
+  it('adds the revision instead of rewriting the first roll', () => {
+    const { events, window } = anOpenWindow();
+    const before = stableStringify(events);
+    const closed = decide(
+      HOT,
+      { type: 'momentum.burn', rollId: window.roll.rollId },
+      aCtx([], {}, { burnWindow: window }),
+    );
+    if (isErr(closed)) throw new Error(closed.error.code);
+    const revised = closed.value.events[1];
+    if (revised?.type !== 'roll.action_revised') throw new Error('no revision');
+    expect(revised.payload.revisedFromSeq).toBe(window.rollSeq);
+    expect(stableStringify(events)).toBe(before);
+    // `move.resolved` hangs from the ROLL, not from its revision: the proof
+    // view needs the dice.
+    const resolved = closed.value.events[3];
+    if (resolved?.type !== 'move.resolved') throw new Error('not resolved');
+    expect(resolved.payload.rollSeq).toBe(window.rollSeq);
+  });
+
+  it('spends the elan before the revised outcome pays it back', () => {
+    const { window } = anOpenWindow();
+    const closed = decide(
+      HOT,
+      { type: 'momentum.burn', rollId: window.roll.rollId },
+      aCtx([], {}, { burnWindow: window }),
+    );
+    if (isErr(closed)) throw new Error(closed.error.code);
+    const burned = closed.value.events[0];
     if (burned?.type !== 'character.momentum_burned') throw new Error('no burn');
     expect(burned.payload.spent).toBe(8);
     expect(burned.payload.resetTo).toBe(2);
+    const gained = closed.value.events[2];
+    if (gained?.type !== 'character.momentum_changed') throw new Error('no gain');
+    // From the RESET value, not from the elan the character no longer has.
+    expect(gained.payload.from).toBe(2);
+    expect(gained.payload.to).toBe(3);
+  });
+
+  it('draws nothing at all: not a die, on any stream', () => {
+    // Every stream of this context is scripted EMPTY, and `scriptedRng` throws
+    // when it runs out. A revision that drew on `action` would not just throw
+    // here, it would shift every index after it and rewrite dice already in
+    // the journal (03-donnees.md section 3.6).
+    const { window } = anOpenWindow();
+    const closed = decide(
+      HOT,
+      { type: 'momentum.burn', rollId: window.roll.rollId },
+      aCtx([], {}, { burnWindow: window }),
+    );
+    if (isErr(closed)) throw new Error(closed.error.code);
+    expect(closed.value.events.map((event) => event.rngStream)).toEqual([null, null, null, null]);
   });
 
   it('keeps the presage of the roll it revises', () => {
-    const matched = { ...burnWindow, challengeDice: [6, 6] as const };
-    const result = decide(
+    const state = aPlayableState({
+      characters: [aCharacter({ id: HERO, playerId: PLAYER, momentum: 8 })],
+    });
+    const opened = decide(state, faceDanger, aCtx([1, 6, 6], { presage: [2] }));
+    if (isErr(opened)) throw new Error(opened.error.code);
+    const window = opened.value.pending;
+    if (window === null) throw new Error('the window did not open');
+    expect(window.isPresage).toBe(true);
+    const closed = decide(
       state,
-      { type: 'momentum.burn', rollId },
-      aCtx([], {}, { burnWindow: matched }),
+      { type: 'momentum.burn', rollId: window.roll.rollId },
+      aCtx([], {}, { burnWindow: window }),
     );
-    if (isErr(result)) throw new Error(result.error.code);
-    const revised = result.value.events[1];
+    if (isErr(closed)) throw new Error(closed.error.code);
+    const revised = closed.value.events[1];
     if (revised?.type !== 'roll.action_revised') throw new Error('no revision');
     expect(revised.payload.isPresage).toBe(true);
+  });
+
+  // ------------------------------------------------------------ saying no
+
+  it('momentum.keep applies the effects of the roll as the dice left it', () => {
+    const { window } = anOpenWindow();
+    const closed = decide(
+      HOT,
+      { type: 'momentum.keep', rollId: window.roll.rollId },
+      aCtx([], { price: [1] }, { burnWindow: window }),
+    );
+    if (isErr(closed)) throw new Error(closed.error.code);
+    expect(typesOf(closed.value.events)).toContain('roll.price_paid');
+    const resolved = closed.value.events[closed.value.events.length - 1];
+    if (resolved?.type !== 'move.resolved') throw new Error('not resolved');
+    expect(resolved.payload.outcome).toBe('echec');
+    expect(typesOf(closed.value.events)).not.toContain('character.momentum_burned');
+    expect(closed.value.pending).toBeNull();
+  });
+
+  it('momentum.keep costs no momentum', () => {
+    const { window } = anOpenWindow();
+    const closed = decide(
+      HOT,
+      { type: 'momentum.keep', rollId: window.roll.rollId },
+      aCtx([], { price: [1] }, { burnWindow: window }),
+    );
+    if (isErr(closed)) throw new Error(closed.error.code);
+    const after = reduceAll(HOT, closed.value.events);
+    expect(after.characters[HERO]?.momentum).toBe(8);
+  });
+
+  // ------------------------------------------------ ONE TURN, in two halves
+
+  /**
+   * THE WHOLE TURN AS THE JOURNAL HOLDS IT: the half the roll wrote, then the
+   * half the closing wrote, concatenated — which is what `system.reverted`
+   * cancels and what `buildTurnProof` reads (03-donnees.md sections 0.5, 3.7).
+   *
+   * ONE id factory across the two calls and the state the ROLL left behind,
+   * because that is what the server hands back: a second factory would mint
+   * `id-1` twice and a stale state would renumber the second half on top of
+   * the first.
+   */
+  function aWholeTurn(burn: boolean): {
+    readonly events: readonly GameEvent[];
+    readonly brief: NarrationBrief;
+  } {
+    const ids = counterIds('id');
+    const opened = decide(HOT, faceDanger, aCtx(BURNABLE_MISS, {}, { ids }));
+    if (isErr(opened)) throw new Error(opened.error.code);
+    const window = opened.value.pending;
+    if (window === null) throw new Error('the window did not open');
+    const afterRoll = reduceAll(HOT, opened.value.events);
+    const closing: Intent = burn
+      ? { type: 'momentum.burn', rollId: window.roll.rollId }
+      : { type: 'momentum.keep', rollId: window.roll.rollId };
+    const closed = decide(
+      afterRoll,
+      closing,
+      aCtx([], { price: [1] }, { ids, burnWindow: window }),
+    );
+    if (isErr(closed)) throw new Error(closed.error.code);
+    return {
+      events: [...opened.value.events, ...closed.value.events],
+      brief: closed.value.brief,
+    };
+  }
+
+  // The two assertions of `one turn of face-danger`, word for word, on the
+  // turn that took two intents to write. A burned turn is ONE turn.
+  it('groups the whole turn under one correlation identifier', () => {
+    const { events, brief } = aWholeTurn(true);
+    expect(new Set(events.map((event) => event.correlationId)).size).toBe(1);
+    expect(brief.correlationId).toBe(events[0]?.correlationId);
+  });
+
+  it('hangs every entry off the declaration', () => {
+    const { events } = aWholeTurn(true);
+    expect(events[0]?.causationId).toBeNull();
+    for (const event of events.slice(1)) expect(event.causationId).toBe(events[0]?.id);
+  });
+
+  it('keeps both, the day the player says no as much as the day they burn', () => {
+    const { events, brief } = aWholeTurn(false);
+    expect(new Set(events.map((event) => event.correlationId)).size).toBe(1);
+    expect(brief.correlationId).toBe(events[0]?.correlationId);
+    expect(events[0]?.causationId).toBeNull();
+    for (const event of events.slice(1)) expect(event.causationId).toBe(events[0]?.id);
+  });
+
+  it('numbers the second half straight after the first, with no hole', () => {
+    const { events } = aWholeTurn(true);
+    // HOT stands at 10: declaration, roll, then burn, revision, momentum,
+    // resolution. Written out, because the count comes from the fixture and
+    // not from the thing under test.
+    expect(events.map((event) => event.seq)).toEqual([11, 12, 13, 14, 15, 16]);
+    expect(typesOf(events)).toEqual([
+      'move.declared',
+      'roll.action_resolved',
+      'character.momentum_burned',
+      'roll.action_revised',
+      'character.momentum_changed',
+      'move.resolved',
+    ]);
+  });
+
+  it('tells the storyteller the dice were burned, and only then', () => {
+    expect(aWholeTurn(true).brief.roll?.burned).toBe(true);
+    expect(aWholeTurn(false).brief.roll?.burned).toBe(false);
+    const { window } = anOpenWindow();
+    expect(window.roll.burned).toBe(false);
+  });
+
+  // --------------------------------------- a window the world moved on from
+
+  /**
+   * A WINDOW MUST ALWAYS BE CLOSEABLE. The dice are written and visible; the
+   * only thing still owed is their consequences. `strike` refuses without a
+   * scene, so before this the end of the scene stranded the window for good:
+   * `scene.ended` carries no subject character, so the safety net does not
+   * fire on it, and both closing intents were then refused `no_active_scene`.
+   */
+  describe('the scene ends between the dice and the decision', () => {
+    const scene = aScene({
+      present: [aScenePresence({ ref: { kind: 'entity', id: FOE }, name: 'Katla' })],
+    });
+    const inScene = aPlayableState({
+      characters: [aCharacter({ id: HERO, playerId: PLAYER, momentum: 8 })],
+      scene,
+      tracks: [{ ...aTrackFixture(), kind: 'combat', ticks: 0 }],
+    });
+    const strike: Intent = { type: 'move.strike', targetId: FOE, attribute: 'fer' };
+
+    function aStrandedWindow(): { readonly state: CampaignState; readonly window: BurnWindow } {
+      const opened = decide(inScene, strike, aCtx(BURNABLE_MISS));
+      if (isErr(opened)) throw new Error(opened.error.code);
+      const window = opened.value.pending;
+      if (window === null) throw new Error('the window did not open');
+      const ended = anEvent({
+        type: 'scene.ended',
+        payload: { sceneId: scene.sceneId },
+        seq: window.rollSeq + 1,
+      });
+      // The net does not catch it: no subject character on `scene.ended`.
+      expect(burnWindowClosedBy(window, ended)).toBe(false);
+      return { state: reduceAll(reduceAll(inScene, opened.value.events), [ended]), window };
+    }
+
+    it('burns anyway, and the revised outcome lands', () => {
+      const { state, window } = aStrandedWindow();
+      expect(state.scene).toBeNull();
+      const closed = decide(
+        state,
+        { type: 'momentum.burn', rollId: window.roll.rollId },
+        aCtx([], {}, { burnWindow: window }),
+      );
+      if (isErr(closed)) throw new Error(closed.error.code);
+      const ticked = closed.value.events.find((event) => event.type === 'track.ticked');
+      if (ticked?.type !== 'track.ticked') throw new Error('no tick');
+      // The clean success of `strike` in the fixture bundle: four ticks.
+      expect(ticked.payload.to).toBe(4);
+      expect(typesOf(closed.value.events)).toContain('move.resolved');
+    });
+
+    it('keeps anyway, and the initial outcome lands', () => {
+      const { state, window } = aStrandedWindow();
+      const closed = decide(
+        state,
+        { type: 'momentum.keep', rollId: window.roll.rollId },
+        aCtx([], {}, { burnWindow: window }),
+      );
+      if (isErr(closed)) throw new Error(closed.error.code);
+      const after = reduceAll(state, closed.value.events);
+      // The failure of `strike`: one point of vigueur, from the five a
+      // character sheet starts at in the fixture.
+      expect(after.characters[HERO]?.gauges.vigueur).toBe(
+        (inScene.characters[HERO]?.gauges.vigueur ?? 0) - 1,
+      );
+      expect(typesOf(closed.value.events)).toContain('move.resolved');
+    });
+
+    it('CE QUE LE MOTEUR NE PEUT PAS TENIR SEUL : une campagne en pause', () => {
+      // Le contrat pour M0-24, mesuré ici plutôt qu'affirmé. `decide` refuse
+      // TOUT sur une campagne qui n'est pas active, et c'est voulu : une pause
+      // n'est pas un demi-arrêt. La fenêtre, elle, ne s'en va pas — donc le
+      // serveur doit fermer toute fenêtre ouverte AVANT d'écrire le changement
+      // de statut. Il le peut : la pause est une intention humaine, sérialisée
+      // sur la même file d'écriture (03-donnees.md §0.3). Le jour où cette
+      // assertion tombe, c'est que le moteur a changé d'avis et que la clause
+      // du contrat est devenue inutile.
+      const { state, window } = aStrandedWindow();
+      const paused: CampaignState = { ...state, status: 'paused' };
+      expect(
+        violationOf(
+          decide(
+            paused,
+            { type: 'momentum.keep', rollId: window.roll.rollId },
+            aCtx([], {}, { burnWindow: window }),
+          ),
+        ).code,
+      ).toBe('campaign_not_active');
+    });
+
+    it('reads the plan the DECLARATION settled, not one recomputed after it', () => {
+      const { window } = aStrandedWindow();
+      // What makes the two closings above possible, named: the plan travels
+      // with the window. Recomputing it is replaying `strike`'s scene check.
+      expect(window.plan.roll).toEqual({ kind: 'action', attribute: 'fer', bonus: 0 });
+    });
+  });
+
+  // ------------------------------------------------------------ the safety net
+
+  it('burnWindowClosedBy names the entries that shut the window, in both directions', () => {
+    // 03-donnees.md section 3.4: the first FOLLOWING entry about the SAME
+    // character. Three cases, and each one is a different reason to answer.
+    const { window } = anOpenWindow();
+    const somebodyElse = anId('character', 9);
+    const entry = (seq: number, subject: CharacterId | null): GameEvent =>
+      anEvent({ seq, subjectCharacterId: subject });
+    expect(burnWindowClosedBy(window, entry(window.rollSeq + 1, HERO))).toBe(true);
+    expect(burnWindowClosedBy(window, entry(window.rollSeq + 1, somebodyElse))).toBe(false);
+    expect(burnWindowClosedBy(window, entry(window.rollSeq, HERO))).toBe(false);
+    expect(burnWindowClosedBy(window, entry(window.rollSeq + 1, null))).toBe(false);
+  });
+
+  // ------------------------------------------------------------ the refusals
+
+  it('refuses a burn with no window open', () => {
+    const result = decide(HOT, { type: 'momentum.burn', rollId: anId('roll') }, aCtx([]));
+    expect(violationOf(result).code).toBe('no_burn_window');
+  });
+
+  it('refuses a decision aimed at another roll', () => {
+    const { window } = anOpenWindow();
+    const ctx = aCtx([], {}, { burnWindow: window });
+    expect(
+      violationOf(decide(HOT, { type: 'momentum.burn', rollId: anId('roll', 2) }, ctx)).code,
+    ).toBe('no_burn_window');
+    expect(
+      violationOf(decide(HOT, { type: 'momentum.keep', rollId: anId('roll', 2) }, ctx)).code,
+    ).toBe('no_burn_window');
+  });
+
+  it('refuses a burn that would not improve the score', () => {
+    const { window } = anOpenWindow();
+    const weak = aPlayableState({
+      characters: [aCharacter({ id: HERO, playerId: PLAYER, momentum: 1 })],
+    });
+    const result = decide(
+      weak,
+      { type: 'momentum.burn', rollId: window.roll.rollId },
+      aCtx([], {}, { burnWindow: window }),
+    );
+    expect(violationOf(result).code).toBe('momentum_too_low');
+  });
+
+  it('refuses a closing whose character died in between — the net owes it', () => {
+    // La couverture l'a dit avant moi : la branche `requireActor` de la
+    // fermeture n'était exercée par rien. C'est le dernier refus qui dépend de
+    // l'état, et il est TENU par le filet de sécurité : `character.died` porte
+    // le personnage en sujet, donc `burnWindowClosedBy` le voit et le serveur
+    // ferme avant de l'écrire. Mesuré dans les deux sens, faute de quoi la
+    // clause du contrat serait une promesse sans preuve.
+    const { window } = anOpenWindow();
+    const died = anEvent({ seq: window.rollSeq + 1, subjectCharacterId: HERO });
+    expect(burnWindowClosedBy(window, died)).toBe(true);
+    const dead = aPlayableState({
+      characters: [aCharacter({ id: HERO, playerId: PLAYER, momentum: 8, status: 'dead' })],
+    });
+    expect(
+      violationOf(
+        decide(
+          dead,
+          { type: 'momentum.keep', rollId: window.roll.rollId },
+          aCtx([], {}, { burnWindow: window }),
+        ),
+      ).code,
+    ).toBe('character_dead');
+  });
+
+  it('refuses, instead of throwing, when the bundle no longer carries the move', () => {
+    // The last state-dependent lookup of the closing path. It cannot happen on
+    // a campaign that pins its content version — and `decide` promises a
+    // `Result` for the impossible too, rather than a `TypeError` on
+    // `definition.outcomes`.
+    const { window } = anOpenWindow();
+    const ctx = aCtx([], {}, { burnWindow: window, content: aContent({ moves: {} }) });
+    expect(
+      violationOf(decide(HOT, { type: 'momentum.keep', rollId: window.roll.rollId }, ctx)).code,
+    ).toBe('unknown_move');
+  });
+
+  it('refuses a burn aimed at somebody else’s window', () => {
+    const { window } = anOpenWindow();
+    const ctx = aCtx([], {}, { burnWindow: { ...window, characterId: anId('character', 9) } });
+    expect(
+      violationOf(decide(HOT, { type: 'momentum.burn', rollId: window.roll.rollId }, ctx)).code,
+    ).toBe('no_burn_window');
+  });
+
+  // ------------------------------------------------------------ replayability
+
+  it('replays the whole two-step turn to the same state, twice', () => {
+    const play = (): CampaignState => {
+      const { events, window } = anOpenWindow();
+      const closed = decide(
+        HOT,
+        { type: 'momentum.burn', rollId: window.roll.rollId },
+        aCtx([], {}, { burnWindow: window }),
+      );
+      if (isErr(closed)) throw new Error(closed.error.code);
+      return reduceAll(HOT, [...events, ...closed.value.events]);
+    };
+    expect(stableStringify(play())).toBe(stableStringify(play()));
+  });
+
+  it('leaves the action draw index exactly where the roll left it', () => {
+    // Two operands, two origins: the index after the ROLL, and the index after
+    // the roll AND the burn. If the burn ever drew, the second would be larger.
+    const { events, window } = anOpenWindow();
+    const afterRoll = reduceAll(HOT, events);
+    const closed = decide(
+      HOT,
+      { type: 'momentum.burn', rollId: window.roll.rollId },
+      aCtx([], {}, { burnWindow: window }),
+    );
+    if (isErr(closed)) throw new Error(closed.error.code);
+    const afterBurn = reduceAll(afterRoll, closed.value.events);
+    expect(afterRoll.rng.draws.action).toBe(1);
+    expect(afterBurn.rng.draws.action).toBe(afterRoll.rng.draws.action);
   });
 });
 
@@ -1217,6 +1675,7 @@ describe('five hundred syntactically valid intents', () => {
       { type: 'move.fulfill_your_vow', trackId: pick(2) === 1 ? TRACK : anId('track', 9) },
       { type: 'move.forsake_your_vow', trackId: TRACK, reason: 'x' },
       { type: 'momentum.burn', rollId: anId('roll') },
+      { type: 'momentum.keep', rollId: anId('roll') },
       { type: 'oracle.ask', question: 'x', likelihood },
       { type: 'oracle.draw', oracleId: pick(2) === 1 ? 'complication' : 'absente' },
       { type: 'speech.say', channel: pick(2) === 1 ? 'ic' : 'ooc', text: 'x' },

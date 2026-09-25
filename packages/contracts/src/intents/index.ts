@@ -122,6 +122,19 @@ export const zMomentumBurnIntent = z.object({
   rollId: zRollId,
 });
 
+/**
+ * DECLINE the burn: the dice stand, and the move applies what they gave.
+ *
+ * Same payload as the burn, and for the same reason — the player says WHICH
+ * roll they are answering about, never what the answer does. It carries the
+ * `rollId` rather than nothing so that a stale click, on a window already
+ * closed, is refused instead of landing on whatever is open now.
+ */
+export const zMomentumKeepIntent = z.object({
+  type: z.literal('momentum.keep'),
+  rollId: zRollId,
+});
+
 export const zOracleAskIntent = z.object({
   type: z.literal('oracle.ask'),
   question: z.string().min(1),
@@ -157,6 +170,7 @@ export const zIntent = z.discriminatedUnion('type', [
   zMoveFulfillYourVowIntent,
   zMoveForsakeYourVowIntent,
   zMomentumBurnIntent,
+  zMomentumKeepIntent,
   zOracleAskIntent,
   zOracleDrawIntent,
   zSpeechSayIntent,
