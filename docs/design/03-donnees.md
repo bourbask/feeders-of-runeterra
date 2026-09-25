@@ -1048,6 +1048,41 @@ l'intention `momentum.burn { rollId }` produit alors `character.momentum_burned`
 append-only, le premier jet n'est jamais réécrit : on ajoute sa révision. Si le joueur ne brûle
 pas, la fenêtre se ferme au premier événement suivant du même personnage.
 
+**Ce que « qu'après » veut dire, littéralement.** Tant que la fenêtre est ouverte, `decide()`
+n'écrit ni effet ni `move.resolved` : le tour n'est pas fini, et la narration attend. Ce sont
+**les effets de l'issue révisée** qui s'appliquent, jamais ceux de l'issue initiale — un échec
+devenu réussite franche ne paie pas le prix de l'échec. Trois fermetures, et trois seulement :
+
+| Fermeture | Ce que le moteur écrit, dans cet ordre |
+|---|---|
+| `momentum.burn { rollId }` | `character.momentum_burned` → `roll.action_revised` → les effets de l'issue **révisée** → `move.resolved` |
+| `momentum.keep { rollId }` | les effets de l'issue **initiale** → `move.resolved` |
+| le filet de sécurité | première entrée suivante portant le **même** `subject_character_id` : le serveur ferme comme `momentum.keep` avant de traiter ce qui arrive |
+
+`momentum.keep` existe parce que son absence laissait un tour en suspens : sans un « non »
+explicite, seul le filet fermait la fenêtre. Le filet **reste** — un joueur qui ferme son
+onglet ne doit pas bloquer la table.
+
+**La révision ne tire rien.** Le score révisé est le souffle dépensé, lu contre les dés de défi
+**déjà écrits**. Aucun tirage sur le flux `action`, donc aucun décalage d'index : les valeurs
+de dés déjà journalisées restent les mêmes (§3.6).
+
+**Deux intentions, UN SEUL tour.** Les entrées de la fermeture portent le `correlation_id` du
+jet et le `causation_id` du `move.declared` : la fenêtre les transporte, le moteur les
+réinjecte. Un second groupe casserait deux choses à la fois — `system.reverted` porte sur un
+groupe (§3.7), et annuler le jet sans ses effets laisserait l'état incohérent ; et `TurnProof`
+se construit des événements d'**un** groupe (§0.5), donc un tour brûlé s'afficherait en deux
+moitiés, les dés d'un côté, les conséquences de l'autre.
+
+**Une fenêtre ouverte doit toujours pouvoir se fermer.** Le plan du mouvement est porté par la
+fenêtre, jamais recalculé à la fermeture : la faisabilité a été tranchée **avant** les dés, et
+la rejouer contre un état qui a bougé — une scène close entre les deux temps — refuserait la
+fermeture d'un tour dont les dés sont déjà lus, sans plus aucun moyen de le finir. Reste ce que
+le moteur ne peut pas tenir seul : une campagne qui n'est plus `active` refuse tout, y compris
+une fermeture. Le serveur ferme donc toute fenêtre ouverte **avant** d'écrire un changement de
+statut de campagne (contrat de M0-24) ; pour le reste — mort, retraite, départ — le filet de
+`burnWindowClosedBy` suffit, ces événements portant le personnage en sujet.
+
 `total` est la valeur **plafonnée à 10** ; `rawTotal` garde la valeur non plafonnée pour la
 lisibilité du journal et les tests ; `cappedAtTen` explicite le plafonnement au lieu de le
 laisser déduire. Redondance volontaire : un journal qui se lit sans recalculer vaut cher au
@@ -1337,6 +1372,12 @@ En test, le port `Rng` est substitué par `scriptedRng([3, 7, 9, ...])`, qui con
 liste de valeurs et **échoue si la liste est épuisée** — un test qui tire plus de dés que
 prévu casse au lieu de dériver.
 
+**Le prix d'un tour brûlable se tire à la FERMETURE, pas au jet** (§3.4). L'index du flux
+`action` n'en bouge pas — la révision ne tire rien —, mais l'ordre des tirages du flux `price`
+entre deux joueurs dépend du moment où chacun répond à sa fenêtre. Le déterminisme est intact :
+chaque tirage journalise son `rng_stream` et son `rng_draw_index`, et c'est le journal qui fait
+foi au rejeu, jamais l'ordre d'arrivée des intentions.
+
 **`rng_draw_index` est monotone, et une annulation ne le rembobine pas.** Un jet annulé
 (§3.7 — correction humaine ou refus du conteur) laisse son index consommé : le jet suivant du
 même flux prend le suivant, donc rejouer une intention après annulation ne redonne pas les mêmes
@@ -1593,6 +1634,22 @@ export const EffectSchema: z.ZodType<EngineEffect> = z.lazy(() =>
 
 Un `op` inconnu fait échouer le chargement. Ajouter un effet impose une branche dans
 l'exécuteur du moteur — même mécanique d'exhaustivité TypeScript que pour le réducteur.
+
+**`choice` ATTEND M1, et c'est acté plutôt que découvert une troisième fois.** La borne 3 de
+l'ADR 0006 dit que la sélection du joueur « arrive comme une intention ordinaire validée par le
+serveur ». Cette intention n'existe pas : `Intent` en compte vingt et une, aucune ne sélectionne
+une option. Mesuré dans le code du moteur, où la branche est explicite et rend `false` sans rien
+appliquer — et `resolveTargets` a le même trou sur `target: 'chosen-ally'`.
+
+| | |
+|---|---|
+| Ce que fait un contenu qui écrit un `choice` aujourd'hui | rien : l'effet est ignoré, aucun événement, aucune trace |
+| Pourquoi ce n'est pas réparé ici | ajouter une intention de sélection touche `Intent`, `INTENT_TYPES`, `zIntent`, `decide()` et le protocole : c'est une tâche de moteur, pas de serveur |
+| Ce qui est fait à la place | **acté** : aucun mouvement de M0 n'écrit `choice`. Une seule occurrence de `chosen-ally` existe, `content/assets/arc-de-givre.json`, sur un effet `momentum` — où le champ `target` **n'existe pas** dans `EngineEffect` et est donc retiré au chargement. Deux trous distincts, tous deux signalés |
+| Qui le lève | M1, avec l'intention de sélection et les deux bornes de l'ADR 0006 qui vont avec |
+
+*(Constat de M0-24. Les deux autres bornes de l'ADR 0006 tiennent : `pay_price` n'a qu'un mode, et
+aucune option ne vient du modèle.)*
 
 ### 4.4 Mouvement (`content/moves/*.json`)
 

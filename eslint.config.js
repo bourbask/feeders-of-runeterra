@@ -28,4 +28,22 @@ const outillage = [
   },
 ];
 
-export default [...base, ...enginePurity, ...react, ...outillage];
+// Les fichiers d'appoint des tests — mise en place vitest, fabriques partagées —
+// vivent dans `tests/` sans porter `.test.ts`. Le tsconfig de build n'émet que
+// `src/`, donc le service de projet ne les voit pas et le lint échouait sur une
+// erreur d'analyse, pas sur une règle. Ils se rattachent au tsconfig de test du
+// paquet, exactement comme les tests eux-mêmes.
+const appointDeTest = [
+  {
+    files: ['packages/*/tests/**/*.ts', 'tests/**/*.ts'],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+        project: ['./tsconfig.test.json'],
+        tsconfigRootDir: process.cwd(),
+      },
+    },
+  },
+];
+
+export default [...base, ...enginePurity, ...react, ...outillage, ...appointDeTest];

@@ -4,6 +4,8 @@ export default defineConfig({
   test: {
     name: '@for/ai',
     globals: true,
+    // Any real egress fails the run. See `tests/setup.ts`.
+    setupFiles: ['./tests/setup.ts'],
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],

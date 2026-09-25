@@ -29,7 +29,15 @@
 
 import type { TableStateDto, TurnProofDto } from '@for/contracts';
 import type { JournalEvent } from '@for/db';
-import type { CampaignId, Intent, NarrationBrief, PlayerId, Result } from '@for/engine';
+import type {
+  BurnWindow,
+  CampaignId,
+  Intent,
+  NarrationBrief,
+  PlayerId,
+  Result,
+  RuleViolation,
+} from '@for/engine';
 import type { AppError } from '../errors.js';
 
 export type { NarratorPort } from '@for/contracts';
@@ -60,6 +68,28 @@ export interface SubmitIntentResult {
   readonly events: readonly PersistedEvent[];
   /** The fact the storyteller will dress, OUT of band and OUT of transaction. */
   readonly brief?: NarrationBrief;
+  /**
+   * WHY THE RULES SAID NO, present exactly when `accepted` is `false`.
+   *
+   * ADDED BY M0-24, and additively: a `RuleViolation` is NOT an `AppError`.
+   * 01-architecture.md section 3.3 keeps the two families apart and
+   * `@for/contracts/errors.ts` says in capitals that no error code is a rule
+   * outcome, so "tu n'as pas assez de souffle" cannot travel as a server
+   * error. `accepted: false` is the field that was already here for this case;
+   * this is the code that goes with it, and `s2c.rejected` carries either
+   * family through `zRejectionCode`.
+   */
+  readonly rejection?: RuleViolation;
+  /**
+   * THE TURN IS NOT OVER when this is non-null: the dice are written and
+   * visible, and the player may still burn their momentum (M0-34,
+   * 03-donnees.md section 3.4). The storyteller has NOT been called, and the
+   * caller must not treat the turn as finished.
+   *
+   * Added by M0-24 for the same reason as `rejection`: the two-step burn
+   * landed in the engine after this interface was written.
+   */
+  readonly pending?: BurnWindow | null;
 }
 
 /** What `getTurnProof` answers: the projection, and whether it was cut to fit. */
