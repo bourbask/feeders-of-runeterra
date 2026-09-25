@@ -91,7 +91,7 @@ describe('ce que la base contient d’une session', () => {
     expect(lines.some((line) => line.includes('/api/me'))).toBe(true);
   });
 
-  it('le cookie porte HttpOnly, Secure, SameSite=Lax et trente jours', async () => {
+  it('le cookie porte HttpOnly, Secure, SameSite=Lax, Path=/ et trente jours', async () => {
     const b = await bed();
     const start = await b.app.inject({ method: 'GET', url: '/api/auth/discord/start' });
     const state = cookieValue(start.headers, 'fr_oauth_state')!;
@@ -105,13 +105,20 @@ describe('ce que la base contient d’une session', () => {
 
     const line = setCookies(callback.headers).find((l) => l.startsWith('fr_session='));
     expect(line).toBeDefined();
-    // The four attributes of the criterion, written out.
-    expect(line).toContain('HttpOnly');
-    expect(line).toContain('Secure');
-    expect(line).toContain('SameSite=Lax');
-    expect(line).toContain('Path=/');
+
+    // DÉCOUPÉS PUIS COMPARÉS ENTIERS, et c'est le correctif : `toContain` sur
+    // la ligne brute cherche une SOUS-CHAÎNE, donc `Path=/api` contient
+    // `Path=/` et `Max-Age=25920000` contient `Max-Age=2592000`. Les deux
+    // attributs passaient pour tenus par un préfixe. Le `Path` compte pour
+    // lui-même : `clearedCookieAttributes` doit porter le même, sans quoi
+    // l'effacement laisse le cookie d'origine en place à côté du sien.
+    const attributes = line!.split(';').map((part) => part.trim());
+    expect(attributes).toContain('HttpOnly');
+    expect(attributes).toContain('Secure');
+    expect(attributes).toContain('SameSite=Lax');
+    expect(attributes).toContain('Path=/');
     // Thirty days in seconds, spelled out rather than imported.
-    expect(line).toContain(`Max-Age=${String(30 * 24 * 60 * 60)}`);
+    expect(attributes).toContain(`Max-Age=${String(30 * 24 * 60 * 60)}`);
   });
 });
 
@@ -235,7 +242,7 @@ describe('GET /api/me', () => {
 });
 
 describe('POST /api/auth/logout', () => {
-  it('révoque la session : la requête suivante répond 401', async () => {
+  it('révoque la session, et efface le cookie : la requête suivante répond 401', async () => {
     const b = await bed();
     const signed = await signIn(b);
 
@@ -255,6 +262,18 @@ describe('POST /api/auth/logout', () => {
     });
     expect(logout.statusCode).toBe(200);
     expect(logout.json()).toEqual({ ok: true });
+
+    // ET LE COOKIE QUITTE LE NAVIGATEUR, pas seulement la ligne de la base.
+    // Mesuré avant d'être écrit : `clearCookie` supprimé de la déconnexion
+    // laissait les cent dix-huit tests verts. Un `fr_session` révoqué mais
+    // laissé en place repart à chaque requête, et finit dans le journal du
+    // premier intermédiaire qui ne redacte pas `cookie`.
+    const cleared = setCookies(logout.headers).find((l) => l.startsWith('fr_session='));
+    expect(cleared).toBeDefined();
+    const attributes = cleared!.split(';').map((part) => part.trim());
+    expect(attributes[0]).toBe('fr_session=');
+    expect(attributes).toContain('Max-Age=0');
+    expect(attributes).toContain('Path=/');
 
     // THE CRITERION: the next request answers 401 — measured with the SAME
     // cookie, not with none.

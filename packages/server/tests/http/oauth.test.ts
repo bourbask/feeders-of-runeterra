@@ -11,6 +11,18 @@
  * `discord.com`, ten minutes in milliseconds), or a value recomputed here with
  * `node:crypto` (the PKCE challenge). Comparing the route's challenge to the
  * route's own helper would be a number compared to itself.
+ *
+ * THE TWO PROMISES THE HEADERS MAKE IN CAPITALS ARE MEASURED HERE, because a
+ * comment that promises a security property nothing holds is worse than no
+ * comment: the next reader trusts it and does not check.
+ *
+ *   - `discord.ts` says the requested scope is `identify` ALONE. Asserted in
+ *     the start test, SPELLED OUT rather than read from `DISCORD_SCOPES`:
+ *     widening the constant to `identify email` has to turn this file red;
+ *   - `auth.routes.ts` says the two `oauth_*` cookies are cleared on every
+ *     exit of the callback. `expectOauthCookiesCleared` asserts it on the
+ *     success path AND on every refusal, since a verifier left in a browser is
+ *     the one that can be paired with a second stolen code.
  */
 
 import { createHash } from 'node:crypto';
@@ -20,7 +32,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { DiscordCallError } from '../../src/auth/discord.js';
 import { OAUTH_STATE_TTL_MS } from '../../src/auth/session.js';
-import { bench, cookieValue, fakeDiscord, signIn } from '../../src/auth/testing.js';
+import { bench, cookieValue, fakeDiscord, setCookies, signIn } from '../../src/auth/testing.js';
 
 import type { Bench } from '../../src/auth/testing.js';
 
@@ -45,6 +57,46 @@ function countStates(bed_: Bench): number {
     .n;
 }
 
+/**
+ * The two round-trip cookies are GONE from the browser after this reply.
+ *
+ * Three assertions per cookie, and none of the three is redundant: the value
+ * comes back EMPTY (nothing usable is left in the jar), `Max-Age=0` (the jar
+ * drops the entry rather than keeping an empty one), and the `Path` is the one
+ * they were set with — a clear on another path leaves the original pair
+ * untouched beside it, which is a clear that clears nothing.
+ *
+ * Attributes are compared WHOLE, after splitting: `toContain('Path=/')` on the
+ * raw line is also true of `Path=/api`, so a prefix would pass for the
+ * attribute. Written out here rather than read from `clearedCookieAttributes`.
+ */
+function expectOauthCookiesCleared(headers: Record<string, unknown>): void {
+  const lines = setCookies(headers);
+  for (const name of ['fr_oauth_state', 'fr_oauth_verifier']) {
+    const line = lines.find((one) => one.startsWith(`${name}=`));
+    expect(line, `aucun Set-Cookie pour ${name}`).toBeDefined();
+    const parts = line!.split(';').map((part) => part.trim());
+    expect(parts[0]).toBe(`${name}=`);
+    expect(parts).toContain('Max-Age=0');
+    expect(parts).toContain('Path=/');
+  }
+}
+
+/** A full round trip through the REAL routes, handing back the callback reply. */
+async function roundTrip(
+  bed_: Bench,
+  code = 'un-code',
+): Promise<{ headers: Record<string, unknown>; statusCode: number }> {
+  const start = await bed_.app.inject({ method: 'GET', url: '/api/auth/discord/start' });
+  const state = cookieValue(start.headers, 'fr_oauth_state')!;
+  const verifier = cookieValue(start.headers, 'fr_oauth_verifier')!;
+  return bed_.app.inject({
+    method: 'GET',
+    url: `/api/auth/discord/callback?code=${code}&state=${encodeURIComponent(state)}`,
+    cookies: { fr_oauth_state: state, fr_oauth_verifier: verifier },
+  });
+}
+
 describe('GET /api/auth/discord/start', () => {
   it('redirige vers discord.com avec state, code_challenge et code_challenge_method=S256', async () => {
     const b = await bed();
@@ -59,6 +111,12 @@ describe('GET /api/auth/discord/start', () => {
     expect(location.searchParams.get('code_challenge_method')).toBe('S256');
     expect(location.searchParams.get('state')).not.toBeNull();
     expect(location.searchParams.get('code_challenge')).not.toBeNull();
+    // LA PORTÉE DEMANDÉE, ÉCRITE EN TOUTES LETTRES. `DISCORD_SCOPES` n'est pas
+    // importé : l'assertion se comparerait à elle-même et la demande de
+    // consentement pourrait glisser vers `email` sans qu'un test bouge, à côté
+    // d'une colonne `players.discord_email` qui existe déjà. Une portée qu'on
+    // ne demande pas est une portée qui ne peut pas fuir.
+    expect(location.searchParams.get('scope')).toBe('identify');
     // From the environment the bench declares, not from `deps.env` read back.
     expect(location.searchParams.get('client_id')).toBe('client-id');
     expect(location.searchParams.get('redirect_uri')).toBe(
@@ -178,9 +236,34 @@ describe('GET /api/auth/discord/callback — le chemin qui marche', () => {
   it('efface les cookies du tour et brûle la ligne oauth_states', async () => {
     const b = await bed();
 
+    const callback = await roundTrip(b);
+    expect(callback.statusCode).toBe(302);
+
+    // LA PREMIÈRE MOITIÉ DU TITRE, qui n'était mesurée par rien : ce test
+    // s'appelait « efface les cookies » et ne regardait que la ligne. Les deux
+    // effacements pouvaient disparaître du rappel sans qu'un seul test tombe.
+    expectOauthCookiesCleared(callback.headers);
+
+    // La seconde moitié : la ligne d'état est consommée.
+    expect(countStates(b)).toBe(0);
+  });
+
+  it('présente à /users/@me le jeton que l’échange a rendu, et pas autre chose', async () => {
+    // LE FAUX RECEVAIT MOINS QUE LE VRAI. `DiscordClient.fetchUser` prend un
+    // jeton ; le double était déclaré `() => …`, ce que TypeScript accepte en
+    // silence, et l'argument cessait d'exister pour toute la suite —
+    // `fetchUser('')` restait vert. Huitième mode de `docs/RECETTE.md`.
+    const b = await bench({
+      discord: fakeDiscord(
+        { id: '7', username: 'sept', globalName: null, avatar: null },
+        { accessToken: 'jeton-rendu-par-l-echange' },
+      ),
+    });
+    open.push(b);
+
     await signIn(b);
 
-    expect(countStates(b)).toBe(0);
+    expect(b.discord.seen.tokens).toEqual(['jeton-rendu-par-l-echange']);
   });
 
   it('un rappel redirige vers PUBLIC_URL', async () => {
@@ -208,6 +291,10 @@ describe('GET /api/auth/discord/callback — les refus', () => {
     expect(zAppErrorPayload.parse(response.json()).code).toBe('validation_failed');
     // The criterion, literally: no player is created.
     expect(countPlayers(b)).toBe(0);
+    // « À CHAQUE SORTIE », dit l'en-tête du rappel — et c'est sur un refus que
+    // le vérificateur laissé en place vaut le plus cher : il s'apparie à un
+    // second code volé. Chaque refus de ce fichier passe par ici.
+    expectOauthCookiesCleared(response.headers);
     return response;
   }
 
@@ -357,6 +444,9 @@ describe('GET /api/auth/discord/callback — les refus', () => {
     expect(sessions.n).toBe(0);
     // And the body carries no trace of what Discord answered.
     expect(response.body).not.toContain('indisponible');
+    // La sortie en panne amont est une sortie comme les autres : les deux
+    // cookies repartent effacés, bien que le code ait déjà été dépensé.
+    expectOauthCookiesCleared(response.headers);
   });
 
   it('une panne qui n’est PAS un DiscordCallError n’est pas maquillée en 502', async () => {
@@ -389,17 +479,31 @@ describe('GET /api/auth/discord/callback — les refus', () => {
     // Et le message interne ne fuit pas sur le fil.
     expect(response.body).not.toContain('un bogue bien à nous');
     expect(countPlayers(b)).toBe(0);
+    expectOauthCookiesCleared(response.headers);
   });
 
-  it('avec une chaîne de requête que le contrat ne décrit pas : 400', async () => {
+  it('avec une chaîne de requête que le contrat ne décrit pas : 400, et le gestionnaire n’a pas tourné', async () => {
     const b = await bed();
+    // Une ligne d'état bien vivante, pour que « le gestionnaire n'a pas
+    // tourné » soit mesurable plutôt que supposé.
+    await b.app.inject({ method: 'GET', url: '/api/auth/discord/start' });
+    expect(countStates(b)).toBe(1);
 
     const response = await b.app.inject({
       method: 'GET',
       url: '/api/auth/discord/callback?code=c&state=s&surnumeraire=1',
+      cookies: { fr_oauth_state: 's', fr_oauth_verifier: 'v' },
     });
 
     expect(response.statusCode).toBe(400);
     expect(countPlayers(b)).toBe(0);
+
+    // LA BORNE EXACTE DE LA PROMESSE, dite plutôt que maquillée : ce 400 vient
+    // du schéma, AVANT le gestionnaire, donc les deux cookies ne sont pas
+    // effacés — et c'est correct, puisque rien n'a été consommé : le tour reste
+    // celui du navigateur, qui peut le terminer. L'en-tête du rappel parle des
+    // sorties DU GESTIONNAIRE, et cette assertion est ce qui l'y tient.
+    expect(setCookies(response.headers)).toEqual([]);
+    expect(countStates(b)).toBe(1);
   });
 });

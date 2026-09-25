@@ -106,15 +106,26 @@ function drizzleTripwire(): AppDeps['db'] {
  * The counter is the part that matters: "no network happened" is proven by
  * the refusal path calling neither method, which a client that merely returned
  * a canned answer could not show.
+ *
+ * EVERY METHOD HERE TAKES EVERY PARAMETER THE REAL INTERFACE PASSES IT, and
+ * that is a rule rather than a style. TypeScript accepts a function that
+ * declares FEWER parameters than the type it is assigned to, so `fetchUser:
+ * () => …` compiled without a word while `DiscordClient.fetchUser` takes an
+ * access token — and the token the callback hands it stopped existing for the
+ * whole suite. Found on this file, not by coverage: `testing.ts` was already
+ * executed everywhere. Eighth failure mode of `docs/RECETTE.md`, question 7.
+ * `seen` therefore records the token too, and
+ * `tests/http/oauth.test.ts`, `présente à /users/@me le jeton que l'échange a
+ * rendu`, reads it back.
  */
 export interface FakeDiscord extends DiscordClient {
   readonly calls: { exchange: number; user: number };
-  readonly seen: { codes: string[]; verifiers: string[] };
+  readonly seen: { codes: string[]; verifiers: string[]; tokens: string[] };
 }
 
 export function fakeDiscord(user: DiscordUser, tokens: Partial<DiscordTokens> = {}): FakeDiscord {
   const calls = { exchange: 0, user: 0 };
-  const seen = { codes: [] as string[], verifiers: [] as string[] };
+  const seen = { codes: [] as string[], verifiers: [] as string[], tokens: [] as string[] };
   return {
     calls,
     seen,
@@ -130,8 +141,9 @@ export function fakeDiscord(user: DiscordUser, tokens: Partial<DiscordTokens> = 
         ...tokens,
       });
     },
-    fetchUser: () => {
+    fetchUser: (accessToken) => {
       calls.user += 1;
+      seen.tokens.push(accessToken);
       return Promise.resolve(user);
     },
   };

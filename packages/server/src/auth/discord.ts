@@ -19,6 +19,13 @@
  * when the player did not grant it". M0 asks nobody for an e-mail address: the
  * product needs a name and a face, the column stays null, and a scope that is
  * not requested is a scope that cannot leak from a public deployment.
+ *
+ * That last sentence is HELD BY A TEST rather than by this comment:
+ * `tests/http/oauth.test.ts`, `redirige vers discord.com avec state,
+ * code_challenge et code_challenge_method=S256`, reads `scope` back out of the
+ * authorisation URL and compares it to the word `identify` SPELLED OUT there.
+ * `DISCORD_SCOPES` is deliberately not imported by that test: widening this
+ * constant to `identify email` turns it red, which is the whole point.
  */
 
 import type { Env } from '../env.js';

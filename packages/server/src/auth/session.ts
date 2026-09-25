@@ -229,6 +229,14 @@ export function revokeSessionBySecret(
 /**
  * The four attributes section 6 fixes, plus `Path`.
  *
+ * ALL FIVE ARE ASSERTED, AND AS WHOLE ATTRIBUTES. `tests/http/session.test.ts`,
+ * `le cookie porte HttpOnly, Secure, SameSite=Lax, Path=/ et trente jours`,
+ * splits the `Set-Cookie` line and compares each attribute entire: a substring
+ * check on the raw line is satisfied by `Path=/api`, which is a different
+ * cookie. `Path` earns its own assertion twice over, because
+ * `clearedCookieAttributes` below must carry the SAME one — a clear on another
+ * path leaves the original cookie sitting beside the empty one.
+ *
  * `secure: true` IS UNCONDITIONAL, including in development, and that is a
  * decision worth the two lines it takes to explain. Browsers treat
  * `http://localhost` as a secure context, so a `Secure` cookie is set and sent
@@ -269,5 +277,16 @@ export const oauthCookieAttributes: CookieAttributes = {
   maxAge: OAUTH_STATE_TTL_MS / 1000,
 };
 
-/** What clears a cookie: same attributes, no value, `Max-Age=0`. */
+/**
+ * What clears a cookie: the SAME attributes, so the browser drops the entry it
+ * actually holds rather than adding a second one on another path.
+ *
+ * `maxAge: 0` IS NOT WHAT PRODUCES `Max-Age=0` ON THE WIRE, and saying
+ * otherwise would be a comment promising something it does not do. Measured:
+ * `@fastify/cookie`'s `clearCookie` overwrites `maxAge` and `expires` itself,
+ * so this object still serialises to `Max-Age=0; Expires=Thu, 01 Jan 1970`
+ * when the field is set to 600. The field is here because `CookieAttributes`
+ * demands one; what this object really contributes is `Path`, `SameSite`,
+ * `Secure` and `HttpOnly`.
+ */
 export const clearedCookieAttributes: CookieAttributes = { ...BASE, maxAge: 0 };

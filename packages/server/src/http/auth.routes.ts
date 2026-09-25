@@ -116,9 +116,22 @@ export const authRoutes: FastifyPluginCallback<AppPluginOptions> = (app, options
   /**
    * Callback: check the three bindings, then trade the code for an identity.
    *
-   * The two `oauth_*` cookies are cleared on EVERY exit, success or refusal.
-   * A verifier left in a browser is a verifier that can be paired with a
-   * second stolen code.
+   * The two `oauth_*` cookies are cleared on EVERY exit OF THIS HANDLER —
+   * success, refusal, upstream outage — because the clearing is written before
+   * the first binding is even looked at. A verifier left in a browser is a
+   * verifier that can be paired with a second stolen code.
+   *
+   * MEASURED, in both halves, by `tests/http/oauth.test.ts`: the success path
+   * in `efface les cookies du tour et brûle la ligne oauth_states`, and every
+   * refusal through its `expectRefused`, which asserts the empty value, the
+   * `Max-Age=0` and the matching `Path`. Removing the two `clearCookie` calls
+   * turns both red.
+   *
+   * The boundary, stated because it is real: a query string the CONTRACT does
+   * not describe is refused by the schema, before this handler runs, so
+   * nothing is cleared there. That is correct rather than a hole — no row is
+   * consumed either, so the round trip is still the browser's to finish — and
+   * the same test file pins it so the sentence above cannot quietly grow.
    */
   routes.get(
     '/api/auth/discord/callback',
@@ -228,6 +241,12 @@ export const authRoutes: FastifyPluginCallback<AppPluginOptions> = (app, options
    * 401 when nobody is signed in would make "sign me out everywhere" a
    * two-outcome operation for no gain; and the CSRF hook already refuses this
    * route to anybody who cannot set a header.
+   *
+   * BOTH HALVES ARE ASSERTED, and the second one had to be added: deleting the
+   * `clearCookie` below left the whole suite green, though a revoked cookie
+   * left in the jar is re-sent on every request. `tests/http/session.test.ts`,
+   * `révoque la session, et efface le cookie : la requête suivante répond
+   * 401`, now reads the `Set-Cookie` back.
    */
   routes.post(
     '/api/auth/logout',
