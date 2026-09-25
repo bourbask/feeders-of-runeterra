@@ -1,0 +1,25 @@
+{
+  "id": "prix-impose",
+  "title": "Réussite partielle et prix imposé, déjà tiré par le moteur",
+  "actor": "Sejuani",
+  "imposed_price": true,
+  "fact": "Mouvement : Endurer le froid (cœur).\nIssue : RÉUSSITE PARTIELLE. Présage : non.\nDétail du calcul, pour ta compréhension seule : dé d'action cinq, attribut deux, bonus un, total huit ; dés de défi sept et trois.\nCe qui a déjà eu lieu et qui est acquis : Sejuani a tenu le bivouac ouvert jusqu'au bout de la bourrasque. Ses vivres ont baissé d'un cran.\nPrix imposé, déjà survenu, à mettre en scène tel quel : « Un allié se retourne contre toi. »",
+  "intent": "Sejuani (joueur : Kevin) : « Je monte le bivouac contre le cairn et je tiens jusqu'à ce que la bourrasque passe. »",
+  "scene_in": {
+    "place": "col_des_hurleurs — Le Col des Hurleurs, passe étroite battue par le vent, deux cairns effondrés, une corniche de glace au nord.",
+    "time": "nuit tombée, vent qui faiblit.",
+    "present": [
+      { "name": "Sejuani", "detail": "personnage joueur — accroupie sous la toile" },
+      { "name": "Braum", "detail": "personnage joueur — adossé au cairn" },
+      { "name": "Ulrun", "detail": "éclaireur du clan, méfiant — à l'écart, la main sur sa hache" }
+    ],
+    "absent": [
+      { "name": "Keld", "detail": "mort" },
+      { "name": "Signy", "detail": "partie" }
+    ]
+  },
+  "locked_champions": [
+    { "name": "Ashe", "aliases": ["la Reine des Neiges", "l'Archère du Givre"] },
+    { "name": "Lissandra", "aliases": ["la Sorcière de Glace", "la Prophétesse Noire"] }
+  ]
+}

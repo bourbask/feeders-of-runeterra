@@ -36,7 +36,7 @@
     "eval:record": "node scripts/pas-encore.mjs M0-27 \"enregistrement des sorties de reference\"",
     "eval:live": "node scripts/pas-encore.mjs M1 \"niveau N1 : jalon M1\"",
     "eval:judge": "node scripts/pas-encore.mjs M1 \"niveau N2 : jalon M1\"",
-    "eval:smoke": "node scripts/pas-encore.mjs M0-32 \"sonde de fumee du conteur\"",
+    "eval:smoke": "turbo run build --filter @for/ai && tsx packages/ai-eval/smoke/run-smoke.ts",
     "eval:probe": "node scripts/pas-encore.mjs M0-31 \"mesure complete d un fournisseur\""
   },
   "devDependencies": {
