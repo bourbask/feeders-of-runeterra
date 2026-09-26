@@ -36,9 +36,9 @@
  * hardest rules of this repository live.
  *
  * WHAT THAT HOLE LOOKS LIKE WHEN THE DRAIN IS REMOVED: `tests/scenarios.test.ts`,
- * « la diffusion par séquence n'est pas décorative : sans elle, le fil d'un
- * joueur perd des entrées », runs a scenario with the drain disabled and
- * requires `checkReplayEquivalence` to fail. Both directions, one test.
+ * describe « la diffusion se fait par séquence, jamais par le résultat », it
+ * « sans le drain, le fil d'un joueur perd des entrées » — and its low
+ * direction, « avec le drain, le même scénario est vert ».
  */
 
 import { createHash } from 'node:crypto';
@@ -284,8 +284,45 @@ export function campaignIdOf(scenario: Scenario): CampaignId {
   return expandUlid(`CAMP${numberOf(scenario)}`) as CampaignId;
 }
 
+/** The scene identifier of a scenario: derived, like the campaign's. */
+export function sceneIdOf(scenario: Scenario): SceneId {
+  return expandUlid(`SCN${numberOf(scenario)}`) as SceneId;
+}
+
 function numberOf(scenario: Scenario): string {
   return /^(\d+)/.exec(scenario.id)?.[1] ?? '00';
+}
+
+/**
+ * Every identifier this harness MINTS FROM A SYMBOL, mapped back to that
+ * symbol — `0000000000000000000000CHRA` to `CHRA`.
+ *
+ * WHY IT EXISTS: the golden corpus pins payloads, and a payload is mostly
+ * identifiers. Twenty-two leading zeros per identifier are noise a human
+ * reading a red corpus has to step over, and the substitution is EXACT — the
+ * map is built from `expandUlid`, whose padding is total and reversible, so
+ * nothing is lost and no two symbols collide.
+ *
+ * WHAT IS DELIBERATELY ABSENT: the identifiers the COUNTER mints (`rollId`,
+ * `aiCallId`, the entry's own `id`, `correlationId`). They carry the order in
+ * which the server allocated them, which is signal, and `counterUlids` /
+ * `counterUuids` already make them the same on every run. Held by
+ * `tests/scenarios.test.ts` « le corpus doré remplace les identifiants nommés
+ * par leur symbole et laisse les identifiants comptés tels quels ».
+ */
+export function symbolsOf(scenario: Scenario): ReadonlyMap<string, string> {
+  const table = new Map<string, string>();
+  const put = (symbol: string): void => {
+    table.set(expandUlid(symbol), symbol);
+  };
+  put(`CAMP${numberOf(scenario)}`);
+  put(`SCN${numberOf(scenario)}`);
+  for (const player of scenario.players) {
+    put(player.symbol);
+    put(player.character.symbol);
+  }
+  for (const entity of scenario.entities) put(entity.symbol);
+  return table;
 }
 
 export function createSimHarness(options: HarnessOptions): SimHarness {
@@ -474,7 +511,7 @@ export function createSimHarness(options: HarnessOptions): SimHarness {
     if (scenario.scene !== null) {
       events.push(
         envelope('scene.started', {
-          sceneId: expandUlid(`SCN${numberOf(scenario)}`) as SceneId,
+          sceneId: sceneIdOf(scenario),
           title: scenario.scene.title,
           entityIds: scenario.scene.entities.map((symbol) => expandUlid(symbol) as EntityId),
           presentCharacterIds: scenario.players.map(

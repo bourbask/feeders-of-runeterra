@@ -1,110 +1,418 @@
 {
   "journal": [
     {
+      "payload": {
+        "contentPackHash": "24d030b6ef069dc6d4c7f4b8ddba84846af4e8ea944e5cb541f0d1a8a927c5d0",
+        "contentPackVersion": "0.1.0",
+        "name": "Deux joueurs, aucune file de tour, et le filet de sécurité de la brûlure",
+        "ownerPlayerId": "PYRA",
+        "pitch": "",
+        "rngSeed": "sim-06",
+        "rulesVersion": 1,
+        "slug": "sim-06-two-players-interleaved"
+      },
       "seq": 1,
       "type": "campaign.created"
     },
     {
+      "payload": {
+        "from": "draft",
+        "to": "active"
+      },
       "seq": 2,
       "type": "campaign.status_changed"
     },
     {
+      "payload": {
+        "displayName": "Alice",
+        "playerId": "PYRA",
+        "role": "owner"
+      },
       "seq": 3,
       "type": "party.member_joined"
     },
     {
+      "payload": {
+        "displayName": "Bruno",
+        "playerId": "PYRB",
+        "role": "player"
+      },
       "seq": 4,
       "type": "party.member_joined"
     },
     {
+      "payload": {
+        "attributes": {
+          "coeur": 1,
+          "esprit": 1,
+          "fer": 1,
+          "ombre": 1,
+          "vif": 1
+        },
+        "championId": "ashe",
+        "characterId": "CHRA",
+        "displayName": "Ashe",
+        "gauges": {
+          "ame": 5,
+          "vigueur": 5,
+          "vivres": 5
+        },
+        "momentum": 9,
+        "playerId": "PYRA",
+        "sheetRef": "ashe",
+        "sheetSnapshot": {},
+        "sheetSource": "handwritten"
+      },
       "seq": 5,
       "type": "character.created"
     },
     {
+      "payload": {
+        "attributes": {
+          "coeur": 3,
+          "esprit": 2,
+          "fer": 3,
+          "ombre": 1,
+          "vif": 1
+        },
+        "championId": "braum",
+        "characterId": "CHRB",
+        "displayName": "Braum",
+        "gauges": {
+          "ame": 5,
+          "vigueur": 5,
+          "vivres": 5
+        },
+        "momentum": 2,
+        "playerId": "PYRB",
+        "sheetRef": "braum",
+        "sheetSnapshot": {},
+        "sheetSource": "handwritten"
+      },
       "seq": 6,
       "type": "character.created"
     },
     {
+      "payload": {
+        "championId": "ashe",
+        "lockKind": "reserved_pc",
+        "reason": "personnage de Alice"
+      },
       "seq": 7,
       "type": "party.champion_locked"
     },
     {
+      "payload": {
+        "championId": "braum",
+        "lockKind": "reserved_pc",
+        "reason": "personnage de Bruno"
+      },
       "seq": 8,
       "type": "party.champion_locked"
     },
     {
+      "payload": {
+        "characterId": "CHRA",
+        "chosenAttribute": "vif",
+        "moveId": "face-danger",
+        "narrativeInput": "Passer devant, et vite."
+      },
       "seq": 9,
       "type": "move.declared"
     },
     {
+      "payload": {
+        "actionDie": 1,
+        "adds": [],
+        "attribute": "vif",
+        "attributeValue": 1,
+        "burnWindow": true,
+        "cappedAtTen": false,
+        "challengeDice": [
+          7,
+          5
+        ],
+        "characterId": "CHRA",
+        "isPresage": false,
+        "momentumBefore": 9,
+        "momentumNegated": false,
+        "moveId": "face-danger",
+        "outcome": "echec",
+        "rawTotal": 2,
+        "rngDrawIndex": 0,
+        "rngStream": "action",
+        "rollId": "00000000000000000000000003",
+        "total": 2
+      },
       "seq": 10,
       "type": "roll.action_resolved"
     },
     {
+      "payload": {
+        "characterId": "CHRB",
+        "chosenAttribute": "fer",
+        "moveId": "endure-cold",
+        "narrativeInput": ""
+      },
       "seq": 11,
       "type": "move.declared"
     },
     {
+      "payload": {
+        "actionDie": 5,
+        "adds": [],
+        "attribute": "fer",
+        "attributeValue": 3,
+        "burnWindow": false,
+        "cappedAtTen": false,
+        "challengeDice": [
+          8,
+          9
+        ],
+        "characterId": "CHRB",
+        "isPresage": false,
+        "momentumBefore": 2,
+        "momentumNegated": false,
+        "moveId": "endure-cold",
+        "outcome": "echec",
+        "rawTotal": 8,
+        "rngDrawIndex": 1,
+        "rngStream": "action",
+        "rollId": "0000000000000000000000000E",
+        "total": 8
+      },
       "seq": 12,
       "type": "roll.action_resolved"
     },
     {
+      "payload": {
+        "cause": "effect:gauge",
+        "characterId": "CHRB",
+        "clamped": false,
+        "delta": -1,
+        "from": 5,
+        "gauge": "vigueur",
+        "to": 4
+      },
       "seq": 13,
       "type": "character.gauge_changed"
     },
     {
+      "payload": {
+        "characterId": "CHRB",
+        "conditionId": "transi",
+        "label": "Transi",
+        "source": "engine"
+      },
       "seq": 14,
       "type": "character.condition_added"
     },
     {
+      "payload": {
+        "characterId": "CHRB",
+        "effectsApplied": [
+          {
+            "delta": -1,
+            "gauge": "vigueur",
+            "op": "gauge",
+            "target": "self"
+          },
+          {
+            "conditionId": "transi",
+            "op": "condition_add"
+          }
+        ],
+        "moveId": "endure-cold",
+        "outcome": "echec",
+        "rollSeq": 12
+      },
       "seq": 15,
       "type": "move.resolved"
     },
     {
+      "payload": {
+        "aiCallId": "0000000000000000000000000K",
+        "citedEventSeqs": [
+          11,
+          12,
+          13,
+          14,
+          15
+        ],
+        "model": "scripted:sim",
+        "promptVersion": "conteur/0.0.0-placeholder",
+        "source": "ai",
+        "text": "[conteur-scripte] mouvement=endure-cold issue=echec acteur=0000000000000000000000CHRB"
+      },
       "seq": 16,
       "type": "narration.gm_message"
     },
     {
+      "payload": {
+        "effectIndex": 2,
+        "entryId": "le-pire-arrive",
+        "rollId": "0000000000000000000000000N",
+        "severity": "grave",
+        "targetCharacterId": "CHRA",
+        "text": "Le pire que tu pouvais imaginer arrive, et il était prévisible depuis le début.",
+        "value": 12
+      },
       "seq": 17,
       "type": "roll.price_paid"
     },
     {
+      "payload": {
+        "characterId": "CHRA",
+        "conditionId": "traque",
+        "label": "Traqué",
+        "source": "engine"
+      },
       "seq": 18,
       "type": "character.condition_added"
     },
     {
+      "payload": {
+        "characterId": "CHRA",
+        "effectsApplied": [
+          {
+            "conditionId": "traque",
+            "op": "condition_add"
+          },
+          {
+            "mode": "roll",
+            "op": "pay_price"
+          }
+        ],
+        "moveId": "face-danger",
+        "outcome": "echec",
+        "rollSeq": 10
+      },
       "seq": 19,
       "type": "move.resolved"
     },
     {
+      "payload": {
+        "characterId": "CHRA",
+        "kind": "ic",
+        "text": "Je ne brûle rien. On passe comme ça."
+      },
       "seq": 20,
       "type": "narration.player_message"
     },
     {
+      "payload": {
+        "aiCallId": "0000000000000000000000000V",
+        "citedEventSeqs": [
+          20
+        ],
+        "model": "scripted:sim",
+        "promptVersion": "conteur/0.0.0-placeholder",
+        "source": "ai",
+        "text": "[conteur-scripte] mouvement=aucun issue=aucune acteur=0000000000000000000000CHRA"
+      },
       "seq": 21,
       "type": "narration.gm_message"
     },
     {
+      "payload": {
+        "characterId": "CHRB",
+        "chosenAttribute": "coeur",
+        "moveId": "face-danger",
+        "narrativeInput": "Suivre Alice sans la perdre de vue."
+      },
       "seq": 22,
       "type": "move.declared"
     },
     {
+      "payload": {
+        "actionDie": 3,
+        "adds": [],
+        "attribute": "coeur",
+        "attributeValue": 3,
+        "burnWindow": false,
+        "cappedAtTen": false,
+        "challengeDice": [
+          9,
+          8
+        ],
+        "characterId": "CHRB",
+        "isPresage": false,
+        "momentumBefore": 2,
+        "momentumNegated": false,
+        "moveId": "face-danger",
+        "outcome": "echec",
+        "rawTotal": 6,
+        "rngDrawIndex": 2,
+        "rngStream": "action",
+        "rollId": "0000000000000000000000000Z",
+        "total": 6
+      },
       "seq": 23,
       "type": "roll.action_resolved"
     },
     {
+      "payload": {
+        "effectIndex": 0,
+        "entryId": "un-allie-paie-a-ta-place",
+        "rollId": "00000000000000000000000011",
+        "severity": "serieuse",
+        "targetCharacterId": "CHRB",
+        "text": "Quelqu'un d'autre paie à ta place, et il le saura toute sa vie.",
+        "value": 1
+      },
       "seq": 24,
       "type": "roll.price_paid"
     },
     {
+      "payload": {
+        "cause": "effect:gauge",
+        "characterId": "CHRB",
+        "clamped": false,
+        "delta": -1,
+        "from": 5,
+        "gauge": "ame",
+        "to": 4
+      },
       "seq": 25,
       "type": "character.gauge_changed"
     },
     {
+      "payload": {
+        "characterId": "CHRB",
+        "effectsApplied": [
+          {
+            "delta": -1,
+            "gauge": "ame",
+            "op": "gauge",
+            "target": "self"
+          },
+          {
+            "mode": "roll",
+            "op": "pay_price"
+          }
+        ],
+        "moveId": "face-danger",
+        "outcome": "echec",
+        "rollSeq": 23
+      },
       "seq": 26,
       "type": "move.resolved"
     },
     {
+      "payload": {
+        "aiCallId": "00000000000000000000000015",
+        "citedEventSeqs": [
+          22,
+          23,
+          24,
+          25,
+          26
+        ],
+        "model": "scripted:sim",
+        "promptVersion": "conteur/0.0.0-placeholder",
+        "source": "ai",
+        "text": "[conteur-scripte] mouvement=face-danger issue=echec acteur=0000000000000000000000CHRB"
+      },
       "seq": 27,
       "type": "narration.gm_message"
     }
@@ -117,7 +425,7 @@
     "seed": "sim-06"
   },
   "state": {
-    "campaignId": "00000000000000000000CAMP06",
+    "campaignId": "CAMP06",
     "championLocks": [
       {
         "championId": "ashe",
@@ -158,14 +466,14 @@
           "vigueur": 5,
           "vivres": 5
         },
-        "id": "0000000000000000000000CHRA",
+        "id": "CHRA",
         "momentum": 9,
         "momentumBounds": {
           "max": 10,
           "min": -6,
           "reset": 2
         },
-        "playerId": "0000000000000000000000PYRA",
+        "playerId": "PYRA",
         "sheet": {
           "championId": "ashe",
           "ref": "ashe",
@@ -201,14 +509,14 @@
           "vigueur": 4,
           "vivres": 5
         },
-        "id": "0000000000000000000000CHRB",
+        "id": "CHRB",
         "momentum": 2,
         "momentumBounds": {
           "max": 10,
           "min": -6,
           "reset": 2
         },
-        "playerId": "0000000000000000000000PYRB",
+        "playerId": "PYRB",
         "sheet": {
           "championId": "braum",
           "ref": "braum",
@@ -225,10 +533,10 @@
     "entities": [],
     "party": {
       "memberPlayerIds": [
-        "0000000000000000000000PYRA",
-        "0000000000000000000000PYRB"
+        "PYRA",
+        "PYRB"
       ],
-      "ownerPlayerId": "0000000000000000000000PYRA"
+      "ownerPlayerId": "PYRA"
     },
     "scene": null,
     "seq": 27,
@@ -255,136 +563,444 @@
     "PYRA": [
       {
         "deliverySeq": 1,
+        "payload": {
+          "contentPackHash": "24d030b6ef069dc6d4c7f4b8ddba84846af4e8ea944e5cb541f0d1a8a927c5d0",
+          "contentPackVersion": "0.1.0",
+          "name": "Deux joueurs, aucune file de tour, et le filet de sécurité de la brûlure",
+          "ownerPlayerId": "PYRA",
+          "pitch": "",
+          "rngSeed": "sim-06",
+          "rulesVersion": 1,
+          "slug": "sim-06-two-players-interleaved"
+        },
         "seq": 1,
         "type": "campaign.created"
       },
       {
         "deliverySeq": 2,
+        "payload": {
+          "from": "draft",
+          "to": "active"
+        },
         "seq": 2,
         "type": "campaign.status_changed"
       },
       {
         "deliverySeq": 3,
+        "payload": {
+          "displayName": "Alice",
+          "playerId": "PYRA",
+          "role": "owner"
+        },
         "seq": 3,
         "type": "party.member_joined"
       },
       {
         "deliverySeq": 4,
+        "payload": {
+          "displayName": "Bruno",
+          "playerId": "PYRB",
+          "role": "player"
+        },
         "seq": 4,
         "type": "party.member_joined"
       },
       {
         "deliverySeq": 5,
+        "payload": {
+          "attributes": {
+            "coeur": 1,
+            "esprit": 1,
+            "fer": 1,
+            "ombre": 1,
+            "vif": 1
+          },
+          "championId": "ashe",
+          "characterId": "CHRA",
+          "displayName": "Ashe",
+          "gauges": {
+            "ame": 5,
+            "vigueur": 5,
+            "vivres": 5
+          },
+          "momentum": 9,
+          "playerId": "PYRA",
+          "sheetRef": "ashe",
+          "sheetSnapshot": {},
+          "sheetSource": "handwritten"
+        },
         "seq": 5,
         "type": "character.created"
       },
       {
         "deliverySeq": 6,
+        "payload": {
+          "attributes": {
+            "coeur": 3,
+            "esprit": 2,
+            "fer": 3,
+            "ombre": 1,
+            "vif": 1
+          },
+          "championId": "braum",
+          "characterId": "CHRB",
+          "displayName": "Braum",
+          "gauges": {
+            "ame": 5,
+            "vigueur": 5,
+            "vivres": 5
+          },
+          "momentum": 2,
+          "playerId": "PYRB",
+          "sheetRef": "braum",
+          "sheetSnapshot": {},
+          "sheetSource": "handwritten"
+        },
         "seq": 6,
         "type": "character.created"
       },
       {
         "deliverySeq": 7,
+        "payload": {
+          "championId": "ashe",
+          "lockKind": "reserved_pc",
+          "reason": "personnage de Alice"
+        },
         "seq": 7,
         "type": "party.champion_locked"
       },
       {
         "deliverySeq": 8,
+        "payload": {
+          "championId": "braum",
+          "lockKind": "reserved_pc",
+          "reason": "personnage de Bruno"
+        },
         "seq": 8,
         "type": "party.champion_locked"
       },
       {
         "deliverySeq": 9,
+        "payload": {
+          "characterId": "CHRA",
+          "chosenAttribute": "vif",
+          "moveId": "face-danger",
+          "narrativeInput": "Passer devant, et vite."
+        },
         "seq": 9,
         "type": "move.declared"
       },
       {
         "deliverySeq": 10,
+        "payload": {
+          "actionDie": 1,
+          "adds": [],
+          "attribute": "vif",
+          "attributeValue": 1,
+          "burnWindow": true,
+          "cappedAtTen": false,
+          "challengeDice": [
+            7,
+            5
+          ],
+          "characterId": "CHRA",
+          "isPresage": false,
+          "momentumBefore": 9,
+          "momentumNegated": false,
+          "moveId": "face-danger",
+          "outcome": "echec",
+          "rawTotal": 2,
+          "rngDrawIndex": 0,
+          "rngStream": "action",
+          "rollId": "00000000000000000000000003",
+          "total": 2
+        },
         "seq": 10,
         "type": "roll.action_resolved"
       },
       {
         "deliverySeq": 11,
+        "payload": {
+          "characterId": "CHRB",
+          "chosenAttribute": "fer",
+          "moveId": "endure-cold",
+          "narrativeInput": ""
+        },
         "seq": 11,
         "type": "move.declared"
       },
       {
         "deliverySeq": 12,
+        "payload": {
+          "actionDie": 5,
+          "adds": [],
+          "attribute": "fer",
+          "attributeValue": 3,
+          "burnWindow": false,
+          "cappedAtTen": false,
+          "challengeDice": [
+            8,
+            9
+          ],
+          "characterId": "CHRB",
+          "isPresage": false,
+          "momentumBefore": 2,
+          "momentumNegated": false,
+          "moveId": "endure-cold",
+          "outcome": "echec",
+          "rawTotal": 8,
+          "rngDrawIndex": 1,
+          "rngStream": "action",
+          "rollId": "0000000000000000000000000E",
+          "total": 8
+        },
         "seq": 12,
         "type": "roll.action_resolved"
       },
       {
         "deliverySeq": 13,
+        "payload": {
+          "cause": "effect:gauge",
+          "characterId": "CHRB",
+          "clamped": false,
+          "delta": -1,
+          "from": 5,
+          "gauge": "vigueur",
+          "to": 4
+        },
         "seq": 13,
         "type": "character.gauge_changed"
       },
       {
         "deliverySeq": 14,
+        "payload": {
+          "characterId": "CHRB",
+          "conditionId": "transi",
+          "label": "Transi",
+          "source": "engine"
+        },
         "seq": 14,
         "type": "character.condition_added"
       },
       {
         "deliverySeq": 15,
+        "payload": {
+          "characterId": "CHRB",
+          "effectsApplied": [
+            {
+              "delta": -1,
+              "gauge": "vigueur",
+              "op": "gauge",
+              "target": "self"
+            },
+            {
+              "conditionId": "transi",
+              "op": "condition_add"
+            }
+          ],
+          "moveId": "endure-cold",
+          "outcome": "echec",
+          "rollSeq": 12
+        },
         "seq": 15,
         "type": "move.resolved"
       },
       {
         "deliverySeq": 16,
+        "payload": {
+          "aiCallId": "0000000000000000000000000K",
+          "citedEventSeqs": [
+            11,
+            12,
+            13,
+            14,
+            15
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=endure-cold issue=echec acteur=0000000000000000000000CHRB"
+        },
         "seq": 16,
         "type": "narration.gm_message"
       },
       {
         "deliverySeq": 17,
+        "payload": {
+          "effectIndex": 2,
+          "entryId": "le-pire-arrive",
+          "rollId": "0000000000000000000000000N",
+          "severity": "grave",
+          "targetCharacterId": "CHRA",
+          "text": "Le pire que tu pouvais imaginer arrive, et il était prévisible depuis le début.",
+          "value": 12
+        },
         "seq": 17,
         "type": "roll.price_paid"
       },
       {
         "deliverySeq": 18,
+        "payload": {
+          "characterId": "CHRA",
+          "conditionId": "traque",
+          "label": "Traqué",
+          "source": "engine"
+        },
         "seq": 18,
         "type": "character.condition_added"
       },
       {
         "deliverySeq": 19,
+        "payload": {
+          "characterId": "CHRA",
+          "effectsApplied": [
+            {
+              "conditionId": "traque",
+              "op": "condition_add"
+            },
+            {
+              "mode": "roll",
+              "op": "pay_price"
+            }
+          ],
+          "moveId": "face-danger",
+          "outcome": "echec",
+          "rollSeq": 10
+        },
         "seq": 19,
         "type": "move.resolved"
       },
       {
         "deliverySeq": 20,
+        "payload": {
+          "characterId": "CHRA",
+          "kind": "ic",
+          "text": "Je ne brûle rien. On passe comme ça."
+        },
         "seq": 20,
         "type": "narration.player_message"
       },
       {
         "deliverySeq": 21,
+        "payload": {
+          "aiCallId": "0000000000000000000000000V",
+          "citedEventSeqs": [
+            20
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=aucun issue=aucune acteur=0000000000000000000000CHRA"
+        },
         "seq": 21,
         "type": "narration.gm_message"
       },
       {
         "deliverySeq": 22,
+        "payload": {
+          "characterId": "CHRB",
+          "chosenAttribute": "coeur",
+          "moveId": "face-danger",
+          "narrativeInput": "Suivre Alice sans la perdre de vue."
+        },
         "seq": 22,
         "type": "move.declared"
       },
       {
         "deliverySeq": 23,
+        "payload": {
+          "actionDie": 3,
+          "adds": [],
+          "attribute": "coeur",
+          "attributeValue": 3,
+          "burnWindow": false,
+          "cappedAtTen": false,
+          "challengeDice": [
+            9,
+            8
+          ],
+          "characterId": "CHRB",
+          "isPresage": false,
+          "momentumBefore": 2,
+          "momentumNegated": false,
+          "moveId": "face-danger",
+          "outcome": "echec",
+          "rawTotal": 6,
+          "rngDrawIndex": 2,
+          "rngStream": "action",
+          "rollId": "0000000000000000000000000Z",
+          "total": 6
+        },
         "seq": 23,
         "type": "roll.action_resolved"
       },
       {
         "deliverySeq": 24,
+        "payload": {
+          "effectIndex": 0,
+          "entryId": "un-allie-paie-a-ta-place",
+          "rollId": "00000000000000000000000011",
+          "severity": "serieuse",
+          "targetCharacterId": "CHRB",
+          "text": "Quelqu'un d'autre paie à ta place, et il le saura toute sa vie.",
+          "value": 1
+        },
         "seq": 24,
         "type": "roll.price_paid"
       },
       {
         "deliverySeq": 25,
+        "payload": {
+          "cause": "effect:gauge",
+          "characterId": "CHRB",
+          "clamped": false,
+          "delta": -1,
+          "from": 5,
+          "gauge": "ame",
+          "to": 4
+        },
         "seq": 25,
         "type": "character.gauge_changed"
       },
       {
         "deliverySeq": 26,
+        "payload": {
+          "characterId": "CHRB",
+          "effectsApplied": [
+            {
+              "delta": -1,
+              "gauge": "ame",
+              "op": "gauge",
+              "target": "self"
+            },
+            {
+              "mode": "roll",
+              "op": "pay_price"
+            }
+          ],
+          "moveId": "face-danger",
+          "outcome": "echec",
+          "rollSeq": 23
+        },
         "seq": 26,
         "type": "move.resolved"
       },
       {
         "deliverySeq": 27,
+        "payload": {
+          "aiCallId": "00000000000000000000000015",
+          "citedEventSeqs": [
+            22,
+            23,
+            24,
+            25,
+            26
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=face-danger issue=echec acteur=0000000000000000000000CHRB"
+        },
         "seq": 27,
         "type": "narration.gm_message"
       }
@@ -392,136 +1008,444 @@
     "PYRB": [
       {
         "deliverySeq": 1,
+        "payload": {
+          "contentPackHash": "24d030b6ef069dc6d4c7f4b8ddba84846af4e8ea944e5cb541f0d1a8a927c5d0",
+          "contentPackVersion": "0.1.0",
+          "name": "Deux joueurs, aucune file de tour, et le filet de sécurité de la brûlure",
+          "ownerPlayerId": "PYRA",
+          "pitch": "",
+          "rngSeed": "sim-06",
+          "rulesVersion": 1,
+          "slug": "sim-06-two-players-interleaved"
+        },
         "seq": 1,
         "type": "campaign.created"
       },
       {
         "deliverySeq": 2,
+        "payload": {
+          "from": "draft",
+          "to": "active"
+        },
         "seq": 2,
         "type": "campaign.status_changed"
       },
       {
         "deliverySeq": 3,
+        "payload": {
+          "displayName": "Alice",
+          "playerId": "PYRA",
+          "role": "owner"
+        },
         "seq": 3,
         "type": "party.member_joined"
       },
       {
         "deliverySeq": 4,
+        "payload": {
+          "displayName": "Bruno",
+          "playerId": "PYRB",
+          "role": "player"
+        },
         "seq": 4,
         "type": "party.member_joined"
       },
       {
         "deliverySeq": 5,
+        "payload": {
+          "attributes": {
+            "coeur": 1,
+            "esprit": 1,
+            "fer": 1,
+            "ombre": 1,
+            "vif": 1
+          },
+          "championId": "ashe",
+          "characterId": "CHRA",
+          "displayName": "Ashe",
+          "gauges": {
+            "ame": 5,
+            "vigueur": 5,
+            "vivres": 5
+          },
+          "momentum": 9,
+          "playerId": "PYRA",
+          "sheetRef": "ashe",
+          "sheetSnapshot": {},
+          "sheetSource": "handwritten"
+        },
         "seq": 5,
         "type": "character.created"
       },
       {
         "deliverySeq": 6,
+        "payload": {
+          "attributes": {
+            "coeur": 3,
+            "esprit": 2,
+            "fer": 3,
+            "ombre": 1,
+            "vif": 1
+          },
+          "championId": "braum",
+          "characterId": "CHRB",
+          "displayName": "Braum",
+          "gauges": {
+            "ame": 5,
+            "vigueur": 5,
+            "vivres": 5
+          },
+          "momentum": 2,
+          "playerId": "PYRB",
+          "sheetRef": "braum",
+          "sheetSnapshot": {},
+          "sheetSource": "handwritten"
+        },
         "seq": 6,
         "type": "character.created"
       },
       {
         "deliverySeq": 7,
+        "payload": {
+          "championId": "ashe",
+          "lockKind": "reserved_pc",
+          "reason": "personnage de Alice"
+        },
         "seq": 7,
         "type": "party.champion_locked"
       },
       {
         "deliverySeq": 8,
+        "payload": {
+          "championId": "braum",
+          "lockKind": "reserved_pc",
+          "reason": "personnage de Bruno"
+        },
         "seq": 8,
         "type": "party.champion_locked"
       },
       {
         "deliverySeq": 9,
+        "payload": {
+          "characterId": "CHRA",
+          "chosenAttribute": "vif",
+          "moveId": "face-danger",
+          "narrativeInput": "Passer devant, et vite."
+        },
         "seq": 9,
         "type": "move.declared"
       },
       {
         "deliverySeq": 10,
+        "payload": {
+          "actionDie": 1,
+          "adds": [],
+          "attribute": "vif",
+          "attributeValue": 1,
+          "burnWindow": true,
+          "cappedAtTen": false,
+          "challengeDice": [
+            7,
+            5
+          ],
+          "characterId": "CHRA",
+          "isPresage": false,
+          "momentumBefore": 9,
+          "momentumNegated": false,
+          "moveId": "face-danger",
+          "outcome": "echec",
+          "rawTotal": 2,
+          "rngDrawIndex": 0,
+          "rngStream": "action",
+          "rollId": "00000000000000000000000003",
+          "total": 2
+        },
         "seq": 10,
         "type": "roll.action_resolved"
       },
       {
         "deliverySeq": 11,
+        "payload": {
+          "characterId": "CHRB",
+          "chosenAttribute": "fer",
+          "moveId": "endure-cold",
+          "narrativeInput": ""
+        },
         "seq": 11,
         "type": "move.declared"
       },
       {
         "deliverySeq": 12,
+        "payload": {
+          "actionDie": 5,
+          "adds": [],
+          "attribute": "fer",
+          "attributeValue": 3,
+          "burnWindow": false,
+          "cappedAtTen": false,
+          "challengeDice": [
+            8,
+            9
+          ],
+          "characterId": "CHRB",
+          "isPresage": false,
+          "momentumBefore": 2,
+          "momentumNegated": false,
+          "moveId": "endure-cold",
+          "outcome": "echec",
+          "rawTotal": 8,
+          "rngDrawIndex": 1,
+          "rngStream": "action",
+          "rollId": "0000000000000000000000000E",
+          "total": 8
+        },
         "seq": 12,
         "type": "roll.action_resolved"
       },
       {
         "deliverySeq": 13,
+        "payload": {
+          "cause": "effect:gauge",
+          "characterId": "CHRB",
+          "clamped": false,
+          "delta": -1,
+          "from": 5,
+          "gauge": "vigueur",
+          "to": 4
+        },
         "seq": 13,
         "type": "character.gauge_changed"
       },
       {
         "deliverySeq": 14,
+        "payload": {
+          "characterId": "CHRB",
+          "conditionId": "transi",
+          "label": "Transi",
+          "source": "engine"
+        },
         "seq": 14,
         "type": "character.condition_added"
       },
       {
         "deliverySeq": 15,
+        "payload": {
+          "characterId": "CHRB",
+          "effectsApplied": [
+            {
+              "delta": -1,
+              "gauge": "vigueur",
+              "op": "gauge",
+              "target": "self"
+            },
+            {
+              "conditionId": "transi",
+              "op": "condition_add"
+            }
+          ],
+          "moveId": "endure-cold",
+          "outcome": "echec",
+          "rollSeq": 12
+        },
         "seq": 15,
         "type": "move.resolved"
       },
       {
         "deliverySeq": 16,
+        "payload": {
+          "aiCallId": "0000000000000000000000000K",
+          "citedEventSeqs": [
+            11,
+            12,
+            13,
+            14,
+            15
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=endure-cold issue=echec acteur=0000000000000000000000CHRB"
+        },
         "seq": 16,
         "type": "narration.gm_message"
       },
       {
         "deliverySeq": 17,
+        "payload": {
+          "effectIndex": 2,
+          "entryId": "le-pire-arrive",
+          "rollId": "0000000000000000000000000N",
+          "severity": "grave",
+          "targetCharacterId": "CHRA",
+          "text": "Le pire que tu pouvais imaginer arrive, et il était prévisible depuis le début.",
+          "value": 12
+        },
         "seq": 17,
         "type": "roll.price_paid"
       },
       {
         "deliverySeq": 18,
+        "payload": {
+          "characterId": "CHRA",
+          "conditionId": "traque",
+          "label": "Traqué",
+          "source": "engine"
+        },
         "seq": 18,
         "type": "character.condition_added"
       },
       {
         "deliverySeq": 19,
+        "payload": {
+          "characterId": "CHRA",
+          "effectsApplied": [
+            {
+              "conditionId": "traque",
+              "op": "condition_add"
+            },
+            {
+              "mode": "roll",
+              "op": "pay_price"
+            }
+          ],
+          "moveId": "face-danger",
+          "outcome": "echec",
+          "rollSeq": 10
+        },
         "seq": 19,
         "type": "move.resolved"
       },
       {
         "deliverySeq": 20,
+        "payload": {
+          "characterId": "CHRA",
+          "kind": "ic",
+          "text": "Je ne brûle rien. On passe comme ça."
+        },
         "seq": 20,
         "type": "narration.player_message"
       },
       {
         "deliverySeq": 21,
+        "payload": {
+          "aiCallId": "0000000000000000000000000V",
+          "citedEventSeqs": [
+            20
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=aucun issue=aucune acteur=0000000000000000000000CHRA"
+        },
         "seq": 21,
         "type": "narration.gm_message"
       },
       {
         "deliverySeq": 22,
+        "payload": {
+          "characterId": "CHRB",
+          "chosenAttribute": "coeur",
+          "moveId": "face-danger",
+          "narrativeInput": "Suivre Alice sans la perdre de vue."
+        },
         "seq": 22,
         "type": "move.declared"
       },
       {
         "deliverySeq": 23,
+        "payload": {
+          "actionDie": 3,
+          "adds": [],
+          "attribute": "coeur",
+          "attributeValue": 3,
+          "burnWindow": false,
+          "cappedAtTen": false,
+          "challengeDice": [
+            9,
+            8
+          ],
+          "characterId": "CHRB",
+          "isPresage": false,
+          "momentumBefore": 2,
+          "momentumNegated": false,
+          "moveId": "face-danger",
+          "outcome": "echec",
+          "rawTotal": 6,
+          "rngDrawIndex": 2,
+          "rngStream": "action",
+          "rollId": "0000000000000000000000000Z",
+          "total": 6
+        },
         "seq": 23,
         "type": "roll.action_resolved"
       },
       {
         "deliverySeq": 24,
+        "payload": {
+          "effectIndex": 0,
+          "entryId": "un-allie-paie-a-ta-place",
+          "rollId": "00000000000000000000000011",
+          "severity": "serieuse",
+          "targetCharacterId": "CHRB",
+          "text": "Quelqu'un d'autre paie à ta place, et il le saura toute sa vie.",
+          "value": 1
+        },
         "seq": 24,
         "type": "roll.price_paid"
       },
       {
         "deliverySeq": 25,
+        "payload": {
+          "cause": "effect:gauge",
+          "characterId": "CHRB",
+          "clamped": false,
+          "delta": -1,
+          "from": 5,
+          "gauge": "ame",
+          "to": 4
+        },
         "seq": 25,
         "type": "character.gauge_changed"
       },
       {
         "deliverySeq": 26,
+        "payload": {
+          "characterId": "CHRB",
+          "effectsApplied": [
+            {
+              "delta": -1,
+              "gauge": "ame",
+              "op": "gauge",
+              "target": "self"
+            },
+            {
+              "mode": "roll",
+              "op": "pay_price"
+            }
+          ],
+          "moveId": "face-danger",
+          "outcome": "echec",
+          "rollSeq": 23
+        },
         "seq": 26,
         "type": "move.resolved"
       },
       {
         "deliverySeq": 27,
+        "payload": {
+          "aiCallId": "00000000000000000000000015",
+          "citedEventSeqs": [
+            22,
+            23,
+            24,
+            25,
+            26
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=face-danger issue=echec acteur=0000000000000000000000CHRB"
+        },
         "seq": 27,
         "type": "narration.gm_message"
       }

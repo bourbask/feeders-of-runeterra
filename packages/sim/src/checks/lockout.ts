@@ -20,7 +20,7 @@
  * `expectNoReservedChampion` THROWS on an empty reserved list, on purpose:
  * searching for nothing finds nothing. A scenario with a single player has no
  * other champion to reserve, so it is skipped EXPLICITLY below rather than
- * passing over an empty list — `tests/scenarios.test.ts`, « un scénario à un
+ * passing over an empty list — `tests/checks.test.ts`, « un scénario à un
  * seul joueur ne passe pas le verrou par une liste vide ».
  */
 

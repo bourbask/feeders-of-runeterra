@@ -1,150 +1,533 @@
 {
   "journal": [
     {
+      "payload": {
+        "contentPackHash": "24d030b6ef069dc6d4c7f4b8ddba84846af4e8ea944e5cb541f0d1a8a927c5d0",
+        "contentPackVersion": "0.1.0",
+        "name": "Du serment au jalon : le rythme d'un rang dangereux",
+        "ownerPlayerId": "PYRA",
+        "pitch": "",
+        "rngSeed": "sim-02",
+        "rulesVersion": 1,
+        "slug": "sim-02-vow-to-fulfilment"
+      },
       "seq": 1,
       "type": "campaign.created"
     },
     {
+      "payload": {
+        "from": "draft",
+        "to": "active"
+      },
       "seq": 2,
       "type": "campaign.status_changed"
     },
     {
+      "payload": {
+        "displayName": "Alice",
+        "playerId": "PYRA",
+        "role": "owner"
+      },
       "seq": 3,
       "type": "party.member_joined"
     },
     {
+      "payload": {
+        "attributes": {
+          "coeur": 3,
+          "esprit": 2,
+          "fer": 2,
+          "ombre": 1,
+          "vif": 2
+        },
+        "championId": "ashe",
+        "characterId": "CHRA",
+        "displayName": "Ashe",
+        "gauges": {
+          "ame": 5,
+          "vigueur": 5,
+          "vivres": 5
+        },
+        "momentum": 2,
+        "playerId": "PYRA",
+        "sheetRef": "ashe",
+        "sheetSnapshot": {},
+        "sheetSource": "handwritten"
+      },
       "seq": 4,
       "type": "character.created"
     },
     {
+      "payload": {
+        "championId": "ashe",
+        "lockKind": "reserved_pc",
+        "reason": "personnage de Alice"
+      },
       "seq": 5,
       "type": "party.champion_locked"
     },
     {
+      "payload": {
+        "aiCallId": "00000000000000000000000002",
+        "citedEventSeqs": [],
+        "model": "scripted:sim",
+        "promptVersion": "conteur/0.0.0-placeholder",
+        "source": "ai",
+        "text": "[conteur-scripte] mouvement=aucun issue=aucune acteur=0000000000000000000000CHRA"
+      },
       "seq": 6,
       "type": "narration.gm_message"
     },
     {
+      "payload": {
+        "characterId": "CHRA",
+        "chosenAttribute": "coeur",
+        "moveId": "swear-a-vow",
+        "narrativeInput": "Ramener le corps de mon frère au sud."
+      },
       "seq": 7,
       "type": "move.declared"
     },
     {
+      "payload": {
+        "actionDie": 5,
+        "adds": [],
+        "attribute": "coeur",
+        "attributeValue": 3,
+        "burnWindow": false,
+        "cappedAtTen": false,
+        "challengeDice": [
+          8,
+          3
+        ],
+        "characterId": "CHRA",
+        "isPresage": false,
+        "momentumBefore": 2,
+        "momentumNegated": false,
+        "moveId": "swear-a-vow",
+        "outcome": "partielle",
+        "rawTotal": 8,
+        "rngDrawIndex": 0,
+        "rngStream": "action",
+        "rollId": "00000000000000000000000006",
+        "total": 8
+      },
       "seq": 8,
       "type": "roll.action_resolved"
     },
     {
+      "payload": {
+        "description": "",
+        "initialTicks": 0,
+        "kind": "vow",
+        "ownerCharacterId": "CHRA",
+        "rank": "dangereux",
+        "title": "Ramener le corps de mon frère au sud.",
+        "trackId": "00000000000000000000000008",
+        "visibility": "public"
+      },
       "seq": 9,
       "type": "track.created"
     },
     {
+      "payload": {
+        "cause": "effect:momentum",
+        "characterId": "CHRA",
+        "clamped": false,
+        "delta": 1,
+        "from": 2,
+        "to": 3
+      },
       "seq": 10,
       "type": "character.momentum_changed"
     },
     {
+      "payload": {
+        "characterId": "CHRA",
+        "effectsApplied": [
+          {
+            "op": "track_create",
+            "rankFrom": "player",
+            "trackKind": "vow"
+          },
+          {
+            "delta": 1,
+            "op": "momentum"
+          }
+        ],
+        "moveId": "swear-a-vow",
+        "outcome": "partielle",
+        "rollSeq": 8
+      },
       "seq": 11,
       "type": "move.resolved"
     },
     {
+      "payload": {
+        "aiCallId": "0000000000000000000000000C",
+        "citedEventSeqs": [
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "model": "scripted:sim",
+        "promptVersion": "conteur/0.0.0-placeholder",
+        "source": "ai",
+        "text": "[conteur-scripte] mouvement=swear-a-vow issue=partielle acteur=0000000000000000000000CHRA"
+      },
       "seq": 12,
       "type": "narration.gm_message"
     },
     {
+      "payload": {
+        "characterId": "CHRA",
+        "chosenAttribute": "coeur",
+        "moveId": "swear-a-vow",
+        "narrativeInput": "Ne plus jamais passer ce col seule."
+      },
       "seq": 13,
       "type": "move.declared"
     },
     {
+      "payload": {
+        "actionDie": 2,
+        "adds": [],
+        "attribute": "coeur",
+        "attributeValue": 3,
+        "burnWindow": false,
+        "cappedAtTen": false,
+        "challengeDice": [
+          5,
+          7
+        ],
+        "characterId": "CHRA",
+        "isPresage": false,
+        "momentumBefore": 3,
+        "momentumNegated": false,
+        "moveId": "swear-a-vow",
+        "outcome": "echec",
+        "rawTotal": 5,
+        "rngDrawIndex": 1,
+        "rngStream": "action",
+        "rollId": "0000000000000000000000000G",
+        "total": 5
+      },
       "seq": 14,
       "type": "roll.action_resolved"
     },
     {
+      "payload": {
+        "description": "",
+        "initialTicks": 0,
+        "kind": "vow",
+        "ownerCharacterId": "CHRA",
+        "rank": "genant",
+        "title": "Ne plus jamais passer ce col seule.",
+        "trackId": "0000000000000000000000000J",
+        "visibility": "public"
+      },
       "seq": 15,
       "type": "track.created"
     },
     {
+      "payload": {
+        "cause": "effect:momentum_reset",
+        "characterId": "CHRA",
+        "clamped": false,
+        "delta": -1,
+        "from": 3,
+        "to": 2
+      },
       "seq": 16,
       "type": "character.momentum_changed"
     },
     {
+      "payload": {
+        "characterId": "CHRA",
+        "effectsApplied": [
+          {
+            "op": "track_create",
+            "rankFrom": "player",
+            "trackKind": "vow"
+          },
+          {
+            "op": "momentum_reset"
+          }
+        ],
+        "moveId": "swear-a-vow",
+        "outcome": "echec",
+        "rollSeq": 14
+      },
       "seq": 17,
       "type": "move.resolved"
     },
     {
+      "payload": {
+        "aiCallId": "0000000000000000000000000P",
+        "citedEventSeqs": [
+          13,
+          14,
+          15,
+          16,
+          17
+        ],
+        "model": "scripted:sim",
+        "promptVersion": "conteur/0.0.0-placeholder",
+        "source": "ai",
+        "text": "[conteur-scripte] mouvement=swear-a-vow issue=echec acteur=0000000000000000000000CHRA"
+      },
       "seq": 18,
       "type": "narration.gm_message"
     },
     {
+      "payload": {
+        "characterId": "CHRA",
+        "moveId": "reach-a-milestone",
+        "narrativeInput": ""
+      },
       "seq": 19,
       "type": "move.declared"
     },
     {
+      "payload": {
+        "cause": "effect:track_tick",
+        "from": 0,
+        "milestones": 1,
+        "ticks": 8,
+        "to": 8,
+        "trackId": "00000000000000000000000008"
+      },
       "seq": 20,
       "type": "track.ticked"
     },
     {
+      "payload": {
+        "characterId": "CHRA",
+        "effectsApplied": [
+          {
+            "op": "track_tick",
+            "ticks": 1,
+            "trackKind": "vow",
+            "useRank": true
+          }
+        ],
+        "moveId": "reach-a-milestone",
+        "outcome": "franche",
+        "rollSeq": 19
+      },
       "seq": 21,
       "type": "move.resolved"
     },
     {
+      "payload": {
+        "aiCallId": "0000000000000000000000000W",
+        "citedEventSeqs": [
+          19,
+          20,
+          21
+        ],
+        "model": "scripted:sim",
+        "promptVersion": "conteur/0.0.0-placeholder",
+        "source": "ai",
+        "text": "[conteur-scripte] mouvement=reach-a-milestone issue=franche acteur=0000000000000000000000CHRA"
+      },
       "seq": 22,
       "type": "narration.gm_message"
     },
     {
+      "payload": {
+        "characterId": "CHRA",
+        "moveId": "reach-a-milestone",
+        "narrativeInput": ""
+      },
       "seq": 23,
       "type": "move.declared"
     },
     {
+      "payload": {
+        "cause": "effect:track_tick",
+        "from": 8,
+        "milestones": 1,
+        "ticks": 8,
+        "to": 16,
+        "trackId": "00000000000000000000000008"
+      },
       "seq": 24,
       "type": "track.ticked"
     },
     {
+      "payload": {
+        "characterId": "CHRA",
+        "effectsApplied": [
+          {
+            "op": "track_tick",
+            "ticks": 1,
+            "trackKind": "vow",
+            "useRank": true
+          }
+        ],
+        "moveId": "reach-a-milestone",
+        "outcome": "franche",
+        "rollSeq": 23
+      },
       "seq": 25,
       "type": "move.resolved"
     },
     {
+      "payload": {
+        "aiCallId": "00000000000000000000000012",
+        "citedEventSeqs": [
+          23,
+          24,
+          25
+        ],
+        "model": "scripted:sim",
+        "promptVersion": "conteur/0.0.0-placeholder",
+        "source": "ai",
+        "text": "[conteur-scripte] mouvement=reach-a-milestone issue=franche acteur=0000000000000000000000CHRA"
+      },
       "seq": 26,
       "type": "narration.gm_message"
     },
     {
+      "payload": {
+        "characterId": "CHRA",
+        "moveId": "fulfill-your-vow",
+        "narrativeInput": ""
+      },
       "seq": 27,
       "type": "move.declared"
     },
     {
+      "payload": {
+        "challengeDice": [
+          5,
+          6
+        ],
+        "filledBoxes": 4,
+        "isPresage": false,
+        "outcome": "echec",
+        "rollId": "00000000000000000000000016",
+        "ticks": 16,
+        "trackId": "00000000000000000000000008"
+      },
       "seq": 28,
       "type": "roll.progress_resolved"
     },
     {
+      "payload": {
+        "amount": 1,
+        "characterId": "CHRA",
+        "reason": "effect:xp",
+        "trackId": "00000000000000000000000008"
+      },
       "seq": 29,
       "type": "character.xp_earned"
     },
     {
+      "payload": {
+        "outcome": "failed",
+        "rollSeq": 28,
+        "trackId": "00000000000000000000000008",
+        "xpAwarded": 1
+      },
       "seq": 30,
       "type": "track.resolved"
     },
     {
+      "payload": {
+        "characterId": "CHRA",
+        "effectsApplied": [
+          {
+            "amount": 1,
+            "op": "xp"
+          }
+        ],
+        "moveId": "fulfill-your-vow",
+        "outcome": "echec",
+        "rollSeq": 28
+      },
       "seq": 31,
       "type": "move.resolved"
     },
     {
+      "payload": {
+        "aiCallId": "0000000000000000000000001B",
+        "citedEventSeqs": [
+          27,
+          28,
+          29,
+          30,
+          31
+        ],
+        "model": "scripted:sim",
+        "promptVersion": "conteur/0.0.0-placeholder",
+        "source": "ai",
+        "text": "[conteur-scripte] mouvement=fulfill-your-vow issue=echec acteur=0000000000000000000000CHRA"
+      },
       "seq": 32,
       "type": "narration.gm_message"
     },
     {
+      "payload": {
+        "characterId": "CHRA",
+        "moveId": "forsake-your-vow",
+        "narrativeInput": "Le col a pris le reste de la bande."
+      },
       "seq": 33,
       "type": "move.declared"
     },
     {
+      "payload": {
+        "characterId": "CHRA",
+        "conditionId": "parjure",
+        "label": "Parjure",
+        "source": "engine"
+      },
       "seq": 34,
       "type": "character.condition_added"
     },
     {
+      "payload": {
+        "reason": "Le col a pris le reste de la bande.",
+        "trackId": "0000000000000000000000000J",
+        "xpLost": 0
+      },
       "seq": 35,
       "type": "track.forsaken"
     },
     {
+      "payload": {
+        "characterId": "CHRA",
+        "effectsApplied": [
+          {
+            "conditionId": "parjure",
+            "op": "condition_add"
+          }
+        ],
+        "moveId": "forsake-your-vow",
+        "outcome": "franche",
+        "rollSeq": 33
+      },
       "seq": 36,
       "type": "move.resolved"
     },
     {
+      "payload": {
+        "aiCallId": "0000000000000000000000001J",
+        "citedEventSeqs": [
+          33,
+          34,
+          35,
+          36
+        ],
+        "model": "scripted:sim",
+        "promptVersion": "conteur/0.0.0-placeholder",
+        "source": "ai",
+        "text": "[conteur-scripte] mouvement=forsake-your-vow issue=franche acteur=0000000000000000000000CHRA"
+      },
       "seq": 37,
       "type": "narration.gm_message"
     }
@@ -156,7 +539,7 @@
     "seed": "sim-02"
   },
   "state": {
-    "campaignId": "00000000000000000000CAMP02",
+    "campaignId": "CAMP02",
     "championLocks": [
       {
         "championId": "ashe",
@@ -191,14 +574,14 @@
           "vigueur": 5,
           "vivres": 5
         },
-        "id": "0000000000000000000000CHRA",
+        "id": "CHRA",
         "momentum": 2,
         "momentumBounds": {
           "max": 10,
           "min": -6,
           "reset": 2
         },
-        "playerId": "0000000000000000000000PYRA",
+        "playerId": "PYRA",
         "sheet": {
           "championId": "ashe",
           "ref": "ashe",
@@ -215,9 +598,9 @@
     "entities": [],
     "party": {
       "memberPlayerIds": [
-        "0000000000000000000000PYRA"
+        "PYRA"
       ],
-      "ownerPlayerId": "0000000000000000000000PYRA"
+      "ownerPlayerId": "PYRA"
     },
     "scene": null,
     "seq": 37,
@@ -243,7 +626,7 @@
         "description": "",
         "id": "00000000000000000000000008",
         "kind": "vow",
-        "ownerCharacterId": "0000000000000000000000CHRA",
+        "ownerCharacterId": "CHRA",
         "rank": "dangereux",
         "resolvedSeq": 30,
         "status": "failed",
@@ -258,7 +641,7 @@
         "description": "",
         "id": "0000000000000000000000000J",
         "kind": "vow",
-        "ownerCharacterId": "0000000000000000000000CHRA",
+        "ownerCharacterId": "CHRA",
         "rank": "genant",
         "resolvedSeq": 35,
         "status": "forsaken",
@@ -275,186 +658,569 @@
     "PYRA": [
       {
         "deliverySeq": 1,
+        "payload": {
+          "contentPackHash": "24d030b6ef069dc6d4c7f4b8ddba84846af4e8ea944e5cb541f0d1a8a927c5d0",
+          "contentPackVersion": "0.1.0",
+          "name": "Du serment au jalon : le rythme d'un rang dangereux",
+          "ownerPlayerId": "PYRA",
+          "pitch": "",
+          "rngSeed": "sim-02",
+          "rulesVersion": 1,
+          "slug": "sim-02-vow-to-fulfilment"
+        },
         "seq": 1,
         "type": "campaign.created"
       },
       {
         "deliverySeq": 2,
+        "payload": {
+          "from": "draft",
+          "to": "active"
+        },
         "seq": 2,
         "type": "campaign.status_changed"
       },
       {
         "deliverySeq": 3,
+        "payload": {
+          "displayName": "Alice",
+          "playerId": "PYRA",
+          "role": "owner"
+        },
         "seq": 3,
         "type": "party.member_joined"
       },
       {
         "deliverySeq": 4,
+        "payload": {
+          "attributes": {
+            "coeur": 3,
+            "esprit": 2,
+            "fer": 2,
+            "ombre": 1,
+            "vif": 2
+          },
+          "championId": "ashe",
+          "characterId": "CHRA",
+          "displayName": "Ashe",
+          "gauges": {
+            "ame": 5,
+            "vigueur": 5,
+            "vivres": 5
+          },
+          "momentum": 2,
+          "playerId": "PYRA",
+          "sheetRef": "ashe",
+          "sheetSnapshot": {},
+          "sheetSource": "handwritten"
+        },
         "seq": 4,
         "type": "character.created"
       },
       {
         "deliverySeq": 5,
+        "payload": {
+          "championId": "ashe",
+          "lockKind": "reserved_pc",
+          "reason": "personnage de Alice"
+        },
         "seq": 5,
         "type": "party.champion_locked"
       },
       {
         "deliverySeq": 6,
+        "payload": {
+          "aiCallId": "00000000000000000000000002",
+          "citedEventSeqs": [],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=aucun issue=aucune acteur=0000000000000000000000CHRA"
+        },
         "seq": 6,
         "type": "narration.gm_message"
       },
       {
         "deliverySeq": 7,
+        "payload": {
+          "characterId": "CHRA",
+          "chosenAttribute": "coeur",
+          "moveId": "swear-a-vow",
+          "narrativeInput": "Ramener le corps de mon frère au sud."
+        },
         "seq": 7,
         "type": "move.declared"
       },
       {
         "deliverySeq": 8,
+        "payload": {
+          "actionDie": 5,
+          "adds": [],
+          "attribute": "coeur",
+          "attributeValue": 3,
+          "burnWindow": false,
+          "cappedAtTen": false,
+          "challengeDice": [
+            8,
+            3
+          ],
+          "characterId": "CHRA",
+          "isPresage": false,
+          "momentumBefore": 2,
+          "momentumNegated": false,
+          "moveId": "swear-a-vow",
+          "outcome": "partielle",
+          "rawTotal": 8,
+          "rngDrawIndex": 0,
+          "rngStream": "action",
+          "rollId": "00000000000000000000000006",
+          "total": 8
+        },
         "seq": 8,
         "type": "roll.action_resolved"
       },
       {
         "deliverySeq": 9,
+        "payload": {
+          "description": "",
+          "initialTicks": 0,
+          "kind": "vow",
+          "ownerCharacterId": "CHRA",
+          "rank": "dangereux",
+          "title": "Ramener le corps de mon frère au sud.",
+          "trackId": "00000000000000000000000008",
+          "visibility": "public"
+        },
         "seq": 9,
         "type": "track.created"
       },
       {
         "deliverySeq": 10,
+        "payload": {
+          "cause": "effect:momentum",
+          "characterId": "CHRA",
+          "clamped": false,
+          "delta": 1,
+          "from": 2,
+          "to": 3
+        },
         "seq": 10,
         "type": "character.momentum_changed"
       },
       {
         "deliverySeq": 11,
+        "payload": {
+          "characterId": "CHRA",
+          "effectsApplied": [
+            {
+              "op": "track_create",
+              "rankFrom": "player",
+              "trackKind": "vow"
+            },
+            {
+              "delta": 1,
+              "op": "momentum"
+            }
+          ],
+          "moveId": "swear-a-vow",
+          "outcome": "partielle",
+          "rollSeq": 8
+        },
         "seq": 11,
         "type": "move.resolved"
       },
       {
         "deliverySeq": 12,
+        "payload": {
+          "aiCallId": "0000000000000000000000000C",
+          "citedEventSeqs": [
+            7,
+            8,
+            9,
+            10,
+            11
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=swear-a-vow issue=partielle acteur=0000000000000000000000CHRA"
+        },
         "seq": 12,
         "type": "narration.gm_message"
       },
       {
         "deliverySeq": 13,
+        "payload": {
+          "characterId": "CHRA",
+          "chosenAttribute": "coeur",
+          "moveId": "swear-a-vow",
+          "narrativeInput": "Ne plus jamais passer ce col seule."
+        },
         "seq": 13,
         "type": "move.declared"
       },
       {
         "deliverySeq": 14,
+        "payload": {
+          "actionDie": 2,
+          "adds": [],
+          "attribute": "coeur",
+          "attributeValue": 3,
+          "burnWindow": false,
+          "cappedAtTen": false,
+          "challengeDice": [
+            5,
+            7
+          ],
+          "characterId": "CHRA",
+          "isPresage": false,
+          "momentumBefore": 3,
+          "momentumNegated": false,
+          "moveId": "swear-a-vow",
+          "outcome": "echec",
+          "rawTotal": 5,
+          "rngDrawIndex": 1,
+          "rngStream": "action",
+          "rollId": "0000000000000000000000000G",
+          "total": 5
+        },
         "seq": 14,
         "type": "roll.action_resolved"
       },
       {
         "deliverySeq": 15,
+        "payload": {
+          "description": "",
+          "initialTicks": 0,
+          "kind": "vow",
+          "ownerCharacterId": "CHRA",
+          "rank": "genant",
+          "title": "Ne plus jamais passer ce col seule.",
+          "trackId": "0000000000000000000000000J",
+          "visibility": "public"
+        },
         "seq": 15,
         "type": "track.created"
       },
       {
         "deliverySeq": 16,
+        "payload": {
+          "cause": "effect:momentum_reset",
+          "characterId": "CHRA",
+          "clamped": false,
+          "delta": -1,
+          "from": 3,
+          "to": 2
+        },
         "seq": 16,
         "type": "character.momentum_changed"
       },
       {
         "deliverySeq": 17,
+        "payload": {
+          "characterId": "CHRA",
+          "effectsApplied": [
+            {
+              "op": "track_create",
+              "rankFrom": "player",
+              "trackKind": "vow"
+            },
+            {
+              "op": "momentum_reset"
+            }
+          ],
+          "moveId": "swear-a-vow",
+          "outcome": "echec",
+          "rollSeq": 14
+        },
         "seq": 17,
         "type": "move.resolved"
       },
       {
         "deliverySeq": 18,
+        "payload": {
+          "aiCallId": "0000000000000000000000000P",
+          "citedEventSeqs": [
+            13,
+            14,
+            15,
+            16,
+            17
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=swear-a-vow issue=echec acteur=0000000000000000000000CHRA"
+        },
         "seq": 18,
         "type": "narration.gm_message"
       },
       {
         "deliverySeq": 19,
+        "payload": {
+          "characterId": "CHRA",
+          "moveId": "reach-a-milestone",
+          "narrativeInput": ""
+        },
         "seq": 19,
         "type": "move.declared"
       },
       {
         "deliverySeq": 20,
+        "payload": {
+          "cause": "effect:track_tick",
+          "from": 0,
+          "milestones": 1,
+          "ticks": 8,
+          "to": 8,
+          "trackId": "00000000000000000000000008"
+        },
         "seq": 20,
         "type": "track.ticked"
       },
       {
         "deliverySeq": 21,
+        "payload": {
+          "characterId": "CHRA",
+          "effectsApplied": [
+            {
+              "op": "track_tick",
+              "ticks": 1,
+              "trackKind": "vow",
+              "useRank": true
+            }
+          ],
+          "moveId": "reach-a-milestone",
+          "outcome": "franche",
+          "rollSeq": 19
+        },
         "seq": 21,
         "type": "move.resolved"
       },
       {
         "deliverySeq": 22,
+        "payload": {
+          "aiCallId": "0000000000000000000000000W",
+          "citedEventSeqs": [
+            19,
+            20,
+            21
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=reach-a-milestone issue=franche acteur=0000000000000000000000CHRA"
+        },
         "seq": 22,
         "type": "narration.gm_message"
       },
       {
         "deliverySeq": 23,
+        "payload": {
+          "characterId": "CHRA",
+          "moveId": "reach-a-milestone",
+          "narrativeInput": ""
+        },
         "seq": 23,
         "type": "move.declared"
       },
       {
         "deliverySeq": 24,
+        "payload": {
+          "cause": "effect:track_tick",
+          "from": 8,
+          "milestones": 1,
+          "ticks": 8,
+          "to": 16,
+          "trackId": "00000000000000000000000008"
+        },
         "seq": 24,
         "type": "track.ticked"
       },
       {
         "deliverySeq": 25,
+        "payload": {
+          "characterId": "CHRA",
+          "effectsApplied": [
+            {
+              "op": "track_tick",
+              "ticks": 1,
+              "trackKind": "vow",
+              "useRank": true
+            }
+          ],
+          "moveId": "reach-a-milestone",
+          "outcome": "franche",
+          "rollSeq": 23
+        },
         "seq": 25,
         "type": "move.resolved"
       },
       {
         "deliverySeq": 26,
+        "payload": {
+          "aiCallId": "00000000000000000000000012",
+          "citedEventSeqs": [
+            23,
+            24,
+            25
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=reach-a-milestone issue=franche acteur=0000000000000000000000CHRA"
+        },
         "seq": 26,
         "type": "narration.gm_message"
       },
       {
         "deliverySeq": 27,
+        "payload": {
+          "characterId": "CHRA",
+          "moveId": "fulfill-your-vow",
+          "narrativeInput": ""
+        },
         "seq": 27,
         "type": "move.declared"
       },
       {
         "deliverySeq": 28,
+        "payload": {
+          "challengeDice": [
+            5,
+            6
+          ],
+          "filledBoxes": 4,
+          "isPresage": false,
+          "outcome": "echec",
+          "rollId": "00000000000000000000000016",
+          "ticks": 16,
+          "trackId": "00000000000000000000000008"
+        },
         "seq": 28,
         "type": "roll.progress_resolved"
       },
       {
         "deliverySeq": 29,
+        "payload": {
+          "amount": 1,
+          "characterId": "CHRA",
+          "reason": "effect:xp",
+          "trackId": "00000000000000000000000008"
+        },
         "seq": 29,
         "type": "character.xp_earned"
       },
       {
         "deliverySeq": 30,
+        "payload": {
+          "outcome": "failed",
+          "rollSeq": 28,
+          "trackId": "00000000000000000000000008",
+          "xpAwarded": 1
+        },
         "seq": 30,
         "type": "track.resolved"
       },
       {
         "deliverySeq": 31,
+        "payload": {
+          "characterId": "CHRA",
+          "effectsApplied": [
+            {
+              "amount": 1,
+              "op": "xp"
+            }
+          ],
+          "moveId": "fulfill-your-vow",
+          "outcome": "echec",
+          "rollSeq": 28
+        },
         "seq": 31,
         "type": "move.resolved"
       },
       {
         "deliverySeq": 32,
+        "payload": {
+          "aiCallId": "0000000000000000000000001B",
+          "citedEventSeqs": [
+            27,
+            28,
+            29,
+            30,
+            31
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=fulfill-your-vow issue=echec acteur=0000000000000000000000CHRA"
+        },
         "seq": 32,
         "type": "narration.gm_message"
       },
       {
         "deliverySeq": 33,
+        "payload": {
+          "characterId": "CHRA",
+          "moveId": "forsake-your-vow",
+          "narrativeInput": "Le col a pris le reste de la bande."
+        },
         "seq": 33,
         "type": "move.declared"
       },
       {
         "deliverySeq": 34,
+        "payload": {
+          "characterId": "CHRA",
+          "conditionId": "parjure",
+          "label": "Parjure",
+          "source": "engine"
+        },
         "seq": 34,
         "type": "character.condition_added"
       },
       {
         "deliverySeq": 35,
+        "payload": {
+          "reason": "Le col a pris le reste de la bande.",
+          "trackId": "0000000000000000000000000J",
+          "xpLost": 0
+        },
         "seq": 35,
         "type": "track.forsaken"
       },
       {
         "deliverySeq": 36,
+        "payload": {
+          "characterId": "CHRA",
+          "effectsApplied": [
+            {
+              "conditionId": "parjure",
+              "op": "condition_add"
+            }
+          ],
+          "moveId": "forsake-your-vow",
+          "outcome": "franche",
+          "rollSeq": 33
+        },
         "seq": 36,
         "type": "move.resolved"
       },
       {
         "deliverySeq": 37,
+        "payload": {
+          "aiCallId": "0000000000000000000000001J",
+          "citedEventSeqs": [
+            33,
+            34,
+            35,
+            36
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=forsake-your-vow issue=franche acteur=0000000000000000000000CHRA"
+        },
         "seq": 37,
         "type": "narration.gm_message"
       }

@@ -36,7 +36,7 @@ import {
 import { checkInvariants } from './checks/invariants.js';
 import { checkLockout } from './checks/lockout.js';
 import { checkReplayEquivalence } from './checks/replay-equivalence.js';
-import { createSimHarness, type HarnessOptions } from './harness.js';
+import { createSimHarness, symbolsOf, type HarnessOptions } from './harness.js';
 import { expandUlid, loadScenarios, selectScenarios } from './scenario.js';
 
 import { staticContent } from '@for/content';
@@ -75,28 +75,85 @@ export interface RunOptions {
   readonly selector?: string | null;
   /** Rewrites the corpora instead of comparing. `pnpm sim record`. */
   readonly record?: boolean;
+  /**
+   * Where the corpora are read from. `GOLDEN_DIR` unless a caller says
+   * otherwise, and the only caller that says otherwise is the counter-probe
+   * of `tests/scenarios.test.ts`: it hands a COPY of a corpus with one number
+   * changed, and requires the run to go red on it. Altering the real corpus
+   * in place to prove the same thing would leave the tree dirty the day the
+   * test fails.
+   */
+  readonly goldenDir?: string | URL;
 }
 
 /**
  * The shape the golden corpus pins.
  *
  * FOUR PARTS, and each one catches something the others cannot:
- *   - `state` catches a rule that changed a number (the milestone canary);
+ *   - `state` catches a rule that changed a number AND SURVIVED to the end;
  *   - `rng` catches a draw taken, skipped or taken on the wrong stream —
  *     §7.4 asks for the trace by name;
- *   - `journal` catches an entry that stopped being written, or a new one;
- *   - `threads` catches ADR 0008: who was told what, and in which order.
+ *   - `journal` catches an entry that stopped being written, a new one, and
+ *     — since it pins `payload` — a number that changed INSIDE an entry;
+ *   - `threads` catches ADR 0008: who was told what, in which order, AND WITH
+ *     WHAT IN IT.
+ *
+ * ── WHY `payload` IS PINNED, AND WHAT IT COST TO LEARN ───────────────────
+ * The first version of this corpus pinned `{seq, type}` and nothing else. A
+ * simulator built that way is WORSE THAN NO SIMULATOR, because it hands out a
+ * confidence it has not earned: measured on this very file, `ACTION_SCORE_CAP`
+ * taken from 10 to 8 turned `total: 9` into `total: 8` and `cappedAtTen:
+ * false` into `true` in `roll.action_resolved` — five engine unit tests went
+ * red, `pnpm test:golden` went red, and `pnpm sim run` stayed GREEN in 0,55 s.
+ * A rule that changes a number without reaching the final state was invisible.
+ * Held by `tests/scenarios.test.ts` « une charge utile qui change fait rougir
+ * le corpus doré, même quand l'état final ne bouge pas ».
+ *
+ * ── WHAT IS NOT PINNED, AND WHY IT WOULD NOT SURVIVE ─────────────────────
+ * `createdAt` is absent, for the same reason `journalHash` leaves it out: the
+ * clock is injected and fixed, so it adds no signal. Named identifiers are
+ * replaced by their scenario symbol (`symbolsOf`) — exact, reversible, and it
+ * removes twenty-two leading zeros per line from a corpus a human has to read
+ * when it goes red.
  */
 interface GoldenShape {
   readonly state: unknown;
   readonly rng: unknown;
-  readonly journal: readonly { readonly seq: number; readonly type: string }[];
+  readonly journal: readonly {
+    readonly seq: number;
+    readonly type: string;
+    readonly payload: unknown;
+  }[];
   readonly threads: Readonly<
     Record<
       string,
-      readonly { readonly deliverySeq: number; readonly seq: number; readonly type: string }[]
+      readonly {
+        readonly deliverySeq: number;
+        readonly seq: number;
+        readonly type: string;
+        readonly payload: unknown;
+      }[]
     >
   >;
+}
+
+/**
+ * `value` with every SYMBOL-MINTED identifier replaced by its symbol.
+ *
+ * Structural, not field-by-field: a payload field added tomorrow is covered
+ * without anyone remembering to add it to a list. Only whole strings are
+ * substituted — an identifier embedded in a narration line stays where it is,
+ * because a partial rewrite of prose would hide a change in the prose.
+ */
+function withSymbols(value: unknown, symbols: ReadonlyMap<string, string>): unknown {
+  if (typeof value === 'string') return symbols.get(value) ?? value;
+  if (Array.isArray(value)) return value.map((item) => withSymbols(item, symbols));
+  if (typeof value === 'object' && value !== null) {
+    const out: Record<string, unknown> = {};
+    for (const [key, item] of Object.entries(value)) out[key] = withSymbols(item, symbols);
+    return out;
+  }
+  return value;
 }
 
 export async function runScenario(
@@ -161,24 +218,35 @@ export async function runScenario(
     }
 
     // 5 — the golden corpus.
-    const threads: Record<string, readonly { deliverySeq: number; seq: number; type: string }[]> =
-      {};
+    const symbols = symbolsOf(scenario);
+    const threads: Record<
+      string,
+      readonly { deliverySeq: number; seq: number; type: string; payload: unknown }[]
+    > = {};
     for (const [symbol, tape] of harness.tapes) {
       const rows = harness.threadOf(tape.playerId);
       threads[symbol] = rows.map((row, at) => ({
         deliverySeq: at + 1,
         seq: row.seq,
         type: row.type,
+        // The payload AS THIS PLAYER RECEIVED IT, not the table's copy of it.
+        // Re-reading the journal here instead would pin one payload twice and
+        // prove nothing about the second half of invariant 4.
+        payload: withSymbols(row.payload, symbols),
       }));
     }
     const golden: GoldenShape = {
-      state: snapshot.state,
-      rng: state.rng,
-      journal: journal.map((event) => ({ seq: event.seq, type: event.type })),
+      state: withSymbols(snapshot.state, symbols),
+      rng: withSymbols(state.rng, symbols),
+      journal: journal.map((event) => ({
+        seq: event.seq,
+        type: event.type,
+        payload: withSymbols(event.payload, symbols),
+      })),
       threads,
     };
     try {
-      expectGolden(scenario.id, golden, { dir: GOLDEN_DIR });
+      expectGolden(scenario.id, golden, { dir: options.goldenDir ?? GOLDEN_DIR });
     } catch (error) {
       failures.push(error instanceof Error ? error.message : String(error));
     }

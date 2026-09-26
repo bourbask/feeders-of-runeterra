@@ -1,46 +1,162 @@
 {
   "journal": [
     {
+      "payload": {
+        "contentPackHash": "24d030b6ef069dc6d4c7f4b8ddba84846af4e8ea944e5cb541f0d1a8a927c5d0",
+        "contentPackVersion": "0.1.0",
+        "name": "Rejoindre la table, ouvrir la séance, lancer un dé",
+        "ownerPlayerId": "PYRA",
+        "pitch": "",
+        "rngSeed": "sim-00",
+        "rulesVersion": 1,
+        "slug": "sim-00-smoke-join-and-roll"
+      },
       "seq": 1,
       "type": "campaign.created"
     },
     {
+      "payload": {
+        "from": "draft",
+        "to": "active"
+      },
       "seq": 2,
       "type": "campaign.status_changed"
     },
     {
+      "payload": {
+        "displayName": "Alice",
+        "playerId": "PYRA",
+        "role": "owner"
+      },
       "seq": 3,
       "type": "party.member_joined"
     },
     {
+      "payload": {
+        "attributes": {
+          "coeur": 2,
+          "esprit": 3,
+          "fer": 2,
+          "ombre": 1,
+          "vif": 2
+        },
+        "championId": "ashe",
+        "characterId": "CHRA",
+        "displayName": "Ashe",
+        "gauges": {
+          "ame": 5,
+          "vigueur": 5,
+          "vivres": 5
+        },
+        "momentum": 2,
+        "playerId": "PYRA",
+        "sheetRef": "ashe",
+        "sheetSnapshot": {},
+        "sheetSource": "handwritten"
+      },
       "seq": 4,
       "type": "character.created"
     },
     {
+      "payload": {
+        "championId": "ashe",
+        "lockKind": "reserved_pc",
+        "reason": "personnage de Alice"
+      },
       "seq": 5,
       "type": "party.champion_locked"
     },
     {
+      "payload": {
+        "aiCallId": "00000000000000000000000002",
+        "citedEventSeqs": [],
+        "model": "scripted:sim",
+        "promptVersion": "conteur/0.0.0-placeholder",
+        "source": "ai",
+        "text": "[conteur-scripte] mouvement=aucun issue=aucune acteur=0000000000000000000000CHRA"
+      },
       "seq": 6,
       "type": "narration.gm_message"
     },
     {
+      "payload": {
+        "characterId": "CHRA",
+        "chosenAttribute": "vif",
+        "moveId": "face-danger",
+        "narrativeInput": "Traverser la crevasse avant que le vent ne tourne."
+      },
       "seq": 7,
       "type": "move.declared"
     },
     {
+      "payload": {
+        "actionDie": 6,
+        "adds": [],
+        "attribute": "vif",
+        "attributeValue": 2,
+        "burnWindow": false,
+        "cappedAtTen": false,
+        "challengeDice": [
+          1,
+          7
+        ],
+        "characterId": "CHRA",
+        "isPresage": false,
+        "momentumBefore": 2,
+        "momentumNegated": false,
+        "moveId": "face-danger",
+        "outcome": "franche",
+        "rawTotal": 8,
+        "rngDrawIndex": 0,
+        "rngStream": "action",
+        "rollId": "00000000000000000000000006",
+        "total": 8
+      },
       "seq": 8,
       "type": "roll.action_resolved"
     },
     {
+      "payload": {
+        "cause": "effect:momentum",
+        "characterId": "CHRA",
+        "clamped": false,
+        "delta": 1,
+        "from": 2,
+        "to": 3
+      },
       "seq": 9,
       "type": "character.momentum_changed"
     },
     {
+      "payload": {
+        "characterId": "CHRA",
+        "effectsApplied": [
+          {
+            "delta": 1,
+            "op": "momentum"
+          }
+        ],
+        "moveId": "face-danger",
+        "outcome": "franche",
+        "rollSeq": 8
+      },
       "seq": 10,
       "type": "move.resolved"
     },
     {
+      "payload": {
+        "aiCallId": "0000000000000000000000000A",
+        "citedEventSeqs": [
+          7,
+          8,
+          9,
+          10
+        ],
+        "model": "scripted:sim",
+        "promptVersion": "conteur/0.0.0-placeholder",
+        "source": "ai",
+        "text": "[conteur-scripte] mouvement=face-danger issue=franche acteur=0000000000000000000000CHRA"
+      },
       "seq": 11,
       "type": "narration.gm_message"
     }
@@ -52,7 +168,7 @@
     "seed": "sim-00"
   },
   "state": {
-    "campaignId": "00000000000000000000CAMP00",
+    "campaignId": "CAMP00",
     "championLocks": [
       {
         "championId": "ashe",
@@ -80,14 +196,14 @@
           "vigueur": 5,
           "vivres": 5
         },
-        "id": "0000000000000000000000CHRA",
+        "id": "CHRA",
         "momentum": 3,
         "momentumBounds": {
           "max": 10,
           "min": -6,
           "reset": 2
         },
-        "playerId": "0000000000000000000000PYRA",
+        "playerId": "PYRA",
         "sheet": {
           "championId": "ashe",
           "ref": "ashe",
@@ -104,9 +220,9 @@
     "entities": [],
     "party": {
       "memberPlayerIds": [
-        "0000000000000000000000PYRA"
+        "PYRA"
       ],
-      "ownerPlayerId": "0000000000000000000000PYRA"
+      "ownerPlayerId": "PYRA"
     },
     "scene": null,
     "seq": 11,
@@ -133,56 +249,172 @@
     "PYRA": [
       {
         "deliverySeq": 1,
+        "payload": {
+          "contentPackHash": "24d030b6ef069dc6d4c7f4b8ddba84846af4e8ea944e5cb541f0d1a8a927c5d0",
+          "contentPackVersion": "0.1.0",
+          "name": "Rejoindre la table, ouvrir la séance, lancer un dé",
+          "ownerPlayerId": "PYRA",
+          "pitch": "",
+          "rngSeed": "sim-00",
+          "rulesVersion": 1,
+          "slug": "sim-00-smoke-join-and-roll"
+        },
         "seq": 1,
         "type": "campaign.created"
       },
       {
         "deliverySeq": 2,
+        "payload": {
+          "from": "draft",
+          "to": "active"
+        },
         "seq": 2,
         "type": "campaign.status_changed"
       },
       {
         "deliverySeq": 3,
+        "payload": {
+          "displayName": "Alice",
+          "playerId": "PYRA",
+          "role": "owner"
+        },
         "seq": 3,
         "type": "party.member_joined"
       },
       {
         "deliverySeq": 4,
+        "payload": {
+          "attributes": {
+            "coeur": 2,
+            "esprit": 3,
+            "fer": 2,
+            "ombre": 1,
+            "vif": 2
+          },
+          "championId": "ashe",
+          "characterId": "CHRA",
+          "displayName": "Ashe",
+          "gauges": {
+            "ame": 5,
+            "vigueur": 5,
+            "vivres": 5
+          },
+          "momentum": 2,
+          "playerId": "PYRA",
+          "sheetRef": "ashe",
+          "sheetSnapshot": {},
+          "sheetSource": "handwritten"
+        },
         "seq": 4,
         "type": "character.created"
       },
       {
         "deliverySeq": 5,
+        "payload": {
+          "championId": "ashe",
+          "lockKind": "reserved_pc",
+          "reason": "personnage de Alice"
+        },
         "seq": 5,
         "type": "party.champion_locked"
       },
       {
         "deliverySeq": 6,
+        "payload": {
+          "aiCallId": "00000000000000000000000002",
+          "citedEventSeqs": [],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=aucun issue=aucune acteur=0000000000000000000000CHRA"
+        },
         "seq": 6,
         "type": "narration.gm_message"
       },
       {
         "deliverySeq": 7,
+        "payload": {
+          "characterId": "CHRA",
+          "chosenAttribute": "vif",
+          "moveId": "face-danger",
+          "narrativeInput": "Traverser la crevasse avant que le vent ne tourne."
+        },
         "seq": 7,
         "type": "move.declared"
       },
       {
         "deliverySeq": 8,
+        "payload": {
+          "actionDie": 6,
+          "adds": [],
+          "attribute": "vif",
+          "attributeValue": 2,
+          "burnWindow": false,
+          "cappedAtTen": false,
+          "challengeDice": [
+            1,
+            7
+          ],
+          "characterId": "CHRA",
+          "isPresage": false,
+          "momentumBefore": 2,
+          "momentumNegated": false,
+          "moveId": "face-danger",
+          "outcome": "franche",
+          "rawTotal": 8,
+          "rngDrawIndex": 0,
+          "rngStream": "action",
+          "rollId": "00000000000000000000000006",
+          "total": 8
+        },
         "seq": 8,
         "type": "roll.action_resolved"
       },
       {
         "deliverySeq": 9,
+        "payload": {
+          "cause": "effect:momentum",
+          "characterId": "CHRA",
+          "clamped": false,
+          "delta": 1,
+          "from": 2,
+          "to": 3
+        },
         "seq": 9,
         "type": "character.momentum_changed"
       },
       {
         "deliverySeq": 10,
+        "payload": {
+          "characterId": "CHRA",
+          "effectsApplied": [
+            {
+              "delta": 1,
+              "op": "momentum"
+            }
+          ],
+          "moveId": "face-danger",
+          "outcome": "franche",
+          "rollSeq": 8
+        },
         "seq": 10,
         "type": "move.resolved"
       },
       {
         "deliverySeq": 11,
+        "payload": {
+          "aiCallId": "0000000000000000000000000A",
+          "citedEventSeqs": [
+            7,
+            8,
+            9,
+            10
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=face-danger issue=franche acteur=0000000000000000000000CHRA"
+        },
         "seq": 11,
         "type": "narration.gm_message"
       }

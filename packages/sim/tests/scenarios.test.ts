@@ -7,19 +7,29 @@
  * this tool exists to answer.
  */
 
-import { readFileSync, readdirSync } from 'node:fs';
+import {
+  copyFileSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { MOVE_REGISTRY } from '@for/engine';
 import { describe, expect, it } from 'vitest';
 
 import { checkReplayEquivalence } from '../src/checks/replay-equivalence.js';
-import { createSimHarness } from '../src/harness.js';
-import { runAll, runScenario } from '../src/run.js';
+import { createSimHarness, symbolsOf } from '../src/harness.js';
+import { GOLDEN_DIR, runAll, runScenario } from '../src/run.js';
 import { expandUlid, loadScenarios } from '../src/scenario.js';
 import { createScriptedNarrator } from '../src/scripted-narrator.js';
 
 import type { PlayerId } from '@for/engine';
+import type { Scenario } from '../src/scenario.js';
 
 const SRC = fileURLToPath(new URL('../src', import.meta.url));
 
@@ -219,5 +229,142 @@ describe('la diffusion se fait par séquence, jamais par le résultat', () => {
     if (scenario === undefined) return;
     const result = await runScenario(scenario);
     expect(result.failures).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------- the golden corpus
+
+/** The corpus of `id`, parsed. */
+function corpusOf(id: string): {
+  journal: { seq: number; type: string; payload: Record<string, unknown> }[];
+  threads: Record<string, { deliverySeq: number; seq: number; type: string; payload: unknown }[]>;
+} {
+  const file = join(fileURLToPath(GOLDEN_DIR), `${id}.golden.json`);
+  return JSON.parse(readFileSync(file, 'utf8')) as ReturnType<typeof corpusOf>;
+}
+
+/**
+ * A copy of `id`'s corpus in a scratch directory, with `edit` applied to the
+ * parsed object. Returns the directory to hand to `runScenario`.
+ */
+function corpusCopy(id: string, edit: (corpus: ReturnType<typeof corpusOf>) => void): string {
+  // The temporary directory is SHARED between agents on this machine: the
+  // prefix names this suite so two runs never read each other's copy.
+  const dir = mkdtempSync(join(tmpdir(), 'for-sim-corpus-probe-'));
+  const source = join(fileURLToPath(GOLDEN_DIR), `${id}.golden.json`);
+  const target = join(dir, `${id}.golden.json`);
+  copyFileSync(source, target);
+  const corpus = JSON.parse(readFileSync(target, 'utf8')) as ReturnType<typeof corpusOf>;
+  edit(corpus);
+  // `expectGolden` compares BYTES, so the copy has to be written the way the
+  // corpus was written: two-space JSON with sorted keys. `JSON.parse` of a
+  // corpus already yields sorted keys, and `JSON.stringify` preserves that
+  // order, so re-serialising the untouched copy reproduces the file exactly —
+  // which the « direction basse » of each test below checks, by running green
+  // on a copy edited with a no-op.
+  writeFileSync(target, `${JSON.stringify(corpus, null, 2)}\n`, 'utf8');
+  return dir;
+}
+
+function firstScenarioWith(type: string): Scenario {
+  const scenario = loadScenarios().find((entry) =>
+    corpusOf(entry.id).journal.some((event) => event.type === type),
+  );
+  if (scenario === undefined) throw new Error(`aucun scénario ne produit « ${type} »`);
+  return scenario;
+}
+
+describe('le corpus doré épingle la charge utile, pas seulement le type', () => {
+  it('une charge utile qui change fait rougir le corpus doré, même quand l’état final ne bouge pas', async () => {
+    const scenario = firstScenarioWith('roll.action_resolved');
+
+    // THE VIOLATION: one number inside one entry, and NOTHING ELSE. `total`
+    // of a resolved roll never reaches `state` — no gauge, no track, no
+    // momentum reads it back — which is exactly the shape of defect that left
+    // `pnpm sim run` green while `ACTION_SCORE_CAP` went from 10 to 8.
+    let touched = 0;
+    const dir = corpusCopy(scenario.id, (corpus) => {
+      for (const event of corpus.journal) {
+        if (event.type !== 'roll.action_resolved') continue;
+        const total = event.payload['total'];
+        if (typeof total !== 'number') continue;
+        event.payload['total'] = total - 1;
+        touched += 1;
+        break;
+      }
+    });
+    expect(touched).toBe(1);
+
+    try {
+      const red = await runScenario(scenario, { goldenDir: dir });
+      expect(red.ok).toBe(false);
+      expect(red.failures.join('\n')).toContain('"total"');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+
+    // THE LOW DIRECTION: the same copy, untouched, is green. Without it the
+    // test above would also pass on a corpus this suite simply cannot read.
+    const clean = corpusCopy(scenario.id, () => undefined);
+    try {
+      const green = await runScenario(scenario, { goldenDir: clean });
+      expect(green.failures).toEqual([]);
+    } finally {
+      rmSync(clean, { recursive: true, force: true });
+    }
+  });
+
+  it('le fil de chaque joueur porte sa charge utile, pas seulement son rang de livraison', async () => {
+    // TWO PLAYERS, not one: a corpus that pinned the table's copy of a payload
+    // once would pass a single-player check and still prove nothing about who
+    // was told what. The scenario chosen has two threads, and the probe edits
+    // ONE of them.
+    const scenario = loadScenarios().find((entry) => entry.players.length >= 2);
+    expect(scenario).toBeDefined();
+    if (scenario === undefined) return;
+
+    const symbols = [...Object.keys(corpusOf(scenario.id).threads)].sort();
+    expect(symbols.length).toBeGreaterThanOrEqual(2);
+    const victim = symbols[1] ?? '';
+
+    let touched = 0;
+    const dir = corpusCopy(scenario.id, (corpus) => {
+      for (const entry of corpus.threads[victim] ?? []) {
+        const payload = entry.payload as Record<string, unknown>;
+        if (typeof payload['text'] !== 'string') continue;
+        payload['text'] = `${payload['text']} (altéré)`;
+        touched += 1;
+        break;
+      }
+    });
+    expect(touched).toBe(1);
+
+    try {
+      const red = await runScenario(scenario, { goldenDir: dir });
+      expect(red.ok).toBe(false);
+      expect(red.failures.join('\n')).toContain('(altéré)');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('le corpus doré remplace les identifiants nommés par leur symbole et laisse les identifiants comptés tels quels', () => {
+    const scenario = loadScenarios().find((entry) => entry.id.startsWith('01'));
+    expect(scenario).toBeDefined();
+    if (scenario === undefined) return;
+
+    const table = symbolsOf(scenario);
+    // Two entries at least, and the map is read as a WHOLE: emptying it has to
+    // make this fall.
+    expect(table.size).toBeGreaterThanOrEqual(6);
+    for (const [id, symbol] of table) expect(id).toBe(symbol.padStart(26, '0'));
+
+    const raw = readFileSync(join(fileURLToPath(GOLDEN_DIR), `${scenario.id}.golden.json`), 'utf8');
+    // NAMED identifiers are gone from the corpus, every one of them.
+    for (const id of table.keys()) expect(raw).not.toContain(`"${id}"`);
+    for (const symbol of table.values()) expect(raw).toContain(`"${symbol}"`);
+    // COUNTED identifiers are still there, whole: the corpus pins the order in
+    // which the server allocated them. `correlationId` is a counted UUID.
+    expect(/"[0-9A-HJKMNP-TV-Z]{26}"/.test(raw)).toBe(true);
   });
 });
