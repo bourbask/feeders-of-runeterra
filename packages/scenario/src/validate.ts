@@ -6,7 +6,8 @@
  * candidates we handed over. Nothing is repaired, nothing is guessed, no
  * nearest-neighbour is accepted — a model that answers
  * `figure-qui-nexiste-pas` gets the same question a second time. Held by
- * `build.test.ts` « un identifiant inventé est refusé et l'étape est reposée ».
+ * `tests/build.test.ts` « un identifiant inventé est refusé, et la question est
+ * reposée ».
  *
  * ── THREE FAILURES LAND ON THE DEFAULT, NEVER ON AN EXCEPTION ────────────
  * A build that throws half-way leaves a campaign nobody can play and nobody
@@ -21,6 +22,14 @@
  * justification would spend attempts — and eventually a default — on the one
  * part of the answer that changes nothing in the scenario. The identifier is
  * the contract; the sentence is for the reader.
+ *
+ * NOT interpreted is not the same as NOT CARRIED. Decision 1 of ADR 0012 asks
+ * for an identifier PLUS one sentence, so the sentence has to reach the report:
+ * held by `tests/build.test.ts` « la justification du modèle survit jusqu'au
+ * compte rendu », three cases — one sentence carried word for word, ten
+ * different sentences staying ten, and the default path saying it took the
+ * default. Measured: replacing it with the empty string used to leave the whole
+ * suite green.
  */
 
 import type { ScenarioCandidate, ScenarioDecision } from './types.js';

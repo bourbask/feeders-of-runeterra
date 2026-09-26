@@ -328,6 +328,100 @@ describe('l’étape B lit les fiches — et les lit TOUTES', () => {
     expect(list).toContain(ENTRY_NODE_ID);
     for (const id of list) expect(registry.getNode(id).periodId).toBe(MODERN);
   });
+
+  it('question d’enjeu : un nœud moderne que le ressort N’ATTEINT PAS est ÉCARTÉ', () => {
+    // Les deux assertions ci-dessus restent vraies si le filtre s'ouvre en
+    // grand : mesuré, quatre-vingt-quatre tests verts. C'est la question 6 de
+    // la recette — il faut une assertion NÉGATIVE.
+    const piste = registry.getNode(ENTRY_NODE_ID).leads[0]?.toNodeId ?? '';
+    const list = candidatesOf(
+      'question-d-enjeu',
+      { periode: MODERN, noeud: ENTRY_NODE_ID, piste, ressort: 'on-vous-doit-un-hiver' },
+      [BRAUM],
+    );
+
+    // Les trois raisons pour lesquelles ce nœud n'est pas atteint sont lues
+    // dans le REGISTRE, pas dans l'étape : ni le nœud d'entrée, ni la piste
+    // ouverte, ni un nœud où se tient un lien suggéré par le ressort.
+    const ÉCARTÉ = 'le-conseil-des-clans';
+    const liens = new Set(registry.getHook('on-vous-doit-un-hiver').suggestedBondIds);
+    expect(liens.size).toBeGreaterThan(0);
+    expect(registry.getNode(ÉCARTÉ).periodId).toBe(MODERN);
+    expect(ÉCARTÉ).not.toBe(ENTRY_NODE_ID);
+    expect(ÉCARTÉ).not.toBe(piste);
+    expect(registry.getNode(ÉCARTÉ).figureIds.some((id) => liens.has(id))).toBe(false);
+    expect(list).not.toContain(ÉCARTÉ);
+
+    // Et la liste est STRICTEMENT plus courte que les nœuds modernes : ouvrir
+    // le filtre la porterait à vingt.
+    const modernes = registry.listNodes().filter((node) => node.periodId === MODERN);
+    expect(modernes.length).toBeGreaterThan(0);
+    expect(list.length).toBeLessThan(modernes.length);
+
+    // Le tableau exact, trié : huit sur vingt.
+    expect([...list].sort()).toEqual([
+      'la-tour-basse',
+      'la-veille-du-gue',
+      'le-col-sans-guetteur',
+      'le-convoi-retourne',
+      'le-grenier-ouvert-de-l-interieur',
+      'le-marche-de-glace',
+      'le-puits-noir',
+      'les-pierres-dressees',
+    ]);
+  });
+});
+
+describe('question d’enjeu : les trois raisons d’entrer dans la liste', () => {
+  // DEUX RESSORTS AU LIEU D’UN. Avec « on-vous-doit-un-hiver », le nœud
+  // d’entrée porte lui-même un lien suggéré du ressort : la clause du nœud
+  // d’entrée est alors masquée par celle des liens, et la retirer laissait
+  // quatre-vingt-onze tests verts — mesuré. « celui-qui-tient-la-porte » ne
+  // suggère aucune figure du nœud d’entrée ni de la piste ouverte, ce qui
+  // rend les trois clauses séparables.
+  const RESSORT = 'celui-qui-tient-la-porte';
+  const PISTE = registry.getNode(ENTRY_NODE_ID).leads[0]?.toNodeId ?? '';
+  const liens = new Set(registry.getHook(RESSORT).suggestedBondIds);
+  const list = candidatesOf(
+    'question-d-enjeu',
+    { periode: MODERN, noeud: ENTRY_NODE_ID, piste: PISTE, ressort: RESSORT },
+    [BRAUM],
+  );
+
+  it('le ressort choisi ne suggère aucune figure du nœud d’entrée ni de la piste', () => {
+    expect(liens.size).toBeGreaterThan(0);
+    expect(registry.getNode(ENTRY_NODE_ID).figureIds.some((id) => liens.has(id))).toBe(false);
+    expect(registry.getNode(PISTE).figureIds.some((id) => liens.has(id))).toBe(false);
+    expect(PISTE).not.toBe(ENTRY_NODE_ID);
+  });
+
+  it('le nœud d’entrée y est, et il n’y est QUE par la clause du nœud d’entrée', () => {
+    expect(list).toContain(ENTRY_NODE_ID);
+  });
+
+  it('la piste ouverte y est, et elle n’y est QUE par la clause de la piste', () => {
+    expect(list).toContain(PISTE);
+  });
+
+  it('un nœud où se tient un lien suggéré y est, sans être ni l’entrée ni la piste', () => {
+    const PAR_LE_LIEN = 'le-col-sans-guetteur';
+    expect(registry.getNode(PAR_LE_LIEN).periodId).toBe(MODERN);
+    expect(PAR_LE_LIEN).not.toBe(ENTRY_NODE_ID);
+    expect(PAR_LE_LIEN).not.toBe(PISTE);
+    expect(registry.getNode(PAR_LE_LIEN).figureIds.some((id) => liens.has(id))).toBe(true);
+    expect(list).toContain(PAR_LE_LIEN);
+  });
+
+  it('et un nœud moderne qu’aucune des trois raisons n’atteint reste dehors', () => {
+    const ÉCARTÉ = 'la-taverne-du-pont-bas';
+    expect(registry.getNode(ÉCARTÉ).periodId).toBe(MODERN);
+    expect(ÉCARTÉ).not.toBe(ENTRY_NODE_ID);
+    expect(ÉCARTÉ).not.toBe(PISTE);
+    expect(registry.getNode(ÉCARTÉ).figureIds.some((id) => liens.has(id))).toBe(false);
+    expect(list).not.toContain(ÉCARTÉ);
+    const modernes = registry.listNodes().filter((node) => node.periodId === MODERN);
+    expect(list.length).toBeLessThan(modernes.length);
+  });
 });
 
 describe('les identifiants composés se relisent', () => {

@@ -17,6 +17,7 @@ import {
 } from '../src/build.js';
 import { firstCandidateDecider, scriptedDecider } from '../src/deciders.js';
 import type { ScenarioSelection } from '../src/steps.js';
+import { parsePortentCandidateId } from '../src/steps.js';
 import type {
   ScenarioBuild,
   ScenarioDecision,
@@ -371,6 +372,73 @@ describe('ce que le faux reçoit, le vrai le recevra', () => {
     expect(ressort?.party.map((member) => member.characterId)).toEqual(['pj-1', 'pj-2']);
   });
 
+  it('`chosen` porte CE QUI PRÉCÈDE : QUATRE choix devant « figure », le dernier est l’enjeu', async () => {
+    // Le jeu de clés ne dit rien du CONTENU. `chosen` est précisément ce qui
+    // donne au modèle ce qui précède — la raison invoquée par la §8 de
+    // `04-scenarios.md` pour employer un modèle plutôt qu'un tirage, et l'objet
+    // depuis lequel l'adaptateur réel de S-05 construira son invite. Le vider
+    // laissait quatre-vingt-quatre tests verts.
+    const { port, seen } = recordingDecider((question) => ({
+      choiceId: question.candidates[0]?.id ?? '',
+      why: 'va',
+    }));
+    const build = ok(
+      await buildScenario({ registry, seed: 'campagne-17', party: PARTY, decide: port }),
+    );
+
+    // La toute première question n'a rien derrière elle : c'est la borne basse.
+    expect(seen[0]?.stepId).toBe('periode');
+    expect(seen[0]?.chosen).toEqual([]);
+
+    const figure = seen.find((question) => question.stepId === 'figure');
+    expect(figure).toBeDefined();
+    // QUATRE, en toutes lettres : période, lieu, front et enjeu précèdent
+    // « figure » dans la liste de la section 6.
+    expect(figure?.chosen).toHaveLength(4);
+    expect(figure?.chosen.map((choice) => choice.stepId)).toEqual([
+      'periode',
+      'lieu',
+      'front',
+      'enjeu',
+    ]);
+
+    // Et le dernier porte bien la décision prise à l'étape « enjeu » : le
+    // compte rendu et le registre le disent chacun de leur côté.
+    const dernier = figure?.chosen.at(-1);
+    expect(dernier?.stepId).toBe('enjeu');
+    expect(dernier?.chosenId).toBe(chosen(build, 'enjeu'));
+    expect(parsePortentCandidateId(dernier?.chosenId ?? '')?.frontId).toBe(chosen(build, 'front'));
+  });
+
+  it('la phase de la question est celle de l’étape : « situation » puis « ressorts »', async () => {
+    const { port, seen } = recordingDecider((question) => ({
+      choiceId: question.candidates[0]?.id ?? '',
+      why: 'va',
+    }));
+    await buildScenario({ registry, seed: 'campagne-17', party: PARTY, decide: port });
+    expect(seen.find((question) => question.stepId === 'periode')?.phase).toBe('situation');
+    expect(seen.find((question) => question.stepId === 'ressort')?.phase).toBe('ressorts');
+    // La coupure de la décision 3 traverse les dix questions, pas seulement deux.
+    for (const question of seen) {
+      const attendue = ['ressort', 'serment', 'question-d-enjeu'].includes(question.stepId)
+        ? 'ressorts'
+        : 'situation';
+      expect(question.phase).toBe(attendue);
+    }
+  });
+
+  it('`attemptsAllowed` vaut TROIS à chaque question : le chiffre du critère', async () => {
+    const { port, seen } = recordingDecider((question) => ({
+      choiceId: question.candidates[0]?.id ?? '',
+      why: 'va',
+    }));
+    await buildScenario({ registry, seed: 'campagne-17', party: PARTY, decide: port });
+    expect(seen).toHaveLength(10);
+    // TROIS, en toutes lettres : il vient du critère d'acceptation, jamais de
+    // `ATTEMPTS_BEFORE_DEFAULT` — un chiffre comparé à lui-même passe toujours.
+    for (const question of seen) expect(question.attemptsAllowed).toBe(3);
+  });
+
   it('l’étape A ne voit personne : `party` y est vide', async () => {
     const { port, seen } = recordingDecider((question) => ({
       choiceId: question.candidates[0]?.id ?? '',
@@ -378,6 +446,55 @@ describe('ce que le faux reçoit, le vrai le recevra', () => {
     }));
     await buildSituation({ registry, seed: 'campagne-13', decide: port });
     for (const question of seen) expect(question.party).toEqual([]);
+  });
+});
+
+describe('la justification du modèle survit jusqu’au compte rendu', () => {
+  it('la phrase rendue par le port est celle du choix accepté, mot pour mot', async () => {
+    // Décision 1 de l'ADR 0012 : « un identifiant PLUS UNE JUSTIFICATION EN UNE
+    // PHRASE ». `validate.test.ts` prouve que `verifyChoice` la rend ; ici on
+    // prouve qu'elle arrive au bout. La remplacer par la chaîne vide laissait
+    // quatre-vingt-quatre tests verts.
+    const PHRASE = 'parce que le grenier a été ouvert de l’intérieur.';
+    const { port } = recordingDecider((question) => ({
+      choiceId: question.candidates[0]?.id ?? '',
+      why: PHRASE,
+    }));
+    const build = ok(
+      await buildScenario({ registry, seed: 'campagne-18', party: PARTY, decide: port }),
+    );
+    expect(build.choices).toHaveLength(10);
+    expect(build.choices[0]?.why).toBe(PHRASE);
+    for (const choice of build.choices) expect(choice.why).toBe(PHRASE);
+  });
+
+  it('DIX phrases différentes restent dix : aucune n’est recopiée depuis une autre étape', async () => {
+    // Deux instants au lieu d'un : une phrase unique ne verrait pas un `why`
+    // figé sur le premier choix, ni deux étapes qui se partagent le même.
+    const { port } = recordingDecider((question) => ({
+      choiceId: question.candidates[0]?.id ?? '',
+      why: `raison de « ${question.stepId} »`,
+    }));
+    const build = ok(
+      await buildScenario({ registry, seed: 'campagne-19', party: PARTY, decide: port }),
+    );
+    for (const choice of build.choices) {
+      expect(choice.why).toBe(`raison de « ${choice.stepId} »`);
+    }
+    expect(new Set(build.choices.map((choice) => choice.why)).size).toBe(10);
+  });
+
+  it('sur le chemin du défaut, la phrase dit que le défaut a été pris', async () => {
+    const perdue = 'une phrase que personne ne lira';
+    const { port } = recordingDecider(() => ({ choiceId: 'n-importe-quoi', why: perdue }));
+    const build = ok(
+      await buildScenario({ registry, seed: 'campagne-20', party: PARTY, decide: port }),
+    );
+    for (const choice of build.choices) {
+      expect(choice.viaDefault).toBe(true);
+      expect(choice.why).toContain('candidat par défaut');
+      expect(choice.why).not.toContain(perdue);
+    }
   });
 });
 

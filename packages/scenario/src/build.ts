@@ -83,8 +83,8 @@ export interface ScenarioRequest extends SituationRequest {
  * `buildSituation` cannot produce one: it refuses a step with no candidate
  * BEFORE it asks, so every phase-A step has landed by the time it assembles.
  * This exists for the caller who drives the steps by hand, and it is held by
- * `build.test.ts` « assembler une sélection tronquée se plaint de l'étape
- * manquante ».
+ * `tests/build.test.ts` « assembleScenario » › « assembler une sélection
+ * tronquée se plaint de l'étape manquante ».
  */
 export class ScenarioAssemblyError extends Error {
   public constructor(public readonly stepId: ScenarioStepId) {

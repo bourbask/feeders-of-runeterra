@@ -50,7 +50,8 @@ export function scenarioStreamSeed(seed: string, stepId: string): string {
  * Fisher-Yates on the step's sub-stream.
  *
  * Same seed and same input order give the same output, always — held by
- * `candidates.test.ts` « même graine, même mélange ». The engine's
+ * `tests/candidates.test.ts` « le mélange sur le flux nommé » › « même graine,
+ * même étape : le même tableau exact ». The engine's
  * `createSeededRng` is reused rather than reimplemented: a second generator
  * would be a second answer to "how does this project draw".
  */
@@ -139,8 +140,9 @@ export function regionIdsOfPeriod(registry: ContentRegistry, periodId: string): 
  * about. So a region is a candidate only when the period puts BOTH a front and
  * an entry node in it.
  *
- * Held by `tests/candidates.test.ts` « une région sans point d'entrée n'est
- * pas jouable, même si un front la menace ».
+ * Held by `tests/steps.test.ts` « chaque étape ferme sa liste sur la période »
+ * › « une région sans point d'entrée n'est pas jouable, même si un front la
+ * menace ».
  */
 export function playableRegionIds(registry: ContentRegistry, periodId: string): readonly string[] {
   const threatened = new Set<string>();

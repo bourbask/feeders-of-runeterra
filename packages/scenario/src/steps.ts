@@ -353,6 +353,16 @@ const QUESTION_D_ENJEU: ScenarioStep = {
   phase: 'ressorts',
   question: 'Quelle question d’enjeu cette campagne cherche-t-elle à trancher ?',
   rule: 'La question d’enjeu d’un nœud où le ressort choisi mène la bande.',
+  // THE RULE IS A FILTER, NOT A WISH, and EACH OF ITS THREE CLAUSES CARRIES —
+  // held by `tests/steps.test.ts` « question d'enjeu : un nœud moderne que le
+  // ressort N'ATTEINT PAS est ÉCARTÉ », which names an unreached node and pins
+  // the exact list (eight of the twenty modern nodes), and by « question
+  // d'enjeu : les trois raisons d'entrer dans la liste », which separates them
+  // on a ressort whose suggested bonds stand in NEITHER the entry node nor the
+  // open lead. Both were needed, and measured: a positive assertion alone
+  // stayed green when the filter was opened wide, and the entry-node clause
+  // stayed green when removed as long as the only ressort under test suggested
+  // a figure of that same node.
   candidates: (context) => {
     const chosen = period(context);
     const chosenHook = hook(context);

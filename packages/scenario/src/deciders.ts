@@ -10,8 +10,9 @@
  * drifting from the real thing. The trap the recipe names — a double declared
  * with one parameter fewer, which compiles without a word and makes the
  * missing argument invisible to the whole suite — is closed twice: by that
- * annotation, and by `build.test.ts` « le faux reçoit tout ce que le vrai
- * reçoit », which asserts the exact key set of the question object.
+ * annotation, and by `tests/build.test.ts` « ce que le faux reçoit, le vrai le
+ * recevra », whose five cases assert the exact key set of the question object
+ * AND the content of `party`, `chosen`, `phase` and `attemptsAllowed`.
  */
 
 import type { ScenarioDecision, ScenarioDecisionPort, ScenarioQuestion } from './types.js';

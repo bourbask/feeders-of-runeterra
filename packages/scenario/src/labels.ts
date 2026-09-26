@@ -5,13 +5,17 @@
  * ── WHY A RECORD AND NOT A `switch` ──────────────────────────────────────
  * `Record<Disposition, string>` is total by construction: a fifth disposition
  * in the engine stops this file compiling. The pair of tests in
- * `labels.test.ts` closes the other direction — they WALK
+ * `src/labels.test.ts` « les libellés couvrent le miroir moteur, membre à
+ * membre » closes the other direction — they WALK
  * `DispositionSchema.options` and `RankSchema.options` rather than pinning a
  * list of their own, so emptying the record drops a key and reddens them.
  *
  * These are the only three lists this package renders in French, and none of
  * them is retyped: `.options` and `.def.values` enumerate the mirror S-01
- * already guards member by member (`tests/exhaustive-union.test.ts`).
+ * already guards member by member — in
+ * `packages/contracts/tests/exhaustive-union.test.ts`, « %s porte exactement le
+ * tuple du moteur », one case each for « FrontSchema.segments »,
+ * « HookSchema.vowRank » and « FigureSchema.disposition ».
  */
 
 import type { Disposition, Rank, SegmentCount } from '@for/contracts';

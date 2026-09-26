@@ -66,8 +66,9 @@ export interface ScenarioCandidate {
  *
  * MIRRORS NOTHING. The engine has no notion of a build step, so per the
  * operating rule of ADR 0007 this tuple is owned here and pinned IN FULL
- * LETTERS by `src/steps.test.ts` « les dix étapes de la section 6 », rather
- * than "compared" to a list that does not exist.
+ * LETTERS by `tests/steps.test.ts` « les dix étapes de la section 6, dans
+ * l'ordre » › « les dix identifiants, écrits en toutes lettres », rather than
+ * "compared" to a list that does not exist.
  */
 export const SCENARIO_STEP_IDS = [
   'periode',
@@ -95,10 +96,23 @@ export type ScenarioPhase = (typeof SCENARIO_PHASES)[number];
  * EVERY FIELD IS READ BY SOMEBODY. `party` is here because step B cannot be
  * answered without it; `chosen` because a candidate only makes sense next to
  * what already stands; `attempt` because a model that is being asked a second
- * time should be told so. A double that quietly drops one of them would make
- * the corresponding half of the contract untestable — which is why
- * `src/build.test.ts` « le faux reçoit tout ce que le vrai reçoit » asserts
- * the exact key set.
+ * time should be told so.
+ *
+ * A KEY SET IS NOT A CONTENT. All four assertions live in `tests/build.test.ts`
+ * under « ce que le faux reçoit, le vrai le recevra », and measuring said so:
+ * emptying `chosen`, forcing `attemptsAllowed` to 99 and freezing `phase` each
+ * left the suite green while only the key set was compared.
+ *
+ *   - the exact key set — « la question porte exactement les neuf champs
+ *     annoncés »
+ *   - `party`, at BOTH seats — « la distribution arrive ENTIÈRE jusqu'au port,
+ *     aux deux places de la table »
+ *   - `chosen`, four entries deep, last one being the `enjeu` decision —
+ *     « `chosen` porte CE QUI PRÉCÈDE : QUATRE choix devant « figure », le
+ *     dernier est l'enjeu »
+ *   - `phase` and `attemptsAllowed` — « la phase de la question est celle de
+ *     l'étape : « situation » puis « ressorts » » and « `attemptsAllowed` vaut
+ *     TROIS à chaque question : le chiffre du critère »
  */
 export interface ScenarioQuestion {
   readonly stepId: ScenarioStepId;
