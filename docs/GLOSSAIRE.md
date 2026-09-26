@@ -142,6 +142,13 @@ moteur : chacune se traduit en quelque chose qui existait déjà.
 | **Présage** (de front) | une étape concrète que la menace franchit. À ne pas confondre avec le **présage des dés**, qui est un doublé. | un segment d'horloge |
 | **Nœud** | une situation — un lieu, un affrontement, une révélation — avec sa question d'enjeu. Jamais un déroulé. | une scène, quand la bande y arrive |
 | **Piste** | une façon de sortir d'un nœud vers un autre. Un nœud en porte **au moins trois**, vers trois endroits différents. | rien : c'est du contenu que le conteur lit |
+| **Construction guidée** | la machine qui fait assembler un scénario à un modèle, une question fermée à la fois. | `@for/scenario`, S-04 |
+| **Étape** (de construction) | une des **dix** questions de `04-scenarios.md` §6, avec sa liste close de candidats. | `SCENARIO_STEPS` |
+| **Candidat** | une réponse possible : un **identifiant** du contenu, son libellé et une ligne de détail. Le modèle n'écrit que l'identifiant. | `ScenarioCandidate` |
+| **Port de décision** | l'interface par laquelle on demande son choix au modèle. Comme le port du conteur : aucun SDK derrière. | `ScenarioDecisionPort` |
+| **Étape A / étape B** | avant les personnages (l'état du monde) / après eux (pourquoi cette bande). La coupure de l'ADR 0012, décision 3. | `buildSituation` / `buildHooks` |
+| **Flux nommé `scenario`** | le hasard de la construction, amorcé par campagne, un sous-flux par étape : deux campagnes diffèrent, une campagne se rejoue. | `seed\|scenario\|<étape>` |
+| **Défaut** (d'une étape) | le premier candidat après mélange. Pris après trois réponses irrecevables : une construction ne s'arrête jamais en cours de route. | `viaDefault` |
 | **Figure** | quelqu'un défini par ce qu'il **veut**, ce qu'il **refuse** et ce qu'il **sait**. Aucun chiffre. | une entité `npc` |
 | **Ressort** | pourquoi *ces* personnages-là sont concernés. Se choisit après la distribution. | un serment et des liens |
 | **Rencontre** | marchand, allié, bête, trouvaille, obstacle. **Tirée à l'oracle**, jamais programmée. | un tirage d'oracle |

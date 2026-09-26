@@ -422,6 +422,22 @@ importers:
         specifier: workspace:*
         version: link:../../tooling/tsconfig
 
+  packages/scenario:
+    dependencies:
+      '@for/content':
+        specifier: workspace:*
+        version: link:../content
+      '@for/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@for/engine':
+        specifier: workspace:*
+        version: link:../engine
+    devDependencies:
+      '@for/tsconfig':
+        specifier: workspace:*
+        version: link:../../tooling/tsconfig
+
   packages/server:
     dependencies:
       '@fastify/cookie':
