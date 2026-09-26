@@ -474,7 +474,7 @@ export const entryPoints = (files: Files): readonly string[] =>
  * DIT À VOIX HAUTE : le critère « le testeur coupe une piste, le compte tombe »
  * est presque toujours FAUX sur un bon graphe, et c'est voulu. La règle des
  * trois indices inversée achète précisément de la redondance : mesuré sur le
- * graphe livré, une seule des soixante-cinq pistes fait bouger le nombre de
+ * graphe livré, une seule des soixante-deux pistes fait bouger le nombre de
  * nœuds atteints. Le seuil de douze ne mord donc pas ; cette liste-ci, si.
  */
 export function unreachableNodes(files: Files): readonly string[] {
