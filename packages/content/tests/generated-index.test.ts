@@ -45,7 +45,7 @@ describe('l’index généré est à jour', () => {
     );
   });
 
-  it('se valide lui-même en quatre passes, sans toucher au disque', () => {
+  it('se valide lui-même en cinq passes, sans toucher au disque', () => {
     const registry = staticContent();
     expect(registry.bundle.hash).toBe(GENERATED_HASH);
     // M0-16 replaced the generated root: `content-fixtures` (three moves) gave

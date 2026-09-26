@@ -63,6 +63,12 @@ const PUBLIC_SURFACE = [
   'collectRefs',
   'suggest',
   'levenshtein',
+  // The fifth pass (S-02, ADR 0012 decision 4). `validateScenarioGraph` is
+  // public so a tool can walk a graph without loading a whole bundle;
+  // `GRAPH_RULES` so a report — or a test — can quote a rule by its name
+  // instead of retyping it.
+  'validateScenarioGraph',
+  'GRAPH_RULES',
 ].sort();
 
 describe('@for/content — la surface publique', () => {

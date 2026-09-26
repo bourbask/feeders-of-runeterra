@@ -66,7 +66,7 @@ const refused = (map: ReadonlyMap<string, string>): readonly ContentIssue[] => {
 const messages = (issues: readonly ContentIssue[]): string => JSON.stringify(issues);
 
 describe('le bundle de référence', () => {
-  it('charge en quatre passes, et le vert n’est pas vide', () => {
+  it('charge en cinq passes, et le vert n’est pas vide', () => {
     const bundle = loadContent(FIXTURES);
     expect(bundle.moves.size).toBe(3);
     expect(bundle.champions.size).toBe(2);
