@@ -80,6 +80,9 @@ import {
   zBriefAudience,
 } from '../src/ai/narration.js';
 import { RANK_TICKS } from '../src/content/common.js';
+import { FigureSchema } from '../src/content/figure.js';
+import { FrontSchema } from '../src/content/front.js';
+import { HookSchema } from '../src/content/hook.js';
 import { likelihoodKeysOfSchema, YESNO_THRESHOLDS } from '../src/content/oracle.js';
 import {
   ATTRIBUTE_SPREAD_SIGNATURE,
@@ -360,6 +363,40 @@ describe('exhaustivité des unions', () => {
     expect(zBriefAudience.safeParse({ scope: 'table', recipients: [player] }).success).toBe(false);
     expect(zBriefAudience.safeParse({ scope: 'subset', recipients: null }).success).toBe(false);
     expect(zBriefAudience.safeParse({ scope: 'private', recipients: null }).success).toBe(false);
+  });
+
+  // ────────────────────────────────────────────────────────────────────────
+  // S-01, ADR 0012 — LES PIÈCES DE SCÉNARIO NE ROUVRENT AUCUNE LISTE.
+  //
+  // Trois des tuples qu'une pièce de scénario utilise appartiennent au moteur :
+  // un front devient une HORLOGE, un ressort devient un SERMENT, une figure
+  // devient une ENTITÉ. Les schémas les prennent par alias
+  // (`SegmentCountSchema`, `RankSchema`, `DispositionSchema`) au lieu de les
+  // retaper — mais un alias n'est qu'une intention tant que personne ne
+  // l'oppose au moteur. Ces trois lignes le font.
+  //
+  // Le jour où quelqu'un remplace l'alias par `z.enum([...])` ET où le moteur
+  // bouge, c'est ici que ça rougit. C'est exactement le trou de PAY_PRICE_MODES,
+  // transposé au vocabulaire du scénario.
+  //
+  // Le dépôt paie déjà une divergence sur `disposition` — `ai/tools.ts` offre
+  // cinq valeurs là où le moteur en porte quatre — et la fiche S-01 nomme ce
+  // précédent comme la faute à ne pas répéter. La ligne `FigureSchema` est ce
+  // qui l'empêche.
+  it.each([
+    [
+      'FrontSchema.segments',
+      [...CLOCK_SEGMENT_COUNTS],
+      [...(FrontSchema.shape.segments.def.values as readonly number[])].sort((a, b) => a - b),
+    ],
+    ['HookSchema.vowRank', [...PROGRESS_RANKS], [...HookSchema.shape.vowRank.options]],
+    [
+      'FigureSchema.disposition',
+      [...ENTITY_DISPOSITIONS],
+      [...FigureSchema.shape.disposition.options],
+    ],
+  ] as const)('%s porte exactement le tuple du moteur', (_name, engine, schema) => {
+    expect(schema).toStrictEqual(engine);
   });
 
   it('le flux RNG est une union fermée, pas une chaîne libre', () => {

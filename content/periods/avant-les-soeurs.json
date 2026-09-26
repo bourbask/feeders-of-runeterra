@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "avant-les-soeurs",
+  "name": "Avant les Sœurs",
+  "after": null,
+  "before": 100,
+  "summary": "Le nord n'a pas encore de clans : il a des maîtres. Les puissances anciennes prennent ce qu'elles veulent et laissent vivre qui les sert, et les vallées paient pour qu'on les oublie.",
+  "factionIds": [],
+  "absentFactionIds": ["avarosans", "griffe-d-hiver", "gardiens-du-givre"],
+  "tags": ["frise", "anciens-dieux", "yetis"]
+}

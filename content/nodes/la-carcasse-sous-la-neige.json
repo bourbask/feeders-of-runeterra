@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "la-carcasse-sous-la-neige",
+  "name": "La carcasse sous la neige",
+  "kind": "revelation",
+  "situation": "Une bête de trait morte debout, les harnais encore sur elle, à trois cents pas de toute route. Elle n'a pas été tuée : elle s'est arrêtée et le froid a fait le reste, ce qui n'arrive pas à une bête menée. Ce qu'elle tirait n'est plus là, mais l'empreinte du chargement est restée dans la neige tassée, et l'empreinte est trop large pour du grain. Le gel remonte ici à contre-saison, en suivant une ligne droite que rien dans le terrain n'explique.",
+  "stakeQuestion": "Qu'est-ce qui a été transporté assez lourd pour tuer une bête, et vers où ?",
+  "figureIds": [],
+  "regionId": "ice-reaches",
+  "periodId": "freljord-moderne",
+  "entryPoint": false,
+  "leads": [
+    {
+      "toNodeId": "les-pierres-dressees",
+      "trigger": "La ligne de gel remonte tout droit vers les vieilles pierres."
+    },
+    {
+      "toNodeId": "la-veille-du-givre",
+      "trigger": "Le chargement correspond à ce que la Citadelle achète cette saison."
+    },
+    {
+      "toNodeId": "le-convoi-qui-manque",
+      "trigger": "Le harnais porte la marque du grenier de la Marche."
+    }
+  ],
+  "tags": ["revelation", "sous-la-glace"]
+}

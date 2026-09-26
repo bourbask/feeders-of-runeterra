@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "halvar-du-gue",
+  "name": "Halvar du Gué",
+  "disposition": "allie",
+  "factionId": "avarosans",
+  "periodId": "freljord-moderne",
+  "wants": "Rouvrir le gué bas à tout le monde, serment prêté ou non, avant que la glace décide à sa place.",
+  "refuses": "Lever une barrière qu'il devrait ensuite tenir avec des armes.",
+  "knows": "Quelles nuits le gué porte un convoi entier, et lesquelles mentent jusqu'au milieu.",
+  "tags": ["passage", "grain"]
+}

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "le-grain-qui-n-arrive-pas",
+  "name": "Le grain qui n'arrive pas",
+  "appliesTo": {
+    "kind": "faction",
+    "factionId": "avarosans"
+  },
+  "vowRank": "dangereux",
+  "periodId": "freljord-moderne",
+  "suggestedBondIds": ["halvar-du-gue", "katla-la-compteuse"],
+  "pitch": "Un convoi est parti plein et arrivé vide, et les deux comptes sont signés de la même main.",
+  "tags": ["grain"]
+}

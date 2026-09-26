@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "ce-qui-suit-la-piste",
+  "name": "Ce qui suit la piste",
+  "kind": "bete",
+  "periodId": "freljord-moderne",
+  "regionKinds": ["etendue", "site"],
+  "oracleRef": "complication",
+  "summary": "Des traces parallèles aux vôtres depuis une demi-journée, toujours à la même distance, jamais visibles.",
+  "tags": ["bete", "traque"]
+}

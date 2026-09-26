@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "eira-la-veilleuse",
+  "name": "Eira la Veilleuse",
+  "disposition": "inconnu",
+  "factionId": "gardiens-du-givre",
+  "periodId": "freljord-moderne",
+  "wants": "Que le mur tienne encore une génération, et que personne n'aille demander pourquoi il est là.",
+  "refuses": "Laisser descendre quelqu'un qui n'a pas compris ce qu'il descend voir.",
+  "knows": "Ce qu'il y a derrière, et le prix exact qui a été payé pour l'y mettre.",
+  "tags": ["veille", "citadelle"]
+}

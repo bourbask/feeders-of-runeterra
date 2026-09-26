@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "le-guide-qui-connait-la-neige",
+  "name": "Le guide qui connaît la neige",
+  "kind": "allie",
+  "periodId": "freljord-moderne",
+  "regionKinds": ["etendue", "territoire"],
+  "oracleRef": "npc-names-freljord",
+  "summary": "Quelqu'un qui propose de mener la bande par un chemin plus long, et qui a raison.",
+  "tags": ["allie", "voyage"]
+}

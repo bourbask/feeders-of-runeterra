@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "les-murs-de-glace-se-fendent",
+  "name": "Les murs de glace se fendent",
+  "segments": 6,
+  "stake": "Le mur dressé sur ce qui regardait, et les vies qu'il a coûtées pour être dressé.",
+  "periodId": "la-longue-nuit",
+  "regionIds": ["frostguard-citadel", "howling-abyss"],
+  "tags": ["mur", "veille"],
+  "portents": [
+    "Une fissure apparaît là où la glace avait été fondue puis reprise.",
+    "Les veilleurs cessent de se relayer par deux, faute de bras valides.",
+    "L'un d'eux redescend seul, remonte au matin, et dit n'avoir rien vu.",
+    "Les yétis abandonnent les hauteurs et deviennent dangereux dans les vallées.",
+    "Le mur tient encore, mais on entend distinctement au travers.",
+    "Ceux qui gardent décident qu'il vaut mieux parler à ce qu'ils gardent."
+  ]
+}

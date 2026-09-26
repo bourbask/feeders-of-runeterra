@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "la-marque-sur-la-glace",
+  "name": "La marque sur la glace",
+  "kind": "revelation",
+  "situation": "Une entaille dans la glace ancienne, nette, régulière, et faite depuis l'intérieur. Le gel l'a recouverte au moins deux fois et elle a été rouverte autant. Autour, la neige porte des allées et venues qui ne mènent à aucun campement. Ce qui a taillé ça avait le temps et savait où tailler ; ce qui l'a recouverte avait moins de temps. La même marque existe ailleurs dans le nord, plus petite, sur des pierres qu'on a déplacées cette saison.",
+  "stakeQuestion": "La marque est-elle une serrure, une signature, ou un message adressé à quelqu'un ?",
+  "figureIds": [],
+  "regionId": "howling-abyss",
+  "periodId": "freljord-moderne",
+  "entryPoint": false,
+  "leads": [
+    {
+      "toNodeId": "la-question-posee-en-bas",
+      "trigger": "La marque a son jumeau au bout du couloir de la Citadelle."
+    },
+    {
+      "toNodeId": "la-faille-hurlante",
+      "trigger": "Sortir de la glace et regarder la faille autrement."
+    },
+    {
+      "toNodeId": "le-couloir-qui-descend",
+      "trigger": "Les niches vides du couloir ont la taille de ce qui manque ici."
+    }
+  ],
+  "tags": ["revelation", "sous-la-glace"]
+}

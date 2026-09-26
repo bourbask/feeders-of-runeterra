@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "ceux-qui-comptent-les-sacs",
+  "name": "Ceux qui comptent les sacs",
+  "appliesTo": {
+    "kind": "trait",
+    "tag": "commandement"
+  },
+  "vowRank": "redoutable",
+  "periodId": "freljord-moderne",
+  "suggestedBondIds": ["katla-la-compteuse"],
+  "pitch": "On vous demande d'arbitrer un compte que personne ne veut relire à voix haute, et les deux camps ont déjà leur réponse écrite.",
+  "tags": ["commandement", "conseil"]
+}

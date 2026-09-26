@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "la-glace-qui-porte-une-marque",
+  "name": "La glace qui porte une marque",
+  "kind": "trouvaille",
+  "periodId": "freljord-moderne",
+  "regionKinds": ["site"],
+  "oracleRef": "action-theme",
+  "summary": "Une entaille nette dans la glace ancienne, faite de l'intérieur, que le gel a recouverte puis rouverte.",
+  "tags": ["trouvaille", "sous-la-glace"]
+}

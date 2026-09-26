@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "la-descente-de-la-griffe",
+  "name": "La descente de la Griffe",
+  "segments": 6,
+  "stake": "Les hameaux du versant bas, et le droit d'y passer l'hiver sans payer de tribut à qui que ce soit.",
+  "periodId": "freljord-moderne",
+  "regionIds": ["ice-reaches", "freljord", "avarosa-reach"],
+  "tags": ["territoire-conteste", "tribut", "bande-de-guerre"],
+  "portents": [
+    "Une bande de guerre hiverne plus bas que d'habitude, et ne remonte pas au dégel.",
+    "Le tribut demandé au premier hameau double, et le hameau paie sans discuter.",
+    "Le Col Battu change de main une nuit, sans un mort, et la route du grain avec lui.",
+    "Les convois ne partent plus sans escorte, et l'escorte coûte plus cher que ce qu'elle garde.",
+    "Un hameau du versant bas ouvre ses portes de lui-même, pour cesser d'attendre.",
+    "La Griffe d'Hiver n'a plus besoin de descendre : on lui monte tout."
+  ]
+}

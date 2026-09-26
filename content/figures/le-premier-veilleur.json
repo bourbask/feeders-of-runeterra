@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "le-premier-veilleur",
+  "name": "Le premier veilleur",
+  "disposition": "inconnu",
+  "factionId": "gardiens-du-givre",
+  "periodId": "la-longue-nuit",
+  "wants": "Que le mur soit fini avant que le froid empêche d'y travailler une saison de plus.",
+  "refuses": "Nommer à voix haute ce qui se tient de l'autre côté de ce qu'il bâtit.",
+  "knows": "Combien de ceux qui ont commencé le mur sont encore capables d'y monter.",
+  "tags": ["mur", "veille"]
+}

@@ -37,9 +37,32 @@ try {
     `${String(bundle.truths.length)} vérités`,
   ].join(' · ');
 
+  // ADR 0012 — the six scenario families. S-01 left this line to S-03 on
+  // purpose: printing « 0 périodes · 0 fronts » while the directories did not
+  // exist would have been six numbers nobody could act on. They are printed on
+  // a line of their own, and only once at least one of them is loaded, so the
+  // summary of a bundle without scenario content stays exactly what it was.
+  const scenario = [
+    `${String(bundle.periods.size)} périodes`,
+    `${String(bundle.fronts.size)} fronts`,
+    `${String(bundle.nodes.size)} nœuds`,
+    `${String(bundle.figures.size)} figures`,
+    `${String(bundle.hooks.size)} ressorts`,
+    `${String(bundle.encounters.size)} rencontres`,
+  ].join(' · ');
+  const scenarioLoaded =
+    bundle.periods.size +
+      bundle.fronts.size +
+      bundle.nodes.size +
+      bundle.figures.size +
+      bundle.hooks.size +
+      bundle.encounters.size >
+    0;
+
   console.log(
-    `content:check — « ${root} » valide en quatre passes : ${counted}\n` +
-      `  version ${bundle.version} · règles v${String(bundle.rulesVersion)} · hash ${bundle.hash.slice(0, 12)}`,
+    `content:check — « ${root} » valide en quatre passes : ${counted}` +
+      (scenarioLoaded ? `\n  scénario : ${scenario}` : '') +
+      `\n  version ${bundle.version} · règles v${String(bundle.rulesVersion)} · hash ${bundle.hash.slice(0, 12)}`,
   );
 
   // Said out loud rather than implied: these paths exist under the root and NO

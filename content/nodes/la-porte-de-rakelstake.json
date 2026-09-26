@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "la-porte-de-rakelstake",
+  "name": "La porte de Rakelstake",
+  "kind": "lieu",
+  "situation": "Quarante feux accrochés sous les pics, et une seule porte pour tout le hameau. Elle tient, elle a toujours tenu, et celui qui la tenait n'est plus là cette saison. La neige est tombée une semaine trop tôt et n'a pas fondu entre deux chutes ; le bois de chauffe baisse plus vite que l'hiver n'avance. Personne ne veut être le premier à dire qu'il faudrait partir. Un enfant connaît l'ordre exact des dalles du pont et le récite à qui veut, faute de quelqu'un pour les remplacer.",
+  "stakeQuestion": "Le hameau passe-t-il l'hiver, ou se vide-t-il avant le dégel ?",
+  "figureIds": ["l-enfant-du-pont"],
+  "regionId": "rakelstake",
+  "periodId": "freljord-moderne",
+  "entryPoint": true,
+  "leads": [
+    {
+      "toNodeId": "la-salle-commune",
+      "trigger": "Le soir, tout le hameau tient dans une seule pièce."
+    },
+    {
+      "toNodeId": "le-pont-de-planches",
+      "trigger": "Le pont est la seule sortie vers le bas, et il travaille sous le gel."
+    },
+    {
+      "toNodeId": "le-gue-bas",
+      "trigger": "Les vivres, s'il en vient, viendront par le gué."
+    }
+  ],
+  "tags": ["hameau", "hiver"]
+}

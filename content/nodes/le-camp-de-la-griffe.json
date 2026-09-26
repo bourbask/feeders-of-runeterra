@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "le-camp-de-la-griffe",
+  "name": "Le camp de la Griffe",
+  "kind": "confrontation",
+  "situation": "Une bande de guerre qui a hiverné plus bas que d'habitude et n'est pas remontée au dégel. Le camp est propre, discipliné, et personne n'y a faim. Celui qui commande compte les toits et les bêtes avant d'entrer quelque part, et n'entre pas chez qui n'a plus rien : il appelle ça de la gestion, et il a raison. Ce qui le gêne, c'est qu'une partie de sa bande a cessé de lui rendre des comptes et prend en son nom de l'autre côté du col.",
+  "stakeQuestion": "La bande obéit-elle encore à quelqu'un, et à qui exactement ?",
+  "figureIds": ["ulfar-le-preneur", "sigrid-au-tribut"],
+  "regionId": "ice-reaches",
+  "periodId": "freljord-moderne",
+  "entryPoint": true,
+  "leads": [
+    {
+      "toNodeId": "le-tribut-compte",
+      "trigger": "Les comptes du tribut se tiennent au camp, et ils ne tombent pas juste."
+    },
+    {
+      "toNodeId": "la-piste-des-sangliers",
+      "trigger": "Ceux qui ne rendent plus de comptes sont partis par la piste."
+    },
+    {
+      "toNodeId": "le-feu-partage",
+      "trigger": "On peut demander le feu ici, et on ne peut pas le refuser."
+    }
+  ],
+  "tags": ["bande-de-guerre", "territoire-conteste"]
+}

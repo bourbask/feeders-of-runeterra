@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "le-pont-de-planches",
+  "name": "Le pont de planches",
+  "kind": "lieu",
+  "situation": "Un pont de bois jeté sur une gorge que personne ne descend, et trois dalles qui sonnent creux depuis l'automne. On passe quand même, en file, en connaissant les planches. Le gel a pris le tablier et le bois travaille dessous, bruyamment, la nuit. Celui qui réparait ce genre de chose est parti et n'a pas été remplacé. En bas, dans la gorge, quelque chose a été laissé là qui n'y était pas au printemps.",
+  "stakeQuestion": "Le pont tient-il l'hiver, et qu'est-ce qui attend dans la gorge ?",
+  "figureIds": ["l-enfant-du-pont"],
+  "regionId": "rakelstake",
+  "periodId": "freljord-moderne",
+  "entryPoint": false,
+  "leads": [
+    {
+      "toNodeId": "le-col-battu",
+      "trigger": "Passé le pont, la seule route qui monte est celle du col."
+    },
+    {
+      "toNodeId": "la-salle-commune",
+      "trigger": "Ce qu'on a vu dans la gorge se raconte au chaud, pas dehors."
+    },
+    {
+      "toNodeId": "les-pierres-dressees",
+      "trigger": "Le sentier de crête part du pont et longe les vieilles pierres."
+    }
+  ],
+  "tags": ["passage", "hameau"]
+}

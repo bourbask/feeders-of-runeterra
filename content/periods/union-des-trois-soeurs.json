@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "union-des-trois-soeurs",
+  "name": "L'union des Trois Sœurs",
+  "after": 200,
+  "before": 300,
+  "summary": "Trois sœurs rassemblent des clans qui ne s'étaient jamais parlé autrement qu'à la lame, et abattent ensemble les puissances anciennes. Le nord connaît une génération sans guerre intérieure.",
+  "factionIds": [],
+  "absentFactionIds": ["avarosans", "griffe-d-hiver", "gardiens-du-givre"],
+  "tags": ["frise", "union", "anciens-dieux"]
+}

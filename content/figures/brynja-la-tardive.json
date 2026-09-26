@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "brynja-la-tardive",
+  "name": "Brynja la Tardive",
+  "disposition": "neutre",
+  "factionId": "avarosans",
+  "periodId": "freljord-moderne",
+  "wants": "Une place au conseil pour les hameaux qui n'ont rien à mettre en commun que des bras.",
+  "refuses": "Parler au nom de gens qu'elle n'a pas consultés, même quand ils seraient d'accord.",
+  "knows": "Qui a voté quoi le soir où les absents ont été déclarés sortis, et qui s'est tu.",
+  "tags": ["conseil", "hameau"]
+}

@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "ulfar-le-preneur",
+  "name": "Ulfar le Preneur",
+  "disposition": "hostile",
+  "factionId": "griffe-d-hiver",
+  "periodId": "freljord-moderne",
+  "wants": "Que sa bande passe l'hiver sans rien demander poliment à personne.",
+  "refuses": "Prendre chez qui n'a plus rien : il compte les toits et les bêtes avant d'entrer.",
+  "knows": "Combien de jours un hameau tient avec ce qu'il montre, et combien avec ce qu'il cache.",
+  "tags": ["bande-de-guerre", "tribut"]
+}

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "la-dette-du-versant-bas",
+  "name": "La dette du versant bas",
+  "appliesTo": {
+    "kind": "faction",
+    "factionId": "griffe-d-hiver"
+  },
+  "vowRank": "redoutable",
+  "periodId": "freljord-moderne",
+  "suggestedBondIds": ["sigrid-au-tribut"],
+  "pitch": "Le tribut a doublé, le hameau a payé sans discuter, et celui qui l'a encaissé n'avait rien demandé à sa cheffe.",
+  "tags": ["tribut"]
+}

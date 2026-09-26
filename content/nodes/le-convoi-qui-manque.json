@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "le-convoi-qui-manque",
+  "name": "Le convoi qui manque",
+  "kind": "rencontre",
+  "situation": "Un convoi parti plein, arrivé vide, et deux comptes signés de la même main. Les traîneaux sont là, rangés, en bon état ; les bêtes aussi. Les conducteurs ont été payés et sont rentrés chez eux sans rien dire de particulier. Celui qui a signé les deux comptes est le seul à ne pas être rentré. La marchande sans clan, qui a croisé le convoi à mi-route, sait combien de traîneaux étaient chargés ce jour-là, et elle n'a pas envie de le dire gratuitement.",
+  "stakeQuestion": "Le grain a-t-il été volé, vendu, ou remis à quelqu'un qui avait le droit de le demander ?",
+  "figureIds": ["la-marchande-sans-clan", "katla-la-compteuse"],
+  "regionId": "avarosa-reach",
+  "periodId": "freljord-moderne",
+  "entryPoint": false,
+  "leads": [
+    {
+      "toNodeId": "la-carcasse-sous-la-neige",
+      "trigger": "Une bête de trait manque à l'appel, et on l'a vue partir vers le haut."
+    },
+    {
+      "toNodeId": "le-col-battu",
+      "trigger": "La marchande dit avoir croisé les traîneaux là où ils n'avaient rien à faire."
+    },
+    {
+      "toNodeId": "le-conseil-des-greniers",
+      "trigger": "Le second compte porte un sceau que seul le conseil délivre."
+    }
+  ],
+  "tags": ["grain", "enquete"]
+}

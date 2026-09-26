@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "tenir-la-derniere-porte",
+  "name": "Tenir la dernière porte",
+  "appliesTo": {
+    "kind": "trait",
+    "tag": "protection"
+  },
+  "vowRank": "dangereux",
+  "periodId": "freljord-moderne",
+  "suggestedBondIds": ["l-enfant-du-pont"],
+  "pitch": "Il reste une porte entre le hameau et le col, et plus personne d'assez grand pour la tenir une nuit entière.",
+  "tags": ["protection"]
+}

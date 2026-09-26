@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "la-faille-hurlante",
+  "name": "La Faille Hurlante",
+  "kind": "lieu",
+  "situation": "Une entaille dans le monde, ouverte lors d'une guerre dont les récits ne s'accordent pas, et le vent qui en remonte porte un bruit qu'on prend pour du vent. Les bêtes l'ont désertée le même jour, toutes, et ne sont pas revenues. Un pont enjambe la faille sans qu'on sache qui l'a bâti ni pourquoi il est encore debout. La glace du bord s'est fendue d'un côté à l'autre, sans bruit et sans que rien ne bouge depuis.",
+  "stakeQuestion": "Ce qui est arrivé ici est-il fini, ou seulement interrompu ?",
+  "figureIds": [],
+  "regionId": "howling-abyss",
+  "periodId": "freljord-moderne",
+  "entryPoint": false,
+  "leads": [
+    {
+      "toNodeId": "le-pont-sans-fin",
+      "trigger": "Traverser est la seule façon de voir l'autre bord."
+    },
+    {
+      "toNodeId": "la-marque-sur-la-glace",
+      "trigger": "La fente du bord n'est pas une fente : elle est régulière."
+    },
+    {
+      "toNodeId": "les-pierres-dressees",
+      "trigger": "La ligne des pierres s'arrête juste avant la faille, et pas par hasard."
+    }
+  ],
+  "tags": ["faille", "ancien"]
+}

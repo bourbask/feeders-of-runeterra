@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "la-soeur-qui-est-restee",
+  "name": "La sœur qui est restée",
+  "disposition": "inconnu",
+  "factionId": null,
+  "periodId": "guerre-des-trois-soeurs",
+  "wants": "Tenir l'union d'une seule main, alors que les deux autres ont déjà lâché la leur.",
+  "refuses": "Choisir entre ses sœurs devant les clans assemblés, quoi qu'il lui en coûte ensuite.",
+  "knows": "Ce qui a été promis sous la glace, et par laquelle des trois.",
+  "tags": ["rupture", "union"]
+}

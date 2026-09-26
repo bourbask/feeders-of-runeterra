@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "le-conseil-des-greniers",
+  "name": "Le conseil des greniers",
+  "kind": "confrontation",
+  "situation": "Douze bancs, dix occupés, et deux hameaux déclarés sortis parce qu'ils n'étaient pas là le soir du vote. La mesure en discussion est simple : on sert d'abord ceux qui ont signé. Personne ne la défend à voix haute et personne ne s'y oppose non plus, parce que l'hiver est déjà là et que revenir sur un vote prendrait une semaine. Celle qui parle pour les hameaux sans grain attend son tour depuis deux séances. Une escorte en armes est postée à l'extérieur, et c'est la première fois.",
+  "stakeQuestion": "Le conseil sert-il encore ceux qui n'ont rien à mettre en commun ?",
+  "figureIds": ["brynja-la-tardive", "katla-la-compteuse", "halvar-du-gue"],
+  "regionId": "avarosa-reach",
+  "periodId": "freljord-moderne",
+  "entryPoint": false,
+  "leads": [
+    {
+      "toNodeId": "le-col-battu",
+      "trigger": "Le conseil veut savoir qui tient la route du grain avant de voter."
+    },
+    {
+      "toNodeId": "la-veille-du-givre",
+      "trigger": "Un émissaire de la Citadelle attend une réponse depuis trois jours."
+    },
+    {
+      "toNodeId": "le-camp-de-la-griffe",
+      "trigger": "Un hameau du versant bas a payé un tribut que le conseil n'a pas autorisé."
+    },
+    {
+      "toNodeId": "la-porte-de-rakelstake",
+      "trigger": "Les deux hameaux déclarés sortis sont rentrés chez eux sans un mot."
+    }
+  ],
+  "tags": ["conseil", "avarosans"]
+}
