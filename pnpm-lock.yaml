@@ -467,9 +467,18 @@ importers:
 
   packages/sim:
     dependencies:
+      '@for/content':
+        specifier: workspace:*
+        version: link:../content
+      '@for/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@for/db':
         specifier: workspace:*
         version: link:../db
+      '@for/engine':
+        specifier: workspace:*
+        version: link:../engine
       '@for/server':
         specifier: workspace:*
         version: link:../server

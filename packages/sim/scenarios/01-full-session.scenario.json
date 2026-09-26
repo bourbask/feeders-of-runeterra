@@ -1,0 +1,177 @@
+{
+  "id": "01-full-session",
+  "title": "Une séance entière : parler, chercher, sonder, endurer le froid",
+  "seed": "sim-01",
+  "startedAt": "2026-01-06T18:00:00.000Z",
+  "players": [
+    {
+      "symbol": "PYRA",
+      "displayName": "Alice",
+      "character": {
+        "symbol": "CHRA",
+        "championId": "ashe",
+        "displayName": "Ashe",
+        "attributes": {
+          "vif": 2,
+          "coeur": 2,
+          "fer": 2,
+          "ombre": 1,
+          "esprit": 3
+        },
+        "gauges": {
+          "vigueur": 5,
+          "ame": 5,
+          "vivres": 5
+        },
+        "momentum": 2
+      }
+    },
+    {
+      "symbol": "PYRB",
+      "displayName": "Bruno",
+      "character": {
+        "symbol": "CHRB",
+        "championId": "braum",
+        "displayName": "Braum",
+        "attributes": {
+          "vif": 1,
+          "coeur": 3,
+          "fer": 3,
+          "ombre": 1,
+          "esprit": 2
+        },
+        "gauges": {
+          "vigueur": 5,
+          "ame": 5,
+          "vivres": 5
+        },
+        "momentum": 2
+      }
+    }
+  ],
+  "entities": [
+    {
+      "symbol": "ENTA",
+      "kind": "npc",
+      "displayName": "Katla la passeuse"
+    }
+  ],
+  "scene": {
+    "title": "Le col battu par la tempête",
+    "locationName": "Le col",
+    "entities": ["ENTA"]
+  },
+  "steps": [
+    {
+      "kind": "intent",
+      "player": "PYRA",
+      "intent": {
+        "type": "play_session.begin"
+      }
+    },
+    {
+      "kind": "speak",
+      "player": "PYRA",
+      "channel": "ic",
+      "text": "On passe par le col, et on ne s'arrête pas.",
+      "expect": {
+        "accepted": true,
+        "events": ["narration.player_message", "narration.gm_message"]
+      },
+      "note": "`c2s.speak` DEVIENT une intention `speech.say` : le meme chemin d'ecriture, jamais un second."
+    },
+    {
+      "kind": "speak",
+      "player": "PYRB",
+      "channel": "ooc",
+      "text": "Je garde le dos d'Alice."
+    },
+    {
+      "kind": "intent",
+      "player": "PYRA",
+      "intent": {
+        "type": "move.secure_advantage",
+        "attribute": "esprit",
+        "description": "Lire le vent avant d'engager."
+      },
+      "expect": {
+        "accepted": true,
+        "events": [
+          "move.declared",
+          "roll.action_resolved",
+          "character.momentum_changed",
+          "move.resolved",
+          "narration.gm_message"
+        ]
+      }
+    },
+    {
+      "kind": "intent",
+      "player": "PYRB",
+      "intent": {
+        "type": "move.gather_information",
+        "description": "Demander à Katla ce qu'elle a vu passer."
+      }
+    },
+    {
+      "kind": "intent",
+      "player": "PYRA",
+      "intent": {
+        "type": "move.probe_a_soul",
+        "target": {
+          "kind": "description",
+          "text": "La passeuse, qui regarde ailleurs quand on parle du nord."
+        }
+      }
+    },
+    {
+      "kind": "intent",
+      "player": "PYRB",
+      "intent": {
+        "type": "move.endure_cold"
+      },
+      "expect": {
+        "accepted": true,
+        "events": [
+          "move.declared",
+          "roll.action_resolved",
+          "character.gauge_changed",
+          "move.resolved",
+          "narration.gm_message"
+        ]
+      },
+      "note": "Endurer le froid touche une jauge : l'entree de jauge est distincte du `move.resolved` qui la resume."
+    },
+    {
+      "kind": "secret",
+      "player": "PYRA",
+      "text": "Tu reconnais la broche à son col.",
+      "note": "Une entrée adressée : le fil d'Alice avance, celui de Bruno non."
+    },
+    {
+      "kind": "intent",
+      "player": "PYRA",
+      "intent": {
+        "type": "play_session.end"
+      },
+      "expect": {
+        "accepted": true,
+        "gauges": {
+          "CHRA": {
+            "vigueur": 5,
+            "ame": 5,
+            "vivres": 5,
+            "momentum": 5
+          },
+          "CHRB": {
+            "vigueur": 5,
+            "ame": 5,
+            "vivres": 4,
+            "momentum": 4
+          }
+        }
+      },
+      "note": "Les jauges des DEUX personnages a la fin : un scenario a deux acteurs se lit a deux acteurs."
+    }
+  ]
+}

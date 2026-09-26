@@ -21,9 +21,12 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@for/content": "workspace:*",
+    "@for/contracts": "workspace:*",
+    "@for/db": "workspace:*",
+    "@for/engine": "workspace:*",
     "@for/server": "workspace:*",
-    "@for/testkit": "workspace:*",
-    "@for/db": "workspace:*"
+    "@for/testkit": "workspace:*"
   },
   "devDependencies": {
     "@for/tsconfig": "workspace:*"

@@ -1,0 +1,125 @@
+{
+  "id": "06-two-players-interleaved",
+  "title": "Deux joueurs, aucune file de tour, et le filet de sécurité de la brûlure",
+  "seed": "sim-06",
+  "startedAt": "2026-01-11T18:00:00.000Z",
+  "players": [
+    {
+      "symbol": "PYRA",
+      "displayName": "Alice",
+      "character": {
+        "symbol": "CHRA",
+        "championId": "ashe",
+        "displayName": "Ashe",
+        "attributes": {
+          "vif": 1,
+          "coeur": 1,
+          "fer": 1,
+          "ombre": 1,
+          "esprit": 1
+        },
+        "gauges": {
+          "vigueur": 5,
+          "ame": 5,
+          "vivres": 5
+        },
+        "momentum": 9
+      }
+    },
+    {
+      "symbol": "PYRB",
+      "displayName": "Bruno",
+      "character": {
+        "symbol": "CHRB",
+        "championId": "braum",
+        "displayName": "Braum",
+        "attributes": {
+          "vif": 1,
+          "coeur": 3,
+          "fer": 3,
+          "ombre": 1,
+          "esprit": 2
+        },
+        "gauges": {
+          "vigueur": 5,
+          "ame": 5,
+          "vivres": 5
+        },
+        "momentum": 2
+      }
+    }
+  ],
+  "entities": [],
+  "scene": null,
+  "steps": [
+    {
+      "kind": "intent",
+      "player": "PYRA",
+      "intent": {
+        "type": "move.face_danger",
+        "attribute": "vif",
+        "description": "Passer devant, et vite."
+      },
+      "note": "Alice ouvre une fenêtre de brûlure. Son tour reste ouvert.",
+      "expect": {
+        "accepted": true,
+        "events": ["move.declared", "roll.action_resolved"],
+        "window": "open"
+      }
+    },
+    {
+      "kind": "intent",
+      "player": "PYRB",
+      "intent": {
+        "type": "move.endure_cold",
+        "description": "Tenir la nuit dehors."
+      },
+      "note": "LA TABLE EST LIBRE : le tour de Bruno passe pendant que la fenetre d'Alice est ouverte, et elle NE SE FERME PAS — l'entree ne parle pas d'Alice.",
+      "expect": {
+        "accepted": true,
+        "window": "open"
+      }
+    },
+    {
+      "kind": "intent",
+      "player": "PYRA",
+      "intent": {
+        "type": "move.secure_advantage",
+        "attribute": "fer",
+        "description": "Assurer la prise."
+      },
+      "note": "Alice a un jet en attente : `move_in_progress`. Ce n'est PAS un verrou de tour — Bruno vient de jouer — et le journal ne gagne rien.",
+      "expect": {
+        "events": [],
+        "window": "open"
+      }
+    },
+    {
+      "kind": "speak",
+      "player": "PYRA",
+      "channel": "ic",
+      "text": "Je ne brûle rien. On passe comme ça.",
+      "note": "LE FILET DE SECURITE : la premiere entree suivante du MEME personnage ferme la fenetre comme un `momentum.keep` — le prix et le `move.resolved` du tour precedent arrivent AVANT la parole. Ces trois entrees-la sont absentes du resultat de l'intention : un harnais qui lirait le resultat les perdrait.",
+      "expect": {
+        "accepted": true,
+        "window": "closed",
+        "events": [
+          "roll.price_paid",
+          "character.condition_added",
+          "move.resolved",
+          "narration.player_message",
+          "narration.gm_message"
+        ]
+      }
+    },
+    {
+      "kind": "intent",
+      "player": "PYRB",
+      "intent": {
+        "type": "move.face_danger",
+        "attribute": "coeur",
+        "description": "Suivre Alice sans la perdre de vue."
+      }
+    }
+  ]
+}

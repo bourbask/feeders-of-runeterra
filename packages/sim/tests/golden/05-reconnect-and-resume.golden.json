@@ -1,0 +1,1268 @@
+{
+  "journal": [
+    {
+      "payload": {
+        "contentPackHash": "24d030b6ef069dc6d4c7f4b8ddba84846af4e8ea944e5cb541f0d1a8a927c5d0",
+        "contentPackVersion": "0.1.0",
+        "name": "Couper la socket, revenir, et retrouver exactement ce qu'on avait vu",
+        "ownerPlayerId": "PYRA",
+        "pitch": "",
+        "rngSeed": "sim-05",
+        "rulesVersion": 1,
+        "slug": "sim-05-reconnect-and-resume"
+      },
+      "seq": 1,
+      "type": "campaign.created"
+    },
+    {
+      "payload": {
+        "from": "draft",
+        "to": "active"
+      },
+      "seq": 2,
+      "type": "campaign.status_changed"
+    },
+    {
+      "payload": {
+        "displayName": "Alice",
+        "playerId": "PYRA",
+        "role": "owner"
+      },
+      "seq": 3,
+      "type": "party.member_joined"
+    },
+    {
+      "payload": {
+        "displayName": "Bruno",
+        "playerId": "PYRB",
+        "role": "player"
+      },
+      "seq": 4,
+      "type": "party.member_joined"
+    },
+    {
+      "payload": {
+        "attributes": {
+          "coeur": 2,
+          "esprit": 3,
+          "fer": 2,
+          "ombre": 1,
+          "vif": 2
+        },
+        "championId": "ashe",
+        "characterId": "CHRA",
+        "displayName": "Ashe",
+        "gauges": {
+          "ame": 5,
+          "vigueur": 5,
+          "vivres": 5
+        },
+        "momentum": 2,
+        "playerId": "PYRA",
+        "sheetRef": "ashe",
+        "sheetSnapshot": {},
+        "sheetSource": "handwritten"
+      },
+      "seq": 5,
+      "type": "character.created"
+    },
+    {
+      "payload": {
+        "attributes": {
+          "coeur": 3,
+          "esprit": 2,
+          "fer": 3,
+          "ombre": 1,
+          "vif": 1
+        },
+        "championId": "braum",
+        "characterId": "CHRB",
+        "displayName": "Braum",
+        "gauges": {
+          "ame": 5,
+          "vigueur": 5,
+          "vivres": 5
+        },
+        "momentum": 2,
+        "playerId": "PYRB",
+        "sheetRef": "braum",
+        "sheetSnapshot": {},
+        "sheetSource": "handwritten"
+      },
+      "seq": 6,
+      "type": "character.created"
+    },
+    {
+      "payload": {
+        "championId": "ashe",
+        "lockKind": "reserved_pc",
+        "reason": "personnage de Alice"
+      },
+      "seq": 7,
+      "type": "party.champion_locked"
+    },
+    {
+      "payload": {
+        "championId": "braum",
+        "lockKind": "reserved_pc",
+        "reason": "personnage de Bruno"
+      },
+      "seq": 8,
+      "type": "party.champion_locked"
+    },
+    {
+      "payload": {
+        "characterId": "CHRA",
+        "chosenAttribute": "esprit",
+        "moveId": "face-danger",
+        "narrativeInput": "Lire la pente avant de descendre."
+      },
+      "seq": 9,
+      "type": "move.declared"
+    },
+    {
+      "payload": {
+        "actionDie": 5,
+        "adds": [],
+        "attribute": "esprit",
+        "attributeValue": 3,
+        "burnWindow": false,
+        "cappedAtTen": false,
+        "challengeDice": [
+          3,
+          1
+        ],
+        "characterId": "CHRA",
+        "isPresage": false,
+        "momentumBefore": 2,
+        "momentumNegated": false,
+        "moveId": "face-danger",
+        "outcome": "franche",
+        "rawTotal": 8,
+        "rngDrawIndex": 0,
+        "rngStream": "action",
+        "rollId": "00000000000000000000000003",
+        "total": 8
+      },
+      "seq": 10,
+      "type": "roll.action_resolved"
+    },
+    {
+      "payload": {
+        "cause": "effect:momentum",
+        "characterId": "CHRA",
+        "clamped": false,
+        "delta": 1,
+        "from": 2,
+        "to": 3
+      },
+      "seq": 11,
+      "type": "character.momentum_changed"
+    },
+    {
+      "payload": {
+        "characterId": "CHRA",
+        "effectsApplied": [
+          {
+            "delta": 1,
+            "op": "momentum"
+          }
+        ],
+        "moveId": "face-danger",
+        "outcome": "franche",
+        "rollSeq": 10
+      },
+      "seq": 12,
+      "type": "move.resolved"
+    },
+    {
+      "payload": {
+        "aiCallId": "00000000000000000000000007",
+        "citedEventSeqs": [
+          9,
+          10,
+          11,
+          12
+        ],
+        "model": "scripted:sim",
+        "promptVersion": "conteur/0.0.0-placeholder",
+        "source": "ai",
+        "text": "[conteur-scripte] mouvement=face-danger issue=franche acteur=0000000000000000000000CHRA"
+      },
+      "seq": 13,
+      "type": "narration.gm_message"
+    },
+    {
+      "payload": {
+        "byPlayerId": "PYRA",
+        "text": "Sous la neige, une corde déjà tendue."
+      },
+      "seq": 14,
+      "type": "system.note"
+    },
+    {
+      "payload": {
+        "characterId": "CHRB",
+        "chosenAttribute": "esprit",
+        "moveId": "gather-information",
+        "narrativeInput": "Demander au vent d'où vient la corde."
+      },
+      "seq": 15,
+      "type": "move.declared"
+    },
+    {
+      "payload": {
+        "actionDie": 6,
+        "adds": [],
+        "attribute": "esprit",
+        "attributeValue": 2,
+        "burnWindow": false,
+        "cappedAtTen": false,
+        "challengeDice": [
+          8,
+          5
+        ],
+        "characterId": "CHRB",
+        "isPresage": false,
+        "momentumBefore": 2,
+        "momentumNegated": false,
+        "moveId": "gather-information",
+        "outcome": "partielle",
+        "rawTotal": 8,
+        "rngDrawIndex": 1,
+        "rngStream": "action",
+        "rollId": "0000000000000000000000000C",
+        "total": 8
+      },
+      "seq": 16,
+      "type": "roll.action_resolved"
+    },
+    {
+      "payload": {
+        "cause": "effect:momentum",
+        "characterId": "CHRB",
+        "clamped": false,
+        "delta": 1,
+        "from": 2,
+        "to": 3
+      },
+      "seq": 17,
+      "type": "character.momentum_changed"
+    },
+    {
+      "payload": {
+        "characterId": "CHRB",
+        "effectsApplied": [
+          {
+            "delta": 1,
+            "op": "momentum"
+          }
+        ],
+        "moveId": "gather-information",
+        "outcome": "partielle",
+        "rollSeq": 16
+      },
+      "seq": 18,
+      "type": "move.resolved"
+    },
+    {
+      "payload": {
+        "aiCallId": "0000000000000000000000000G",
+        "citedEventSeqs": [
+          15,
+          16,
+          17,
+          18
+        ],
+        "model": "scripted:sim",
+        "promptVersion": "conteur/0.0.0-placeholder",
+        "source": "ai",
+        "text": "[conteur-scripte] mouvement=gather-information issue=partielle acteur=0000000000000000000000CHRB"
+      },
+      "seq": 19,
+      "type": "narration.gm_message"
+    },
+    {
+      "payload": {
+        "characterId": "CHRA",
+        "chosenAttribute": "vif",
+        "moveId": "secure-advantage",
+        "narrativeInput": "Assurer la corde avant de la suivre."
+      },
+      "seq": 20,
+      "type": "move.declared"
+    },
+    {
+      "payload": {
+        "actionDie": 1,
+        "adds": [],
+        "attribute": "vif",
+        "attributeValue": 2,
+        "burnWindow": false,
+        "cappedAtTen": false,
+        "challengeDice": [
+          1,
+          3
+        ],
+        "characterId": "CHRA",
+        "isPresage": false,
+        "momentumBefore": 3,
+        "momentumNegated": false,
+        "moveId": "secure-advantage",
+        "outcome": "partielle",
+        "rawTotal": 3,
+        "rngDrawIndex": 2,
+        "rngStream": "action",
+        "rollId": "0000000000000000000000000M",
+        "total": 3
+      },
+      "seq": 21,
+      "type": "roll.action_resolved"
+    },
+    {
+      "payload": {
+        "cause": "effect:momentum",
+        "characterId": "CHRA",
+        "clamped": false,
+        "delta": 1,
+        "from": 3,
+        "to": 4
+      },
+      "seq": 22,
+      "type": "character.momentum_changed"
+    },
+    {
+      "payload": {
+        "characterId": "CHRA",
+        "effectsApplied": [
+          {
+            "delta": 1,
+            "op": "momentum"
+          }
+        ],
+        "moveId": "secure-advantage",
+        "outcome": "partielle",
+        "rollSeq": 21
+      },
+      "seq": 23,
+      "type": "move.resolved"
+    },
+    {
+      "payload": {
+        "aiCallId": "0000000000000000000000000R",
+        "citedEventSeqs": [
+          20,
+          21,
+          22,
+          23
+        ],
+        "model": "scripted:sim",
+        "promptVersion": "conteur/0.0.0-placeholder",
+        "source": "ai",
+        "text": "[conteur-scripte] mouvement=secure-advantage issue=partielle acteur=0000000000000000000000CHRA"
+      },
+      "seq": 24,
+      "type": "narration.gm_message"
+    }
+  ],
+  "rng": {
+    "draws": {
+      "action": 3
+    },
+    "seed": "sim-05"
+  },
+  "state": {
+    "campaignId": "CAMP05",
+    "championLocks": [
+      {
+        "championId": "ashe",
+        "lockKind": "reserved_pc",
+        "reason": "personnage de Alice",
+        "setSeq": 7
+      },
+      {
+        "championId": "braum",
+        "lockKind": "reserved_pc",
+        "reason": "personnage de Bruno",
+        "setSeq": 8
+      }
+    ],
+    "characters": [
+      {
+        "assets": [],
+        "attributes": {
+          "coeur": 2,
+          "esprit": 3,
+          "fer": 2,
+          "ombre": 1,
+          "vif": 2
+        },
+        "championId": "ashe",
+        "conditions": [],
+        "createdSeq": 5,
+        "displayName": "Ashe",
+        "gauges": {
+          "ame": 5,
+          "vigueur": 5,
+          "vivres": 5
+        },
+        "id": "CHRA",
+        "momentum": 4,
+        "momentumBounds": {
+          "max": 10,
+          "min": -6,
+          "reset": 2
+        },
+        "playerId": "PYRA",
+        "sheet": {
+          "championId": "ashe",
+          "ref": "ashe",
+          "source": "handwritten"
+        },
+        "status": "active",
+        "updatedSeq": 22,
+        "xpEarned": 0,
+        "xpSpent": 0
+      },
+      {
+        "assets": [],
+        "attributes": {
+          "coeur": 3,
+          "esprit": 2,
+          "fer": 3,
+          "ombre": 1,
+          "vif": 1
+        },
+        "championId": "braum",
+        "conditions": [],
+        "createdSeq": 6,
+        "displayName": "Braum",
+        "gauges": {
+          "ame": 5,
+          "vigueur": 5,
+          "vivres": 5
+        },
+        "id": "CHRB",
+        "momentum": 3,
+        "momentumBounds": {
+          "max": 10,
+          "min": -6,
+          "reset": 2
+        },
+        "playerId": "PYRB",
+        "sheet": {
+          "championId": "braum",
+          "ref": "braum",
+          "source": "handwritten"
+        },
+        "status": "active",
+        "updatedSeq": 17,
+        "xpEarned": 0,
+        "xpSpent": 0
+      }
+    ],
+    "clocks": [],
+    "contentPackHash": "24d030b6ef069dc6d4c7f4b8ddba84846af4e8ea944e5cb541f0d1a8a927c5d0",
+    "entities": [],
+    "party": {
+      "memberPlayerIds": [
+        "PYRA",
+        "PYRB"
+      ],
+      "ownerPlayerId": "PYRA"
+    },
+    "scene": null,
+    "seq": 24,
+    "settings": {
+      "allowForgedChampions": false,
+      "gmVerbosity": "standard",
+      "models": {
+        "narration": null,
+        "structured": null
+      },
+      "oracleBias": "neutre",
+      "requireForgeReview": true,
+      "safety": {
+        "lines": [],
+        "veils": []
+      },
+      "schemaVersion": 1
+    },
+    "status": "active",
+    "tracks": [],
+    "truths": []
+  },
+  "threads": {
+    "PYRA": [
+      {
+        "deliverySeq": 1,
+        "payload": {
+          "contentPackHash": "24d030b6ef069dc6d4c7f4b8ddba84846af4e8ea944e5cb541f0d1a8a927c5d0",
+          "contentPackVersion": "0.1.0",
+          "name": "Couper la socket, revenir, et retrouver exactement ce qu'on avait vu",
+          "ownerPlayerId": "PYRA",
+          "pitch": "",
+          "rngSeed": "sim-05",
+          "rulesVersion": 1,
+          "slug": "sim-05-reconnect-and-resume"
+        },
+        "seq": 1,
+        "type": "campaign.created"
+      },
+      {
+        "deliverySeq": 2,
+        "payload": {
+          "from": "draft",
+          "to": "active"
+        },
+        "seq": 2,
+        "type": "campaign.status_changed"
+      },
+      {
+        "deliverySeq": 3,
+        "payload": {
+          "displayName": "Alice",
+          "playerId": "PYRA",
+          "role": "owner"
+        },
+        "seq": 3,
+        "type": "party.member_joined"
+      },
+      {
+        "deliverySeq": 4,
+        "payload": {
+          "displayName": "Bruno",
+          "playerId": "PYRB",
+          "role": "player"
+        },
+        "seq": 4,
+        "type": "party.member_joined"
+      },
+      {
+        "deliverySeq": 5,
+        "payload": {
+          "attributes": {
+            "coeur": 2,
+            "esprit": 3,
+            "fer": 2,
+            "ombre": 1,
+            "vif": 2
+          },
+          "championId": "ashe",
+          "characterId": "CHRA",
+          "displayName": "Ashe",
+          "gauges": {
+            "ame": 5,
+            "vigueur": 5,
+            "vivres": 5
+          },
+          "momentum": 2,
+          "playerId": "PYRA",
+          "sheetRef": "ashe",
+          "sheetSnapshot": {},
+          "sheetSource": "handwritten"
+        },
+        "seq": 5,
+        "type": "character.created"
+      },
+      {
+        "deliverySeq": 6,
+        "payload": {
+          "attributes": {
+            "coeur": 3,
+            "esprit": 2,
+            "fer": 3,
+            "ombre": 1,
+            "vif": 1
+          },
+          "championId": "braum",
+          "characterId": "CHRB",
+          "displayName": "Braum",
+          "gauges": {
+            "ame": 5,
+            "vigueur": 5,
+            "vivres": 5
+          },
+          "momentum": 2,
+          "playerId": "PYRB",
+          "sheetRef": "braum",
+          "sheetSnapshot": {},
+          "sheetSource": "handwritten"
+        },
+        "seq": 6,
+        "type": "character.created"
+      },
+      {
+        "deliverySeq": 7,
+        "payload": {
+          "championId": "ashe",
+          "lockKind": "reserved_pc",
+          "reason": "personnage de Alice"
+        },
+        "seq": 7,
+        "type": "party.champion_locked"
+      },
+      {
+        "deliverySeq": 8,
+        "payload": {
+          "championId": "braum",
+          "lockKind": "reserved_pc",
+          "reason": "personnage de Bruno"
+        },
+        "seq": 8,
+        "type": "party.champion_locked"
+      },
+      {
+        "deliverySeq": 9,
+        "payload": {
+          "characterId": "CHRA",
+          "chosenAttribute": "esprit",
+          "moveId": "face-danger",
+          "narrativeInput": "Lire la pente avant de descendre."
+        },
+        "seq": 9,
+        "type": "move.declared"
+      },
+      {
+        "deliverySeq": 10,
+        "payload": {
+          "actionDie": 5,
+          "adds": [],
+          "attribute": "esprit",
+          "attributeValue": 3,
+          "burnWindow": false,
+          "cappedAtTen": false,
+          "challengeDice": [
+            3,
+            1
+          ],
+          "characterId": "CHRA",
+          "isPresage": false,
+          "momentumBefore": 2,
+          "momentumNegated": false,
+          "moveId": "face-danger",
+          "outcome": "franche",
+          "rawTotal": 8,
+          "rngDrawIndex": 0,
+          "rngStream": "action",
+          "rollId": "00000000000000000000000003",
+          "total": 8
+        },
+        "seq": 10,
+        "type": "roll.action_resolved"
+      },
+      {
+        "deliverySeq": 11,
+        "payload": {
+          "cause": "effect:momentum",
+          "characterId": "CHRA",
+          "clamped": false,
+          "delta": 1,
+          "from": 2,
+          "to": 3
+        },
+        "seq": 11,
+        "type": "character.momentum_changed"
+      },
+      {
+        "deliverySeq": 12,
+        "payload": {
+          "characterId": "CHRA",
+          "effectsApplied": [
+            {
+              "delta": 1,
+              "op": "momentum"
+            }
+          ],
+          "moveId": "face-danger",
+          "outcome": "franche",
+          "rollSeq": 10
+        },
+        "seq": 12,
+        "type": "move.resolved"
+      },
+      {
+        "deliverySeq": 13,
+        "payload": {
+          "aiCallId": "00000000000000000000000007",
+          "citedEventSeqs": [
+            9,
+            10,
+            11,
+            12
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=face-danger issue=franche acteur=0000000000000000000000CHRA"
+        },
+        "seq": 13,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 14,
+        "payload": {
+          "byPlayerId": "PYRA",
+          "text": "Sous la neige, une corde déjà tendue."
+        },
+        "seq": 14,
+        "type": "system.note"
+      },
+      {
+        "deliverySeq": 15,
+        "payload": {
+          "characterId": "CHRB",
+          "chosenAttribute": "esprit",
+          "moveId": "gather-information",
+          "narrativeInput": "Demander au vent d'où vient la corde."
+        },
+        "seq": 15,
+        "type": "move.declared"
+      },
+      {
+        "deliverySeq": 16,
+        "payload": {
+          "actionDie": 6,
+          "adds": [],
+          "attribute": "esprit",
+          "attributeValue": 2,
+          "burnWindow": false,
+          "cappedAtTen": false,
+          "challengeDice": [
+            8,
+            5
+          ],
+          "characterId": "CHRB",
+          "isPresage": false,
+          "momentumBefore": 2,
+          "momentumNegated": false,
+          "moveId": "gather-information",
+          "outcome": "partielle",
+          "rawTotal": 8,
+          "rngDrawIndex": 1,
+          "rngStream": "action",
+          "rollId": "0000000000000000000000000C",
+          "total": 8
+        },
+        "seq": 16,
+        "type": "roll.action_resolved"
+      },
+      {
+        "deliverySeq": 17,
+        "payload": {
+          "cause": "effect:momentum",
+          "characterId": "CHRB",
+          "clamped": false,
+          "delta": 1,
+          "from": 2,
+          "to": 3
+        },
+        "seq": 17,
+        "type": "character.momentum_changed"
+      },
+      {
+        "deliverySeq": 18,
+        "payload": {
+          "characterId": "CHRB",
+          "effectsApplied": [
+            {
+              "delta": 1,
+              "op": "momentum"
+            }
+          ],
+          "moveId": "gather-information",
+          "outcome": "partielle",
+          "rollSeq": 16
+        },
+        "seq": 18,
+        "type": "move.resolved"
+      },
+      {
+        "deliverySeq": 19,
+        "payload": {
+          "aiCallId": "0000000000000000000000000G",
+          "citedEventSeqs": [
+            15,
+            16,
+            17,
+            18
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=gather-information issue=partielle acteur=0000000000000000000000CHRB"
+        },
+        "seq": 19,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 20,
+        "payload": {
+          "characterId": "CHRA",
+          "chosenAttribute": "vif",
+          "moveId": "secure-advantage",
+          "narrativeInput": "Assurer la corde avant de la suivre."
+        },
+        "seq": 20,
+        "type": "move.declared"
+      },
+      {
+        "deliverySeq": 21,
+        "payload": {
+          "actionDie": 1,
+          "adds": [],
+          "attribute": "vif",
+          "attributeValue": 2,
+          "burnWindow": false,
+          "cappedAtTen": false,
+          "challengeDice": [
+            1,
+            3
+          ],
+          "characterId": "CHRA",
+          "isPresage": false,
+          "momentumBefore": 3,
+          "momentumNegated": false,
+          "moveId": "secure-advantage",
+          "outcome": "partielle",
+          "rawTotal": 3,
+          "rngDrawIndex": 2,
+          "rngStream": "action",
+          "rollId": "0000000000000000000000000M",
+          "total": 3
+        },
+        "seq": 21,
+        "type": "roll.action_resolved"
+      },
+      {
+        "deliverySeq": 22,
+        "payload": {
+          "cause": "effect:momentum",
+          "characterId": "CHRA",
+          "clamped": false,
+          "delta": 1,
+          "from": 3,
+          "to": 4
+        },
+        "seq": 22,
+        "type": "character.momentum_changed"
+      },
+      {
+        "deliverySeq": 23,
+        "payload": {
+          "characterId": "CHRA",
+          "effectsApplied": [
+            {
+              "delta": 1,
+              "op": "momentum"
+            }
+          ],
+          "moveId": "secure-advantage",
+          "outcome": "partielle",
+          "rollSeq": 21
+        },
+        "seq": 23,
+        "type": "move.resolved"
+      },
+      {
+        "deliverySeq": 24,
+        "payload": {
+          "aiCallId": "0000000000000000000000000R",
+          "citedEventSeqs": [
+            20,
+            21,
+            22,
+            23
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=secure-advantage issue=partielle acteur=0000000000000000000000CHRA"
+        },
+        "seq": 24,
+        "type": "narration.gm_message"
+      }
+    ],
+    "PYRB": [
+      {
+        "deliverySeq": 1,
+        "payload": {
+          "contentPackHash": "24d030b6ef069dc6d4c7f4b8ddba84846af4e8ea944e5cb541f0d1a8a927c5d0",
+          "contentPackVersion": "0.1.0",
+          "name": "Couper la socket, revenir, et retrouver exactement ce qu'on avait vu",
+          "ownerPlayerId": "PYRA",
+          "pitch": "",
+          "rngSeed": "sim-05",
+          "rulesVersion": 1,
+          "slug": "sim-05-reconnect-and-resume"
+        },
+        "seq": 1,
+        "type": "campaign.created"
+      },
+      {
+        "deliverySeq": 2,
+        "payload": {
+          "from": "draft",
+          "to": "active"
+        },
+        "seq": 2,
+        "type": "campaign.status_changed"
+      },
+      {
+        "deliverySeq": 3,
+        "payload": {
+          "displayName": "Alice",
+          "playerId": "PYRA",
+          "role": "owner"
+        },
+        "seq": 3,
+        "type": "party.member_joined"
+      },
+      {
+        "deliverySeq": 4,
+        "payload": {
+          "displayName": "Bruno",
+          "playerId": "PYRB",
+          "role": "player"
+        },
+        "seq": 4,
+        "type": "party.member_joined"
+      },
+      {
+        "deliverySeq": 5,
+        "payload": {
+          "attributes": {
+            "coeur": 2,
+            "esprit": 3,
+            "fer": 2,
+            "ombre": 1,
+            "vif": 2
+          },
+          "championId": "ashe",
+          "characterId": "CHRA",
+          "displayName": "Ashe",
+          "gauges": {
+            "ame": 5,
+            "vigueur": 5,
+            "vivres": 5
+          },
+          "momentum": 2,
+          "playerId": "PYRA",
+          "sheetRef": "ashe",
+          "sheetSnapshot": {},
+          "sheetSource": "handwritten"
+        },
+        "seq": 5,
+        "type": "character.created"
+      },
+      {
+        "deliverySeq": 6,
+        "payload": {
+          "attributes": {
+            "coeur": 3,
+            "esprit": 2,
+            "fer": 3,
+            "ombre": 1,
+            "vif": 1
+          },
+          "championId": "braum",
+          "characterId": "CHRB",
+          "displayName": "Braum",
+          "gauges": {
+            "ame": 5,
+            "vigueur": 5,
+            "vivres": 5
+          },
+          "momentum": 2,
+          "playerId": "PYRB",
+          "sheetRef": "braum",
+          "sheetSnapshot": {},
+          "sheetSource": "handwritten"
+        },
+        "seq": 6,
+        "type": "character.created"
+      },
+      {
+        "deliverySeq": 7,
+        "payload": {
+          "championId": "ashe",
+          "lockKind": "reserved_pc",
+          "reason": "personnage de Alice"
+        },
+        "seq": 7,
+        "type": "party.champion_locked"
+      },
+      {
+        "deliverySeq": 8,
+        "payload": {
+          "championId": "braum",
+          "lockKind": "reserved_pc",
+          "reason": "personnage de Bruno"
+        },
+        "seq": 8,
+        "type": "party.champion_locked"
+      },
+      {
+        "deliverySeq": 9,
+        "payload": {
+          "characterId": "CHRA",
+          "chosenAttribute": "esprit",
+          "moveId": "face-danger",
+          "narrativeInput": "Lire la pente avant de descendre."
+        },
+        "seq": 9,
+        "type": "move.declared"
+      },
+      {
+        "deliverySeq": 10,
+        "payload": {
+          "actionDie": 5,
+          "adds": [],
+          "attribute": "esprit",
+          "attributeValue": 3,
+          "burnWindow": false,
+          "cappedAtTen": false,
+          "challengeDice": [
+            3,
+            1
+          ],
+          "characterId": "CHRA",
+          "isPresage": false,
+          "momentumBefore": 2,
+          "momentumNegated": false,
+          "moveId": "face-danger",
+          "outcome": "franche",
+          "rawTotal": 8,
+          "rngDrawIndex": 0,
+          "rngStream": "action",
+          "rollId": "00000000000000000000000003",
+          "total": 8
+        },
+        "seq": 10,
+        "type": "roll.action_resolved"
+      },
+      {
+        "deliverySeq": 11,
+        "payload": {
+          "cause": "effect:momentum",
+          "characterId": "CHRA",
+          "clamped": false,
+          "delta": 1,
+          "from": 2,
+          "to": 3
+        },
+        "seq": 11,
+        "type": "character.momentum_changed"
+      },
+      {
+        "deliverySeq": 12,
+        "payload": {
+          "characterId": "CHRA",
+          "effectsApplied": [
+            {
+              "delta": 1,
+              "op": "momentum"
+            }
+          ],
+          "moveId": "face-danger",
+          "outcome": "franche",
+          "rollSeq": 10
+        },
+        "seq": 12,
+        "type": "move.resolved"
+      },
+      {
+        "deliverySeq": 13,
+        "payload": {
+          "aiCallId": "00000000000000000000000007",
+          "citedEventSeqs": [
+            9,
+            10,
+            11,
+            12
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=face-danger issue=franche acteur=0000000000000000000000CHRA"
+        },
+        "seq": 13,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 14,
+        "payload": {
+          "characterId": "CHRB",
+          "chosenAttribute": "esprit",
+          "moveId": "gather-information",
+          "narrativeInput": "Demander au vent d'où vient la corde."
+        },
+        "seq": 15,
+        "type": "move.declared"
+      },
+      {
+        "deliverySeq": 15,
+        "payload": {
+          "actionDie": 6,
+          "adds": [],
+          "attribute": "esprit",
+          "attributeValue": 2,
+          "burnWindow": false,
+          "cappedAtTen": false,
+          "challengeDice": [
+            8,
+            5
+          ],
+          "characterId": "CHRB",
+          "isPresage": false,
+          "momentumBefore": 2,
+          "momentumNegated": false,
+          "moveId": "gather-information",
+          "outcome": "partielle",
+          "rawTotal": 8,
+          "rngDrawIndex": 1,
+          "rngStream": "action",
+          "rollId": "0000000000000000000000000C",
+          "total": 8
+        },
+        "seq": 16,
+        "type": "roll.action_resolved"
+      },
+      {
+        "deliverySeq": 16,
+        "payload": {
+          "cause": "effect:momentum",
+          "characterId": "CHRB",
+          "clamped": false,
+          "delta": 1,
+          "from": 2,
+          "to": 3
+        },
+        "seq": 17,
+        "type": "character.momentum_changed"
+      },
+      {
+        "deliverySeq": 17,
+        "payload": {
+          "characterId": "CHRB",
+          "effectsApplied": [
+            {
+              "delta": 1,
+              "op": "momentum"
+            }
+          ],
+          "moveId": "gather-information",
+          "outcome": "partielle",
+          "rollSeq": 16
+        },
+        "seq": 18,
+        "type": "move.resolved"
+      },
+      {
+        "deliverySeq": 18,
+        "payload": {
+          "aiCallId": "0000000000000000000000000G",
+          "citedEventSeqs": [
+            15,
+            16,
+            17,
+            18
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=gather-information issue=partielle acteur=0000000000000000000000CHRB"
+        },
+        "seq": 19,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 19,
+        "payload": {
+          "characterId": "CHRA",
+          "chosenAttribute": "vif",
+          "moveId": "secure-advantage",
+          "narrativeInput": "Assurer la corde avant de la suivre."
+        },
+        "seq": 20,
+        "type": "move.declared"
+      },
+      {
+        "deliverySeq": 20,
+        "payload": {
+          "actionDie": 1,
+          "adds": [],
+          "attribute": "vif",
+          "attributeValue": 2,
+          "burnWindow": false,
+          "cappedAtTen": false,
+          "challengeDice": [
+            1,
+            3
+          ],
+          "characterId": "CHRA",
+          "isPresage": false,
+          "momentumBefore": 3,
+          "momentumNegated": false,
+          "moveId": "secure-advantage",
+          "outcome": "partielle",
+          "rawTotal": 3,
+          "rngDrawIndex": 2,
+          "rngStream": "action",
+          "rollId": "0000000000000000000000000M",
+          "total": 3
+        },
+        "seq": 21,
+        "type": "roll.action_resolved"
+      },
+      {
+        "deliverySeq": 21,
+        "payload": {
+          "cause": "effect:momentum",
+          "characterId": "CHRA",
+          "clamped": false,
+          "delta": 1,
+          "from": 3,
+          "to": 4
+        },
+        "seq": 22,
+        "type": "character.momentum_changed"
+      },
+      {
+        "deliverySeq": 22,
+        "payload": {
+          "characterId": "CHRA",
+          "effectsApplied": [
+            {
+              "delta": 1,
+              "op": "momentum"
+            }
+          ],
+          "moveId": "secure-advantage",
+          "outcome": "partielle",
+          "rollSeq": 21
+        },
+        "seq": 23,
+        "type": "move.resolved"
+      },
+      {
+        "deliverySeq": 23,
+        "payload": {
+          "aiCallId": "0000000000000000000000000R",
+          "citedEventSeqs": [
+            20,
+            21,
+            22,
+            23
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=secure-advantage issue=partielle acteur=0000000000000000000000CHRA"
+        },
+        "seq": 24,
+        "type": "narration.gm_message"
+      }
+    ]
+  }
+}
