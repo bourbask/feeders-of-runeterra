@@ -354,10 +354,20 @@ describe('le corpus doré épingle la charge utile, pas seulement le type', () =
     if (scenario === undefined) return;
 
     const table = symbolsOf(scenario);
-    // Two entries at least, and the map is read as a WHOLE: emptying it has to
-    // make this fall.
-    expect(table.size).toBeGreaterThanOrEqual(6);
-    for (const [id, symbol] of table) expect(id).toBe(symbol.padStart(26, '0'));
+    // WRITTEN OUT, not derived: these seven symbols are what
+    // `01-full-session.scenario.json` declares — two players, their two
+    // characters, one entity — plus the campaign and the scene the harness
+    // derives from the file name. Comparing the table to `expandUlid` instead
+    // would compare `padStart` with itself.
+    expect([...table.values()].sort()).toEqual([
+      'CAMP01',
+      'CHRA',
+      'CHRB',
+      'ENTA',
+      'PYRA',
+      'PYRB',
+      'SCN01',
+    ]);
 
     const raw = readFileSync(join(fileURLToPath(GOLDEN_DIR), `${scenario.id}.golden.json`), 'utf8');
     // NAMED identifiers are gone from the corpus, every one of them.
