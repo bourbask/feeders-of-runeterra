@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "le-veilleur-en-retard",
+  "name": "Le veilleur en retard",
+  "kind": "allie",
+  "periodId": "la-longue-nuit",
+  "regionKinds": ["site", "etablissement"],
+  "oracleRef": "npc-goals",
+  "summary": "Un homme qui devait relever quelqu'un et qui arrive après, avec une explication qu'il n'a pas préparée.",
+  "tags": ["allie", "veille"]
+}

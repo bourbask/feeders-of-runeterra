@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "guerre-des-trois-soeurs",
+  "name": "La Guerre des Trois Sœurs",
+  "after": 300,
+  "before": 400,
+  "summary": "L'union se rompt sur un secret, la Vraie Glace change de mains, et le rituel prononcé au bord de la faille fend le nord d'un bout à l'autre. Les récits de ce qui s'est passé là ne s'accordent sur rien.",
+  "factionIds": [],
+  "absentFactionIds": ["avarosans", "griffe-d-hiver", "gardiens-du-givre"],
+  "tags": ["frise", "rupture", "vraie-glace"]
+}

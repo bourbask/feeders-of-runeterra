@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "la-veille-qui-s-impatiente",
+  "name": "La veille qui s'impatiente",
+  "segments": 10,
+  "stake": "Ce qui dort sous la Faille, et le silence qu'on entretient autour depuis assez longtemps pour qu'il passe pour du calme.",
+  "periodId": "freljord-moderne",
+  "regionIds": ["frostguard-citadel", "howling-abyss", "freljord"],
+  "tags": ["territoire-conteste", "veille", "sous-la-glace"],
+  "portents": [
+    "Des voyageurs sont accueillis à la Citadelle et repartent avec moins de questions qu'à l'arrivée.",
+    "On demande aux clans du haut de céder leurs vieilles pierres gravées, contre du sel.",
+    "Un couloir de la Citadelle descend plus bas qu'au dernier passage, et personne ne l'a creusé.",
+    "Les bêtes désertent la Faille Hurlante, toutes le même jour.",
+    "Un veilleur quitte son poste sans explication, et sa place est comblée avant le soir.",
+    "Le gel remonte les vallées à contre-saison, en suivant les anciennes routes.",
+    "Un chant sans paroles s'entend la nuit au fond du col, et les enfants le répètent au matin.",
+    "La Citadelle ferme ses portes aux marchands, pour la première fois de mémoire d'homme.",
+    "La glace de la Faille se fend d'un bord à l'autre, sans bruit.",
+    "Ce qu'on gardait n'est plus gardé, et le nord apprend enfin ce qu'on lui cachait."
+  ]
+}

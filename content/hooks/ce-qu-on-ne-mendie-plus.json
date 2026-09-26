@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "ce-qu-on-ne-mendie-plus",
+  "name": "Ce qu'on ne mendie plus",
+  "appliesTo": {
+    "kind": "champion",
+    "championId": "sejuani"
+  },
+  "vowRank": "redoutable",
+  "periodId": "freljord-moderne",
+  "suggestedBondIds": ["ulfar-le-preneur", "torvald-qui-est-descendu"],
+  "pitch": "Une bande a hiverné en bas sans qu'on le lui accorde et n'est pas remontée au dégel. Elle porte encore les mêmes couleurs, elle prend en leur nom, et elle n'obéit plus à personne.",
+  "tags": ["commandement", "bande-de-guerre"]
+}

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "le-grenier-de-pierre",
+  "name": "Le Grenier de Pierre",
+  "kind": "lieu",
+  "situation": "Le plus grand grenier de la Marche, ouvert de l'intérieur une nuit d'automne, et refermé avant le jour. Personne n'accuse personne : chacun sait ce que coûterait une accusation. La compteuse tient encore ses registres mais ne les lit plus devant témoin, sur ordre du conseil, et les clans qui ont signé pour le grain d'hiver commencent à trouver que leur part maigrit. Deux gardes se relaient à la porte basse, l'un pour le conseil, l'autre pour son propre clan, et les deux se surveillent plus qu'ils ne surveillent le grain.",
+  "stakeQuestion": "Qui a ouvert le grenier de l'intérieur, et à qui le contenu a-t-il servi ?",
+  "figureIds": ["katla-la-compteuse", "brynja-la-tardive"],
+  "regionId": "avarosa-reach",
+  "periodId": "freljord-moderne",
+  "entryPoint": true,
+  "leads": [
+    {
+      "toNodeId": "le-convoi-qui-manque",
+      "trigger": "Les registres désignent un convoi qui n'est jamais arrivé."
+    },
+    {
+      "toNodeId": "le-gue-bas",
+      "trigger": "La seule route par laquelle des sacs ont pu sortir passe le gué."
+    },
+    {
+      "toNodeId": "le-conseil-des-greniers",
+      "trigger": "La compteuse veut qu'on lise son compte devant le conseil."
+    }
+  ],
+  "tags": ["grain", "avarosans"]
+}

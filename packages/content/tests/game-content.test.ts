@@ -86,6 +86,8 @@ import { describe, expect, it } from 'vitest';
 import { readContentFiles } from '../src/load.js';
 import { collectRefs } from '../src/validate.js';
 
+import { normaliseChampionName } from './champion-names.js';
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..', '..', 'content');
 
@@ -421,16 +423,6 @@ export function forestProblems(files: Files): readonly string[] {
 
 const sheetOf = (files: Files, id: string): Record<string, unknown> | undefined =>
   record(parsed(files, `champions/${id}.json`));
-
-/** The normalisation of 02-mj-ia.md section 8.4, used by `no_reserved_champion`. */
-export function normaliseChampionName(value: string): string {
-  return value
-    .normalize('NFD')
-    .replaceAll(/[̀-ͯ]/gu, '')
-    .toLowerCase()
-    .replaceAll(/[\s‐-―_-]+/gu, ' ')
-    .trim();
-}
 
 export function sheetProblems(files: Files): readonly string[] {
   const problems: string[] = [];

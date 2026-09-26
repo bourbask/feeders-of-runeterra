@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "l-enfant-du-pont",
+  "name": "L'enfant du pont",
+  "disposition": "allie",
+  "factionId": null,
+  "periodId": "freljord-moderne",
+  "wants": "Que quelqu'un répare le pont avant que le gel finisse le travail commencé à l'automne.",
+  "refuses": "Quitter le hameau, même pour un hiver, même pour manger tous les jours.",
+  "knows": "L'ordre exact des dalles qui tiennent encore, et de celles qui sonnent creux.",
+  "tags": ["hameau", "passage"]
+}

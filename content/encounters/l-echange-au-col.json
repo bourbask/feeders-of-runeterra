@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "l-echange-au-col",
+  "name": "L'échange au col",
+  "kind": "marchand",
+  "periodId": "freljord-moderne",
+  "regionKinds": ["etendue", "site"],
+  "oracleRef": "npc-goals",
+  "summary": "Deux groupes qui ne se saluent pas troquent au bord de la route, chacun surveillant la crête derrière l'autre.",
+  "tags": ["marchand", "passage"]
+}

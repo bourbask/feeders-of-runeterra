@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "le-poro-obstine",
+  "name": "Le poro obstiné",
+  "kind": "bete",
+  "periodId": "freljord-moderne",
+  "regionKinds": ["etablissement", "territoire", "royaume"],
+  "oracleRef": "action-theme",
+  "summary": "Une boule de poils qui suit la bande depuis le dernier col, refuse d'être semée, et s'arrête net avant certains endroits.",
+  "tags": ["bete", "compagnon"]
+}

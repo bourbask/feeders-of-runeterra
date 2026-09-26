@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "le-convoi-de-sel",
+  "name": "Le convoi de sel",
+  "kind": "marchand",
+  "periodId": "freljord-moderne",
+  "regionKinds": ["etablissement", "territoire"],
+  "oracleRef": "npc-roles",
+  "summary": "Trois traîneaux de sel qui remontent, une escorte payée à la journée, et un maître de convoi qui vend aussi ce qu'il a vu en route.",
+  "tags": ["marchand"]
+}

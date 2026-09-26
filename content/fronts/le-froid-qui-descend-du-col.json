@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "le-froid-qui-descend-du-col",
+  "name": "Le froid qui descend du col",
+  "segments": 4,
+  "stake": "Les toits du hameau des pics, et les quarante feux qui dorment dessous.",
+  "periodId": "freljord-moderne",
+  "regionIds": ["rakelstake", "freljord"],
+  "tags": ["hiver", "hameau"],
+  "portents": [
+    "La neige tombe une semaine trop tôt, et ne fond plus entre deux chutes.",
+    "Le pont de planches prend le gel, et le bois travaille dessous.",
+    "Le hameau brûle ses réserves de bois avant la mi-hiver.",
+    "Le toit de la salle commune cède une nuit, sur ceux qui s'y étaient serrés."
+  ]
+}
