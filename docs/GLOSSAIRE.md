@@ -130,6 +130,24 @@ vitesse.
 | **Trait** | ce que ta fiche établit et qui s'applique sans jet — une langue, une origine, un métier. |
 | **Portée** | qui voit une information : `table`, `subset` (un groupe séparé), `private`. |
 
+### Les mots du scénario
+
+Les six familles de pièces qu'un scénario assemble (ADR 0012). Aucune n'ajoute une primitive au
+moteur : chacune se traduit en quelque chose qui existait déjà.
+
+| Terme | Définition | Devient |
+|---|---|---|
+| **Période** | une tranche de la frise du Freljord : ce qui est vrai alors, et ce qui ne l'est **pas encore**. | un filtre sur toutes les autres pièces |
+| **Front** | ce qui avance si personne n'intervient, avec un **présage** par étape. | une horloge de 4, 6, 8 ou 10 segments |
+| **Présage** (de front) | une étape concrète que la menace franchit. À ne pas confondre avec le **présage des dés**, qui est un doublé. | un segment d'horloge |
+| **Nœud** | une situation — un lieu, un affrontement, une révélation — avec sa question d'enjeu. Jamais un déroulé. | une scène, quand la bande y arrive |
+| **Piste** | une façon de sortir d'un nœud vers un autre. Un nœud en porte **au moins trois**, vers trois endroits différents. | rien : c'est du contenu que le conteur lit |
+| **Point d'entrée** | un nœud où la bande peut commencer (`entryPoint`). Tout autre nœud doit être atteignable depuis l'un d'eux, sinon c'est du travail perdu. | la scène initiale de la campagne |
+| **Îlot** | un groupe de nœuds reliés entre eux et à rien d'autre : chacun a bien des pistes qui mènent à lui, mais aucune ne vient d'un point d'entrée. Refusé par la cinquième passe. | rien : le contenu ne part pas |
+| **Figure** | quelqu'un défini par ce qu'il **veut**, ce qu'il **refuse** et ce qu'il **sait**. Aucun chiffre. | une entité `npc` |
+| **Ressort** | pourquoi *ces* personnages-là sont concernés. Se choisit après la distribution. | un serment et des liens |
+| **Rencontre** | marchand, allié, bête, trouvaille, obstacle. **Tirée à l'oracle**, jamais programmée. | un tirage d'oracle |
+
 ---
 
 ## Les mots du code
@@ -175,6 +193,7 @@ autres ouvrent la session, rattrapent ce qui a été manqué, ou demandent une l
 |---|---|
 | **Miroir** | les règles sont écrites dans le moteur, puis recopiées en schémas de validation dans les contrats. Cette recopie peut diverger en silence (ADR 0007), donc un test compare les deux listes membre à membre. |
 | **Garde-fou** | tout ce qui échoue quand on enfreint une règle : lint, test, vérification de dépendances. Il n'existe que s'il a été **prouvé en le violant**, dans les deux sens : rouge avec, vert sans. |
+| **Passe** | une étape de `pnpm content:check`. Il y en a **cinq** : 1 la syntaxe, 2 la forme d'un fichier, 3 les références, 4 les invariants globaux, 5 **le graphe de scénario** — la seule qui lise deux pièces ensemble. L'ordre est la garantie : une référence morte tombe en 3, jamais en 5, sinon le message enverrait le lecteur au mauvais endroit. |
 | **Corpus doré** | une sortie de référence figée dans un fichier. Le test rejoue le calcul et compare octet à octet. Une référence ne se met jamais à jour toute seule. |
 | **ADR** | un document court qui acte une décision et dit pourquoi. Dans `docs/adr/`, numérotés, à lire dans l'ordre. Une spécification ne se corrige jamais en silence. |
 

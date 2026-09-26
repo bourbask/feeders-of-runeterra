@@ -1,7 +1,8 @@
 /**
- * `pnpm content:check` — the four passes of 03-donnees.md section 4.8, as a
- * command. Exit 0 when the bundle is loadable, exit 1 on the first run that
- * finds anything, with every error reported at once.
+ * `pnpm content:check` — the four passes of 03-donnees.md section 4.8 plus the
+ * scenario-graph pass of ADR 0012 decision 4, as a command. Exit 0 when the
+ * bundle is loadable, exit 1 on the first run that finds anything, with every
+ * error reported at once.
  *
  * WHY IT LIVES IN `scripts/` AND NOT IN `packages/content/src/`. The shared
  * ESLint configuration makes `no-console` an error over
@@ -38,7 +39,7 @@ try {
   ].join(' · ');
 
   console.log(
-    `content:check — « ${root} » valide en quatre passes : ${counted}\n` +
+    `content:check — « ${root} » valide en cinq passes : ${counted}\n` +
       `  version ${bundle.version} · règles v${String(bundle.rulesVersion)} · hash ${bundle.hash.slice(0, 12)}`,
   );
 

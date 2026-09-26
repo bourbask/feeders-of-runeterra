@@ -16,8 +16,14 @@ import type {
   ChampionContent,
   ChampionIndexEntryContent,
   ConditionContent,
+  EncounterContent,
+  FigureContent,
+  FrontContent,
+  HookContent,
   MoveContent,
+  NodeContent,
   OracleTableContent,
+  PeriodContent,
   RegionContent,
   TruthContent,
 } from '@for/contracts';
@@ -73,6 +79,34 @@ export interface ContentRegistry {
   listConditions(): readonly ConditionContent[];
 
   listTruths(): readonly TruthContent[];
+
+  // ADR 0012 — the six scenario families. `find*` alongside `get*` on every
+  // one of them, because S-04 walks candidate lists and legitimately asks for
+  // an id that the chosen period filtered out: that caller has an OPTIONAL id,
+  // which is the one shape allowed to answer `undefined` (see the header).
+  getPeriod(id: string): PeriodContent;
+  findPeriod(id: string): PeriodContent | undefined;
+  listPeriods(): readonly PeriodContent[];
+
+  getFront(id: string): FrontContent;
+  findFront(id: string): FrontContent | undefined;
+  listFronts(): readonly FrontContent[];
+
+  getNode(id: string): NodeContent;
+  findNode(id: string): NodeContent | undefined;
+  listNodes(): readonly NodeContent[];
+
+  getFigure(id: string): FigureContent;
+  findFigure(id: string): FigureContent | undefined;
+  listFigures(): readonly FigureContent[];
+
+  getHook(id: string): HookContent;
+  findHook(id: string): HookContent | undefined;
+  listHooks(): readonly HookContent[];
+
+  getEncounter(id: string): EncounterContent;
+  findEncounter(id: string): EncounterContent | undefined;
+  listEncounters(): readonly EncounterContent[];
 }
 
 const sorted = <T>(map: ReadonlyMap<string, T>): readonly T[] =>
@@ -106,5 +140,29 @@ export function createRegistry(bundle: ContentBundle): ContentRegistry {
     listConditions: () => sorted(bundle.conditions),
 
     listTruths: () => bundle.truths,
+
+    getPeriod: (id: string) => required(bundle.periods, 'période', id),
+    findPeriod: (id: string) => bundle.periods.get(id),
+    listPeriods: () => sorted(bundle.periods),
+
+    getFront: (id: string) => required(bundle.fronts, 'front', id),
+    findFront: (id: string) => bundle.fronts.get(id),
+    listFronts: () => sorted(bundle.fronts),
+
+    getNode: (id: string) => required(bundle.nodes, 'nœud', id),
+    findNode: (id: string) => bundle.nodes.get(id),
+    listNodes: () => sorted(bundle.nodes),
+
+    getFigure: (id: string) => required(bundle.figures, 'figure', id),
+    findFigure: (id: string) => bundle.figures.get(id),
+    listFigures: () => sorted(bundle.figures),
+
+    getHook: (id: string) => required(bundle.hooks, 'ressort', id),
+    findHook: (id: string) => bundle.hooks.get(id),
+    listHooks: () => sorted(bundle.hooks),
+
+    getEncounter: (id: string) => required(bundle.encounters, 'rencontre', id),
+    findEncounter: (id: string) => bundle.encounters.get(id),
+    listEncounters: () => sorted(bundle.encounters),
   });
 }
