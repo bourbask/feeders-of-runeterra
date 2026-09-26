@@ -130,6 +130,29 @@ vitesse.
 | **Trait** | ce que ta fiche établit et qui s'applique sans jet — une langue, une origine, un métier. |
 | **Portée** | qui voit une information : `table`, `subset` (un groupe séparé), `private`. |
 
+### Les mots du scénario
+
+Les six familles de pièces qu'un scénario assemble (ADR 0012). Aucune n'ajoute une primitive au
+moteur : chacune se traduit en quelque chose qui existait déjà.
+
+| Terme | Définition | Devient |
+|---|---|---|
+| **Période** | une tranche de la frise du Freljord : ce qui est vrai alors, et ce qui ne l'est **pas encore**. | un filtre sur toutes les autres pièces |
+| **Front** | ce qui avance si personne n'intervient, avec un **présage** par étape. | une horloge de 4, 6, 8 ou 10 segments |
+| **Présage** (de front) | une étape concrète que la menace franchit. À ne pas confondre avec le **présage des dés**, qui est un doublé. | un segment d'horloge |
+| **Nœud** | une situation — un lieu, un affrontement, une révélation — avec sa question d'enjeu. Jamais un déroulé. | une scène, quand la bande y arrive |
+| **Piste** | une façon de sortir d'un nœud vers un autre. Un nœud en porte **au moins trois**, vers trois endroits différents. | rien : c'est du contenu que le conteur lit |
+| **Construction guidée** | la machine qui fait assembler un scénario à un modèle, une question fermée à la fois. | `@for/scenario`, S-04 |
+| **Étape** (de construction) | une des **dix** questions de `04-scenarios.md` §6, avec sa liste close de candidats. | `SCENARIO_STEPS` |
+| **Candidat** | une réponse possible : un **identifiant** du contenu, son libellé et une ligne de détail. Le modèle n'écrit que l'identifiant. | `ScenarioCandidate` |
+| **Port de décision** | l'interface par laquelle on demande son choix au modèle. Comme le port du conteur : aucun SDK derrière. | `ScenarioDecisionPort` |
+| **Étape A / étape B** | avant les personnages (l'état du monde) / après eux (pourquoi cette bande). La coupure de l'ADR 0012, décision 3. | `buildSituation` / `buildHooks` |
+| **Flux nommé `scenario`** | le hasard de la construction, amorcé par campagne, un sous-flux par étape : deux campagnes diffèrent, une campagne se rejoue. | `seed\|scenario\|<étape>` |
+| **Défaut** (d'une étape) | le premier candidat après mélange. Pris après trois réponses irrecevables : une construction ne s'arrête jamais en cours de route. | `viaDefault` |
+| **Figure** | quelqu'un défini par ce qu'il **veut**, ce qu'il **refuse** et ce qu'il **sait**. Aucun chiffre. | une entité `npc` |
+| **Ressort** | pourquoi *ces* personnages-là sont concernés. Se choisit après la distribution. | un serment et des liens |
+| **Rencontre** | marchand, allié, bête, trouvaille, obstacle. **Tirée à l'oracle**, jamais programmée. | un tirage d'oracle |
+
 ---
 
 ## Les mots du code

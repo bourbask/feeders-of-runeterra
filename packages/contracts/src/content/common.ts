@@ -17,7 +17,13 @@
 
 import { z } from 'zod';
 
-import { zAttributeId, zGaugeId, zProgressRank } from '../core/enums.js';
+import {
+  zAttributeId,
+  zClockSegmentCount,
+  zEntityDisposition,
+  zGaugeId,
+  zProgressRank,
+} from '../core/enums.js';
 import { zNonEmptyText, zSlug } from '../primitives.js';
 
 /** kebab-case ASCII slug. Section 4.2's name for `zSlug`. */
@@ -33,6 +39,30 @@ export const GaugeKeySchema = zGaugeId;
 
 export const RankSchema = zProgressRank;
 export type Rank = z.infer<typeof RankSchema>;
+
+/**
+ * Segments a scenario front asks for — S-01, ADR 0012 decision 2.
+ *
+ * AN ALIAS, NOT A SECOND TUPLE. A front becomes a CLOCK, so its segment count
+ * is the engine's `CLOCK_SEGMENT_COUNTS`, mirrored once in `core/enums.ts` and
+ * compared to the engine value by value in `tests/exhaustive-union.test.ts`.
+ * Writing `z.literal([4, 6, 8, 10])` here would be a copy nothing compares,
+ * and ADR 0007 measured what that costs.
+ */
+export const SegmentCountSchema = zClockSegmentCount;
+export type SegmentCount = z.infer<typeof SegmentCountSchema>;
+
+/**
+ * How a scenario figure stands towards the party — S-01.
+ *
+ * AN ALIAS, FOR THE SAME REASON: a figure becomes an `npc` ENTITY, so its
+ * disposition is the engine's `ENTITY_DISPOSITIONS`. The project already
+ * carries one divergence on this word — `propose_npc_introduce` offers five
+ * values where the engine holds four (`ai/tools.ts` says so out loud) — and
+ * S-01's brief names it as the mistake not to repeat.
+ */
+export const DispositionSchema = zEntityDisposition;
+export type Disposition = z.infer<typeof DispositionSchema>;
 
 /**
  * Ticks granted by one milestone, by rank.

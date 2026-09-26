@@ -1,0 +1,21 @@
+{
+  "extends": "@for/tsconfig/library.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "types": []
+  },
+  "include": ["src/**/*"],
+  "exclude": ["src/**/*.test.ts", "dist"],
+  "references": [
+    {
+      "path": "../engine"
+    },
+    {
+      "path": "../contracts"
+    },
+    {
+      "path": "../content"
+    }
+  ]
+}
