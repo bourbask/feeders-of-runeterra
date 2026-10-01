@@ -32,6 +32,14 @@ packages/db/.check-schema-*/
 
 # Worktrees et etat local des agents : jamais versionnes.
 .claude/
+<<<<<<< HEAD
+
+# Rapport de la sonde de fournisseurs (M0-31) : un artefact de mesure, pas une source.
+# Les chiffres qui comptent sont recopies dans docs/runbook/conteur-fournisseurs.md.
+probe-report*.json
+||||||| a09cd2d
+=======
 
 # Rapports produits par les évals (M0-27) et la CI.
 reports/
+>>>>>>> origin/develop

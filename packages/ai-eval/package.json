@@ -21,7 +21,8 @@
     "test:watch": "vitest",
     "eval:smoke": "tsx smoke/run-smoke.ts",
     "eval:offline": "tsx src/run-offline.ts",
-    "eval:record": "tsx src/record.ts"
+    "eval:record": "tsx src/record.ts",
+    "eval:probe": "tsx probe/run-probe.ts"
   },
   "dependencies": {
     "@for/ai": "workspace:*",
