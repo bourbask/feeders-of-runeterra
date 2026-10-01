@@ -1,0 +1,1894 @@
+{
+  "journal": [
+    {
+      "payload": {
+        "contentPackHash": "24d030b6ef069dc6d4c7f4b8ddba84846af4e8ea944e5cb541f0d1a8a927c5d0",
+        "contentPackVersion": "0.1.0",
+        "name": "Une séance entière : parler, chercher, sonder, endurer le froid",
+        "ownerPlayerId": "PYRA",
+        "pitch": "",
+        "rngSeed": "sim-01",
+        "rulesVersion": 1,
+        "slug": "sim-01-full-session"
+      },
+      "seq": 1,
+      "type": "campaign.created"
+    },
+    {
+      "payload": {
+        "from": "draft",
+        "to": "active"
+      },
+      "seq": 2,
+      "type": "campaign.status_changed"
+    },
+    {
+      "payload": {
+        "displayName": "Alice",
+        "playerId": "PYRA",
+        "role": "owner"
+      },
+      "seq": 3,
+      "type": "party.member_joined"
+    },
+    {
+      "payload": {
+        "displayName": "Bruno",
+        "playerId": "PYRB",
+        "role": "player"
+      },
+      "seq": 4,
+      "type": "party.member_joined"
+    },
+    {
+      "payload": {
+        "attributes": {
+          "coeur": 2,
+          "esprit": 3,
+          "fer": 2,
+          "ombre": 1,
+          "vif": 2
+        },
+        "championId": "ashe",
+        "characterId": "CHRA",
+        "displayName": "Ashe",
+        "gauges": {
+          "ame": 5,
+          "vigueur": 5,
+          "vivres": 5
+        },
+        "momentum": 2,
+        "playerId": "PYRA",
+        "sheetRef": "ashe",
+        "sheetSnapshot": {},
+        "sheetSource": "handwritten"
+      },
+      "seq": 5,
+      "type": "character.created"
+    },
+    {
+      "payload": {
+        "attributes": {
+          "coeur": 3,
+          "esprit": 2,
+          "fer": 3,
+          "ombre": 1,
+          "vif": 1
+        },
+        "championId": "braum",
+        "characterId": "CHRB",
+        "displayName": "Braum",
+        "gauges": {
+          "ame": 5,
+          "vigueur": 5,
+          "vivres": 5
+        },
+        "momentum": 2,
+        "playerId": "PYRB",
+        "sheetRef": "braum",
+        "sheetSnapshot": {},
+        "sheetSource": "handwritten"
+      },
+      "seq": 6,
+      "type": "character.created"
+    },
+    {
+      "payload": {
+        "championId": "ashe",
+        "lockKind": "reserved_pc",
+        "reason": "personnage de Alice"
+      },
+      "seq": 7,
+      "type": "party.champion_locked"
+    },
+    {
+      "payload": {
+        "championId": "braum",
+        "lockKind": "reserved_pc",
+        "reason": "personnage de Bruno"
+      },
+      "seq": 8,
+      "type": "party.champion_locked"
+    },
+    {
+      "payload": {
+        "details": {},
+        "disposition": "hostile",
+        "entityId": "ENTA",
+        "kind": "npc",
+        "name": "Katla la passeuse",
+        "slug": "enta",
+        "summary": "Katla la passeuse"
+      },
+      "seq": 9,
+      "type": "entity.introduced"
+    },
+    {
+      "payload": {
+        "entityIds": [
+          "ENTA"
+        ],
+        "presentCharacterIds": [
+          "CHRA",
+          "CHRB"
+        ],
+        "sceneId": "SCN01",
+        "title": "Le col battu par la tempête"
+      },
+      "seq": 10,
+      "type": "scene.started"
+    },
+    {
+      "payload": {
+        "aiCallId": "00000000000000000000000002",
+        "citedEventSeqs": [],
+        "model": "scripted:sim",
+        "promptVersion": "conteur/0.0.0-placeholder",
+        "source": "ai",
+        "text": "[conteur-scripte] mouvement=aucun issue=aucune acteur=0000000000000000000000CHRA"
+      },
+      "seq": 11,
+      "type": "narration.gm_message"
+    },
+    {
+      "payload": {
+        "characterId": "CHRA",
+        "kind": "ic",
+        "text": "On passe par le col, et on ne s'arrête pas."
+      },
+      "seq": 12,
+      "type": "narration.player_message"
+    },
+    {
+      "payload": {
+        "aiCallId": "00000000000000000000000006",
+        "citedEventSeqs": [
+          12
+        ],
+        "model": "scripted:sim",
+        "promptVersion": "conteur/0.0.0-placeholder",
+        "source": "ai",
+        "text": "[conteur-scripte] mouvement=aucun issue=aucune acteur=0000000000000000000000CHRA"
+      },
+      "seq": 13,
+      "type": "narration.gm_message"
+    },
+    {
+      "payload": {
+        "characterId": "CHRB",
+        "kind": "ooc",
+        "text": "Je garde le dos d'Alice."
+      },
+      "seq": 14,
+      "type": "narration.player_message"
+    },
+    {
+      "payload": {
+        "aiCallId": "0000000000000000000000000A",
+        "citedEventSeqs": [
+          14
+        ],
+        "model": "scripted:sim",
+        "promptVersion": "conteur/0.0.0-placeholder",
+        "source": "ai",
+        "text": "[conteur-scripte] mouvement=aucun issue=aucune acteur=0000000000000000000000CHRB"
+      },
+      "seq": 15,
+      "type": "narration.gm_message"
+    },
+    {
+      "payload": {
+        "characterId": "CHRA",
+        "chosenAttribute": "esprit",
+        "moveId": "secure-advantage",
+        "narrativeInput": "Lire le vent avant d'engager."
+      },
+      "seq": 16,
+      "type": "move.declared"
+    },
+    {
+      "payload": {
+        "actionDie": 6,
+        "adds": [],
+        "attribute": "esprit",
+        "attributeValue": 3,
+        "burnWindow": false,
+        "cappedAtTen": false,
+        "challengeDice": [
+          3,
+          2
+        ],
+        "characterId": "CHRA",
+        "isPresage": false,
+        "momentumBefore": 2,
+        "momentumNegated": false,
+        "moveId": "secure-advantage",
+        "outcome": "franche",
+        "rawTotal": 9,
+        "rngDrawIndex": 0,
+        "rngStream": "action",
+        "rollId": "0000000000000000000000000E",
+        "total": 9
+      },
+      "seq": 17,
+      "type": "roll.action_resolved"
+    },
+    {
+      "payload": {
+        "cause": "effect:momentum",
+        "characterId": "CHRA",
+        "clamped": false,
+        "delta": 2,
+        "from": 2,
+        "to": 4
+      },
+      "seq": 18,
+      "type": "character.momentum_changed"
+    },
+    {
+      "payload": {
+        "characterId": "CHRA",
+        "effectsApplied": [
+          {
+            "delta": 2,
+            "op": "momentum"
+          }
+        ],
+        "moveId": "secure-advantage",
+        "outcome": "franche",
+        "rollSeq": 17
+      },
+      "seq": 19,
+      "type": "move.resolved"
+    },
+    {
+      "payload": {
+        "aiCallId": "0000000000000000000000000J",
+        "citedEventSeqs": [
+          16,
+          17,
+          18,
+          19
+        ],
+        "model": "scripted:sim",
+        "promptVersion": "conteur/0.0.0-placeholder",
+        "source": "ai",
+        "text": "[conteur-scripte] mouvement=secure-advantage issue=franche acteur=0000000000000000000000CHRA"
+      },
+      "seq": 20,
+      "type": "narration.gm_message"
+    },
+    {
+      "payload": {
+        "characterId": "CHRB",
+        "chosenAttribute": "esprit",
+        "moveId": "gather-information",
+        "narrativeInput": "Demander à Katla ce qu'elle a vu passer."
+      },
+      "seq": 21,
+      "type": "move.declared"
+    },
+    {
+      "payload": {
+        "actionDie": 4,
+        "adds": [],
+        "attribute": "esprit",
+        "attributeValue": 2,
+        "burnWindow": false,
+        "cappedAtTen": false,
+        "challengeDice": [
+          1,
+          2
+        ],
+        "characterId": "CHRB",
+        "isPresage": false,
+        "momentumBefore": 2,
+        "momentumNegated": false,
+        "moveId": "gather-information",
+        "outcome": "franche",
+        "rawTotal": 6,
+        "rngDrawIndex": 1,
+        "rngStream": "action",
+        "rollId": "0000000000000000000000000P",
+        "total": 6
+      },
+      "seq": 22,
+      "type": "roll.action_resolved"
+    },
+    {
+      "payload": {
+        "cause": "effect:momentum",
+        "characterId": "CHRB",
+        "clamped": false,
+        "delta": 2,
+        "from": 2,
+        "to": 4
+      },
+      "seq": 23,
+      "type": "character.momentum_changed"
+    },
+    {
+      "payload": {
+        "characterId": "CHRB",
+        "effectsApplied": [
+          {
+            "delta": 2,
+            "op": "momentum"
+          }
+        ],
+        "moveId": "gather-information",
+        "outcome": "franche",
+        "rollSeq": 22
+      },
+      "seq": 24,
+      "type": "move.resolved"
+    },
+    {
+      "payload": {
+        "aiCallId": "0000000000000000000000000T",
+        "citedEventSeqs": [
+          21,
+          22,
+          23,
+          24
+        ],
+        "model": "scripted:sim",
+        "promptVersion": "conteur/0.0.0-placeholder",
+        "source": "ai",
+        "text": "[conteur-scripte] mouvement=gather-information issue=franche acteur=0000000000000000000000CHRB"
+      },
+      "seq": 25,
+      "type": "narration.gm_message"
+    },
+    {
+      "payload": {
+        "characterId": "CHRA",
+        "chosenAttribute": "coeur",
+        "moveId": "probe-a-soul",
+        "narrativeInput": "La passeuse, qui regarde ailleurs quand on parle du nord."
+      },
+      "seq": 26,
+      "type": "move.declared"
+    },
+    {
+      "payload": {
+        "actionDie": 3,
+        "adds": [],
+        "attribute": "coeur",
+        "attributeValue": 2,
+        "burnWindow": false,
+        "cappedAtTen": false,
+        "challengeDice": [
+          3,
+          7
+        ],
+        "characterId": "CHRA",
+        "isPresage": false,
+        "momentumBefore": 4,
+        "momentumNegated": false,
+        "moveId": "probe-a-soul",
+        "outcome": "partielle",
+        "rawTotal": 5,
+        "rngDrawIndex": 2,
+        "rngStream": "action",
+        "rollId": "0000000000000000000000000Y",
+        "total": 5
+      },
+      "seq": 27,
+      "type": "roll.action_resolved"
+    },
+    {
+      "payload": {
+        "cause": "effect:momentum",
+        "characterId": "CHRA",
+        "clamped": false,
+        "delta": 1,
+        "from": 4,
+        "to": 5
+      },
+      "seq": 28,
+      "type": "character.momentum_changed"
+    },
+    {
+      "payload": {
+        "characterId": "CHRA",
+        "effectsApplied": [
+          {
+            "delta": 1,
+            "op": "momentum"
+          }
+        ],
+        "moveId": "probe-a-soul",
+        "outcome": "partielle",
+        "rollSeq": 27
+      },
+      "seq": 29,
+      "type": "move.resolved"
+    },
+    {
+      "payload": {
+        "aiCallId": "00000000000000000000000012",
+        "citedEventSeqs": [
+          26,
+          27,
+          28,
+          29
+        ],
+        "model": "scripted:sim",
+        "promptVersion": "conteur/0.0.0-placeholder",
+        "source": "ai",
+        "text": "[conteur-scripte] mouvement=probe-a-soul issue=partielle acteur=0000000000000000000000CHRA"
+      },
+      "seq": 30,
+      "type": "narration.gm_message"
+    },
+    {
+      "payload": {
+        "characterId": "CHRB",
+        "chosenAttribute": "fer",
+        "moveId": "endure-cold",
+        "narrativeInput": ""
+      },
+      "seq": 31,
+      "type": "move.declared"
+    },
+    {
+      "payload": {
+        "actionDie": 2,
+        "adds": [],
+        "attribute": "fer",
+        "attributeValue": 3,
+        "burnWindow": false,
+        "cappedAtTen": false,
+        "challengeDice": [
+          9,
+          2
+        ],
+        "characterId": "CHRB",
+        "isPresage": false,
+        "momentumBefore": 4,
+        "momentumNegated": false,
+        "moveId": "endure-cold",
+        "outcome": "partielle",
+        "rawTotal": 5,
+        "rngDrawIndex": 3,
+        "rngStream": "action",
+        "rollId": "00000000000000000000000016",
+        "total": 5
+      },
+      "seq": 32,
+      "type": "roll.action_resolved"
+    },
+    {
+      "payload": {
+        "cause": "effect:gauge",
+        "characterId": "CHRB",
+        "clamped": false,
+        "delta": -1,
+        "from": 5,
+        "gauge": "vivres",
+        "to": 4
+      },
+      "seq": 33,
+      "type": "character.gauge_changed"
+    },
+    {
+      "payload": {
+        "characterId": "CHRB",
+        "effectsApplied": [
+          {
+            "delta": -1,
+            "gauge": "vivres",
+            "op": "gauge",
+            "target": "self"
+          }
+        ],
+        "moveId": "endure-cold",
+        "outcome": "partielle",
+        "rollSeq": 32
+      },
+      "seq": 34,
+      "type": "move.resolved"
+    },
+    {
+      "payload": {
+        "aiCallId": "0000000000000000000000001A",
+        "citedEventSeqs": [
+          31,
+          32,
+          33,
+          34
+        ],
+        "model": "scripted:sim",
+        "promptVersion": "conteur/0.0.0-placeholder",
+        "source": "ai",
+        "text": "[conteur-scripte] mouvement=endure-cold issue=partielle acteur=0000000000000000000000CHRB"
+      },
+      "seq": 35,
+      "type": "narration.gm_message"
+    },
+    {
+      "payload": {
+        "byPlayerId": "PYRA",
+        "text": "Tu reconnais la broche à son col."
+      },
+      "seq": 36,
+      "type": "system.note"
+    },
+    {
+      "payload": {
+        "aiCallId": "0000000000000000000000001E",
+        "citedEventSeqs": [],
+        "model": "scripted:sim",
+        "promptVersion": "conteur/0.0.0-placeholder",
+        "source": "ai",
+        "text": "[conteur-scripte] mouvement=aucun issue=aucune acteur=0000000000000000000000CHRA"
+      },
+      "seq": 37,
+      "type": "narration.gm_message"
+    }
+  ],
+  "rng": {
+    "draws": {
+      "action": 4
+    },
+    "seed": "sim-01"
+  },
+  "state": {
+    "campaignId": "CAMP01",
+    "championLocks": [
+      {
+        "championId": "ashe",
+        "lockKind": "reserved_pc",
+        "reason": "personnage de Alice",
+        "setSeq": 7
+      },
+      {
+        "championId": "braum",
+        "lockKind": "reserved_pc",
+        "reason": "personnage de Bruno",
+        "setSeq": 8
+      }
+    ],
+    "characters": [
+      {
+        "assets": [],
+        "attributes": {
+          "coeur": 2,
+          "esprit": 3,
+          "fer": 2,
+          "ombre": 1,
+          "vif": 2
+        },
+        "championId": "ashe",
+        "conditions": [],
+        "createdSeq": 5,
+        "displayName": "Ashe",
+        "gauges": {
+          "ame": 5,
+          "vigueur": 5,
+          "vivres": 5
+        },
+        "id": "CHRA",
+        "momentum": 5,
+        "momentumBounds": {
+          "max": 10,
+          "min": -6,
+          "reset": 2
+        },
+        "playerId": "PYRA",
+        "sheet": {
+          "championId": "ashe",
+          "ref": "ashe",
+          "source": "handwritten"
+        },
+        "status": "active",
+        "updatedSeq": 28,
+        "xpEarned": 0,
+        "xpSpent": 0
+      },
+      {
+        "assets": [],
+        "attributes": {
+          "coeur": 3,
+          "esprit": 2,
+          "fer": 3,
+          "ombre": 1,
+          "vif": 1
+        },
+        "championId": "braum",
+        "conditions": [],
+        "createdSeq": 6,
+        "displayName": "Braum",
+        "gauges": {
+          "ame": 5,
+          "vigueur": 5,
+          "vivres": 4
+        },
+        "id": "CHRB",
+        "momentum": 4,
+        "momentumBounds": {
+          "max": 10,
+          "min": -6,
+          "reset": 2
+        },
+        "playerId": "PYRB",
+        "sheet": {
+          "championId": "braum",
+          "ref": "braum",
+          "source": "handwritten"
+        },
+        "status": "active",
+        "updatedSeq": 33,
+        "xpEarned": 0,
+        "xpSpent": 0
+      }
+    ],
+    "clocks": [],
+    "contentPackHash": "24d030b6ef069dc6d4c7f4b8ddba84846af4e8ea944e5cb541f0d1a8a927c5d0",
+    "entities": [
+      {
+        "championId": null,
+        "details": {},
+        "disposition": "hostile",
+        "firstSeenSeq": 9,
+        "id": "ENTA",
+        "kind": "npc",
+        "lastSeenSeq": 9,
+        "name": "Katla la passeuse",
+        "regionId": null,
+        "slug": "enta",
+        "status": "active",
+        "summary": "Katla la passeuse"
+      }
+    ],
+    "party": {
+      "memberPlayerIds": [
+        "PYRA",
+        "PYRB"
+      ],
+      "ownerPlayerId": "PYRA"
+    },
+    "scene": {
+      "absent": [],
+      "placeId": "",
+      "placeName": "Le col battu par la tempête",
+      "present": [
+        {
+          "name": "Ashe",
+          "ref": {
+            "id": "CHRA",
+            "kind": "character"
+          },
+          "sinceSeq": 10,
+          "state": ""
+        },
+        {
+          "name": "Braum",
+          "ref": {
+            "id": "CHRB",
+            "kind": "character"
+          },
+          "sinceSeq": 10,
+          "state": ""
+        },
+        {
+          "name": "Katla la passeuse",
+          "ref": {
+            "id": "ENTA",
+            "kind": "entity"
+          },
+          "sinceSeq": 10,
+          "state": ""
+        }
+      ],
+      "sceneId": "SCN01",
+      "timeOfDay": "",
+      "updatedSeq": 10
+    },
+    "seq": 37,
+    "settings": {
+      "allowForgedChampions": false,
+      "gmVerbosity": "standard",
+      "models": {
+        "narration": null,
+        "structured": null
+      },
+      "oracleBias": "neutre",
+      "requireForgeReview": true,
+      "safety": {
+        "lines": [],
+        "veils": []
+      },
+      "schemaVersion": 1
+    },
+    "status": "active",
+    "tracks": [],
+    "truths": []
+  },
+  "threads": {
+    "PYRA": [
+      {
+        "deliverySeq": 1,
+        "payload": {
+          "contentPackHash": "24d030b6ef069dc6d4c7f4b8ddba84846af4e8ea944e5cb541f0d1a8a927c5d0",
+          "contentPackVersion": "0.1.0",
+          "name": "Une séance entière : parler, chercher, sonder, endurer le froid",
+          "ownerPlayerId": "PYRA",
+          "pitch": "",
+          "rngSeed": "sim-01",
+          "rulesVersion": 1,
+          "slug": "sim-01-full-session"
+        },
+        "seq": 1,
+        "type": "campaign.created"
+      },
+      {
+        "deliverySeq": 2,
+        "payload": {
+          "from": "draft",
+          "to": "active"
+        },
+        "seq": 2,
+        "type": "campaign.status_changed"
+      },
+      {
+        "deliverySeq": 3,
+        "payload": {
+          "displayName": "Alice",
+          "playerId": "PYRA",
+          "role": "owner"
+        },
+        "seq": 3,
+        "type": "party.member_joined"
+      },
+      {
+        "deliverySeq": 4,
+        "payload": {
+          "displayName": "Bruno",
+          "playerId": "PYRB",
+          "role": "player"
+        },
+        "seq": 4,
+        "type": "party.member_joined"
+      },
+      {
+        "deliverySeq": 5,
+        "payload": {
+          "attributes": {
+            "coeur": 2,
+            "esprit": 3,
+            "fer": 2,
+            "ombre": 1,
+            "vif": 2
+          },
+          "championId": "ashe",
+          "characterId": "CHRA",
+          "displayName": "Ashe",
+          "gauges": {
+            "ame": 5,
+            "vigueur": 5,
+            "vivres": 5
+          },
+          "momentum": 2,
+          "playerId": "PYRA",
+          "sheetRef": "ashe",
+          "sheetSnapshot": {},
+          "sheetSource": "handwritten"
+        },
+        "seq": 5,
+        "type": "character.created"
+      },
+      {
+        "deliverySeq": 6,
+        "payload": {
+          "attributes": {
+            "coeur": 3,
+            "esprit": 2,
+            "fer": 3,
+            "ombre": 1,
+            "vif": 1
+          },
+          "championId": "braum",
+          "characterId": "CHRB",
+          "displayName": "Braum",
+          "gauges": {
+            "ame": 5,
+            "vigueur": 5,
+            "vivres": 5
+          },
+          "momentum": 2,
+          "playerId": "PYRB",
+          "sheetRef": "braum",
+          "sheetSnapshot": {},
+          "sheetSource": "handwritten"
+        },
+        "seq": 6,
+        "type": "character.created"
+      },
+      {
+        "deliverySeq": 7,
+        "payload": {
+          "championId": "ashe",
+          "lockKind": "reserved_pc",
+          "reason": "personnage de Alice"
+        },
+        "seq": 7,
+        "type": "party.champion_locked"
+      },
+      {
+        "deliverySeq": 8,
+        "payload": {
+          "championId": "braum",
+          "lockKind": "reserved_pc",
+          "reason": "personnage de Bruno"
+        },
+        "seq": 8,
+        "type": "party.champion_locked"
+      },
+      {
+        "deliverySeq": 9,
+        "payload": {
+          "details": {},
+          "disposition": "hostile",
+          "entityId": "ENTA",
+          "kind": "npc",
+          "name": "Katla la passeuse",
+          "slug": "enta",
+          "summary": "Katla la passeuse"
+        },
+        "seq": 9,
+        "type": "entity.introduced"
+      },
+      {
+        "deliverySeq": 10,
+        "payload": {
+          "entityIds": [
+            "ENTA"
+          ],
+          "presentCharacterIds": [
+            "CHRA",
+            "CHRB"
+          ],
+          "sceneId": "SCN01",
+          "title": "Le col battu par la tempête"
+        },
+        "seq": 10,
+        "type": "scene.started"
+      },
+      {
+        "deliverySeq": 11,
+        "payload": {
+          "aiCallId": "00000000000000000000000002",
+          "citedEventSeqs": [],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=aucun issue=aucune acteur=0000000000000000000000CHRA"
+        },
+        "seq": 11,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 12,
+        "payload": {
+          "characterId": "CHRA",
+          "kind": "ic",
+          "text": "On passe par le col, et on ne s'arrête pas."
+        },
+        "seq": 12,
+        "type": "narration.player_message"
+      },
+      {
+        "deliverySeq": 13,
+        "payload": {
+          "aiCallId": "00000000000000000000000006",
+          "citedEventSeqs": [
+            12
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=aucun issue=aucune acteur=0000000000000000000000CHRA"
+        },
+        "seq": 13,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 14,
+        "payload": {
+          "characterId": "CHRB",
+          "kind": "ooc",
+          "text": "Je garde le dos d'Alice."
+        },
+        "seq": 14,
+        "type": "narration.player_message"
+      },
+      {
+        "deliverySeq": 15,
+        "payload": {
+          "aiCallId": "0000000000000000000000000A",
+          "citedEventSeqs": [
+            14
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=aucun issue=aucune acteur=0000000000000000000000CHRB"
+        },
+        "seq": 15,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 16,
+        "payload": {
+          "characterId": "CHRA",
+          "chosenAttribute": "esprit",
+          "moveId": "secure-advantage",
+          "narrativeInput": "Lire le vent avant d'engager."
+        },
+        "seq": 16,
+        "type": "move.declared"
+      },
+      {
+        "deliverySeq": 17,
+        "payload": {
+          "actionDie": 6,
+          "adds": [],
+          "attribute": "esprit",
+          "attributeValue": 3,
+          "burnWindow": false,
+          "cappedAtTen": false,
+          "challengeDice": [
+            3,
+            2
+          ],
+          "characterId": "CHRA",
+          "isPresage": false,
+          "momentumBefore": 2,
+          "momentumNegated": false,
+          "moveId": "secure-advantage",
+          "outcome": "franche",
+          "rawTotal": 9,
+          "rngDrawIndex": 0,
+          "rngStream": "action",
+          "rollId": "0000000000000000000000000E",
+          "total": 9
+        },
+        "seq": 17,
+        "type": "roll.action_resolved"
+      },
+      {
+        "deliverySeq": 18,
+        "payload": {
+          "cause": "effect:momentum",
+          "characterId": "CHRA",
+          "clamped": false,
+          "delta": 2,
+          "from": 2,
+          "to": 4
+        },
+        "seq": 18,
+        "type": "character.momentum_changed"
+      },
+      {
+        "deliverySeq": 19,
+        "payload": {
+          "characterId": "CHRA",
+          "effectsApplied": [
+            {
+              "delta": 2,
+              "op": "momentum"
+            }
+          ],
+          "moveId": "secure-advantage",
+          "outcome": "franche",
+          "rollSeq": 17
+        },
+        "seq": 19,
+        "type": "move.resolved"
+      },
+      {
+        "deliverySeq": 20,
+        "payload": {
+          "aiCallId": "0000000000000000000000000J",
+          "citedEventSeqs": [
+            16,
+            17,
+            18,
+            19
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=secure-advantage issue=franche acteur=0000000000000000000000CHRA"
+        },
+        "seq": 20,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 21,
+        "payload": {
+          "characterId": "CHRB",
+          "chosenAttribute": "esprit",
+          "moveId": "gather-information",
+          "narrativeInput": "Demander à Katla ce qu'elle a vu passer."
+        },
+        "seq": 21,
+        "type": "move.declared"
+      },
+      {
+        "deliverySeq": 22,
+        "payload": {
+          "actionDie": 4,
+          "adds": [],
+          "attribute": "esprit",
+          "attributeValue": 2,
+          "burnWindow": false,
+          "cappedAtTen": false,
+          "challengeDice": [
+            1,
+            2
+          ],
+          "characterId": "CHRB",
+          "isPresage": false,
+          "momentumBefore": 2,
+          "momentumNegated": false,
+          "moveId": "gather-information",
+          "outcome": "franche",
+          "rawTotal": 6,
+          "rngDrawIndex": 1,
+          "rngStream": "action",
+          "rollId": "0000000000000000000000000P",
+          "total": 6
+        },
+        "seq": 22,
+        "type": "roll.action_resolved"
+      },
+      {
+        "deliverySeq": 23,
+        "payload": {
+          "cause": "effect:momentum",
+          "characterId": "CHRB",
+          "clamped": false,
+          "delta": 2,
+          "from": 2,
+          "to": 4
+        },
+        "seq": 23,
+        "type": "character.momentum_changed"
+      },
+      {
+        "deliverySeq": 24,
+        "payload": {
+          "characterId": "CHRB",
+          "effectsApplied": [
+            {
+              "delta": 2,
+              "op": "momentum"
+            }
+          ],
+          "moveId": "gather-information",
+          "outcome": "franche",
+          "rollSeq": 22
+        },
+        "seq": 24,
+        "type": "move.resolved"
+      },
+      {
+        "deliverySeq": 25,
+        "payload": {
+          "aiCallId": "0000000000000000000000000T",
+          "citedEventSeqs": [
+            21,
+            22,
+            23,
+            24
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=gather-information issue=franche acteur=0000000000000000000000CHRB"
+        },
+        "seq": 25,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 26,
+        "payload": {
+          "characterId": "CHRA",
+          "chosenAttribute": "coeur",
+          "moveId": "probe-a-soul",
+          "narrativeInput": "La passeuse, qui regarde ailleurs quand on parle du nord."
+        },
+        "seq": 26,
+        "type": "move.declared"
+      },
+      {
+        "deliverySeq": 27,
+        "payload": {
+          "actionDie": 3,
+          "adds": [],
+          "attribute": "coeur",
+          "attributeValue": 2,
+          "burnWindow": false,
+          "cappedAtTen": false,
+          "challengeDice": [
+            3,
+            7
+          ],
+          "characterId": "CHRA",
+          "isPresage": false,
+          "momentumBefore": 4,
+          "momentumNegated": false,
+          "moveId": "probe-a-soul",
+          "outcome": "partielle",
+          "rawTotal": 5,
+          "rngDrawIndex": 2,
+          "rngStream": "action",
+          "rollId": "0000000000000000000000000Y",
+          "total": 5
+        },
+        "seq": 27,
+        "type": "roll.action_resolved"
+      },
+      {
+        "deliverySeq": 28,
+        "payload": {
+          "cause": "effect:momentum",
+          "characterId": "CHRA",
+          "clamped": false,
+          "delta": 1,
+          "from": 4,
+          "to": 5
+        },
+        "seq": 28,
+        "type": "character.momentum_changed"
+      },
+      {
+        "deliverySeq": 29,
+        "payload": {
+          "characterId": "CHRA",
+          "effectsApplied": [
+            {
+              "delta": 1,
+              "op": "momentum"
+            }
+          ],
+          "moveId": "probe-a-soul",
+          "outcome": "partielle",
+          "rollSeq": 27
+        },
+        "seq": 29,
+        "type": "move.resolved"
+      },
+      {
+        "deliverySeq": 30,
+        "payload": {
+          "aiCallId": "00000000000000000000000012",
+          "citedEventSeqs": [
+            26,
+            27,
+            28,
+            29
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=probe-a-soul issue=partielle acteur=0000000000000000000000CHRA"
+        },
+        "seq": 30,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 31,
+        "payload": {
+          "characterId": "CHRB",
+          "chosenAttribute": "fer",
+          "moveId": "endure-cold",
+          "narrativeInput": ""
+        },
+        "seq": 31,
+        "type": "move.declared"
+      },
+      {
+        "deliverySeq": 32,
+        "payload": {
+          "actionDie": 2,
+          "adds": [],
+          "attribute": "fer",
+          "attributeValue": 3,
+          "burnWindow": false,
+          "cappedAtTen": false,
+          "challengeDice": [
+            9,
+            2
+          ],
+          "characterId": "CHRB",
+          "isPresage": false,
+          "momentumBefore": 4,
+          "momentumNegated": false,
+          "moveId": "endure-cold",
+          "outcome": "partielle",
+          "rawTotal": 5,
+          "rngDrawIndex": 3,
+          "rngStream": "action",
+          "rollId": "00000000000000000000000016",
+          "total": 5
+        },
+        "seq": 32,
+        "type": "roll.action_resolved"
+      },
+      {
+        "deliverySeq": 33,
+        "payload": {
+          "cause": "effect:gauge",
+          "characterId": "CHRB",
+          "clamped": false,
+          "delta": -1,
+          "from": 5,
+          "gauge": "vivres",
+          "to": 4
+        },
+        "seq": 33,
+        "type": "character.gauge_changed"
+      },
+      {
+        "deliverySeq": 34,
+        "payload": {
+          "characterId": "CHRB",
+          "effectsApplied": [
+            {
+              "delta": -1,
+              "gauge": "vivres",
+              "op": "gauge",
+              "target": "self"
+            }
+          ],
+          "moveId": "endure-cold",
+          "outcome": "partielle",
+          "rollSeq": 32
+        },
+        "seq": 34,
+        "type": "move.resolved"
+      },
+      {
+        "deliverySeq": 35,
+        "payload": {
+          "aiCallId": "0000000000000000000000001A",
+          "citedEventSeqs": [
+            31,
+            32,
+            33,
+            34
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=endure-cold issue=partielle acteur=0000000000000000000000CHRB"
+        },
+        "seq": 35,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 36,
+        "payload": {
+          "byPlayerId": "PYRA",
+          "text": "Tu reconnais la broche à son col."
+        },
+        "seq": 36,
+        "type": "system.note"
+      },
+      {
+        "deliverySeq": 37,
+        "payload": {
+          "aiCallId": "0000000000000000000000001E",
+          "citedEventSeqs": [],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=aucun issue=aucune acteur=0000000000000000000000CHRA"
+        },
+        "seq": 37,
+        "type": "narration.gm_message"
+      }
+    ],
+    "PYRB": [
+      {
+        "deliverySeq": 1,
+        "payload": {
+          "contentPackHash": "24d030b6ef069dc6d4c7f4b8ddba84846af4e8ea944e5cb541f0d1a8a927c5d0",
+          "contentPackVersion": "0.1.0",
+          "name": "Une séance entière : parler, chercher, sonder, endurer le froid",
+          "ownerPlayerId": "PYRA",
+          "pitch": "",
+          "rngSeed": "sim-01",
+          "rulesVersion": 1,
+          "slug": "sim-01-full-session"
+        },
+        "seq": 1,
+        "type": "campaign.created"
+      },
+      {
+        "deliverySeq": 2,
+        "payload": {
+          "from": "draft",
+          "to": "active"
+        },
+        "seq": 2,
+        "type": "campaign.status_changed"
+      },
+      {
+        "deliverySeq": 3,
+        "payload": {
+          "displayName": "Alice",
+          "playerId": "PYRA",
+          "role": "owner"
+        },
+        "seq": 3,
+        "type": "party.member_joined"
+      },
+      {
+        "deliverySeq": 4,
+        "payload": {
+          "displayName": "Bruno",
+          "playerId": "PYRB",
+          "role": "player"
+        },
+        "seq": 4,
+        "type": "party.member_joined"
+      },
+      {
+        "deliverySeq": 5,
+        "payload": {
+          "attributes": {
+            "coeur": 2,
+            "esprit": 3,
+            "fer": 2,
+            "ombre": 1,
+            "vif": 2
+          },
+          "championId": "ashe",
+          "characterId": "CHRA",
+          "displayName": "Ashe",
+          "gauges": {
+            "ame": 5,
+            "vigueur": 5,
+            "vivres": 5
+          },
+          "momentum": 2,
+          "playerId": "PYRA",
+          "sheetRef": "ashe",
+          "sheetSnapshot": {},
+          "sheetSource": "handwritten"
+        },
+        "seq": 5,
+        "type": "character.created"
+      },
+      {
+        "deliverySeq": 6,
+        "payload": {
+          "attributes": {
+            "coeur": 3,
+            "esprit": 2,
+            "fer": 3,
+            "ombre": 1,
+            "vif": 1
+          },
+          "championId": "braum",
+          "characterId": "CHRB",
+          "displayName": "Braum",
+          "gauges": {
+            "ame": 5,
+            "vigueur": 5,
+            "vivres": 5
+          },
+          "momentum": 2,
+          "playerId": "PYRB",
+          "sheetRef": "braum",
+          "sheetSnapshot": {},
+          "sheetSource": "handwritten"
+        },
+        "seq": 6,
+        "type": "character.created"
+      },
+      {
+        "deliverySeq": 7,
+        "payload": {
+          "championId": "ashe",
+          "lockKind": "reserved_pc",
+          "reason": "personnage de Alice"
+        },
+        "seq": 7,
+        "type": "party.champion_locked"
+      },
+      {
+        "deliverySeq": 8,
+        "payload": {
+          "championId": "braum",
+          "lockKind": "reserved_pc",
+          "reason": "personnage de Bruno"
+        },
+        "seq": 8,
+        "type": "party.champion_locked"
+      },
+      {
+        "deliverySeq": 9,
+        "payload": {
+          "details": {},
+          "disposition": "hostile",
+          "entityId": "ENTA",
+          "kind": "npc",
+          "name": "Katla la passeuse",
+          "slug": "enta",
+          "summary": "Katla la passeuse"
+        },
+        "seq": 9,
+        "type": "entity.introduced"
+      },
+      {
+        "deliverySeq": 10,
+        "payload": {
+          "entityIds": [
+            "ENTA"
+          ],
+          "presentCharacterIds": [
+            "CHRA",
+            "CHRB"
+          ],
+          "sceneId": "SCN01",
+          "title": "Le col battu par la tempête"
+        },
+        "seq": 10,
+        "type": "scene.started"
+      },
+      {
+        "deliverySeq": 11,
+        "payload": {
+          "aiCallId": "00000000000000000000000002",
+          "citedEventSeqs": [],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=aucun issue=aucune acteur=0000000000000000000000CHRA"
+        },
+        "seq": 11,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 12,
+        "payload": {
+          "characterId": "CHRA",
+          "kind": "ic",
+          "text": "On passe par le col, et on ne s'arrête pas."
+        },
+        "seq": 12,
+        "type": "narration.player_message"
+      },
+      {
+        "deliverySeq": 13,
+        "payload": {
+          "aiCallId": "00000000000000000000000006",
+          "citedEventSeqs": [
+            12
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=aucun issue=aucune acteur=0000000000000000000000CHRA"
+        },
+        "seq": 13,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 14,
+        "payload": {
+          "characterId": "CHRB",
+          "kind": "ooc",
+          "text": "Je garde le dos d'Alice."
+        },
+        "seq": 14,
+        "type": "narration.player_message"
+      },
+      {
+        "deliverySeq": 15,
+        "payload": {
+          "aiCallId": "0000000000000000000000000A",
+          "citedEventSeqs": [
+            14
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=aucun issue=aucune acteur=0000000000000000000000CHRB"
+        },
+        "seq": 15,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 16,
+        "payload": {
+          "characterId": "CHRA",
+          "chosenAttribute": "esprit",
+          "moveId": "secure-advantage",
+          "narrativeInput": "Lire le vent avant d'engager."
+        },
+        "seq": 16,
+        "type": "move.declared"
+      },
+      {
+        "deliverySeq": 17,
+        "payload": {
+          "actionDie": 6,
+          "adds": [],
+          "attribute": "esprit",
+          "attributeValue": 3,
+          "burnWindow": false,
+          "cappedAtTen": false,
+          "challengeDice": [
+            3,
+            2
+          ],
+          "characterId": "CHRA",
+          "isPresage": false,
+          "momentumBefore": 2,
+          "momentumNegated": false,
+          "moveId": "secure-advantage",
+          "outcome": "franche",
+          "rawTotal": 9,
+          "rngDrawIndex": 0,
+          "rngStream": "action",
+          "rollId": "0000000000000000000000000E",
+          "total": 9
+        },
+        "seq": 17,
+        "type": "roll.action_resolved"
+      },
+      {
+        "deliverySeq": 18,
+        "payload": {
+          "cause": "effect:momentum",
+          "characterId": "CHRA",
+          "clamped": false,
+          "delta": 2,
+          "from": 2,
+          "to": 4
+        },
+        "seq": 18,
+        "type": "character.momentum_changed"
+      },
+      {
+        "deliverySeq": 19,
+        "payload": {
+          "characterId": "CHRA",
+          "effectsApplied": [
+            {
+              "delta": 2,
+              "op": "momentum"
+            }
+          ],
+          "moveId": "secure-advantage",
+          "outcome": "franche",
+          "rollSeq": 17
+        },
+        "seq": 19,
+        "type": "move.resolved"
+      },
+      {
+        "deliverySeq": 20,
+        "payload": {
+          "aiCallId": "0000000000000000000000000J",
+          "citedEventSeqs": [
+            16,
+            17,
+            18,
+            19
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=secure-advantage issue=franche acteur=0000000000000000000000CHRA"
+        },
+        "seq": 20,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 21,
+        "payload": {
+          "characterId": "CHRB",
+          "chosenAttribute": "esprit",
+          "moveId": "gather-information",
+          "narrativeInput": "Demander à Katla ce qu'elle a vu passer."
+        },
+        "seq": 21,
+        "type": "move.declared"
+      },
+      {
+        "deliverySeq": 22,
+        "payload": {
+          "actionDie": 4,
+          "adds": [],
+          "attribute": "esprit",
+          "attributeValue": 2,
+          "burnWindow": false,
+          "cappedAtTen": false,
+          "challengeDice": [
+            1,
+            2
+          ],
+          "characterId": "CHRB",
+          "isPresage": false,
+          "momentumBefore": 2,
+          "momentumNegated": false,
+          "moveId": "gather-information",
+          "outcome": "franche",
+          "rawTotal": 6,
+          "rngDrawIndex": 1,
+          "rngStream": "action",
+          "rollId": "0000000000000000000000000P",
+          "total": 6
+        },
+        "seq": 22,
+        "type": "roll.action_resolved"
+      },
+      {
+        "deliverySeq": 23,
+        "payload": {
+          "cause": "effect:momentum",
+          "characterId": "CHRB",
+          "clamped": false,
+          "delta": 2,
+          "from": 2,
+          "to": 4
+        },
+        "seq": 23,
+        "type": "character.momentum_changed"
+      },
+      {
+        "deliverySeq": 24,
+        "payload": {
+          "characterId": "CHRB",
+          "effectsApplied": [
+            {
+              "delta": 2,
+              "op": "momentum"
+            }
+          ],
+          "moveId": "gather-information",
+          "outcome": "franche",
+          "rollSeq": 22
+        },
+        "seq": 24,
+        "type": "move.resolved"
+      },
+      {
+        "deliverySeq": 25,
+        "payload": {
+          "aiCallId": "0000000000000000000000000T",
+          "citedEventSeqs": [
+            21,
+            22,
+            23,
+            24
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=gather-information issue=franche acteur=0000000000000000000000CHRB"
+        },
+        "seq": 25,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 26,
+        "payload": {
+          "characterId": "CHRA",
+          "chosenAttribute": "coeur",
+          "moveId": "probe-a-soul",
+          "narrativeInput": "La passeuse, qui regarde ailleurs quand on parle du nord."
+        },
+        "seq": 26,
+        "type": "move.declared"
+      },
+      {
+        "deliverySeq": 27,
+        "payload": {
+          "actionDie": 3,
+          "adds": [],
+          "attribute": "coeur",
+          "attributeValue": 2,
+          "burnWindow": false,
+          "cappedAtTen": false,
+          "challengeDice": [
+            3,
+            7
+          ],
+          "characterId": "CHRA",
+          "isPresage": false,
+          "momentumBefore": 4,
+          "momentumNegated": false,
+          "moveId": "probe-a-soul",
+          "outcome": "partielle",
+          "rawTotal": 5,
+          "rngDrawIndex": 2,
+          "rngStream": "action",
+          "rollId": "0000000000000000000000000Y",
+          "total": 5
+        },
+        "seq": 27,
+        "type": "roll.action_resolved"
+      },
+      {
+        "deliverySeq": 28,
+        "payload": {
+          "cause": "effect:momentum",
+          "characterId": "CHRA",
+          "clamped": false,
+          "delta": 1,
+          "from": 4,
+          "to": 5
+        },
+        "seq": 28,
+        "type": "character.momentum_changed"
+      },
+      {
+        "deliverySeq": 29,
+        "payload": {
+          "characterId": "CHRA",
+          "effectsApplied": [
+            {
+              "delta": 1,
+              "op": "momentum"
+            }
+          ],
+          "moveId": "probe-a-soul",
+          "outcome": "partielle",
+          "rollSeq": 27
+        },
+        "seq": 29,
+        "type": "move.resolved"
+      },
+      {
+        "deliverySeq": 30,
+        "payload": {
+          "aiCallId": "00000000000000000000000012",
+          "citedEventSeqs": [
+            26,
+            27,
+            28,
+            29
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=probe-a-soul issue=partielle acteur=0000000000000000000000CHRA"
+        },
+        "seq": 30,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 31,
+        "payload": {
+          "characterId": "CHRB",
+          "chosenAttribute": "fer",
+          "moveId": "endure-cold",
+          "narrativeInput": ""
+        },
+        "seq": 31,
+        "type": "move.declared"
+      },
+      {
+        "deliverySeq": 32,
+        "payload": {
+          "actionDie": 2,
+          "adds": [],
+          "attribute": "fer",
+          "attributeValue": 3,
+          "burnWindow": false,
+          "cappedAtTen": false,
+          "challengeDice": [
+            9,
+            2
+          ],
+          "characterId": "CHRB",
+          "isPresage": false,
+          "momentumBefore": 4,
+          "momentumNegated": false,
+          "moveId": "endure-cold",
+          "outcome": "partielle",
+          "rawTotal": 5,
+          "rngDrawIndex": 3,
+          "rngStream": "action",
+          "rollId": "00000000000000000000000016",
+          "total": 5
+        },
+        "seq": 32,
+        "type": "roll.action_resolved"
+      },
+      {
+        "deliverySeq": 33,
+        "payload": {
+          "cause": "effect:gauge",
+          "characterId": "CHRB",
+          "clamped": false,
+          "delta": -1,
+          "from": 5,
+          "gauge": "vivres",
+          "to": 4
+        },
+        "seq": 33,
+        "type": "character.gauge_changed"
+      },
+      {
+        "deliverySeq": 34,
+        "payload": {
+          "characterId": "CHRB",
+          "effectsApplied": [
+            {
+              "delta": -1,
+              "gauge": "vivres",
+              "op": "gauge",
+              "target": "self"
+            }
+          ],
+          "moveId": "endure-cold",
+          "outcome": "partielle",
+          "rollSeq": 32
+        },
+        "seq": 34,
+        "type": "move.resolved"
+      },
+      {
+        "deliverySeq": 35,
+        "payload": {
+          "aiCallId": "0000000000000000000000001A",
+          "citedEventSeqs": [
+            31,
+            32,
+            33,
+            34
+          ],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=endure-cold issue=partielle acteur=0000000000000000000000CHRB"
+        },
+        "seq": 35,
+        "type": "narration.gm_message"
+      },
+      {
+        "deliverySeq": 36,
+        "payload": {
+          "aiCallId": "0000000000000000000000001E",
+          "citedEventSeqs": [],
+          "model": "scripted:sim",
+          "promptVersion": "conteur/0.0.0-placeholder",
+          "source": "ai",
+          "text": "[conteur-scripte] mouvement=aucun issue=aucune acteur=0000000000000000000000CHRA"
+        },
+        "seq": 37,
+        "type": "narration.gm_message"
+      }
+    ]
+  }
+}

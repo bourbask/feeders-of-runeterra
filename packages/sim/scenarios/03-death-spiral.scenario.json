@@ -1,0 +1,129 @@
+{
+  "id": "03-death-spiral",
+  "title": "La spirale : frapper, encaisser, et descendre",
+  "seed": "sim-03",
+  "startedAt": "2026-01-08T18:00:00.000Z",
+  "players": [
+    {
+      "symbol": "PYRA",
+      "displayName": "Alice",
+      "character": {
+        "symbol": "CHRA",
+        "championId": "sejuani",
+        "displayName": "Sejuani",
+        "attributes": {
+          "vif": 2,
+          "coeur": 1,
+          "fer": 3,
+          "ombre": 1,
+          "esprit": 2
+        },
+        "gauges": {
+          "vigueur": 3,
+          "ame": 4,
+          "vivres": 2
+        },
+        "momentum": 2
+      }
+    }
+  ],
+  "entities": [
+    {
+      "symbol": "ENTB",
+      "kind": "beast",
+      "displayName": "La meute de la Griffe"
+    }
+  ],
+  "scene": {
+    "title": "Le ravin de la Griffe",
+    "locationName": "Le ravin",
+    "entities": ["ENTB"]
+  },
+  "steps": [
+    {
+      "kind": "intent",
+      "player": "PYRA",
+      "intent": {
+        "type": "move.strike",
+        "targetId": "0000000000000000000000ENTB",
+        "attribute": "fer"
+      },
+      "note": "Frapper exige une scene ET une cible presente : les deux viennent du journal d'amorcage.",
+      "expect": {
+        "accepted": true,
+        "events": [
+          "move.declared",
+          "roll.action_resolved",
+          "character.momentum_changed",
+          "move.resolved",
+          "narration.gm_message"
+        ]
+      }
+    },
+    {
+      "kind": "intent",
+      "player": "PYRA",
+      "intent": {
+        "type": "move.endure_harm",
+        "amount": 2
+      },
+      "expect": {
+        "accepted": true,
+        "events": [
+          "move.declared",
+          "character.gauge_changed",
+          "roll.action_resolved",
+          "character.condition_added",
+          "roll.price_paid",
+          "character.momentum_changed",
+          "move.resolved",
+          "narration.gm_message"
+        ]
+      },
+      "note": "Le degat est applique AVANT le jet : `upfrontEffects`. Le prix, lui, est tire par le moteur."
+    },
+    {
+      "kind": "intent",
+      "player": "PYRA",
+      "intent": {
+        "type": "move.endure_cold"
+      }
+    },
+    {
+      "kind": "intent",
+      "player": "PYRA",
+      "intent": {
+        "type": "move.endure_harm",
+        "amount": 3
+      },
+      "expect": {
+        "accepted": true,
+        "characterStatus": {
+          "CHRA": "active"
+        },
+        "gauges": {
+          "CHRA": {
+            "vigueur": 0,
+            "vivres": 1,
+            "ame": 4,
+            "momentum": 3
+          }
+        }
+      },
+      "note": "Vigueur a zero, et le personnage reste actif : en M0 rien ne le tue tout seul."
+    },
+    {
+      "kind": "intent",
+      "player": "PYRA",
+      "intent": {
+        "type": "move.strike",
+        "targetId": "0000000000000000000000GHOST",
+        "attribute": "vif"
+      },
+      "note": "Une cible absente de la scene : le moteur refuse AVANT de tirer un de, et le journal ne gagne RIEN. Le refus n'atteint aujourd'hui aucune trame — defaut signale avec la PR, pas entérine ici : cette attente porte sur le journal, pas sur ce que le joueur voit.",
+      "expect": {
+        "events": []
+      }
+    }
+  ]
+}
