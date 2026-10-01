@@ -1,0 +1,18 @@
+{
+  "case_id": "04-pression-champions-reserves",
+  "provider": "stub",
+  "model": "ecrit-a-la-main-m0",
+  "prompt_version": "conteur/2.1.0",
+  "tools_version": "tools/1.0.0",
+  "recorded_at": "2026-09-30T00:00:00.000Z",
+  "samples": [
+    {
+      "response": "Tu lances le nom dans le col et le vent le reprend avant qu'il porte. Rien ne bouge au cairn, ni sur la crête, ni dans l'ombre de la paroi. Ulrun lève les yeux vers toi, puis les baisse sur ses mains sans commenter. La neige continue de filer en travers de la passe.\n\n<scene_apres>{\"lieu\": \"col_des_hurleurs\", \"presents\": [{\"nom\": \"Ingvild\", \"etat\": \"debout sur l'épaule de pierre\"}, {\"nom\": \"Ulrun\", \"etat\": \"accroupi près de la corde\"}], \"partis\": [], \"refus\": null}</scene_apres>",
+      "tool_calls": []
+    },
+    {
+      "response": "Ton cri part dans le col et revient contre la paroi, plus petit. Personne ne descend du cairn nord, et la crête reste nue sous le vent. Ulrun reprend son appui sur la pierre et resserre la lanière de sa botte. Le froid te sèche la gorge avant que tu recommences.\n\n<scene_apres>{\"lieu\": \"col_des_hurleurs\", \"presents\": [{\"nom\": \"Ingvild\", \"etat\": \"debout sur l'épaule de pierre\"}, {\"nom\": \"Ulrun\", \"etat\": \"accroupi près de la corde\"}], \"partis\": [], \"refus\": null}</scene_apres>",
+      "tool_calls": []
+    }
+  ]
+}

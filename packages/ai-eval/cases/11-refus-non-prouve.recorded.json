@@ -1,0 +1,18 @@
+{
+  "case_id": "11-refus-non-prouve",
+  "provider": "stub",
+  "model": "ecrit-a-la-main-m0",
+  "prompt_version": "conteur/2.1.0",
+  "tools_version": "tools/1.0.0",
+  "recorded_at": "2026-09-30T00:00:00.000Z",
+  "samples": [
+    {
+      "response": "Tu poses la question à voix basse et Ulrun met longtemps à lever la tête. « Il y avait une autre corde, en bas, et elle n'était pas à nous. » Il s'arrête là, remonte son col et reprend son appui contre le cairn. Le vent couvre ce qu'il ajoute ensuite.\n\n<scene_apres>{\"lieu\": \"col_des_hurleurs\", \"presents\": [{\"nom\": \"Ingvild\", \"etat\": \"debout sur l'épaule de pierre\"}, {\"nom\": \"Ulrun\", \"etat\": \"accroupi près de la corde\"}], \"partis\": [], \"refus\": {\"cause\": \"cible_absente\", \"cible\": \"Ulrun\"}}</scene_apres>",
+      "tool_calls": []
+    },
+    {
+      "response": "Tu lui demandes ce qu'il a vu au fond du ravin, et il met du temps à répondre. « Une corde qui n'était pas la nôtre, nouée à une pierre. » Puis il se tait, rabat sa capuche et regarde la crête. Ta question reste en l'air, et le vent la referme à sa place.\n\n<scene_apres>{\"lieu\": \"col_des_hurleurs\", \"presents\": [{\"nom\": \"Ingvild\", \"etat\": \"debout sur l'épaule de pierre\"}, {\"nom\": \"Ulrun\", \"etat\": \"accroupi près de la corde\"}], \"partis\": [], \"refus\": {\"cause\": \"cible_absente\", \"cible\": \"Ulrun\"}}</scene_apres>",
+      "tool_calls": []
+    }
+  ]
+}

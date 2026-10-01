@@ -1,0 +1,122 @@
+{
+  "id": "avarosa",
+  "context_window_tokens": 32768,
+  "chronicle": "avarosa",
+  "seq": 401,
+  "campaign": {
+    "name": "Les cendres d'Avarosa",
+    "tone": "âpre, concret, peu de mots",
+    "house_rules": null,
+    "characters": [
+      {
+        "id": "01HZZZ0000000000000000CHR1",
+        "name": "Ingvild",
+        "champion_display_name": "Ashe",
+        "pronouns": "elle",
+        "one_line": "Archère avarosane, elle mène la bande depuis la mort de son frère."
+      },
+      {
+        "id": "01HZZZ0000000000000000CHR2",
+        "name": "Torvald",
+        "champion_display_name": "Udyr",
+        "pronouns": "il",
+        "one_line": "Porteur de hache, lent à parler, il compte les pas et les vivres."
+      }
+    ],
+    "reserved_champions": [
+      {
+        "id": "sejuani",
+        "display_name": "Sejuani",
+        "aliases": ["la Griffe de Givre", "la Fureur du Nord", "Sejuani Avarosan"]
+      },
+      {
+        "id": "braum",
+        "display_name": "Braum",
+        "aliases": ["le Cœur du Freljord", "le Coeur du Freljord", "the Heart of the Freljord"]
+      },
+      {
+        "id": "lissandra",
+        "display_name": "Lissandra",
+        "aliases": ["la Sorcière de Glace", "la Gardienne de Glace"]
+      }
+    ],
+    "allowed_npcs": [
+      {
+        "id": "01HZZZ0000000000000000ENT1",
+        "name": "Ulrun",
+        "role": "éclaireur",
+        "one_line": "Il marche devant et ne dit rien de ce qu'il voit."
+      },
+      {
+        "id": "01HZZZ0000000000000000ENT2",
+        "name": "Signy",
+        "role": "forgeronne",
+        "one_line": "Elle est restée au camp de la hache, et elle attend son dû."
+      },
+      {
+        "id": "01HZZZ0000000000000000ENT4",
+        "name": "Brynja",
+        "role": "guetteuse du cairn nord",
+        "one_line": "Elle laisse passer qui porte des cendres."
+      }
+    ]
+  },
+  "actors": [
+    {
+      "ref": { "kind": "character", "id": "01HZZZ0000000000000000CHR1" },
+      "name": "Ingvild",
+      "is_player_character": true,
+      "is_dead": false,
+      "place_id": "col_des_hurleurs"
+    },
+    {
+      "ref": { "kind": "character", "id": "01HZZZ0000000000000000CHR2" },
+      "name": "Torvald",
+      "is_player_character": true,
+      "is_dead": false,
+      "place_id": "col_des_hurleurs"
+    },
+    {
+      "ref": { "kind": "entity", "id": "01HZZZ0000000000000000ENT1" },
+      "name": "Ulrun",
+      "is_player_character": false,
+      "is_dead": false,
+      "place_id": "col_des_hurleurs"
+    },
+    {
+      "ref": { "kind": "entity", "id": "01HZZZ0000000000000000ENT2" },
+      "name": "Signy",
+      "is_player_character": false,
+      "is_dead": false,
+      "place_id": "camp_de_la_hache"
+    },
+    {
+      "ref": { "kind": "entity", "id": "01HZZZ0000000000000000ENT3" },
+      "name": "Keld",
+      "is_player_character": false,
+      "is_dead": true,
+      "place_id": "ravin_de_la_corne"
+    },
+    {
+      "ref": { "kind": "entity", "id": "01HZZZ0000000000000000ENT4" },
+      "name": "Brynja",
+      "is_player_character": false,
+      "is_dead": false,
+      "place_id": "col_des_hurleurs"
+    }
+  ],
+  "place_ids": ["col_des_hurleurs", "camp_de_la_hache", "ravin_de_la_corne"],
+  "etat": {
+    "core": "<etat>\nIngvild : debout, lame refaite, carquois entamé.\nTorvald : debout, hache en main, corde à l'épaule.\nHorloge « la passe se ferme » : avancée.\nSerment en cours : porter les cendres au cairn du nord.",
+    "inventory_and_idle_clocks": "Inventaire d'Ingvild : corde de chanvre, briquet de fer, coffre de cendres.\nHorloges inactives : « la dette de la forge »."
+  },
+  "lore": [
+    "Le col des Hurleurs porte ce nom à cause du vent qui s'engouffre entre les deux crêtes et ne tombe jamais, même la nuit.",
+    "Les cairns du nord marquent les morts qu'on n'a pas pu ramener ; on y dépose des cendres, jamais des corps.",
+    "Avarosa est une fondatrice, pas une déesse : on jure par son nom, on ne la prie pas."
+  ],
+  "turns": [
+    "<fait>\nMouvement : Prendre l'avantage (vif).\nIssue : RÉUSSITE PARTIELLE. Présage : non.\n</fait>\n<intention>\nIngvild : « Je monte repérer la corniche avant que la nuit tombe. »\n</intention>",
+    "Tu montes jusqu'à l'épaule de pierre. Le vent te prend de biais et te force à poser un genou. En bas, la toile de l'abri bat contre une roche, arrachée d'un côté. Ulrun lève la tête vers toi et ne bouge pas."
+  ]
+}

@@ -19,7 +19,9 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "eval:smoke": "tsx smoke/run-smoke.ts"
+    "eval:smoke": "tsx smoke/run-smoke.ts",
+    "eval:offline": "tsx src/run-offline.ts",
+    "eval:record": "tsx src/record.ts"
   },
   "dependencies": {
     "@for/ai": "workspace:*",

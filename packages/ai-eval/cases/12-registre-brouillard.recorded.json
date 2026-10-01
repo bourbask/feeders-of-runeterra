@@ -1,0 +1,18 @@
+{
+  "case_id": "12-registre-brouillard",
+  "provider": "stub",
+  "model": "ecrit-a-la-main-m0",
+  "prompt_version": "conteur/2.1.0",
+  "tools_version": "tools/1.0.0",
+  "recorded_at": "2026-09-30T00:00:00.000Z",
+  "samples": [
+    {
+      "response": "Tu avances dans la brume en tenant la paroi du bout des doigts. Le gris avale la crête, puis la corniche, puis tes propres bottes. Ta main butte contre une pierre plate posée sur une autre : le cairn. La neige y a pris en plaques et craque quand tu appuies.\n\n<scene_apres>{\"lieu\": \"col_des_hurleurs\", \"presents\": [{\"nom\": \"Ingvild\", \"etat\": \"debout sur l'épaule de pierre\"}, {\"nom\": \"Ulrun\", \"etat\": \"accroupi près de la corde\"}], \"partis\": [], \"refus\": null}</scene_apres>",
+      "tool_calls": []
+    },
+    {
+      "response": "Tu marches à la paroi, la brume collée au visage, et tu comptes les pas. Le gris mange la crête et la corniche, et il ne reste que le bruit de tes bottes. Tes doigts trouvent une pierre plate, puis une deuxième en dessous. La neige craque sous ta paume quand tu t'appuies au cairn.\n\n<scene_apres>{\"lieu\": \"col_des_hurleurs\", \"presents\": [{\"nom\": \"Ingvild\", \"etat\": \"debout sur l'épaule de pierre\"}, {\"nom\": \"Ulrun\", \"etat\": \"accroupi près de la corde\"}], \"partis\": [], \"refus\": null}</scene_apres>",
+      "tool_calls": []
+    }
+  ]
+}
