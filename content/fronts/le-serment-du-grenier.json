@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "le-serment-du-grenier",
+  "name": "Le serment du grenier",
+  "segments": 8,
+  "stake": "Le grain mis en commun, et l'idée qu'on puisse réunir le nord sans écraser personne pour y arriver.",
+  "periodId": "freljord-moderne",
+  "regionIds": ["avarosa-reach", "rakelstake", "freljord"],
+  "tags": ["territoire-conteste", "grain", "serment"],
+  "portents": [
+    "Deux clans signent pour le grain d'hiver et repartent avec plus qu'ils n'ont apporté.",
+    "Le compte du grenier cesse d'être relu à voix haute devant témoin.",
+    "Un hameau qui a refusé de signer est servi en dernier, et l'apprend par un voisin.",
+    "Une escorte en armes accompagne le convoi, et personne n'appelle ça une garnison.",
+    "Le gué bas est fermé à qui n'a pas prêté serment, sous prétexte de gel.",
+    "Un clan rend son tribut deux fois dans la saison pour garder sa place à la table.",
+    "Le conseil vote une mesure sans les absents, puis déclare les absents sortis.",
+    "La Marche nourrit le nord et le tient : plus personne ne peut partir sans avoir faim."
+  ]
+}

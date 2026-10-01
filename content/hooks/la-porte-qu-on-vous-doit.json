@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "la-porte-qu-on-vous-doit",
+  "name": "La porte qu'on vous doit",
+  "appliesTo": {
+    "kind": "champion",
+    "championId": "braum"
+  },
+  "vowRank": "dangereux",
+  "periodId": "freljord-moderne",
+  "suggestedBondIds": ["l-enfant-du-pont", "katla-la-compteuse"],
+  "pitch": "Le hameau des pics a tenu l'hiver dernier parce que quelqu'un s'est mis devant. Cette année le convoi n'est pas arrivé, le pont ne portera pas un homme de plus, et on attend la même personne.",
+  "tags": ["protection", "hameau"]
+}

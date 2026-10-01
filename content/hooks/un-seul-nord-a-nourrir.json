@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "un-seul-nord-a-nourrir",
+  "name": "Un seul nord à nourrir",
+  "appliesTo": {
+    "kind": "champion",
+    "championId": "ashe"
+  },
+  "vowRank": "extreme",
+  "periodId": "freljord-moderne",
+  "suggestedBondIds": ["katla-la-compteuse", "brynja-la-tardive"],
+  "pitch": "Le compte du grenier n'est plus relu devant témoin, et deux clans s'en servent déjà comme d'une preuve. Ce qui se défait au conseil n'est pas du grain, c'est la seule chose qui tenait les clans ensemble.",
+  "tags": ["commandement", "grain"]
+}

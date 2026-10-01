@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "les-pierres-dressees",
+  "name": "Les Pierres Dressées",
+  "kind": "lieu",
+  "situation": "Des pierres plantées avant les clans, entretenues par personne et renversées par personne non plus. Les marques dessus sont encore lisibles et plus personne ne les lit. Cette saison, trois pierres manquent : on les a descendues proprement, avec du matériel, et on a payé les hameaux du haut en sel. Là où elles étaient, la neige ne tient pas. Les bêtes contournent l'endroit depuis le jour où les pierres sont parties.",
+  "stakeQuestion": "À quoi servaient les pierres, et qu'est-ce qui change quand on les enlève ?",
+  "figureIds": ["la-marchande-sans-clan"],
+  "regionId": "freljord",
+  "periodId": "freljord-moderne",
+  "entryPoint": false,
+  "leads": [
+    {
+      "toNodeId": "la-veille-du-givre",
+      "trigger": "Ceux qui ont payé en sel sont repartis vers la Citadelle."
+    },
+    {
+      "toNodeId": "la-faille-hurlante",
+      "trigger": "La ligne des pierres pointe vers la faille, et s'arrête avant."
+    },
+    {
+      "toNodeId": "le-col-battu",
+      "trigger": "Le matériel est redescendu par la route, à découvert."
+    }
+  ],
+  "tags": ["ancien", "revelation"]
+}

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "freljord-moderne",
+  "name": "Le Freljord moderne",
+  "after": 500,
+  "before": null,
+  "summary": "Trois façons de vouloir le même nord — le grain, la lame, et ce qui dort — et trois prétendantes dont aucune ne cédera avant l'autre. Le gel, lui, n'attend l'issue d'aucune.",
+  "factionIds": ["avarosans", "griffe-d-hiver", "gardiens-du-givre"],
+  "absentFactionIds": [],
+  "tags": ["frise", "moderne", "trois-factions"]
+}

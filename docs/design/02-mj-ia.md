@@ -1349,10 +1349,16 @@ Quatre `cacheHint` au total : `system[0]` et `system[1]` en `stable`/`session`, 
 
 Budget cible **`min(14 000, capabilities.contextWindowTokens × 0,6)` tokens d'entrée** par tour, 800 en sortie. Sur un fournisseur à large fenêtre, la cible vaut 14 000 ; sur un modèle local à 8 192 tokens, elle tombe à ≈ 4 900 et l'échelle de troncature (§ 4.4) démarre plus haut. Répartition et plafonds durs à la cible haute :
 
+> **Amendé par l'ADR 0011.** Les deux premiers plafonds étaient annoncés « figés, mesurés en CI »
+> et rien ne les mesurait : la table pèse **2 112** et le prompt **4 279**, soit **+3 091** de fixe.
+> Décision : mode **prose seule** (table à 0), prompt ramené à sa cible, **total à 7 000**. Motif :
+> le projet ne tourne que sur des fournisseurs gratuits, dont le plafond est **quotidien** — à
+> 14 000 par tour, une offre à 200 K/jour donne 14 tours, et une séance en fait 60.
+
 | Segment | Plafond | Mesure |
 |---|---:|---|
-| `tools` | 900 | figé, mesuré en CI |
-| `system[0]` prompt conteur | 2 400 | figé, mesuré en CI (`conteur/2.0.0` ≈ 2 200) |
+| `tools` | **0** | mode prose seule, ADR 0011 |
+| `system[0]` prompt conteur | 2 400 | mesuré en CI, référence commitée (M0-18) |
 | `system[1]` bloc campagne | 900 | tronqué par le constructeur |
 | `<chronique>` | 2 500 | plafond imposé au générateur de chronique (§ 5.2) |
 | fenêtre des 12 tours | 3 000 | ≈ 250 tokens par tour (fait condensé + narration) |
@@ -1361,7 +1367,7 @@ Budget cible **`min(14 000, capabilities.contextWindowTokens × 0,6)` tokens d'e
 | `<lore>` | 1 200 | 3 extraits × 400 caractères |
 | `<fait>` | 400 | |
 | `<intention>` + `<consignes_du_tour>` | 600 | |
-| **Total** | **≈ 14 000** | |
+| **Total** | **≈ 7 000** (ADR 0011) | l'ancienne cible de 14 000 supposait 5 200 de fixe ; il en pèse 8 291 |
 
 **Pourquoi la sortie passe de 700 à 800 tokens.** La prose n'a pas grossi — `conteur/2.0.0`
 raccourcit même les phrases. C'est le bloc `<scene_apres>` (§ 2.3) qui coûte 60 à 120 tokens de

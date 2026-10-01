@@ -9,6 +9,12 @@
     "oracles": 9,
     "tables": 2,
     "assets": 7,
-    "championIndex": 14
+    "championIndex": 14,
+    "periods": 6,
+    "fronts": 6,
+    "nodes": 20,
+    "figures": 12,
+    "hooks": 10,
+    "encounters": 15
   }
 }

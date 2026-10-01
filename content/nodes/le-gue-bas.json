@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "le-gue-bas",
+  "name": "Le Gué Bas",
+  "kind": "lieu",
+  "situation": "Le passage à pied sec entre les deux versants, quand la glace veut bien porter. Une barrière de fortune a été dressée sur l'ordre du conseil : on ne passe qu'en montrant un serment prêté. Celui qui garde la barrière ne croit pas à ce qu'il fait et le dit à qui l'écoute. De l'autre côté, deux hameaux attendent depuis six jours avec des bêtes qui ne tiendront pas la semaine, et un troisième groupe, qui n'attend pas, a commencé à chercher un autre passage plus haut.",
+  "stakeQuestion": "Le gué reste-t-il une route, ou devient-il une frontière qu'il faudra tenir en armes ?",
+  "figureIds": ["halvar-du-gue"],
+  "regionId": "avarosa-reach",
+  "periodId": "freljord-moderne",
+  "entryPoint": false,
+  "leads": [
+    {
+      "toNodeId": "le-convoi-qui-manque",
+      "trigger": "Les traces du convoi s'arrêtent net à deux pas de la barrière."
+    },
+    {
+      "toNodeId": "le-col-battu",
+      "trigger": "Ceux qui ne passent pas le gué remontent chercher le col."
+    },
+    {
+      "toNodeId": "la-porte-de-rakelstake",
+      "trigger": "Le hameau de l'autre versant demande qu'on vienne voir ce qu'il reste."
+    }
+  ],
+  "tags": ["passage", "avarosans"]
+}

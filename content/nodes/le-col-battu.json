@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "le-col-battu",
+  "name": "Le Col Battu",
+  "kind": "lieu",
+  "situation": "La seule route entre le haut et le bas qui reste praticable en hiver, et elle a changé de main une nuit, sans un mort. Ceux qui la tiennent laissent passer les gens et comptent les charges ; ils appellent ça un droit de passage et le montant est écrit nulle part. Les convois de grain n'y montent plus sans escorte, et l'escorte coûte plus cher que ce qu'elle garde. Du haut du col on voit les deux versants, et on voit aussi qui descend de la Citadelle, ce qui n'arrivait pas avant.",
+  "stakeQuestion": "Qui tient réellement la route du grain, et à quel prix la rendra-t-il ?",
+  "figureIds": ["sigrid-au-tribut", "la-marchande-sans-clan"],
+  "regionId": "freljord",
+  "periodId": "freljord-moderne",
+  "entryPoint": false,
+  "leads": [
+    {
+      "toNodeId": "le-camp-de-la-griffe",
+      "trigger": "Ceux qui tiennent le col rendent des comptes plus haut."
+    },
+    {
+      "toNodeId": "les-pierres-dressees",
+      "trigger": "Le sentier de crête contourne le col par les vieilles pierres."
+    },
+    {
+      "toNodeId": "le-tribut-compte",
+      "trigger": "Le droit de passage se négocie là où on tient les registres."
+    },
+    {
+      "toNodeId": "le-gue-bas",
+      "trigger": "Ce qui ne passe plus le col essaie de passer par le bas."
+    }
+  ],
+  "tags": ["passage", "territoire-conteste"]
+}

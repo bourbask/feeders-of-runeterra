@@ -1211,6 +1211,26 @@ ici servent deux fois — notation dans l'éval, post-filtre en production.
 - `tests/{context-budget,outputs,assertions,degradation,scene-merge,refusal-proof}.test.ts`.
 
 **Critères d'acceptation**
+- **Le budget de l'ADR 0011 est celui-ci, et il est mesuré.** Cible **7 000** tokens par tour, pas
+  14 000. `context-budget.test.ts` épingle le total **en toutes lettres** et échoue si le contexte
+  assemblé le dépasse sur le pire cas du corpus. Le testeur allonge un bloc variable de 1 000
+  tokens : le test sort en code non nul **et nomme le niveau de troncature** qui aurait dû tomber.
+- **Mode prose seule.** Aucun outil n'est envoyé au modèle en M0 : la table pèse 2 112 tokens et
+  c'est ce que les petits modèles ratent le plus. Un test vérifie que le contexte assemblé ne
+  contient **aucune** définition d'outil, et le testeur en rajoute une pour le faire rougir.
+- **Le prompt conteur redescend à sa cible de 2 400.** Il en pèse 4 279 et la référence commitée
+  de M0-18 le mesure : `prompt-size.reference.json` est mis à jour dans la même PR, et le test de
+  taille rougit si le prompt repasse au-dessus. Ce qui est coupé est de la **redite**, jamais une
+  règle : les deux exemples du §2.1 et la liste noire de style restent intouchés — ils sont le
+  seul garde-fou contre une réécriture qui garderait les règles et jetterait ce qui les rend
+  efficaces.
+- **L'estimateur est importé, jamais redéclaré.** `estimateTokens` vit dans
+  `packages/ai/src/prompts/estimate.ts` depuis M0-18. Deux estimateurs, et le budget et le test de
+  taille cessent de parler du même prompt. Un test l'épingle.
+- **Le bloc `<scene>` se construit depuis `brief.perceivableFacts`, jamais depuis `SceneState`.**
+  La fiche disait le contraire avant l'ADR 0008 et M0-33 : `src/prompts/scene.block.ts` est livré
+  par M0-18, cette tâche s'y branche. Un test vérifie qu'un fait présent dans l'état mais absent
+  de la liste n'apparaît pas dans le prompt rendu.
 - `env -u NARRATOR_PROVIDER -u NARRATOR_API_KEY pnpm turbo run test --filter @for/ai` sort en 0 (aucun
   appel réseau ; `@for/ai` n'a qu'une tâche livrante dans cette vague, la suite entière est donc
   un critère légitime ici).
@@ -2002,6 +2022,46 @@ ni `docs/runbook/conteur-fumee.md`, qui appartiennent à M0-32.)*
 ---
 
 ## Vague 9 — Assemblage
+### M0-35 · Le port de la voix — écrit, pas branché
+**Taille** : petite · **Dépend de** : M0-19 · **Parallélisable** : oui · **Reportée en V2 pour l'essai**
+
+**À quoi ça sert.** Théo veut que la narration se lise à voix haute — *« ça aurait énormément de
+value pour dynamiser l'aventure »*. Le porteur a tranché : **on pose le port maintenant, on ne le
+teste pas**, et on corrige à l'oreille en V2.
+
+**L'ordre retenu**, décidé sans essai et assumé comme tel :
+
+| Rang | Voie | Coût | Ce qu'on en sait |
+|---|---|---|---|
+| 1 | **Kokoro** auto-hébergé | 0 | 82 M de paramètres, tourne sur CPU, Apache 2.0, français inclus, 2ᵉ du classement public derrière le leader payant |
+| 2 | **Web Speech API**, Windows 11 + Edge | 0 | voix *Microsoft Natural* ; sur Windows 10 ou sous Chrome, on retombe sur les anciennes voix |
+| 3 | **Google WaveNet**, en repli | 1 M caractères/mois gratuits | ≈ 5,8 séances par mois, puis 0,70 $ la séance |
+
+**La contrainte qui décide de la forme.** Depuis l'ADR 0008, deux joueurs peuvent recevoir **deux
+narrations différentes au même tour**. La lecture est donc **par destinataire**, donc **côté
+client**. Un serveur qui lirait à voix haute pour la table est disqualifié par construction, pas
+par préférence.
+
+**Livrables** — le port et rien d'autre :
+- `packages/contracts/src/voice.ts` : `VoicePort` — `dire(texte, options)`, capacités annoncées,
+  erreurs classées. Même forme que le port narrateur de l'ADR 0002, pour la même raison.
+- `packages/client/src/voice/web-speech.ts` : l'adaptateur navigateur, le seul qui demande zéro
+  infrastructure. Il déclare ses capacités **à partir des voix réellement présentes** sur la
+  machine, jamais en supposant.
+- Le bouton qui coupe le son, et qui est **coupé par défaut**.
+
+**Deux pièges déjà connus, à écrire dans le code plutôt qu'à découvrir :**
+- Chromium **coupe toute phrase au-delà de ~15 secondes** — bug ancien, jamais corrigé. Une
+  narration se découpe en phrases avant d'être lue.
+- Les voix disponibles **changent d'une machine à l'autre**. Deux joueurs n'entendront pas la même
+  chose tant qu'on n'aura pas centralisé sur Kokoro. C'est la raison pour laquelle le rang 1 est
+  Kokoro et pas le navigateur.
+
+**Ce que cette tâche NE fait PAS** : brancher Kokoro, brancher Google, choisir une voix française,
+ni juger la qualité. Tout ça demande une partie à écouter, et il n'y en a pas encore.
+
+---
+
 
 ### M0-30 · Parcours de bout en bout : la preuve que le socle tient
 **Taille** : grosse · **Dépend de** : M0-26, M0-27, M0-28, M0-29 (et donc de tout le reste)

@@ -217,7 +217,7 @@ jobs:
       # masquer une chaîne cassée.
       - name: Construire les paquets
         run: pnpm build
-      - name: Chargeur en quatre passes, puis index régénéré à l'identique
+      - name: Chargeur en cinq passes, puis index régénéré à l'identique
         id: content
         continue-on-error: true # TODO M0-30: retirer
         run: |

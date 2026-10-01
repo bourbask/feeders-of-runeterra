@@ -2,19 +2,21 @@
  * `@for/content` — the complete registry. Server and simulator only.
  *
  * The content is NOT read from disk at runtime: `generated/index.ts` carries
- * it as static data, and this module runs the same four passes over it before
+ * it as static data, and this module runs the same five passes over it before
  * anybody gets a `ContentBundle`. So a bundle that would have failed
  * `pnpm content:check` fails `buildServer()` too, with the same report.
  *
  * `staticContent()` is memoised and LAZY on purpose. Validating at import time
  * would turn a broken bundle into a module-load crash with no report attached
- * — the server could not print the four-pass errors it exists to print.
+ * — the server could not print the five-pass errors it exists to print.
  */
 
+export * from './issue.js';
 export * from './json-source.js';
 export * from './load.js';
 export * from './manifest.js';
 export * from './registry.js';
+export * from './validate-graph.js';
 export * from './validate.js';
 
 import { GENERATED_FILES, GENERATED_FROM, GENERATED_HASH } from './generated/index.js';

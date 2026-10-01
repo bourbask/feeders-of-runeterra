@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "la-piste-des-sangliers",
+  "name": "La piste des sangliers",
+  "kind": "lieu",
+  "situation": "Une trouée dans la neige profonde, large comme une bête de charge, qui relie le haut au bas sans passer par le col. Elle n'est sur aucune carte et tout le monde en haut la connaît. On y voit des traces de traîneaux lourds, récentes, dans le sens de la descente, et rien dans l'autre. À mi-pente, une halte abandonnée où un feu a brûlé longtemps, entretenu par quelqu'un qui savait qu'il reviendrait.",
+  "stakeQuestion": "Qu'est-ce qui descend par une route que le col ne contrôle pas ?",
+  "figureIds": ["torvald-qui-est-descendu"],
+  "regionId": "ice-reaches",
+  "periodId": "freljord-moderne",
+  "entryPoint": false,
+  "leads": [
+    {
+      "toNodeId": "la-carcasse-sous-la-neige",
+      "trigger": "Les traces s'écartent de la piste, et une seule ne revient pas."
+    },
+    {
+      "toNodeId": "le-col-battu",
+      "trigger": "La piste rejoint la route juste sous le col, hors de vue."
+    },
+    {
+      "toNodeId": "le-camp-de-la-griffe",
+      "trigger": "Ceux qui l'empruntent dorment encore au camp, parfois."
+    }
+  ],
+  "tags": ["passage", "traque"]
+}

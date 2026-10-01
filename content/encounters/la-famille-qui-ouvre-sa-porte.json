@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "la-famille-qui-ouvre-sa-porte",
+  "name": "La famille qui ouvre sa porte",
+  "kind": "allie",
+  "periodId": "freljord-moderne",
+  "regionKinds": ["etablissement"],
+  "oracleRef": "settlement-troubles",
+  "summary": "Un feu, une soupe claire, et des gens qui donnent ce qu'ils n'ont pas en trop parce que c'est comme ça qu'on fait ici.",
+  "tags": ["allie", "hameau"]
+}
