@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "le-pacte-sous-la-glace",
+  "name": "Le pacte sous la glace",
+  "after": 100,
+  "before": 200,
+  "summary": "Une des trois sœurs descend parler à ce qui attend sous la banquise, et remonte avec une promesse que ses aînées ignorent. Rien ne change encore en surface, et c'est déjà fait.",
+  "factionIds": [],
+  "absentFactionIds": ["avarosans", "griffe-d-hiver", "gardiens-du-givre"],
+  "tags": ["frise", "secret", "sous-la-glace"]
+}

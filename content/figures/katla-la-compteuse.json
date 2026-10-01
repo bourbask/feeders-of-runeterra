@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "katla-la-compteuse",
+  "name": "Katla la Compteuse",
+  "disposition": "neutre",
+  "factionId": "avarosans",
+  "periodId": "freljord-moderne",
+  "wants": "Que le compte du grenier redevienne juste, et qu'on le relise à voix haute devant tout le monde comme avant.",
+  "refuses": "Servir un clan avant un autre, même celui qui la loge, la nourrit et la protège.",
+  "knows": "Le jour exact où les sacs ont cessé de correspondre, et le nom de celui qui tenait la craie ce soir-là.",
+  "tags": ["grain", "conseil"]
+}

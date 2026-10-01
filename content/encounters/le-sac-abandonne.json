@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "le-sac-abandonne",
+  "name": "Le sac abandonné",
+  "kind": "trouvaille",
+  "periodId": "freljord-moderne",
+  "regionKinds": ["territoire", "etendue"],
+  "oracleRef": "place-features",
+  "summary": "Un paquetage complet posé au pied d'un arbre, fermé, sec, et sans personne autour depuis des jours.",
+  "tags": ["trouvaille"]
+}

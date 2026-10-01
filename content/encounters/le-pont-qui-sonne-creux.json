@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "le-pont-qui-sonne-creux",
+  "name": "Le pont qui sonne creux",
+  "kind": "obstacle",
+  "periodId": "freljord-moderne",
+  "regionKinds": ["etablissement", "territoire"],
+  "oracleRef": "complication",
+  "summary": "Un passage que tout le monde emprunte encore, et dont chacun connaît par cœur les planches à éviter.",
+  "tags": ["obstacle", "passage"]
+}

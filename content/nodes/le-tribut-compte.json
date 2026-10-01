@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "le-tribut-compte",
+  "name": "Le tribut compté",
+  "kind": "confrontation",
+  "situation": "Une table, deux registres, et un écart que personne ne veut expliquer. Le tribut demandé au versant bas a doublé cette saison ; le hameau a payé sans discuter, et ce qui est arrivé au camp est la moitié de ce qui est parti. Celle qui tient les comptes sait exactement combien chaque hameau peut donner avant de préférer se battre, et elle sait que le montant actuel est au-dessus. Elle n'a pas encore décidé si elle protège la bande ou le hameau.",
+  "stakeQuestion": "Où va la moitié manquante du tribut, et qui la garde ?",
+  "figureIds": ["sigrid-au-tribut", "ulfar-le-preneur"],
+  "regionId": "ice-reaches",
+  "periodId": "freljord-moderne",
+  "entryPoint": false,
+  "leads": [
+    {
+      "toNodeId": "le-conseil-des-greniers",
+      "trigger": "Le hameau qui a payé deux fois veut que le conseil l'entende."
+    },
+    {
+      "toNodeId": "la-piste-des-sangliers",
+      "trigger": "Ce qui manque n'est pas monté au camp : il est descendu."
+    },
+    {
+      "toNodeId": "le-feu-partage",
+      "trigger": "Elle accepte de parler dehors, au feu, et pas devant la bande."
+    }
+  ],
+  "tags": ["tribut", "enquete"]
+}

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "la-fracture-des-trois",
+  "name": "La fracture des trois",
+  "segments": 8,
+  "stake": "L'union que trois sœurs ont mis une vie à bâtir, et les clans qui avaient fini par y croire.",
+  "periodId": "guerre-des-trois-soeurs",
+  "regionIds": ["howling-abyss", "freljord"],
+  "tags": ["rupture", "vraie-glace"],
+  "portents": [
+    "L'une des trois cesse de venir aux conseils, et envoie quelqu'un à sa place.",
+    "Un secret vieux d'une génération se dit à voix haute devant un témoin de trop.",
+    "Les clans choisissent leur sœur, et les familles se coupent en deux.",
+    "La Vraie Glace est prise à celle qui la portait, et nul ne dit par quelle main.",
+    "Une armée passe le col en plein hiver, ce qu'aucune n'avait osé jusque-là.",
+    "Le rituel est prononcé au bord de la faille, et la faille répond.",
+    "Deux des trois disparaissent le même jour, et les récits ne s'accordent pas.",
+    "Il ne reste qu'un nord fendu, trois héritages, et aucune paix à se partager."
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "ce-que-la-citadelle-ne-dit-pas",
+  "name": "Ce que la Citadelle ne dit pas",
+  "appliesTo": {
+    "kind": "faction",
+    "factionId": "gardiens-du-givre"
+  },
+  "vowRank": "extreme",
+  "periodId": "freljord-moderne",
+  "suggestedBondIds": ["eira-la-veilleuse", "hjalmar-le-questionneur"],
+  "pitch": "On vous accueille, on vous nourrit, on répond à toutes vos questions. Vous repartez avec moins de questions qu'à l'arrivée, et c'est exactement ce qui devrait vous inquiéter.",
+  "tags": ["citadelle", "secret"]
+}

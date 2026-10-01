@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "le-feu-partage",
+  "name": "Le feu partagé",
+  "kind": "rencontre",
+  "situation": "Un feu dehors, des formes que tout le monde connaît, et une règle plus vieille que les clans : qui partage le feu ne lève plus la main cette nuit-là. On y trouve, la même nuit, des gens qui ne devraient pas s'y trouver ensemble, et aucun ne part le premier. Ce qui se dit ici ne se répète pas ailleurs, ce qui en fait le seul endroit du nord où les trois se parlent. Le rite oblige celui qui l'accepte, et tout le monde le sait en tendant les mains.",
+  "stakeQuestion": "Qui est venu ici pour parler, et qui est venu pour écouter ?",
+  "figureIds": ["la-marchande-sans-clan", "torvald-qui-est-descendu", "brynja-la-tardive"],
+  "regionId": "freljord",
+  "periodId": "freljord-moderne",
+  "entryPoint": false,
+  "leads": [
+    {
+      "toNodeId": "le-conseil-des-greniers",
+      "trigger": "Ce qui s'est dit au feu doit être porté au conseil par quelqu'un."
+    },
+    {
+      "toNodeId": "la-salle-commune",
+      "trigger": "On rentre au hameau avec un invité de plus."
+    },
+    {
+      "toNodeId": "le-camp-de-la-griffe",
+      "trigger": "Celui qui a accepté le feu rentre rendre des comptes."
+    }
+  ],
+  "tags": ["rite", "rencontre"]
+}

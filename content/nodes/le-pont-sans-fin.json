@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "le-pont-sans-fin",
+  "name": "Le pont sans fin",
+  "kind": "confrontation",
+  "situation": "Un pont de pierre au-dessus du vide, assez large pour deux hommes de front, et assez long pour qu'on ne voie pas l'autre bout par mauvais temps. Il est entretenu, ce qui est la seule chose vraiment inquiétante ici : les joints sont repris, les dalles remplacées, et personne n'admet le faire. Au milieu, un renfoncement abrité où quelqu'un s'installe régulièrement pour attendre ceux qui traversent.",
+  "stakeQuestion": "Qui entretient le pont, et qu'est-ce qu'il attend de ceux qui le prennent ?",
+  "figureIds": [],
+  "regionId": "howling-abyss",
+  "periodId": "freljord-moderne",
+  "entryPoint": false,
+  "leads": [
+    {
+      "toNodeId": "la-marque-sur-la-glace",
+      "trigger": "De ce côté, la glace porte la même entaille, en plus ancienne."
+    },
+    {
+      "toNodeId": "la-faille-hurlante",
+      "trigger": "Revenir sur ses pas en sachant ce qu'il y a en face."
+    },
+    {
+      "toNodeId": "le-feu-partage",
+      "trigger": "Celui qui attend au milieu demande le feu, selon les formes."
+    }
+  ],
+  "tags": ["faille", "confrontation"]
+}

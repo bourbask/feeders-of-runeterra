@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "ce-qui-fend-la-faille",
+  "name": "Ce qui fend la faille",
+  "appliesTo": {
+    "kind": "region",
+    "regionId": "howling-abyss"
+  },
+  "vowRank": "epique",
+  "periodId": "freljord-moderne",
+  "suggestedBondIds": ["eira-la-veilleuse"],
+  "pitch": "Les bêtes ont quitté la Faille le même jour, toutes, et personne à la Citadelle n'a voulu dire pourquoi.",
+  "tags": ["veille", "sous-la-glace"]
+}

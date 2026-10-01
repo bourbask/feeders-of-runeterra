@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "la-longue-nuit",
+  "name": "La Longue Nuit",
+  "after": 400,
+  "before": 500,
+  "summary": "Ce qui regardait sous la glace est emmuré, le monde refroidit d'un cran, et les yétis redeviennent sauvages. Ceux qui ont tourné la clé restent pour la garder, et fondent une lignée qui ne dit pas ce qu'elle veille.",
+  "factionIds": ["gardiens-du-givre"],
+  "absentFactionIds": ["avarosans", "griffe-d-hiver"],
+  "tags": ["frise", "mur", "veille"]
+}

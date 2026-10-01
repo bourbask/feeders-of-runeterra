@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "le-pont-de-rakelstake",
+  "name": "Le pont de Rakelstake",
+  "appliesTo": {
+    "kind": "region",
+    "regionId": "rakelstake"
+  },
+  "vowRank": "genant",
+  "periodId": "freljord-moderne",
+  "suggestedBondIds": ["l-enfant-du-pont"],
+  "pitch": "Quarante feux, une seule porte, et un pont dont trois dalles sonnent creux depuis l'automne.",
+  "tags": ["hameau", "passage"]
+}

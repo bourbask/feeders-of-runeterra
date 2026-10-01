@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "hjalmar-le-questionneur",
+  "name": "Hjalmar le Questionneur",
+  "disposition": "neutre",
+  "factionId": "gardiens-du-givre",
+  "periodId": "freljord-moderne",
+  "wants": "Que la Citadelle dise enfin ce qu'elle garde, avant que le nord ne l'apprenne d'une autre façon.",
+  "refuses": "Ouvrir lui-même ce qu'il réclame qu'on ouvre : il veut une réponse, pas une faute.",
+  "knows": "Le compte des couloirs déclarés, et celui des couloirs réellement empruntés cette saison.",
+  "tags": ["citadelle", "secret"]
+}

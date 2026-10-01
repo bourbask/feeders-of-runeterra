@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "la-charrette-qui-remonte",
+  "name": "La charrette qui remonte",
+  "kind": "marchand",
+  "periodId": "freljord-moderne",
+  "regionKinds": ["territoire", "etendue"],
+  "oracleRef": "settlement-troubles",
+  "summary": "Une charrette chargée pour l'aller et vide au retour, alors que la saison voudrait le contraire.",
+  "tags": ["marchand", "grain"]
+}

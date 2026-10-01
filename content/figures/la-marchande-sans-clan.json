@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "la-marchande-sans-clan",
+  "name": "La marchande sans clan",
+  "disposition": "neutre",
+  "factionId": null,
+  "periodId": "freljord-moderne",
+  "wants": "Passer le col avant la fermeture et vendre à qui paie, quelle que soit la bannière plantée devant.",
+  "refuses": "Transporter des armes pour l'un des trois, même payée le double du chargement.",
+  "knows": "Qui achète quoi cette saison, et ce que ces achats disent de ce qui se prépare.",
+  "tags": ["marchand", "passage"]
+}

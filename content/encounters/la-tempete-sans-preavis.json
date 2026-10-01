@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "la-tempete-sans-preavis",
+  "name": "La tempête sans préavis",
+  "kind": "obstacle",
+  "periodId": "freljord-moderne",
+  "regionKinds": ["etendue", "royaume", "territoire"],
+  "oracleRef": "freljord-weather",
+  "summary": "Le ciel change en une heure, la trace disparaît, et l'abri le plus proche appartient à quelqu'un.",
+  "tags": ["obstacle", "hiver"]
+}

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "la-question-posee-en-bas",
+  "name": "La question posée en bas",
+  "kind": "revelation",
+  "situation": "Le fond du couloir n'est pas une salle : c'est un mur, et le mur est une réponse à quelque chose. Il a été bâti par des gens qui savaient qu'ils ne le reverraient pas fini, et il tient encore. De ce côté-ci, une chaise, une lampe entretenue, et le compte des veilles tenu à jour depuis assez de générations pour que l'écriture change trois fois. La dernière page est récente et pose une question au lieu d'inscrire une relève.",
+  "stakeQuestion": "Ce que le mur retient veut-il sortir, ou veut-il qu'on entre ?",
+  "figureIds": ["eira-la-veilleuse", "hjalmar-le-questionneur"],
+  "regionId": "frostguard-citadel",
+  "periodId": "freljord-moderne",
+  "entryPoint": false,
+  "leads": [
+    {
+      "toNodeId": "la-faille-hurlante",
+      "trigger": "Le registre renvoie à la faille pour ce qui précède le mur."
+    },
+    {
+      "toNodeId": "le-couloir-qui-descend",
+      "trigger": "Remonter avec la dernière page, ou sans elle."
+    },
+    {
+      "toNodeId": "le-conseil-des-greniers",
+      "trigger": "Ce qui est écrit là concerne le nord entier, pas une maison."
+    }
+  ],
+  "tags": ["revelation", "veille"]
+}

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "le-peage-improvise",
+  "name": "Le péage improvisé",
+  "kind": "obstacle",
+  "periodId": "freljord-moderne",
+  "regionKinds": ["territoire", "etablissement"],
+  "oracleRef": "settlement-troubles",
+  "summary": "Une corde en travers de la route, quatre hommes mal armés, et un droit de passage inventé la semaine dernière.",
+  "tags": ["obstacle", "tribut"]
+}

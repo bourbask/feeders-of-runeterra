@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "sigrid-au-tribut",
+  "name": "Sigrid au Tribut",
+  "disposition": "hostile",
+  "factionId": "griffe-d-hiver",
+  "periodId": "freljord-moderne",
+  "wants": "Que le versant bas paie sans qu'on ait besoin de brûler quoi que ce soit pour l'obtenir.",
+  "refuses": "Lever la main sur un enfant ou sur une bête de trait, quel que soit le retard.",
+  "knows": "Le montant que chaque hameau peut payer avant de préférer se battre et mourir debout.",
+  "tags": ["tribut", "negociation"]
+}

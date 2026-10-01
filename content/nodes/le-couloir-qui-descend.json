@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "le-couloir-qui-descend",
+  "name": "Le couloir qui descend",
+  "kind": "lieu",
+  "situation": "Un couloir taillé dans la glace qui descend plus bas que la roche ne le permet, et plus bas qu'au dernier passage. Personne ne l'a creusé cette saison. La température baisse à mesure qu'on descend, ce qui est l'inverse de ce que fait la terre. Des niches régulières sur les parois ont contenu quelque chose, et les trois dernières sont vides. On entend, par intervalles, un chant sans paroles que les enfants du haut répètent au matin sans savoir où ils l'ont pris.",
+  "stakeQuestion": "Le couloir a-t-il été creusé depuis le haut, ou ouvert depuis le bas ?",
+  "figureIds": ["eira-la-veilleuse"],
+  "regionId": "frostguard-citadel",
+  "periodId": "freljord-moderne",
+  "entryPoint": false,
+  "leads": [
+    {
+      "toNodeId": "la-question-posee-en-bas",
+      "trigger": "Au bout du couloir, quelqu'un attend depuis longtemps qu'on demande."
+    },
+    {
+      "toNodeId": "la-veille-du-givre",
+      "trigger": "Remonter et exiger qu'on explique les niches vides."
+    },
+    {
+      "toNodeId": "la-marque-sur-la-glace",
+      "trigger": "Une des parois porte une entaille faite de l'autre côté."
+    }
+  ],
+  "tags": ["citadelle", "sous-la-glace"]
+}
