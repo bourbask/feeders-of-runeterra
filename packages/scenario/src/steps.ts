@@ -266,8 +266,14 @@ const PISTE: ScenarioStep = {
     if (node === undefined || chosen === undefined) return [];
     return node.leads.flatMap((lead) => {
       // `getNode`, not `findNode`: `toNodeId` carries a `ref:node` marker, so
-      // pass 3 of the loader has already refused an unresolvable lead. The
-      // only thing left to filter here is the period.
+      // pass 3 of the loader has already refused an unresolvable lead.
+      //
+      // THE PERIOD CHECK BELOW IS BELT AND BRACES, AND NO TEST CAN REACH IT:
+      // rule 3 of the fifth pass (S-02, ADR 0012 decision 4) refuses a
+      // cross-period lead at load time, so a registry carrying one cannot be
+      // built. Kept because this function is also callable on a registry
+      // assembled by hand, and said rather than implied — a guard nothing can
+      // exercise must not claim to be held by a test it does not have.
       const destination = context.registry.getNode(lead.toNodeId);
       if (destination.periodId !== chosen.id) return [];
       return [

@@ -20,7 +20,7 @@
  *
  * The corpus is S-02-clean on purpose: three distinct leads per node, no
  * orphan outside an `entryPoint`, no lead across periods, portents exactly
- * equal to segments. `crossPeriodLeadRegistry()` is the one deliberate
+ * equal to segments. Every document is S-02-clean: the fifth pass refuses a cross-period lead one pass before the
  * exception, and says so.
  */
 
@@ -565,29 +565,6 @@ export function corpusFiles(): Map<string, string> {
 
 export function corpusRegistry(): ContentRegistry {
   return createRegistry(validateContent(corpusFiles(), { root: 'content-fixtures' }));
-}
-
-/**
- * The same corpus with ONE lead crossing a period boundary.
- *
- * Deliberate, and the only piece of the fixture that is not S-02-clean: it is
- * what proves the period filter of the `piste` step is not inert. If a future
- * `validateContent` refuses this bundle, that means S-02's rule 3 has landed
- * and now refuses the same thing one pass earlier — the filter becomes
- * redundant, and this helper can go.
- */
-export function crossPeriodLeadRegistry(): ContentRegistry {
-  const files = corpusFiles();
-  const entry = pick(NODE_NAMES, 0);
-  const document = JSON.parse(files.get(`nodes/${entry}.json`) ?? '{}') as {
-    leads: { toNodeId: string; trigger: string }[];
-  };
-  document.leads = [
-    { toNodeId: pick(ANCIENT_NODE_NAMES, 0), trigger: 'On descend sous la glace, bien plus tôt.' },
-    ...document.leads.slice(1),
-  ];
-  write(files, `nodes/${entry}.json`, document);
-  return createRegistry(validateContent(files, { root: 'content-fixtures' }));
 }
 
 /** Périodes que le contenu rend jouables : un front, une figure, un point d'entrée. */

@@ -26,9 +26,7 @@ import { SCENARIO_STEP_IDS } from '../src/types.js';
 
 import {
   ANCIENT,
-  ANCIENT_ENTRY_NODE_ID,
   corpusRegistry,
-  crossPeriodLeadRegistry,
   ENTRY_NODE_ID,
   LONG_NIGHT,
   MODERN,
@@ -202,26 +200,6 @@ describe('chaque étape ferme sa liste sur la période', () => {
     const list = candidatesOf('piste', { periode: MODERN, noeud: ENTRY_NODE_ID });
     expect(new Set(list).size).toBe(3);
     expect(list).not.toContain(ENTRY_NODE_ID);
-  });
-
-  it('piste : une destination d’UNE AUTRE PÉRIODE est écartée', () => {
-    // Le seul document du corpus qui n'est pas propre au sens de S-02 : il
-    // porte une piste qui traverse les périodes. Si un jour `validateContent`
-    // le refuse, c'est que la règle 3 de S-02 est arrivée — ce filtre devient
-    // redondant et ce test peut tomber.
-    const croisé = crossPeriodLeadRegistry();
-    const list = step('piste')
-      .candidates({
-        registry: croisé,
-        party: [],
-        selection: selection({ periode: MODERN, noeud: ENTRY_NODE_ID }),
-      })
-      .map((candidate) => candidate.id);
-    expect(croisé.getNode(ENTRY_NODE_ID).leads.map((lead) => lead.toNodeId)).toContain(
-      ANCIENT_ENTRY_NODE_ID,
-    );
-    expect(list).not.toContain(ANCIENT_ENTRY_NODE_ID);
-    expect(list).toHaveLength(2);
   });
 });
 
