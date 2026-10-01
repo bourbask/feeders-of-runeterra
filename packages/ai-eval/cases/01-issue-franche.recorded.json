@@ -1,0 +1,18 @@
+{
+  "case_id": "01-issue-franche",
+  "provider": "stub",
+  "model": "ecrit-a-la-main-m0",
+  "prompt_version": "conteur/2.1.0",
+  "tools_version": "tools/1.0.0",
+  "recorded_at": "2026-09-30T00:00:00.000Z",
+  "samples": [
+    {
+      "response": "Tu montes jusqu'à l'épaule de pierre et le vent te prend de biais. La trace est là, creusée dans la neige dure, deux empreintes larges qui remontent vers le cairn nord. Ulrun te rejoint, pose la main sur la corde tendue et la laisse filer entre ses doigts. Le froid mord ton poignet nu.\n\n<scene_apres>{\"lieu\": \"col_des_hurleurs\", \"presents\": [{\"nom\": \"Ingvild\", \"etat\": \"debout sur l'épaule de pierre\"}, {\"nom\": \"Ulrun\", \"etat\": \"accroupi près de la corde\"}], \"partis\": [], \"refus\": null}</scene_apres>",
+      "tool_calls": []
+    },
+    {
+      "response": "Tu poses le pied sur l'épaule de pierre et la roche tient sous ton poids. Deux empreintes remontent vers le cairn nord, gelées au fond, nettes au bord. Ulrun monte derrière toi sans un mot et noue la corde au piton de fer. Le vent arrache un peu de neige du bord et la pousse dans ta manche.\n\n<scene_apres>{\"lieu\": \"col_des_hurleurs\", \"presents\": [{\"nom\": \"Ingvild\", \"etat\": \"debout sur l'épaule de pierre\"}, {\"nom\": \"Ulrun\", \"etat\": \"accroupi près de la corde\"}], \"partis\": [], \"refus\": null}</scene_apres>",
+      "tool_calls": []
+    }
+  ]
+}

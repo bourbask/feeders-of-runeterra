@@ -1,0 +1,163 @@
+{
+  "id": "avarosa",
+  "known_event_seq_max": 400,
+  "target_event_seq": 400,
+  "doc": {
+    "premise": "Une bande remonte vers le col des Hurleurs avant que la neige ne ferme la passe. Elle porte les cendres d'Avarosa jusqu'au cairn du nord, et elle a déjà laissé un mort derrière elle.",
+    "arcs": [
+      {
+        "id": "arc_cendres",
+        "title": "Porter les cendres jusqu'au cairn du nord",
+        "status": "ouvert",
+        "summary": "Le coffre de cendres a quitté le camp de la hache. Il doit atteindre le cairn avant la fermeture de la passe. Deux nuits ont été perdues dans le ravin.",
+        "last_event_seq": 396
+      },
+      {
+        "id": "arc_forge",
+        "title": "La dette envers la forge",
+        "status": "dormant",
+        "summary": "La forgeronne a refait la lame d'Ingvild sans rien demander. Elle réclamera son dû au retour.",
+        "last_event_seq": 311
+      }
+    ],
+    "characters": [
+      {
+        "character_id": "01HZZZ0000000000000000CHR1",
+        "name": "Ingvild",
+        "one_line": "Archère avarosane, née au camp de la hache, elle mène la bande depuis la mort de son frère.",
+        "notable_deeds": [
+          "A tiré la bande hors du ravin de la Corne sous la neige.",
+          "A porté le coffre de cendres seule pendant une nuit entière."
+        ],
+        "current_burden": "Elle n'a pas dit aux autres ce que Keld lui a demandé avant de tomber."
+      },
+      {
+        "character_id": "01HZZZ0000000000000000CHR2",
+        "name": "Torvald",
+        "one_line": "Porteur de hache, lent à parler, il compte les pas et les vivres comme on compte des grains.",
+        "notable_deeds": ["A tenu la corde quand la corniche a cédé."],
+        "current_burden": "Il veut redescendre et ne le dit pas."
+      }
+    ],
+    "npcs": [
+      {
+        "npc_id": "01HZZZ0000000000000000ENT1",
+        "name": "Ulrun",
+        "role": "éclaireur de la bande",
+        "status": "vivant",
+        "stance": "Fidèle, mais il garde pour lui ce qu'il a vu dans le ravin.",
+        "voice": "Phrases courtes, jamais un mot de trop, il nomme les choses par leur nom.",
+        "last_seen_place": "Le col des Hurleurs",
+        "last_event_seq": 398
+      },
+      {
+        "npc_id": "01HZZZ0000000000000000ENT2",
+        "name": "Signy",
+        "role": "forgeronne du camp de la hache",
+        "status": "vivant",
+        "stance": "Elle a refait la lame sans rien demander et attend son dû.",
+        "voice": "Lente, railleuse, elle finit ses phrases par une question qu'elle ne pose pas.",
+        "last_seen_place": "Le camp de la hache",
+        "last_event_seq": 374
+      },
+      {
+        "npc_id": "01HZZZ0000000000000000ENT3",
+        "name": "Keld",
+        "role": "porteur du coffre de cendres",
+        "status": "mort",
+        "stance": "Il a porté le coffre jusqu'au ravin, puis la corniche a cédé.",
+        "voice": "Il chantait pour marcher, et personne ne le lui a jamais demandé.",
+        "last_seen_place": "Le ravin de la Corne",
+        "last_event_seq": 361
+      },
+      {
+        "npc_id": "01HZZZ0000000000000000ENT4",
+        "name": "Brynja",
+        "role": "guetteuse du cairn nord",
+        "status": "vivant",
+        "stance": "Elle laisse passer qui porte des cendres, et retient le reste.",
+        "voice": "Sèche, elle parle du vent comme d'une bête qu'elle connaît.",
+        "last_seen_place": "Le col des Hurleurs",
+        "last_event_seq": 399
+      }
+    ],
+    "places": [
+      {
+        "place_id": "col_des_hurleurs",
+        "name": "Le col des Hurleurs",
+        "one_line": "Une entaille de pierre entre deux crêtes, où le vent ne tombe jamais.",
+        "state": "La neige a commencé à prendre sur la corniche est."
+      },
+      {
+        "place_id": "camp_de_la_hache",
+        "name": "Le camp de la hache",
+        "one_line": "Des toits de tourbe autour d'une forge qui ne s'éteint pas.",
+        "state": "Vidé de ses hommes valides depuis le départ de la bande."
+      },
+      {
+        "place_id": "ravin_de_la_corne",
+        "name": "Le ravin de la Corne",
+        "one_line": "Un couloir de glace qui descend vers la rivière morte.",
+        "state": "La corniche a cédé et le passage est fermé."
+      }
+    ],
+    "facts": [
+      {
+        "fact_id": "fait_keld_mort",
+        "statement": "Keld est mort dans le ravin de la Corne quand la corniche a cédé sous le coffre.",
+        "entities": ["01HZZZ0000000000000000ENT3"],
+        "event_seq": 361,
+        "superseded_by": null
+      },
+      {
+        "fact_id": "fait_signy_restee",
+        "statement": "Signy est restée au camp de la hache et n'a pas suivi la bande dans la montée.",
+        "entities": ["01HZZZ0000000000000000ENT2"],
+        "event_seq": 374,
+        "superseded_by": null
+      },
+      {
+        "fact_id": "fait_coffre_porte",
+        "statement": "Le coffre de cendres est porté par la bande depuis la mort de Keld.",
+        "entities": ["01HZZZ0000000000000000CHR1", "01HZZZ0000000000000000ENT3"],
+        "event_seq": 362,
+        "superseded_by": null
+      },
+      {
+        "fact_id": "fait_ulrun_tait",
+        "statement": "Ulrun a vu quelque chose dans le ravin et refuse d'en parler devant les autres.",
+        "entities": ["01HZZZ0000000000000000ENT1"],
+        "event_seq": 398,
+        "superseded_by": null
+      },
+      {
+        "fact_id": "fait_passe_ferme",
+        "statement": "Le ravin de la Corne est fermé : la bande ne peut plus redescendre par là.",
+        "entities": [],
+        "event_seq": 363,
+        "superseded_by": null
+      }
+    ],
+    "open_threads": [
+      {
+        "thread_id": "fil_ulrun",
+        "title": "Ce qu'Ulrun a vu dans le ravin",
+        "summary": "Il s'est tu devant la bande et n'a parlé qu'à Ingvild, à demi-mot, le soir même.",
+        "opened_event_seq": 398,
+        "tied_to": "Ulrun"
+      },
+      {
+        "thread_id": "fil_dette",
+        "title": "La dette envers la forge",
+        "summary": "Signy réclamera son dû au retour, et la bande ne sait pas ce qu'elle demandera.",
+        "opened_event_seq": 374,
+        "tied_to": "Signy"
+      }
+    ],
+    "recent_digest": [
+      "La bande a quitté le camp de la hache avec le coffre et deux jours de vivres de moins que prévu.",
+      "La corniche du ravin a cédé ; Keld est tombé avec le coffre, qui a été remonté sans lui.",
+      "La montée vers le col s'est faite de nuit, sous un vent qui a arraché la toile de l'abri."
+    ]
+  }
+}

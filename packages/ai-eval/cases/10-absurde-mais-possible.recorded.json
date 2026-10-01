@@ -1,0 +1,18 @@
+{
+  "case_id": "10-absurde-mais-possible",
+  "provider": "stub",
+  "model": "ecrit-a-la-main-m0",
+  "prompt_version": "conteur/2.1.0",
+  "tools_version": "tools/1.0.0",
+  "recorded_at": "2026-09-30T00:00:00.000Z",
+  "samples": [
+    {
+      "response": "Tu écartes la toile et tu prends la barbe de Keld entre tes doigts gelés. Les mèches sont raides et le gel les tient collées les unes aux autres. Tu démêles le gel, puis tu tresses, et la tresse tient. Ulrun regarde ailleurs, dos au vent, et laisse faire.\n\n<scene_apres>{\"lieu\": \"col_des_hurleurs\", \"presents\": [{\"nom\": \"Ingvild\", \"etat\": \"agenouillée près de la toile\"}, {\"nom\": \"Ulrun\", \"etat\": \"debout, dos au vent\"}, {\"nom\": \"Keld\", \"etat\": \"étendu sous la toile\"}], \"partis\": [], \"refus\": null}</scene_apres>",
+      "tool_calls": []
+    },
+    {
+      "response": "Tu soulèves le pan de toile et la barbe de Keld apparaît, blanche de gel. Tes doigts sont trop raides pour aller vite, alors tu vas lentement. La tresse se forme, courte, serrée, et tu la cales sous le col de sa pelisse. Ulrun tourne le dos et compte les pierres du cairn.\n\n<scene_apres>{\"lieu\": \"col_des_hurleurs\", \"presents\": [{\"nom\": \"Ingvild\", \"etat\": \"agenouillée près de la toile\"}, {\"nom\": \"Ulrun\", \"etat\": \"debout, dos au vent\"}, {\"nom\": \"Keld\", \"etat\": \"étendu sous la toile\"}], \"partis\": [], \"refus\": null}</scene_apres>",
+      "tool_calls": []
+    }
+  ]
+}

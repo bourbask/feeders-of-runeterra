@@ -1,0 +1,18 @@
+{
+  "case_id": "07-bloc-malforme",
+  "provider": "stub",
+  "model": "ecrit-a-la-main-m0",
+  "prompt_version": "conteur/2.1.0",
+  "tools_version": "tools/1.0.0",
+  "recorded_at": "2026-09-30T00:00:00.000Z",
+  "samples": [
+    {
+      "response": "Tu casses du bois mort sous le surplomb et la première flamme prend au troisième essai. La fumée part à plat sous la pierre et te revient dans la figure. Ulrun approche les mains et les garde ouvertes au-dessus du feu. Le bois siffle et crache une braise sur ta botte.\n\n<scene_apres>{\"lieu\": \"col_des_hurleurs\", \"presents\": [{\"nom\": \"Ingvild\"</scene_apres>",
+      "tool_calls": []
+    },
+    {
+      "response": "Tu empiles le bois mort au ras de la pierre et le feu prend court, sans hauteur. La fumée reste plaquée sous le surplomb et sort par le côté ouvert. Ulrun tend les paumes vers la flamme et ne dit rien pendant un long moment. Une braise saute et marque le cuir de ta botte.\n\n<scene_apres>ceci n'est pas du JSON</scene_apres>",
+      "tool_calls": []
+    }
+  ]
+}

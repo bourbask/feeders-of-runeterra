@@ -1,0 +1,18 @@
+{
+  "case_id": "06-absent-interpelle",
+  "provider": "stub",
+  "model": "ecrit-a-la-main-m0",
+  "prompt_version": "conteur/2.1.0",
+  "tools_version": "tools/1.0.0",
+  "recorded_at": "2026-09-30T00:00:00.000Z",
+  "samples": [
+    {
+      "response": "Tu appelles, et seule la trace de Signy dans la neige dure te répond, déjà à moitié comblée. Elle est partie au camp de la hache et sa place près du cairn reste vide. Ulrun te regarde crier, puis repasse le pouce sur le fil de ta lame. Le vent prend ta voix et la pousse contre la paroi.\n\n<scene_apres>{\"lieu\": \"col_des_hurleurs\", \"presents\": [{\"nom\": \"Ingvild\", \"etat\": \"debout sur l'épaule de pierre\"}, {\"nom\": \"Ulrun\", \"etat\": \"accroupi près de la corde\"}], \"partis\": [], \"refus\": null}</scene_apres>",
+      "tool_calls": []
+    },
+    {
+      "response": "Tu cries vers le bas du col, mais Signy est partie depuis deux nuits, au camp de la hache. Ce qu'elle a laissé tient dans deux empreintes de bottes et un cercle de cendre froide. Ulrun pose le pouce sur le fil de la lame et secoue la tête. Ta voix revient de la paroi, plus courte que tu ne l'as lancée.\n\n<scene_apres>{\"lieu\": \"col_des_hurleurs\", \"presents\": [{\"nom\": \"Ingvild\", \"etat\": \"debout sur l'épaule de pierre\"}, {\"nom\": \"Ulrun\", \"etat\": \"accroupi près de la corde\"}], \"partis\": [], \"refus\": null}</scene_apres>",
+      "tool_calls": []
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "case_id": "09-refus-cible-absente",
+  "provider": "stub",
+  "model": "ecrit-a-la-main-m0",
+  "prompt_version": "conteur/2.1.0",
+  "tools_version": "tools/1.0.0",
+  "recorded_at": "2026-09-30T00:00:00.000Z",
+  "samples": [
+    {
+      "response": "Tu te tournes pour parler, et il ne reste de Signy que la trace de ses bottes dans la neige dure. Elle est partie au camp de la hache bien avant que tu engages la montée. Ulrun suit ton regard, puis revient au cairn sans commenter. Le vent racle la pierre nue.\n\n<scene_apres>{\"lieu\": \"col_des_hurleurs\", \"presents\": [{\"nom\": \"Ingvild\", \"etat\": \"debout sur l'épaule de pierre\"}, {\"nom\": \"Ulrun\", \"etat\": \"accroupi près de la corde\"}], \"partis\": [], \"refus\": {\"cause\": \"cible_absente\", \"cible\": \"Signy\"}}</scene_apres>",
+      "tool_calls": []
+    },
+    {
+      "response": "Tu cherches Signy des yeux et tu ne trouves que l'empreinte qu'elle a laissée au départ. La forge est restée en bas, et elle avec, depuis deux nuits. Ulrun remonte le col de sa pelisse et attend que tu redescendes du bord. La lame reste froide dans ta main.\n\n<scene_apres>{\"lieu\": \"col_des_hurleurs\", \"presents\": [{\"nom\": \"Ingvild\", \"etat\": \"debout sur l'épaule de pierre\"}, {\"nom\": \"Ulrun\", \"etat\": \"accroupi près de la corde\"}], \"partis\": [], \"refus\": {\"cause\": \"cible_absente\", \"cible\": \"Signy\"}}</scene_apres>",
+      "tool_calls": []
+    }
+  ]
+}

@@ -569,35 +569,6 @@ export function corpusRegistry(): ContentRegistry {
 
 /** Périodes que le contenu rend jouables : un front, une figure, un point d'entrée. */
 export const PLAYABLE_PERIODS = [ANCIENT, LONG_NIGHT, MODERN] as const;
-
-/**
- * Le corpus, plus UNE figure qui se contredit : elle se déclare de la Longue
- * Nuit, période qui déclare les Avarosans absents, et se dit avarosane.
- *
- * Elle existe parce que sans elle le filtre de faction absente ne gardait
- * RIEN : la boucle qui le vérifiait ne trouvait aucune figure à écarter et
- * passait à vide. Mesuré — retirer le filtre laissait 84 tests verts. S-03
- * refusera ce document par son propre test de cohérence ; ici il sert à
- * prouver que le filtre mord.
- */
-export function contradictoryFigureRegistry(): ContentRegistry {
-  const files = corpusFiles();
-  write(files, 'figures/la-transfuge-impossible.json', {
-    ...figure('la-transfuge-impossible', 'La transfuge impossible', LONG_NIGHT, AVAROSANS, 0),
-  });
-  const manifest = JSON.parse(files.get('manifest.json') ?? '{}') as {
-    expectedCounts: Record<string, number>;
-  };
-  manifest.expectedCounts = {
-    ...manifest.expectedCounts,
-    figures: (manifest.expectedCounts['figures'] ?? 0) + 1,
-  };
-  write(files, 'manifest.json', manifest);
-  return createRegistry(validateContent(files, { root: 'content-fixtures' }));
-}
-
-export const CONTRADICTORY_FIGURE_ID = 'la-transfuge-impossible';
-
 export const ENTRY_NODE_ID = pick(NODE_NAMES, 0);
 export const ANCIENT_ENTRY_NODE_ID = pick(ANCIENT_NODE_NAMES, 0);
 export const MODERN_NODE_COUNT = NODE_NAMES.length;

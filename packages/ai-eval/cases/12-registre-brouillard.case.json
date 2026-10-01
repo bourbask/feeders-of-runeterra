@@ -1,0 +1,124 @@
+{
+  "id": "12-registre-brouillard",
+  "title": "Scène qui appelle le vague : la liste noire de registre doit tenir",
+  "tags": ["registre"],
+  "fixture": "avarosa",
+  "turn": {
+    "intent": "J'avance dans la brume le long de la corniche pour trouver le cairn.",
+    "actor_character_id": "01HZZZ0000000000000000CHR1",
+    "actor_label": "Ingvild",
+    "correlation_id": "00000000-0000-4000-8000-000000000012",
+    "scene_in": {
+      "sceneId": "01HZZZ0000000000000000SCN1",
+      "placeId": "col_des_hurleurs",
+      "placeName": "Le col des Hurleurs",
+      "timeOfDay": "fin de journée",
+      "present": [
+        {
+          "ref": {
+            "kind": "character",
+            "id": "01HZZZ0000000000000000CHR1"
+          },
+          "name": "Ingvild",
+          "state": "debout contre le vent",
+          "sinceSeq": 396
+        },
+        {
+          "ref": {
+            "kind": "entity",
+            "id": "01HZZZ0000000000000000ENT1"
+          },
+          "name": "Ulrun",
+          "state": "assis contre le cairn nord",
+          "sinceSeq": 396
+        }
+      ],
+      "absent": [
+        {
+          "ref": {
+            "kind": "entity",
+            "id": "01HZZZ0000000000000000ENT2"
+          },
+          "name": "Signy",
+          "cause": "parti",
+          "sinceSeq": 374
+        },
+        {
+          "ref": {
+            "kind": "entity",
+            "id": "01HZZZ0000000000000000ENT3"
+          },
+          "name": "Keld",
+          "cause": "mort",
+          "sinceSeq": 361
+        }
+      ],
+      "updatedSeq": 400
+    },
+    "fact": {
+      "move": "face-danger",
+      "move_label": "Affronter le danger",
+      "attribute": "esprit",
+      "attribute_label": "esprit",
+      "outcome": "franche",
+      "outcome_label": "RÉUSSITE FRANCHE",
+      "presage": false,
+      "roll": {
+        "roll_id": "01HZZZ0000000000000000RA12",
+        "action_die": 5,
+        "attribute_value": 3,
+        "adds": [
+          {
+            "source": "elan",
+            "value": 1
+          }
+        ],
+        "raw_total": 9,
+        "total": 9,
+        "capped_at_ten": false,
+        "challenge_dice": [2, 4],
+        "momentum_negated": false,
+        "burned": false
+      },
+      "effect_sentences": ["Le cairn a été atteint malgré la brume."],
+      "price": null,
+      "presage_entry": null,
+      "time_skip": false,
+      "event_seqs": [401, 402],
+      "fallback_template_id": "fallback.col"
+    },
+    "actor_inventory": ["corde de chanvre", "briquet de fer", "coffre de cendres"],
+    "actor_assets": ["œil d'archère"],
+    "upheld_refusals_in_window": 0
+  },
+  "expect": {
+    "assertions": [
+      {
+        "id": "sentence_count",
+        "min": 3,
+        "max": 5
+      },
+      {
+        "id": "max_chars",
+        "value": 700
+      },
+      {
+        "id": "mentions_any",
+        "values": ["brume", "pierre", "neige"]
+      },
+      {
+        "id": "tool_calls",
+        "allowed": [],
+        "max": 0
+      },
+      {
+        "id": "no_pc_agency",
+        "pc_names": ["Ingvild", "Torvald"]
+      }
+    ],
+    "scene_out": {
+      "must_stay_absent": ["Signy", "Keld"],
+      "must_stay_present": ["Ulrun"]
+    }
+  }
+}

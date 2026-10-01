@@ -1,0 +1,18 @@
+{
+  "case_id": "03-issue-echec-prix",
+  "provider": "stub",
+  "model": "ecrit-a-la-main-m0",
+  "prompt_version": "conteur/2.1.0",
+  "tools_version": "tools/1.0.0",
+  "recorded_at": "2026-09-30T00:00:00.000Z",
+  "samples": [
+    {
+      "response": "Tu engages la pente nord et la corde se tend d'un coup sec au-dessus de toi. Le chanvre cède au ras du piton et part en sifflant dans la neige. Le coffre dévale, cogne une arête de pierre et s'arrête plus bas, de travers. Ulrun crie ton nom depuis le haut et commence à descendre.\n\n<scene_apres>{\"lieu\": \"col_des_hurleurs\", \"presents\": [{\"nom\": \"Ingvild\", \"etat\": \"debout sur l'épaule de pierre\"}, {\"nom\": \"Ulrun\", \"etat\": \"accroupi près de la corde\"}], \"partis\": [], \"refus\": null}</scene_apres>",
+      "tool_calls": []
+    },
+    {
+      "response": "Tu prends la pente nord en appui sur la corde et le chanvre lâche au piton. Tout ce qui pendait au bout part devant toi dans la neige dure. Le coffre roule, heurte la pierre et s'immobilise de travers, bien plus bas. Ulrun descend déjà, les deux mains à plat sur la glace.\n\n<scene_apres>{\"lieu\": \"col_des_hurleurs\", \"presents\": [{\"nom\": \"Ingvild\", \"etat\": \"debout sur l'épaule de pierre\"}, {\"nom\": \"Ulrun\", \"etat\": \"accroupi près de la corde\"}], \"partis\": [], \"refus\": null}</scene_apres>",
+      "tool_calls": []
+    }
+  ]
+}
