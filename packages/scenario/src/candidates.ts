@@ -68,7 +68,15 @@ export function shuffleFor<T>(seed: string, stepId: string, items: readonly T[])
   return out;
 }
 
-/** True when the period explicitly says this faction is not around. */
+/**
+ * True when the period explicitly says this faction is not around.
+ *
+ * BELT AND BRACES, AND NO TEST CAN REACH IT THROUGH THE LOADER: the fifth pass
+ * (S-06) refuses a figure whose faction its own period declares absent, so a
+ * registry carrying one cannot be built. Kept because these helpers are also
+ * callable on a registry assembled by hand, and said rather than implied — a
+ * guard nothing can exercise must not claim to be held by a test it lacks.
+ */
 export function isAbsentFaction(period: PeriodContent, factionId: string | null): boolean {
   if (factionId === null) return false;
   return period.absentFactionIds.includes(factionId);
