@@ -43,7 +43,7 @@ import { z } from 'zod';
 
 import { errorFromResponse, readSse, wrapUnknown, type NarratorFetch } from '../http.js';
 import { extractAndValidate } from '../structured.js';
-import { driveStream, type ProviderEvent } from './common.js';
+import { driveStream, requireModel, type ProviderEvent } from './common.js';
 
 const PROVIDER = 'openai-compatible' as const;
 
@@ -150,6 +150,23 @@ export function createOpenAiCompatibleNarrator(
       message: 'NARRATOR_BASE_URL is required by this provider',
     });
   }
+
+  /**
+   * ISSUE #89 — AU MÊME ENDROIT QUE L'URL, ET POUR LA MÊME RAISON.
+   *
+   * Cet adaptateur n'a pas de modèle par défaut : il sert ce que son hôte a
+   * sous la main. Avant ce garde, `config.model ?? ''` mettait un modèle vide
+   * sur le fil, le fournisseur répondait 400 et le tour retombait sur la prose
+   * de repli du moteur — assez bien pour que rien ne rougisse.
+   *
+   * ICI PLUTÔT QUE DANS `narrer()` : `narrer()` rend un itérable PARESSEUX et
+   * ne lève pas, c'est ce qui le distingue du port « indisponible »
+   * (`tests/game/narrator-wiring.test.ts` s'appuie dessus). Une erreur de
+   * configuration se dit à la construction, comme l'URL juste au-dessus.
+   *
+   * TENU PAR tests/narrator-model-required.test.ts.
+   */
+  const model = requireModel(config.model, PROVIDER);
   if (config.apiKey === null || config.apiKey.length === 0) {
     throw new NarratorError({
       code: 'unauthenticated',
@@ -213,7 +230,6 @@ export function createOpenAiCompatibleNarrator(
     capabilities,
 
     narrer(req: NarrateRequest): AsyncIterable<NarrateEvent> {
-      const model = config.model ?? '';
       const body = {
         model,
         stream: true,
@@ -291,11 +307,11 @@ export function createOpenAiCompatibleNarrator(
     },
 
     async structurer<T>(req: StructureRequest<T>): Promise<StructureResult<T>> {
-      const model = config.modelStructured ?? config.model ?? '';
+      const structuredModel = config.modelStructured ?? model;
       const clock = options.now ?? (() => Date.now());
       const startedAt = clock();
       const body = {
-        model,
+        model: structuredModel,
         max_tokens: req.maxOutputTokens,
         messages: [
           { role: 'system', content: systemText(req.system) },

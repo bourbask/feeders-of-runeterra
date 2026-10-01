@@ -117,12 +117,17 @@ const CONFIGURATIONS: readonly {
       NARRATOR_PROVIDER: 'openai-compatible',
       NARRATOR_BASE_URL: 'http://127.0.0.1:1',
       NARRATOR_API_KEY: 'cle-de-test',
+      NARRATOR_MODEL: 'modele-de-test',
     },
     providerId: 'openai-compatible',
   },
   {
     label: 'ollama',
-    vars: { NARRATOR_PROVIDER: 'ollama', NARRATOR_BASE_URL: 'http://127.0.0.1:1' },
+    vars: {
+      NARRATOR_PROVIDER: 'ollama',
+      NARRATOR_BASE_URL: 'http://127.0.0.1:1',
+      NARRATOR_MODEL: 'modele-de-test',
+    },
     providerId: 'ollama',
   },
 ];
@@ -164,6 +169,7 @@ describe('le fournisseur que le serveur compose', () => {
     const app = await anAppWith({
       NARRATOR_PROVIDER: 'ollama',
       NARRATOR_BASE_URL: 'http://127.0.0.1:1',
+      NARRATOR_MODEL: 'modele-de-test',
     });
     // `narrer()` rend un itérable PARESSEUX : l'appel seul n'ouvre rien. Le
     // port non branché, lui, lève AVANT d'avoir rien à itérer.
