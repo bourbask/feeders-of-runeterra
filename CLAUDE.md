@@ -17,7 +17,7 @@ par de la discipline.
    tranche une réussite ni ne décide d'une mutation d'état, même indirectement. Le résultat est
    calculé par `@for/engine` **avant** l'appel au modèle et lui est transmis comme un fait acquis
    à habiller. Si tu te surprends à donner au modèle un paramètre que le moteur convertira
-   ensuite en coût, tu es en train de violer cet invariant par la porte de derrière.
+   ensuite en coût, tu es en train de contourner cet invariant par la porte de derrière.
 2. **La mémoire vit dans la base**, jamais dans la fenêtre de contexte. État structuré plus une
    chronique compactée.
 3. **Le serveur est l'autorité.** Le client n'envoie que des intentions.
