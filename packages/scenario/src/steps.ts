@@ -274,7 +274,14 @@ const PISTE: ScenarioStep = {
       // built. Kept because this function is also callable on a registry
       // assembled by hand, and said rather than implied — a guard nothing can
       // exercise must not claim to be held by a test it does not have.
+      //
+      // So it is marked UNREACHABLE for the coverage tool too, and that is not
+      // a way of hiding it: without the marker the package threshold of 100 on
+      // branches — the one `pnpm exec vitest run --coverage` evaluates here —
+      // is false by construction since S-02 landed, and a threshold nobody can
+      // reach is a threshold somebody will lower.
       const destination = context.registry.getNode(lead.toNodeId);
+      /* v8 ignore next */
       if (destination.periodId !== chosen.id) return [];
       return [
         {

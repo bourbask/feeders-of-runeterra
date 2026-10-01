@@ -140,9 +140,18 @@ export function regionIdsOfPeriod(registry: ContentRegistry, periodId: string): 
  * about. So a region is a candidate only when the period puts BOTH a front and
  * an entry node in it.
  *
- * Held by `tests/steps.test.ts` « chaque étape ferme sa liste sur la période »
- * › « une région sans point d'entrée n'est pas jouable, même si un front la
- * menace ».
+ * BOTH halves are held, each by its own named test, in `tests/steps.test.ts`
+ * « chaque étape ferme sa liste sur la période » :
+ *
+ * the entry-node half by
+ * « une région sans point d'entrée n'est pas jouable, même si un front la menace »,
+ * the front half by
+ * « une région sans front n'est pas jouable non plus, même si un nœud d'entrée y ouvre ».
+ *
+ * The second one needed A CORPUS OF ITS OWN, and that is the whole point: in
+ * the base corpus every region a modern node opens in is ALSO threatened by a
+ * modern front, so replacing the intersection with the entry-node list alone
+ * left all ninety-six tests green. Nothing could tell the two lists apart.
  */
 export function playableRegionIds(registry: ContentRegistry, periodId: string): readonly string[] {
   const threatened = new Set<string>();

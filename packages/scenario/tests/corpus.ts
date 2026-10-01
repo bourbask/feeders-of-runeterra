@@ -601,3 +601,52 @@ export const CONTRADICTORY_FIGURE_ID = 'la-transfuge-impossible';
 export const ENTRY_NODE_ID = pick(NODE_NAMES, 0);
 export const ANCIENT_ENTRY_NODE_ID = pick(ANCIENT_NODE_NAMES, 0);
 export const MODERN_NODE_COUNT = NODE_NAMES.length;
+
+/**
+ * La région que le corpus de base ne peut pas porter : UN NŒUD D'ENTRÉE Y
+ * OUVRE, et AUCUN FRONT DE LA PÉRIODE NE LA MENACE.
+ *
+ * `playableRegionIds` croise deux listes, et le corpus de base ne sait en
+ * distinguer qu'une : toutes les régions où un nœud moderne ouvre sont aussi
+ * menacées par un front moderne. Mesuré — remplacer le croisement par la
+ * seule liste des nœuds d'entrée laissait 96 tests verts. `freljord` est la
+ * seule région qu'aucun front moderne ne nomme ; un nœud d'entrée moderne y
+ * est posé ici, et nulle part ailleurs.
+ *
+ * Le document reste S-02-propre : trois pistes distinctes vers des nœuds de
+ * SA période, une figure de sa période, et `entryPoint` le rend atteignable
+ * de lui-même.
+ */
+export const UNTHREATENED_REGION = 'freljord';
+export const UNTHREATENED_ENTRY_NODE_ID = 'le-refuge-que-personne-ne-defend';
+
+export function unthreatenedEntryRegionRegistry(): ContentRegistry {
+  const files = corpusFiles();
+  write(files, `nodes/${UNTHREATENED_ENTRY_NODE_ID}.json`, {
+    schemaVersion: 1,
+    id: UNTHREATENED_ENTRY_NODE_ID,
+    name: 'Le refuge que personne ne défend',
+    kind: 'lieu',
+    situation:
+      'Un creux de rocher hors des routes : on y entre parce que rien ne s’y dispute encore.',
+    stakeQuestion: 'Pourquoi aucun des trois clans n’a-t-il jamais réclamé ce creux ?',
+    figureIds: [pick(MODERN_FIGURE_IDS, 0)],
+    regionId: UNTHREATENED_REGION,
+    periodId: MODERN,
+    entryPoint: true,
+    leads: [0, 1, 2].map((offset) => ({
+      toNodeId: pick(NODE_NAMES, offset),
+      trigger: `On redescend vers « ${pick(NODE_NAMES, offset)} » dès que le vent tombe.`,
+    })),
+    tags: [],
+  });
+  const manifest = JSON.parse(files.get('manifest.json') ?? '{}') as {
+    expectedCounts: Record<string, number>;
+  };
+  manifest.expectedCounts = {
+    ...manifest.expectedCounts,
+    nodes: (manifest.expectedCounts['nodes'] ?? 0) + 1,
+  };
+  write(files, 'manifest.json', manifest);
+  return createRegistry(validateContent(files, { root: 'content-fixtures' }));
+}

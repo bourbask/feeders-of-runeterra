@@ -7,10 +7,11 @@
  * liste qui n'existe pas.
  */
 
+import type { ContentRegistry } from '@for/content';
 import { SegmentCountSchema } from '@for/contracts';
 import { describe, expect, it } from 'vitest';
 
-import { regionIdsOfPeriod } from '../src/candidates.js';
+import { frontsOfPeriod, playableRegionIds, regionIdsOfPeriod } from '../src/candidates.js';
 import type { ScenarioSelection } from '../src/steps.js';
 import {
   hookMatchesParty,
@@ -32,6 +33,9 @@ import {
   MODERN,
   MODERN_REGIONS,
   PLAYABLE_PERIODS,
+  UNTHREATENED_ENTRY_NODE_ID,
+  UNTHREATENED_REGION,
+  unthreatenedEntryRegionRegistry,
 } from './corpus.js';
 
 const registry = corpusRegistry();
@@ -61,14 +65,21 @@ const ASHE: ScenarioPartyMember = {
   factionIds: ['avarosans'],
 };
 
-const candidatesOf = (
+const candidatesOfIn = (
+  target: ContentRegistry,
   id: ScenarioStepId,
   entries: Partial<Record<ScenarioStepId, string>>,
   party: readonly ScenarioPartyMember[] = [],
 ): readonly string[] =>
   step(id)
-    .candidates({ registry, party, selection: selection(entries) })
+    .candidates({ registry: target, party, selection: selection(entries) })
     .map((candidate) => candidate.id);
+
+const candidatesOf = (
+  id: ScenarioStepId,
+  entries: Partial<Record<ScenarioStepId, string>>,
+  party: readonly ScenarioPartyMember[] = [],
+): readonly string[] => candidatesOfIn(registry, id, entries, party);
 
 describe('les dix étapes de la section 6, dans l’ordre', () => {
   it('les dix identifiants, écrits en toutes lettres', () => {
@@ -144,6 +155,29 @@ describe('chaque étape ferme sa liste sur la période', () => {
     expect(regionIdsOfPeriod(registry, LONG_NIGHT)).toContain('howling-abyss');
     expect(candidatesOf('lieu', { periode: LONG_NIGHT })).not.toContain('howling-abyss');
     expect(candidatesOf('lieu', { periode: LONG_NIGHT })).toEqual(['frostguard-citadel']);
+  });
+
+  it('une région sans front n’est pas jouable non plus, même si un nœud d’entrée y ouvre', () => {
+    // Le MIROIR du test précédent, et il demande son propre corpus : dans le
+    // corpus de base, toute région où un nœud moderne ouvre est aussi menacée
+    // par un front moderne, donc rien ne distingue les deux moitiés du
+    // croisement. Ce corpus-ci pose un nœud d'entrée moderne dans « freljord »,
+    // la seule région qu'aucun front moderne ne nomme.
+    const registre = unthreatenedEntryRegionRegistry();
+    const noeud = registre.getNode(UNTHREATENED_ENTRY_NODE_ID);
+    expect(noeud.entryPoint).toBe(true);
+    expect(noeud.periodId).toBe(MODERN);
+    expect(noeud.regionId).toBe(UNTHREATENED_REGION);
+    for (const front of frontsOfPeriod(registre, MODERN)) {
+      expect(front.regionIds).not.toContain(UNTHREATENED_REGION);
+    }
+    // La région est bien une région de la période — c'est le nœud qui l'y met…
+    expect(regionIdsOfPeriod(registre, MODERN)).toContain(UNTHREATENED_REGION);
+    // …et elle n'est pourtant pas jouable, ni pour la fonction, ni à l'étape.
+    expect(playableRegionIds(registre, MODERN)).toEqual([...MODERN_REGIONS].sort());
+    expect(candidatesOfIn(registre, 'lieu', { periode: MODERN })).not.toContain(
+      UNTHREATENED_REGION,
+    );
   });
 
   it('lieu : les régions de la période, et rien d’autre', () => {
