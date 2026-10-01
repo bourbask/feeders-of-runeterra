@@ -1,0 +1,4 @@
+{
+  "comment": "D7 — les faits qu'une régénération ne doit jamais perdre. Ce fichier est SÉPARÉ de avarosa.json pour que le contrôle C6 compare deux fichiers, et non une liste à elle-même (ADR 0007).",
+  "fact_ids": ["fait_keld_mort", "fait_signy_restee", "fait_coffre_porte", "fait_passe_ferme"]
+}

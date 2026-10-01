@@ -1,0 +1,125 @@
+{
+  "id": "11-refus-non-prouve",
+  "title": "Refus déclaré sur une cible bien présente : le serveur le rejette",
+  "tags": ["refus", "rejected"],
+  "fixture": "avarosa",
+  "turn": {
+    "intent": "Je demande à Ulrun de me dire enfin ce qu'il a vu dans le ravin.",
+    "actor_character_id": "01HZZZ0000000000000000CHR1",
+    "actor_label": "Ingvild",
+    "correlation_id": "00000000-0000-4000-8000-000000000011",
+    "scene_in": {
+      "sceneId": "01HZZZ0000000000000000SCN1",
+      "placeId": "col_des_hurleurs",
+      "placeName": "Le col des Hurleurs",
+      "timeOfDay": "fin de journée",
+      "present": [
+        {
+          "ref": {
+            "kind": "character",
+            "id": "01HZZZ0000000000000000CHR1"
+          },
+          "name": "Ingvild",
+          "state": "debout contre le vent",
+          "sinceSeq": 396
+        },
+        {
+          "ref": {
+            "kind": "entity",
+            "id": "01HZZZ0000000000000000ENT1"
+          },
+          "name": "Ulrun",
+          "state": "assis contre le cairn nord",
+          "sinceSeq": 396
+        }
+      ],
+      "absent": [
+        {
+          "ref": {
+            "kind": "entity",
+            "id": "01HZZZ0000000000000000ENT2"
+          },
+          "name": "Signy",
+          "cause": "parti",
+          "sinceSeq": 374
+        },
+        {
+          "ref": {
+            "kind": "entity",
+            "id": "01HZZZ0000000000000000ENT3"
+          },
+          "name": "Keld",
+          "cause": "mort",
+          "sinceSeq": 361
+        }
+      ],
+      "updatedSeq": 400
+    },
+    "fact": {
+      "move": "probe-a-soul",
+      "move_label": "Sonder une âme",
+      "attribute": "coeur",
+      "attribute_label": "cœur",
+      "outcome": "partielle",
+      "outcome_label": "RÉUSSITE PARTIELLE",
+      "presage": false,
+      "roll": {
+        "roll_id": "01HZZZ0000000000000000RA11",
+        "action_die": 4,
+        "attribute_value": 3,
+        "adds": [],
+        "raw_total": 7,
+        "total": 7,
+        "capped_at_ten": false,
+        "challenge_dice": [5, 9],
+        "momentum_negated": false,
+        "burned": false
+      },
+      "effect_sentences": ["Ulrun a parlé, à demi-mot."],
+      "price": null,
+      "presage_entry": null,
+      "time_skip": false,
+      "event_seqs": [401, 402],
+      "fallback_template_id": "fallback.col"
+    },
+    "actor_inventory": ["corde de chanvre", "briquet de fer", "coffre de cendres"],
+    "actor_assets": ["œil d'archère"],
+    "upheld_refusals_in_window": 0
+  },
+  "expect": {
+    "assertions": [
+      {
+        "id": "sentence_count",
+        "min": 3,
+        "max": 5
+      },
+      {
+        "id": "max_chars",
+        "value": 700
+      },
+      {
+        "id": "mentions_any",
+        "values": ["ravin", "vent", "cairn"]
+      },
+      {
+        "id": "tool_calls",
+        "allowed": [],
+        "max": 0
+      },
+      {
+        "id": "no_pc_agency",
+        "pc_names": ["Ingvild", "Torvald"]
+      }
+    ],
+    "refusal": {
+      "verdict": "rejected",
+      "cause": "cible_absente",
+      "target": "Ulrun",
+      "reason": "refusal_unproven"
+    },
+    "scene_out": {
+      "must_stay_absent": ["Signy", "Keld"],
+      "must_stay_present": ["Ulrun"]
+    }
+  }
+}

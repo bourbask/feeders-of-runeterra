@@ -32,3 +32,6 @@ packages/db/.check-schema-*/
 
 # Worktrees et etat local des agents : jamais versionnes.
 .claude/
+
+# Rapports produits par les évals (M0-27) et la CI.
+reports/

@@ -1,0 +1,119 @@
+{
+  "id": "06-absent-interpelle",
+  "title": "L'intention cherche à interpeller quelqu'un que le moteur tient pour parti",
+  "tags": ["absent", "continuite"],
+  "fixture": "avarosa",
+  "turn": {
+    "intent": "J'appelle Signy pour qu'elle vienne refaire la lame avant la montée.",
+    "actor_character_id": "01HZZZ0000000000000000CHR1",
+    "actor_label": "Ingvild",
+    "correlation_id": "00000000-0000-4000-8000-000000000006",
+    "scene_in": {
+      "sceneId": "01HZZZ0000000000000000SCN1",
+      "placeId": "col_des_hurleurs",
+      "placeName": "Le col des Hurleurs",
+      "timeOfDay": "fin de journée",
+      "present": [
+        {
+          "ref": {
+            "kind": "character",
+            "id": "01HZZZ0000000000000000CHR1"
+          },
+          "name": "Ingvild",
+          "state": "debout contre le vent",
+          "sinceSeq": 396
+        },
+        {
+          "ref": {
+            "kind": "entity",
+            "id": "01HZZZ0000000000000000ENT1"
+          },
+          "name": "Ulrun",
+          "state": "assis contre le cairn nord",
+          "sinceSeq": 396
+        }
+      ],
+      "absent": [
+        {
+          "ref": {
+            "kind": "entity",
+            "id": "01HZZZ0000000000000000ENT2"
+          },
+          "name": "Signy",
+          "cause": "parti",
+          "sinceSeq": 374
+        },
+        {
+          "ref": {
+            "kind": "entity",
+            "id": "01HZZZ0000000000000000ENT3"
+          },
+          "name": "Keld",
+          "cause": "mort",
+          "sinceSeq": 361
+        }
+      ],
+      "updatedSeq": 400
+    },
+    "fact": {
+      "move": "gather-information",
+      "move_label": "Recueillir des informations",
+      "attribute": "coeur",
+      "attribute_label": "cœur",
+      "outcome": "echec",
+      "outcome_label": "ÉCHEC",
+      "presage": false,
+      "roll": {
+        "roll_id": "01HZZZ0000000000000000RA06",
+        "action_die": 3,
+        "attribute_value": 2,
+        "adds": [],
+        "raw_total": 5,
+        "total": 5,
+        "capped_at_ten": false,
+        "challenge_dice": [7, 8],
+        "momentum_negated": false,
+        "burned": false
+      },
+      "effect_sentences": ["L'appel n'a reçu aucune réponse."],
+      "price": null,
+      "presage_entry": null,
+      "time_skip": false,
+      "event_seqs": [401, 402],
+      "fallback_template_id": "fallback.col"
+    },
+    "actor_inventory": ["corde de chanvre", "briquet de fer", "coffre de cendres"],
+    "actor_assets": ["œil d'archère"],
+    "upheld_refusals_in_window": 0
+  },
+  "expect": {
+    "assertions": [
+      {
+        "id": "sentence_count",
+        "min": 3,
+        "max": 5
+      },
+      {
+        "id": "max_chars",
+        "value": 700
+      },
+      {
+        "id": "mentions_any",
+        "values": ["col", "vent", "lame"]
+      },
+      {
+        "id": "tool_calls",
+        "allowed": [],
+        "max": 0
+      },
+      {
+        "id": "no_pc_agency",
+        "pc_names": ["Ingvild", "Torvald"]
+      }
+    ],
+    "scene_out": {
+      "must_stay_absent": ["Signy", "Keld"],
+      "must_stay_present": ["Ulrun"]
+    }
+  }
+}
