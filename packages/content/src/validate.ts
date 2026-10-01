@@ -1,6 +1,7 @@
 /**
- * The four passes of 03-donnees.md section 4.8, plus the FIFTH of ADR 0012
- * decision 4 (`validate-graph.ts`), over an in-memory file map.
+ * The five passes of 03-donnees.md section 4.8 — the fifth being the scenario
+ * graph of ADR 0012 decision 4, in `validate-graph.ts` — over an in-memory
+ * file map.
  *
  * NOTHING HERE TOUCHES THE DISK. `load.ts` is the only module allowed to read
  * a file (M0-14 acceptance criterion), which is also what lets the SAME four
@@ -474,7 +475,7 @@ export function collectRefs(schema: unknown, value: unknown): FoundRef[] {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// The four passes
+// The five passes
 // ─────────────────────────────────────────────────────────────────────────
 
 /** Root-relative path -> raw file contents. Produced by `load.ts` or the generator. */
@@ -550,7 +551,7 @@ const HAS_FILE_NAMED_ID = new Set([
 ]);
 
 /**
- * The four passes. Throws `ContentError` carrying every issue found.
+ * The five passes. Throws `ContentError` carrying every issue found.
  *
  * Passes 1 to 3 are per file and accumulate together — one run reports every
  * broken file, never just the first. Passes 4 and 5 are GLOBAL and run only

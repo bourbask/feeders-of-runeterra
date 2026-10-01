@@ -24,6 +24,7 @@ import { HookSchema } from '../../src/content/hook.js';
 import { NodeSchema, SCENARIO_NODE_KINDS } from '../../src/content/node.js';
 import { PeriodSchema } from '../../src/content/period.js';
 import { RegionKindSchema, RegionSchema } from '../../src/content/region.js';
+import { SCENARIO_RULES, scenarioRuleHead } from '../../src/content/scenario-rules.js';
 import { zClockSegmentCount, zEntityDisposition, zProgressRank } from '../../src/core/enums.js';
 
 type Doc = Record<string, unknown>;
@@ -246,7 +247,7 @@ describe('nœud : au moins trois pistes sortantes', () => {
     // Le message doit dire CE QU'IL FAUT AJOUTER, pas seulement « invalide » :
     // trois lignes présentes et une seule sortie est le cas où un auteur se
     // croit conforme.
-    expect(JSON.stringify(refused.error?.issues)).toContain('est écrite deux fois');
+    expect(JSON.stringify(refused.error?.issues)).toContain('écrit deux fois la piste vers');
     expect(JSON.stringify(refused.error?.issues)).toContain('sortie(s) distincte(s)');
   });
 
@@ -267,6 +268,90 @@ describe('nœud : au moins trois pistes sortantes', () => {
     delete document['entryPoint'];
     const parsed = NodeSchema.parse(document);
     expect(parsed.entryPoint).toBe(false);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// UN SEUL DIALECTE DE REFUS (S-06)
+//
+// Les six noms viennent de la fiche S-02 et de la mesure du testeur de S-02 —
+// d'un critère, donc. Ils s'écrivent EN TOUTES LETTRES ici, et `SCENARIO_RULES`
+// est l'autre opérande : deux chemins, pas un (ADR 0007).
+describe('SCENARIO_RULES — les six noms de refus, écrits en toutes lettres', () => {
+  it('les six, membre à membre, dans l’ordre', () => {
+    expect(Object.values(SCENARIO_RULES)).toStrictEqual([
+      'trois pistes minimum',
+      'autant de présages que de segments',
+      'aucun nœud orphelin',
+      'pas de saut de période',
+      'pas de figure hors période',
+      'pas de faction absente de la période',
+    ]);
+  });
+
+  it('l’ouverture est la même pour tous, et c’est celle que la passe 5 produit', () => {
+    // Écrite en toutes lettres : la passe de graphe FILTRE ses rapports sur ce
+    // préfixe exact (`parRegle`, dans `@for/content`). Une espace perdue ici
+    // rendrait les refus d'une règle invisibles aux tests qui les comptent.
+    expect(scenarioRuleHead(SCENARIO_RULES.absentFaction)).toBe(
+      'règle « pas de faction absente de la période » — ',
+    );
+  });
+});
+
+describe('les refus de la passe 2 citent leur règle, comme ceux de la passe 5', () => {
+  // AVANT S-06, MESURÉ : « nœud « le-grenier-vide » : 2 sortie(s)… » et
+  // « front « … » : 3 présage(s)… » — la pièce nommée, la règle nulle part.
+  // Le lecteur voyait deux dialectes de refus sur le même graphe.
+  const messages = (issues: readonly { readonly message: string }[] | undefined): string =>
+    (issues ?? []).map((issue) => issue.message).join('\n');
+
+  it('le nœud à deux sorties cite « trois pistes minimum », et dit combien en ajouter', () => {
+    const document = node();
+    document['leads'] = (document['leads'] as unknown[]).slice(0, 2);
+    const refused = NodeSchema.safeParse(document);
+    const texte = messages(refused.error?.issues);
+    expect(texte).toContain(scenarioRuleHead(SCENARIO_RULES.liveLeads));
+    expect(texte).toContain('le nœud « le-grenier-vide »');
+    expect(texte).toContain('Ajoutez 1 piste(s)');
+
+    // L'autre sens, sur le MÊME document : les trois pistes rendues, aucun refus.
+    expect(NodeSchema.safeParse(node()).success).toBe(true);
+  });
+
+  it('la piste qui revient au même nœud cite la même règle', () => {
+    const document = node();
+    document['leads'] = [
+      { toNodeId: 'le-grenier-vide', trigger: 'On fait le tour et on revient.' },
+      { toNodeId: 'le-conseil-des-clans', trigger: 'On va le dire à ceux qui décident.' },
+      { toNodeId: 'la-taverne-du-pont', trigger: 'On demande qui a vu passer des sacs.' },
+    ];
+    expect(messages(NodeSchema.safeParse(document).error?.issues)).toContain(
+      `${scenarioRuleHead(SCENARIO_RULES.liveLeads)}le nœud « le-grenier-vide »`,
+    );
+  });
+
+  it('le front mal compté cite « autant de présages que de segments », dans les deux sens', () => {
+    // DEUX ACTEURS AU LIEU D'UN (recette §5 bis) : trop peu ET trop. Un message
+    // qui dirait toujours « ajoutez » passerait le premier cas et mentirait au
+    // second.
+    const manquant = front();
+    manquant['portents'] = (manquant['portents'] as string[]).slice(0, -1);
+    const trop = front();
+    trop['portents'] = [...(trop['portents'] as string[]), 'Un présage de trop.'];
+
+    const texteManquant = messages(FrontSchema.safeParse(manquant).error?.issues);
+    expect(texteManquant).toContain(scenarioRuleHead(SCENARIO_RULES.portentsPerSegment));
+    expect(texteManquant).toContain('le front « la-famine-remonte-le-fleuve »');
+    expect(texteManquant).toContain('Ajoutez 1 présage(s)');
+    expect(texteManquant).not.toContain('Retirez');
+
+    const texteTrop = messages(FrontSchema.safeParse(trop).error?.issues);
+    expect(texteTrop).toContain('Retirez 1 présage(s)');
+    expect(texteTrop).not.toContain('Ajoutez');
+
+    // L'autre sens : le front d'origine, quatre présages pour quatre segments.
+    expect(FrontSchema.safeParse(front()).success).toBe(true);
   });
 });
 

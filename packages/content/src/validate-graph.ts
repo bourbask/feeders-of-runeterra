@@ -3,9 +3,10 @@
  *
  * The four other passes read one document at a time. This one reads the
  * SCENARIO GRAPH: a node and the node it leads to, a node and the figure it
- * names. Nothing here can be decided from a file alone, and nothing here
- * repeats what a file already decides — see « WHAT THIS PASS DELIBERATELY DOES
- * NOT CHECK » below.
+ * names, a figure and the period that says her faction does not exist yet.
+ * Nothing here can be decided from a file alone, and nothing here repeats what
+ * a file already decides — see « WHAT THIS PASS DELIBERATELY DOES NOT CHECK »
+ * below.
  *
  * ── WHAT A REPORT HAS TO CONTAIN TO BE WORTH ANYTHING ────────────────────
  * The person who writes content does not read this file; they read the line it
@@ -15,7 +16,7 @@
  *   3. WHAT TO ADD to make it pass.
  * Each rule's `describe` in `tests/scenario-graph.test.ts` asserts those three
  * parts of the message it produces — never the exit code alone. Measured on a
- * real content root with the contractual command, the four shapes read:
+ * real content root with the contractual command, a message reads:
  *
  *   règle « pas de saut de période » — le nœud « le-grenier-vide » est de la
  *   période « freljord-moderne » et sa piste mène à « le-puits-de-glace », qui
@@ -57,8 +58,8 @@
  * twice: it only ever fires on a node some of whose leads cross a period.
  */
 
-import type { FigureContent, HookContent, NodeContent } from '@for/contracts';
-import { MIN_LEADS_PER_NODE } from '@for/contracts';
+import type { FigureContent, HookContent, NodeContent, PeriodContent } from '@for/contracts';
+import { MIN_LEADS_PER_NODE, SCENARIO_RULES, scenarioRuleHead } from '@for/contracts';
 
 import type { ContentIssue } from './issue.js';
 
@@ -74,31 +75,58 @@ export interface ScenarioGraph {
   readonly nodes: ReadonlyMap<string, NodeContent>;
   readonly figures: ReadonlyMap<string, FigureContent>;
   readonly hooks: ReadonlyMap<string, HookContent>;
+  readonly periods: ReadonlyMap<string, PeriodContent>;
 }
 
 /**
  * The rules, by the name their message quotes.
  *
- * PINNED, because these four names come from the S-02 brief and not from the
- * code: `tests/scenario-graph.test.ts` « les quatre règles de la passe de
- * graphe, écrites en toutes lettres » writes all four out and compares them
- * member by member, so renaming one here turns it red (measured). The tests
+ * The five of the six `SCENARIO_RULES` that pass 5 produces — the other,
+ * « autant de présages que de segments », is decided per file in pass 2 and
+ * this pass never emits it. The strings are taken from `@for/contracts` rather
+ * than retyped: one rename, both passes.
+ *
+ * PINNED, because these names come from the S-02 brief, from the gap S-02's
+ * tester measured, and never from the code: `tests/scenario-graph.test.ts`
+ * « les cinq règles de la passe de graphe, écrites en toutes lettres » writes
+ * all five out and compares them member by member, so renaming one here turns
+ * it red (measured). The tests
  * then quote the rules THROUGH this object, which is what stops a message from
  * drifting away from the name its test looks for.
  */
 export const GRAPH_RULES = {
-  liveLeads: 'trois pistes minimum',
-  orphan: 'aucun nœud orphelin',
-  periodJump: 'pas de saut de période',
-  figurePeriod: 'pas de figure hors période',
+  liveLeads: SCENARIO_RULES.liveLeads,
+  orphan: SCENARIO_RULES.orphan,
+  periodJump: SCENARIO_RULES.periodJump,
+  figurePeriod: SCENARIO_RULES.figurePeriod,
+  absentFaction: SCENARIO_RULES.absentFaction,
 } as const;
 
 export type GraphRule = (typeof GRAPH_RULES)[keyof typeof GRAPH_RULES];
 
-/** Every message opens the same way, so a reader can grep the rule. */
-const head = (rule: GraphRule): string => `règle « ${rule} » — `;
+/**
+ * Every message opens the same way, so a reader can grep the rule.
+ *
+ * NOT a template written here: `scenarioRuleHead` is the same function
+ * `NodeSchema` and `FrontSchema` call in pass 2, which is what makes the two
+ * passes answer in ONE dialect (S-06).
+ */
+const head = (rule: GraphRule): string => scenarioRuleHead(rule);
 
 const quoted = (ids: readonly string[]): string => ids.map((id) => `« ${id} »`).join(', ');
+
+/**
+ * Pieces in id order, whatever order the map was filled in.
+ *
+ * The loader sorts its files before parsing, so this only shows up when the
+ * pass is called directly — which is exactly where
+ * `tests/scenario-graph.test.ts` « les nœuds sont rapportés dans l'ordre de
+ * leurs identifiants, pas dans celui de la carte » and « deux figures fautives
+ * donnent deux refus, dans l'ordre des identifiants » build their maps
+ * BACKWARDS and assert the whole array.
+ */
+const byId = <T extends { readonly id: string }>(pieces: ReadonlyMap<string, T>): T[] =>
+  [...pieces.values()].sort((left, right) => (left.id < right.id ? -1 : 1));
 
 const PASS = 5 as const;
 
@@ -110,7 +138,7 @@ const PASS = 5 as const;
  */
 function scenarioGraphIssues(graph: ScenarioGraph): ContentIssue[] {
   const issues: ContentIssue[] = [];
-  const nodes = [...graph.nodes.values()].sort((left, right) => (left.id < right.id ? -1 : 1));
+  const nodes = byId(graph.nodes);
   if (nodes.length === 0) return issues;
 
   // ── Rules « pas de saut de période » and « trois pistes minimum » ─────
@@ -272,10 +300,10 @@ function scenarioGraphIssues(graph: ScenarioGraph): ContentIssue[] {
  * Rule « pas de figure hors période », the fifth rule — the one S-02 was handed
  * rather than briefed.
  *
- * `period.absentFactionIds` stops the anachronism from one end: a period names
- * what does not exist yet. NOTHING stopped it from the other end — a node of
- * the modern Freljord could name a figure who died three centuries earlier,
- * and the four rules of the brief only ever look at leads. This closes it.
+ * A node of the modern Freljord could name a figure who died three centuries
+ * earlier, and the four rules of the brief only ever look at leads. This
+ * closes it. The OTHER half of the anachronism — a piece naming a faction its
+ * period declares absent — is `absentFactionIssues` below (S-06).
  *
  * TWO EDGES CARRY A PERIOD ON BOTH ENDS, and they are written out below
  * rather than driven by a table: a table of two entries would be a list that
@@ -313,7 +341,7 @@ function figurePeriodIssues(graph: ScenarioGraph): ContentIssue[] {
     });
   };
 
-  const nodes = [...graph.nodes.values()].sort((left, right) => (left.id < right.id ? -1 : 1));
+  const nodes = byId(graph.nodes);
   for (const node of nodes) {
     for (const [index, figureId] of node.figureIds.entries()) {
       mismatch(
@@ -329,7 +357,7 @@ function figurePeriodIssues(graph: ScenarioGraph): ContentIssue[] {
     }
   }
 
-  const hooks = [...graph.hooks.values()].sort((left, right) => (left.id < right.id ? -1 : 1));
+  const hooks = byId(graph.hooks);
   for (const hook of hooks) {
     for (const [index, figureId] of hook.suggestedBondIds.entries()) {
       mismatch(
@@ -348,7 +376,111 @@ function figurePeriodIssues(graph: ScenarioGraph): ContentIssue[] {
   return issues;
 }
 
+/**
+ * Rule « pas de faction absente de la période », the sixth — the anachronism by
+ * the OTHER end (S-06).
+ *
+ * `period.absentFactionIds` was written by S-01 as « the field that stops the
+ * anachronism », and until this rule existed it stopped nothing: measured on
+ * the real content root with `pnpm content:check`, a figure of faction
+ * « avarosans » placed in « la-longue-nuit », which declares that faction
+ * absent, loaded at EXIT 0 — and so did a hook aiming at it. The fifth rule
+ * closed « a node cannot name a figure of another period »; nobody had closed
+ * « a piece cannot name a faction its period declares absent ».
+ *
+ * ── THE TWO EDGES, AND WHY THERE ARE ONLY TWO ────────────────────────────
+ * An edge needs a FACTION at one end and a PERIOD at the other, on the same
+ * document. Enumerated from the schemas, not guessed:
+ *
+ *   | Piece       | names a faction            | carries a period | edge |
+ *   |-------------|----------------------------|------------------|------|
+ *   | figure      | `factionId` (nullable)     | yes              | YES  |
+ *   | hook        | `appliesTo.factionId`      | yes              | YES  |
+ *   | front, node, encounter | no              | yes              | no   |
+ *   | region      | `factions[].id` — the SOURCE of every faction id | NO | no |
+ *   | period      | both lists, cross-checked by `PeriodSchema.superRefine` | — | no |
+ *
+ * A region names factions and would look like a third edge; it carries no
+ * period at all — the same place exists in every period — so the comparison has
+ * nothing to compare against. Reported in the PR rather than invented.
+ *
+ * WRITTEN OUT, NOT DRIVEN BY A TABLE, for the same reason as the rule above: a
+ * two-entry table would be a list that is its own source of truth, and emptying
+ * it would check nothing without a test falling. Each edge has its own test —
+ * `tests/scenario-graph.test.ts` « une figure d'une faction que sa période
+ * déclare absente est refusée » and « un ressort qui vise une faction que sa
+ * période déclare absente est refusé » — so deleting either loop reddens a
+ * named test.
+ */
+function absentFactionIssues(graph: ScenarioGraph): ContentIssue[] {
+  const issues: ContentIssue[] = [];
+
+  const absent = (
+    file: string,
+    path: string,
+    owner: string,
+    ownerLabel: string,
+    periodId: string,
+    factionId: string,
+    verb: string,
+    field: string,
+  ): void => {
+    const period = graph.periods.get(periodId);
+    // Pass 3 owns the dead reference. See the header.
+    if (period?.absentFactionIds.includes(factionId) !== true) return;
+    const present = period.factionIds;
+    issues.push({
+      file,
+      path,
+      message:
+        `${head(GRAPH_RULES.absentFaction)}${ownerLabel} « ${owner} » est de la période ` +
+        `« ${periodId} » et ${verb} la faction « ${factionId} », que cette période déclare ` +
+        `absente. ` +
+        (present.length === 0
+          ? `« ${periodId} » ne compte aucune faction : visez une autre période dans « periodId ».`
+          : `Mettez dans « ${field} » une faction de « ${periodId} » — ${quoted(present)} — ou ` +
+            `déplacez « ${owner} » dans une période où « ${factionId} » existe.`),
+      pass: PASS,
+    });
+  };
+
+  for (const figure of byId(graph.figures)) {
+    // `null` is « belongs to nobody », which no period can declare absent.
+    if (figure.factionId === null) continue;
+    absent(
+      `figures/${figure.id}.json`,
+      'factionId',
+      figure.id,
+      'la figure',
+      figure.periodId,
+      figure.factionId,
+      'appartient à',
+      'factionId',
+    );
+  }
+
+  for (const hook of byId(graph.hooks)) {
+    if (hook.appliesTo.kind !== 'faction') continue;
+    absent(
+      `hooks/${hook.id}.json`,
+      'appliesTo.factionId',
+      hook.id,
+      'le ressort',
+      hook.periodId,
+      hook.appliesTo.factionId,
+      'vise',
+      'appliesTo.factionId',
+    );
+  }
+
+  return issues;
+}
+
 /** The whole fifth pass, in the order `validateContent` calls it. */
 export function validateScenarioGraph(graph: ScenarioGraph): ContentIssue[] {
-  return [...scenarioGraphIssues(graph), ...figurePeriodIssues(graph)];
+  return [
+    ...scenarioGraphIssues(graph),
+    ...figurePeriodIssues(graph),
+    ...absentFactionIssues(graph),
+  ];
 }

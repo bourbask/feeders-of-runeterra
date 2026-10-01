@@ -55,5 +55,6 @@ export * from './period.js';
 export * from './presage-table.js';
 export * from './price-table.js';
 export * from './region.js';
+export * from './scenario-rules.js';
 export * from './settings.js';
 export * from './truth.js';

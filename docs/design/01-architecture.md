@@ -227,7 +227,7 @@ pnpm db:migrate
 pnpm db:studio
 pnpm db:seed
 pnpm content:index  # scripts/generate-content-index.ts
-pnpm content:check  # chargeur 4 passes ; sort en code 1 sur la moindre erreur
+pnpm content:check  # chargeur 5 passes ; sort en code 1 sur la moindre erreur
 pnpm db:reset       # rm data/app.db* + migrate + seed  <- commande du quotidien
 pnpm db:rebuild     # reconstruit les projections depuis le journal
 pnpm db:check       # 12 oracles d'integrite
@@ -504,7 +504,7 @@ packages/content/
     index.ts                     # registre COMPLET — serveur / sim uniquement
     ui.ts                        # sous-entree "@for/content/ui" : libelles seuls, leger
     generated/index.ts           # GENERE — imports statiques de tous les JSON de content/
-    load.ts                      # loadContent(): ContentBundle, 4 passes (03-donnees.md §4.8)
+    load.ts                      # loadContent(): ContentBundle, 5 passes (03-donnees.md §4.8)
     registry.ts                  # getChampion(), listChampions(), getOracle(), ...
     validate.ts                  # validateContent(): parse tout via @for/contracts/content
     manifest.ts                  # hash de contenu + CONTENT_VERSION
@@ -1324,7 +1324,7 @@ Runner `ubuntu-latest`, Node 24, `pnpm/action-setup`, cache pnpm + cache Turbore
 > tableau de documentation n'est pas un seuil.
 | 7 | `test-golden` | `pnpm test:golden` ; echoue aussi si `GOLDEN_UPDATE` est present dans l'environnement | **oui** |
 | 8 | `migrations` | `pnpm db:check-schema` (aucune migration en attente, dump == `schema.expected.sql`) + `pnpm db:migrate` + `pnpm db:seed` sur base jetable | **oui** |
-| 9 | `content` | `pnpm content:check` (chargeur 4 passes, code 1 en cas d'erreur) + `pnpm content:index && git diff --exit-code` | **oui** |
+| 9 | `content` | `pnpm content:check` (chargeur 5 passes, code 1 en cas d'erreur) + `pnpm content:index && git diff --exit-code` | **oui** |
 | 10 | `ai-eval-offline` | `pnpm eval:offline` — niveau **N0**, zero appel API, zero cle (02-mj-ia.md §8.5) | **oui** |
 | 11 | `sim` | `pnpm sim run --format=json` (tous les scenarios). **`pnpm sim fuzz` n'est PAS dans la porte de PR en M0** : la trame malformee — le seul cas dangereux — est deja couverte par `packages/contracts/tests/envelope-fuzz.test.ts` (job 6), et fuzzer des intentions valides contre un moteur sans feature de jeu achete peu pour un risque d'instabilite reel sur une porte visee a 8 minutes. Le mode tourne a la demande ; bloquant en M1 (M0-28) | **oui** |
 | 12 | `build` | `pnpm build` | **oui** |
