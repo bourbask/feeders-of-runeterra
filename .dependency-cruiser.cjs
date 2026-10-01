@@ -15,7 +15,15 @@ module.exports = {
       comment:
         '@for/engine est la couche 0 : aucune dépendance, aucun module de plateforme. ' +
         'Sa pureté est ce qui rend le moteur testable et rejouable.',
-      from: { path: '^packages/engine/src' },
+      // LES FICHIERS DE TEST SONT HORS DE CETTE RÈGLE, ET SEULEMENT DE
+      // CELLE-CI. Depuis que `exclude` ne masque plus les tests (voir
+      // `options.exclude`), `engine/src/**/*.test.ts` déclare ses arêtes :
+      // `vitest` et `@for/testkit`, qui portent les RNG scriptés. Aucune ne
+      // part dans le `dist/` — et la pureté qui compte est celle du `dist/`,
+      // lue par `packages/engine/src/index.test.ts`, qui scanne le paquet
+      // compilé et son propre `package.json`. Interdire ici ferait rougir une
+      // dépendance de test que la fiche de M0-02 exige.
+      from: { path: '^packages/engine/src', pathNot: '\\.test\\.tsx?$' },
       to: {
         pathNot: '^packages/engine/src',
         dependencyTypesNot: ['type-only'],
@@ -31,7 +39,10 @@ module.exports = {
         'Conséquence à connaître AVANT d’écrire un schéma : les tuples `as const` du moteur ' +
         '(ATTRIBUTES, RNG_STREAMS, EFFECT_OPS…) sont des VALEURS et ne peuvent pas être ' +
         'importés ici. Ils sont recopiés dans src/core/enums.ts, gardés dans les deux sens.',
-      from: { path: '^packages/contracts/src' },
+      // Même raison que pour `engine-est-pur` : depuis que `exclude` ne masque
+      // plus les tests, `contracts/src/**/*.test.ts` déclare son import de
+      // `vitest`. Ce que la règle garde, c'est ce que le paquet EXPORTE.
+      from: { path: '^packages/contracts/src', pathNot: '\\.test\\.tsx?$' },
       // `node_modules/zod` sans ancre : pnpm résout zod sous
       // `node_modules/.pnpm/zod@<version>/node_modules/zod/`, et la version
       // ancrée de cette expression ne matchait donc AUCUNE arête réelle. La
@@ -75,7 +86,20 @@ module.exports = {
         "Le client affiche et envoie des intentions (invariant 3). La base, l'IA, le " +
         'serveur et le contenu ne franchissent pas le navigateur.',
       from: { path: '^packages/client/src' },
-      to: { path: '^packages/(db|ai|ai-eval|server|content)/' },
+      // DEUX FORMES DANS LA MÊME EXPRESSION, et la seconde est la correction de
+      // M0-30. `to.path` porte le chemin RÉSOLU ; or aucun des cinq paquets
+      // interdits n'est une dépendance de `@for/client`, donc aucun ne se
+      // résout, donc `to.path` valait le spécificateur brut `@for/server` et
+      // cette règle ne pouvait pas matcher. Mesuré avant correction :
+      // `import '@for/server'` en tête de `packages/client/src/routes/Login.tsx`
+      // sortait bien en 1 — mais sous `pas-de-dependance-orpheline`, et
+      // `grep -c "client-ne-voit-que"` sur la sortie affichait 0. La frontière
+      // tenait ; la règle qui prétend la tenir, non. Elle mord désormais sous
+      // SON nom, que le paquet soit résolu (`^packages/<nom>/`) ou pas
+      // (`^@for/<nom>$`).
+      to: {
+        path: '(^packages/(db|ai|ai-eval|server|content)/|^@for/(db|ai|ai-eval|server|content)$)',
+      },
     },
     {
       name: 'scenario-ne-touche-ni-la-base-ni-le-serveur',
@@ -99,7 +123,16 @@ module.exports = {
     // Ne PAS exclure `dist` ici : les paquets de l'espace de travail se résolvent
     // à travers leur `dist/`, et les exclure faisait disparaître toutes les arêtes
     // entre paquets — les règles de frontière devenaient silencieusement inertes.
-    exclude: { path: '(coverage|\\.test\\.ts$)' },
+    // LES FICHIERS DE TEST NE SONT PLUS EXCLUS, et c'est la correction stricte
+    // que M0-30 a mesurée. L'expression d'avant, `(coverage|\.test\.ts$)`,
+    // ne voyait PAS les `.tsx` : `import '@for/db'` en tête de
+    // `packages/client/src/features/table/Journal.test.tsx` sortait en 1, le
+    // même import en tête de `packages/client/src/ws/journal.test.ts` sortait
+    // en 0. Deux extensions, deux verdicts, pour une seule règle. Aligner dans
+    // le sens LÂCHE aurait éteint la moitié qui mordait ; aligner dans le sens
+    // strict fait sortir les deux en 1. Un import licite depuis un fichier de
+    // test reste en 0 — c'est ce que la mesure du compte rendu montre.
+    exclude: { path: '(coverage)' },
     tsPreCompilationDeps: true,
     tsConfig: { fileName: 'tsconfig.json' },
     enhancedResolveOptions: {

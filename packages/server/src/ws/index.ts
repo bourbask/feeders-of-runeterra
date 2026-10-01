@@ -65,18 +65,29 @@
  */
 
 import { randomUUID } from 'node:crypto';
+import { clearInterval, setInterval } from 'node:timers';
 
-import { WS_CLOSE_CODES, zCampaignId, zPlayerId } from '@for/contracts';
+import websocket from '@fastify/websocket';
+import {
+  WS_CLOSE_CODES,
+  WS_MAX_INCOMING_FRAME_BYTES,
+  zCampaignId,
+  zPlayerId,
+} from '@for/contracts';
+import { getCampaign, listMemberPlayerIds } from '@for/db';
 
 import { TableConnection, authorizeHandshake } from './connection.js';
 import { WsRateLimiter, routeMessage } from './handlers.js';
 import { TableHub } from './hub.js';
 
 import type { ContentRegistry } from '@for/content';
+import type { SqliteConnection } from '@for/db';
 import type { IdFactory } from '@for/engine';
 import type { FastifyPluginCallback } from 'fastify';
+import type { Buffer } from 'node:buffer';
+import type { NarrationDispatcher } from '../ai/broadcast.js';
 import type { AppPluginOptions, TimeSource } from '../deps.js';
-import type { CampaignService } from '../game/types.js';
+import type { CampaignService, EventDelivery } from '../game/types.js';
 import type {
   CampaignAccess,
   FrameIdSource,
@@ -89,6 +100,7 @@ import type { HandlerDeps, NarrationReplay } from './handlers.js';
 export * from './connection.js';
 export * from './handlers.js';
 export * from './hub.js';
+export * from './narration.js';
 
 /**
  * Frame identifiers. A UUID, because `zMessageId` is `z.uuid()` — see
@@ -98,12 +110,33 @@ export * from './hub.js';
  */
 export const randomFrameIds: FrameIdSource = { next: () => randomUUID() };
 
-export function createTableHub(service: CampaignService): TableHub {
-  return new TableHub({ service });
+/**
+ * The hub, and — when the process generates narration — the buffer a joining
+ * socket is subscribed to.
+ *
+ * `NarrationDispatcher` ALREADY IMPLEMENTS `NarrationReplay`, the port
+ * `handlers.ts` declared for `c2s.resume_narration`: same method, same input
+ * fields, same return shape. M0-29 wrote it that way on purpose; this is where
+ * the two are joined, which is why `AttachInput.narration` takes the
+ * dispatcher itself rather than an adapter around it. Held by
+ * `tests/ws/narration-frames.test.ts`, « le diffuseur EST le port de reprise :
+ * `c2s.resume_narration` sert son tampon ».
+ */
+export function createTableHub(
+  service: CampaignService,
+  dispatcher?: NarrationDispatcher,
+): TableHub {
+  return new TableHub({ service, ...(dispatcher === undefined ? {} : { dispatcher }) });
 }
 
 export interface AttachInput {
   readonly hub: TableHub;
+  /**
+   * How a write reaches this socket: the journal, read by sequence. See
+   * `game/delivery.ts` and issue #67 — the result of an intent is NOT the
+   * journal, and the difference is three lost entries per game.
+   */
+  readonly delivery: EventDelivery;
   readonly socket: WsSocket;
   readonly request: HandshakeRequest;
   readonly access: CampaignAccess;
@@ -150,6 +183,7 @@ export async function attachSocket(input: AttachInput): Promise<TableConnection 
 
   const deps: HandlerDeps = {
     hub: input.hub,
+    delivery: input.delivery,
     service: input.service,
     content: input.content,
     clock: input.clock,
@@ -175,10 +209,171 @@ export async function attachSocket(input: AttachInput): Promise<TableConnection 
 }
 
 /**
- * The Fastify plugin. It registers nothing until `@fastify/websocket` becomes
- * a dependency of this package — see the header. It stays in `app.ts`'s
- * registration list so that the composition point never has to be reopened.
+ * WHO MAY FOLLOW WHICH TABLE, read from the database.
+ *
+ * THREE ANSWERS, NOT TWO, and that is `CampaignAccess`'s own contract: a
+ * campaign that does not exist and a campaign that is somebody else's are
+ * different close codes (4004 and 4003). Collapsing them would either lie to a
+ * legitimate player or tell a stranger which tables exist.
+ *
+ * Held by `tests/ws/upgrade.test.ts`, « l'accès lit la base : inconnue,
+ * interdite, ouverte », which drives the three on a real campaign.
  */
-export const wsPlugin: FastifyPluginCallback<AppPluginOptions> = (_app, _options, done) => {
+export function createCampaignAccess(connection: SqliteConnection): CampaignAccess {
+  return {
+    check: (campaignId: string, playerId: string) => {
+      if (getCampaign(connection, campaignId) === undefined) {
+        return Promise.resolve('not_found' as const);
+      }
+      return Promise.resolve(
+        listMemberPlayerIds(connection, campaignId).includes(playerId)
+          ? ('ok' as const)
+          : ('forbidden' as const),
+      );
+    },
+  };
+}
+
+/** The upgrade path (01-architecture.md section 5). One table per socket. */
+export const WS_ROUTE = '/ws';
+
+/**
+ * How often `TableHub.tick` runs. The heartbeat itself is
+ * `WS_HEARTBEAT_INTERVAL_MS` (25 s) and `WS_HEARTBEAT_TIMEOUT_MS` (60 s); this
+ * is only how often the clock is LOOKED AT, and it has to be finer than the
+ * cadence it drives or a 25 s ping would fire every 30 s. Five seconds is the
+ * largest divisor of both that leaves the comparison exact.
+ */
+export const WS_TICK_INTERVAL_MS = 5_000;
+
+/**
+ * THE RAW SOCKET, DECLARED HERE AND NOT IMPORTED, and that is a measurement
+ * rather than a preference.
+ *
+ * `@fastify/websocket` re-exports `ws`'s own `WebSocket` type, and `ws` is NOT
+ * a declared dependency of this package — it arrives as a transitive one. With
+ * `skipLibCheck` the compiler lets that through and the type silently becomes
+ * unresolvable: `pnpm lint` answered ten `no-unsafe-call` /
+ * `no-unsafe-member-access` on this very function, which is the type system
+ * saying it has no idea what `socket.send` is. Four members are used here;
+ * naming them is both honest and checkable.
+ */
+interface RawSocket {
+  send(data: string, callback?: () => void): void;
+  close(code?: number, reason?: string): void;
+  on(event: 'message', listener: (data: Buffer) => void): void;
+  on(event: 'close', listener: () => void): void;
+}
+
+/**
+ * The transport, adapted. Two methods, and both are the ones `WsSocket`
+ * declares — a `send(data)` that dropped `onFlushed` would compile and would
+ * silently disable the back-pressure rearming of `TableConnection`.
+ */
+function wireSocket(socket: RawSocket): WsSocket {
+  return {
+    send: (data: string, onFlushed?: () => void): void => {
+      socket.send(data, () => {
+        onFlushed?.();
+      });
+    },
+    close: (code: number, reason?: string): void => {
+      socket.close(code, reason);
+    },
+  };
+}
+
+/**
+ * THE UPGRADE, AND THE GAP M0-25 REPORTED IS CLOSED HERE.
+ *
+ * M0-25 wrote: "`wsPlugin` STILL REGISTERS NO ROUTE, and that is a reported
+ * gap rather than an oversight. The HTTP upgrade needs `@fastify/websocket`,
+ * which is not a dependency of `@for/server` […] `attachSocket` is the seam
+ * that task will call". This is that call, and `@fastify/websocket` is now a
+ * dependency of the package.
+ *
+ * ── WHAT IS READ PER REQUEST, AND WHY ────────────────────────────────────
+ * `app.ts` registers this plugin BEFORE `gamePlugin`, and `app.ts` is closed.
+ * The hub, the service, the dispatcher and the delivery are therefore read
+ * from the instance INSIDE the handler, by which point `gamePlugin` has run.
+ * A socket that arrives before the composition is answered 1013 rather than
+ * crashing the process.
+ *
+ * ── THE HEARTBEAT IS ONE TIMER FOR THE WHOLE PROCESS ─────────────────────
+ * `TableHub.tick` walks every room; one `setInterval` per socket would be one
+ * timer per player for a job that is already global. It is `unref`'d so it
+ * never holds the process open, and cleared on `onClose` so a test that builds
+ * ten applications does not leave ten timers behind.
+ *
+ * Held by `tests/ws/upgrade.test.ts`: « une socket authentifiée reçoit
+ * `s2c.welcome`, `s2c.snapshot` et `s2c.presence` », « une socket sans session
+ * est fermée en 4002 » and « le départ du transport vide la salle ».
+ */
+export const wsPlugin: FastifyPluginCallback<AppPluginOptions> = (app, options, done) => {
+  const { deps } = options;
+  const access = createCampaignAccess(deps.connection);
+
+  void app.register(websocket, {
+    options: { maxPayload: WS_MAX_INCOMING_FRAME_BYTES },
+  });
+
+  app.register((scope, _opts, ready) => {
+    scope.get(WS_ROUTE, { websocket: true }, (rawSocket: unknown, request) => {
+      const socket = rawSocket as RawSocket;
+      const hub = scope.tableHub;
+      const service = scope.campaigns;
+      const delivery = scope.delivery;
+      if (hub === undefined || service === undefined || delivery === undefined) {
+        // The composition has not run. 1013 is "try again later"; closing with
+        // an application code would tell a client to stop retrying.
+        socket.close(1013, 'not ready');
+        return;
+      }
+
+      const session = scope.currentPlayer(request);
+      const query = request.query as { campaignId?: string };
+
+      void attachSocket({
+        hub,
+        delivery,
+        socket: wireSocket(socket),
+        request: {
+          session: session === null ? null : { playerId: session.profile.id },
+          campaignId: query.campaignId ?? null,
+        },
+        access,
+        service,
+        content: deps.content,
+        clock: deps.clock,
+        ids: deps.ids,
+        frameIds: randomFrameIds,
+        logger: deps.logger,
+        ...(scope.narration === undefined ? {} : { narration: scope.narration }),
+      }).then((connection) => {
+        if (connection === null) return;
+
+        socket.on('message', (raw: Buffer) => {
+          void connection.receive(raw.toString('utf8'));
+        });
+
+        socket.on('close', () => {
+          connection.markClosed();
+          hub.detach(connection);
+          hub.broadcastPresence(connection.session.campaignId);
+        });
+      });
+    });
+    ready();
+  });
+
+  const beat = setInterval(() => {
+    app.tableHub?.tick(deps.clock.now());
+  }, WS_TICK_INTERVAL_MS);
+  beat.unref();
+  app.addHook('onClose', (_instance, onClosed) => {
+    clearInterval(beat);
+    onClosed();
+  });
+
   done();
 };

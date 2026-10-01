@@ -55,6 +55,8 @@ pnpm format          # avant de committer
 pnpm check:workspace # cohérence des package.json et de la liste contractuelle de commandes
 pnpm db:reset        # base locale remise à zéro puis réamorcée
 pnpm sim run <scénario>
+bash scripts/smoke-m0.sh      # installation -> socket -> « Pourquoi ? » -> arrêt
+bash scripts/canary-regle.sh  # le canari : une constante de règle fait rougir trois suites
 ```
 
 **`pnpm typecheck` ne regarde pas les fichiers de test.** Ce sont deux tâches turbo distinctes, et
@@ -62,10 +64,11 @@ pnpm sim run <scénario>
 passe les quatre portes locales et tombe au job 4 de la CI, sur une fixture de test qui ne compile
 plus. Toute mesure de recette lance **les deux**.
 
-`pnpm verify` **n'a pas à être verte avant la fin de M0** : la porte se ferme progressivement,
-tâche après tâche, et c'est M0-30 qui la referme entièrement. Ne cherche pas à rendre vertes des
-commandes dont la cible n'est pas encore livrée — elles t'annoncent d'elles-mêmes quelle tâche
-les remplira.
+`pnpm verify` **est verte depuis M0-30**, et la porte est fermée : plus aucune étape de la CI ne
+tolère l'échec. Deux commandes restent hors de `verify` et sont dans la CI — `pnpm test:coverage`
+(travail 6, le seul qui évalue le seuil global) et les cibles de base (`db:check-schema`,
+`db:migrate`, `db:seed`, travail 8), qui écrivent un fichier. `bash scripts/smoke-m0.sh` les
+enchaîne sur une base jetable.
 
 ## Une promesse nomme le test qui la tient
 
@@ -145,13 +148,13 @@ Deux façons d'obtenir un vert qui ne veut rien dire, toutes deux rencontrées e
 - **`z.toJSONSchema` écrit `additionalProperties: false` même sur un objet non strict**, en mode
   par défaut. Toute vérification de strictness par le JSON Schema doit passer `io: 'input'`, et
   doubler d'un test d'exécution — sinon elle est verte pour la mauvaise raison.
-- **Douze jobs verts ne sont pas douze portes fermées.** Les jobs 8 à 11 — migrations, contenu,
-  éval hors ligne, simulateur — portent un `continue-on-error` marqué `TODO M0-30` : ils
-  **restent verts en échouant**, et seule la conclusion de leur étape le dit. Une PR en conflit,
-  elle, n'a pas une CI rouge : elle n'a **pas de CI du tout**, parce que le déclencheur
-  `pull_request` porte sur la ref de fusion que GitHub ne fabrique pas. Dans les deux cas,
-  « aucun échec » ne veut pas dire « tout est passé ». Compte les check-runs sur le sha de tête,
-  et regarde les conclusions d'étapes.
+- **Plus aucune étape de la CI ne tolère l'échec.** Les cinq `continue-on-error` marqués
+  `TODO M0-30` — corpus dorés, migrations, contenu, éval hors ligne, simulateur — sont retirés
+  depuis M0-30 : `grep -c continue-on-error .github/workflows/ci.yml` affiche `0`, et
+  `scripts/check-ci-jobs.sh` le relit à chaque PR. Reste l'autre moitié du piège : une PR en
+  conflit n'a pas une CI rouge, elle n'a **pas de CI du tout**, parce que le déclencheur
+  `pull_request` porte sur la ref de fusion que GitHub ne fabrique pas. « Aucun échec » ne veut
+  donc toujours pas dire « tout est passé » : compte les check-runs sur le sha de tête.
 
 ## Trois pièges de l'environnement, déjà payés
 

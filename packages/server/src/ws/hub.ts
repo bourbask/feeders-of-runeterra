@@ -85,7 +85,10 @@
 
 import { EVENT_SCOPES } from '@for/engine';
 
+import { narrationSinkFor } from './narration.js';
+
 import type { CampaignId, PlayerId } from '@for/engine';
+import type { NarrationDispatcher, NarrationSink } from '../ai/broadcast.js';
 import type { CampaignService, PersistedEvent } from '../game/types.js';
 import type { DeliveredEntry, PresenceMember, TableConnection } from './connection.js';
 
@@ -176,12 +179,31 @@ interface CampaignRoom {
 
 export interface HubDeps {
   readonly service: CampaignService;
+  /**
+   * The narration buffer, when the process has one.
+   *
+   * OPTIONAL, AND FOR ONE REASON ONLY: `@for/sim` drives tables with a
+   * scripted storyteller and no dispatcher, and the acceptance criteria of
+   * M0-25 are all about `s2c.event`. When it IS there, a socket that joins a
+   * room joins the narration stream in the SAME call — one lifecycle, one
+   * owner. A socket attached to the room and not to the stream would miss the
+   * text of every turn it is otherwise fully entitled to; a sink left behind
+   * on `detach` would keep writing to a closed transport.
+   *
+   * BOTH DIRECTIONS, in `tests/ws/narration-frames.test.ts`: « une socket qui
+   * rejoint la table rejoint le fil de narration » and « et le puits s'en va
+   * avec elle : plus rien ne s'écrit après le départ ».
+   */
+  readonly dispatcher?: NarrationDispatcher;
 }
 
 export class TableHub {
   private readonly deps: HubDeps;
 
   private readonly rooms = new Map<string, CampaignRoom>();
+
+  /** The narration sink minted for each connection, so `detach` can undo it. */
+  private readonly sinks = new Map<TableConnection, NarrationSink>();
 
   constructor(deps: HubDeps) {
     this.deps = deps;
@@ -212,7 +234,14 @@ export class TableHub {
    * frame by frame.
    */
   attach(connection: TableConnection): void {
-    this.room(connection.session.campaignId).connections.add(connection);
+    const campaignId = connection.session.campaignId;
+    this.room(campaignId).connections.add(connection);
+
+    const dispatcher = this.deps.dispatcher;
+    if (dispatcher === undefined) return;
+    const sink = narrationSinkFor(connection);
+    this.sinks.set(connection, sink);
+    dispatcher.attach(campaignId, sink);
   }
 
   /**
@@ -223,6 +252,13 @@ export class TableHub {
    */
   detach(connection: TableConnection): void {
     const campaignId = connection.session.campaignId;
+
+    const sink = this.sinks.get(connection);
+    if (sink !== undefined) {
+      this.sinks.delete(connection);
+      this.deps.dispatcher?.detach(campaignId, sink);
+    }
+
     const room = this.rooms.get(campaignId);
     if (room === undefined) return;
     room.connections.delete(connection);

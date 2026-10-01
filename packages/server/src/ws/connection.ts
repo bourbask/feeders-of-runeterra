@@ -594,6 +594,53 @@ export class TableConnection {
   }
 
   /**
+   * ══ THE THREE FRAMES A GENERATION ACTUALLY EMITS (M0-29's reported gap) ══
+   *
+   * M0-29 wrote, in the header of `ai/broadcast.ts`: "that class ships
+   * `sendNarrationSnapshot` and `sendNarrationError` (M0-25) and NOTHING for
+   * `started`, `delta` or `done` — the three frames a generation actually
+   * emits […] the seam is declared here and the three methods land on
+   * `TableConnection` with the wiring, in M0-30". This is that landing.
+   *
+   * They go through the SAME shell factory as every other frame, which is
+   * what `frame()`'s own header says is the whole point, and through
+   * `zS2CEnvelope` like every other frame — a narration frame the server built
+   * wrongly dies here and not in a browser.
+   *
+   * HELD BY `tests/ws/narration-frames.test.ts`: « les trois trames d'une
+   * génération sortent de la même fabrique : trois `id`, un `ts` par instant »
+   * and « chaque charge émise par le diffuseur est acceptée par le protocole »,
+   * which drives a REAL `NarrationBroadcast` into a real `TableConnection` and
+   * reads the bytes.
+   */
+  sendNarrationStarted(payload: {
+    readonly narrationId: string;
+    readonly eventSeq: number;
+    readonly actorCharacterId: string | null;
+    readonly chunk: 0;
+  }): void {
+    this.send(this.frame('s2c.narration_started', payload));
+  }
+
+  sendNarrationDelta(payload: {
+    readonly narrationId: string;
+    readonly chunk: number;
+    readonly text: string;
+  }): void {
+    this.send(this.frame('s2c.narration_delta', payload));
+  }
+
+  sendNarrationDone(payload: {
+    readonly narrationId: string;
+    readonly eventSeq: number;
+    readonly text: string;
+    readonly model: string;
+    readonly source: 'ai' | 'engine';
+  }): void {
+    this.send(this.frame('s2c.narration_done', payload));
+  }
+
+  /**
    * The whole narration buffer, replayed after a cut. NEVER a second
    * generation: what is sent here is what the server already holds
    * (02-mj-ia.md section 6.3). Held by `tests/ws/routing.test.ts`, « rejoue le

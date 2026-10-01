@@ -42,14 +42,23 @@ import { describe, expect, it } from 'vitest';
 
 import { staticContent } from '@for/content';
 import type { TableStateDto, TurnProofDto } from '@for/contracts';
-import { PROTOCOL_VERSION, zGameEvent, zPlayerId, zTableState, zTurnProof } from '@for/contracts';
-import type { CampaignId, PlayerId, Result } from '@for/engine';
+import {
+  PROTOCOL_VERSION,
+  zCampaignId,
+  zGameEvent,
+  zPlayerId,
+  zTableState,
+  zTurnProof,
+} from '@for/contracts';
+import type { CampaignId, PlayerId, Result, RuleViolation } from '@for/engine';
 import { err, ok } from '@for/engine';
 
+import type { NarrationDispatcher } from '../../../src/ai/broadcast.js';
 import type { TimeSource } from '../../../src/deps.js';
 import { AppError } from '../../../src/errors.js';
 import type {
   CampaignService,
+  EventDelivery,
   PersistedEvent,
   SubmitIntentInput,
   SubmitIntentResult,
@@ -391,6 +400,26 @@ export class FakeCampaignService implements CampaignService {
   /** Set by a probe to check that the "mutates nothing" suite really bites. */
   mutateOnProof = false;
 
+  /**
+   * CE QUE LES RÈGLES REFUSENT, quand on le lui demande : `ok({ accepted:
+   * false, rejection })`, la TROISIÈME réponse de `submitIntent` — ni une
+   * `AppError`, ni une acceptation. C'est elle que `ws/handlers.ts` laissait
+   * tomber (issue #66).
+   */
+  rejectWith: RuleViolation | null = null;
+
+  /**
+   * COMBIEN D'ENTRÉES LE JOURNAL REÇOIT EN PLUS DE CELLE QUE LE RÉSULTAT REND.
+   *
+   * C'est le filet de sécurité de la brûlure (`closeWindowAsKeep`), en une
+   * ligne : des entrées écrites, numérotées, et ABSENTES de
+   * `SubmitIntentResult.events`. Issue #67.
+   */
+  journalledOutsideResult = 0;
+
+  /** Ce que le dernier `submitIntent` a RENDU — jamais tout ce qu'il a écrit. */
+  readonly lastResultEvents: PersistedEvent[] = [];
+
   characters: TableStateDto['characters'] = [];
 
   /** The last input the server handed over, or `null` if it never wrote. */
@@ -406,6 +435,21 @@ export class FakeCampaignService implements CampaignService {
         err(new AppError('forbidden_campaign', 403, 'La table te refuse ce geste.')),
       );
     }
+    if (this.rejectWith !== null) {
+      return Promise.resolve(ok({ accepted: false, events: [], rejection: this.rejectWith }));
+    }
+    // ÉCRITES AVANT, RENDUES JAMAIS : le filet de la brûlure journalise ses
+    // entrées et le résultat ne les porte pas.
+    for (let index = 0; index < this.journalledOutsideResult; index += 1) {
+      this.journal.push(
+        anEvent({
+          seq: this.journal.length + 1,
+          scope: 'table',
+          campaignId: input.campaignId,
+          text: 'écrite par le filet, absente du résultat',
+        }),
+      );
+    }
     const event = anEvent({
       seq: this.journal.length + 1,
       scope: 'table',
@@ -413,6 +457,7 @@ export class FakeCampaignService implements CampaignService {
     });
     this.journal.push(event);
     this.narrationsStarted += 1;
+    this.lastResultEvents.splice(0, this.lastResultEvents.length, event);
     return Promise.resolve(ok({ accepted: true, events: [event] }));
   }
 
@@ -467,6 +512,78 @@ export class FakeCampaignService implements CampaignService {
 }
 
 /**
+ * La livraison, comme la production la fait : PAR SÉQUENCE, depuis le journal,
+ * jamais depuis le résultat de l'intention.
+ *
+ * Elle lit le journal du faux service — qui est le vrai journal de ces suites —
+ * exactement comme `game/delivery.ts` lit `readSince`. Ce n'est pas un faux
+ * plus permissif que le vrai : c'est la même lecture, sur la même source, avec
+ * le même curseur. La différence avec la production tient en une ligne, la
+ * requête SQL.
+ *
+ * ELLE RETIENT CE QU'ON LUI DEMANDE : `asked` garde chaque campagne nommée,
+ * pour qu'une assertion puisse porter sur le paramètre plutôt que sur son
+ * effet. Un `deliver()` sans paramètre satisferait l'interface sans un mot.
+ */
+export class FakeDelivery implements EventDelivery {
+  /** Chaque campagne nommée, dans l'ordre. */
+  readonly asked: string[] = [];
+
+  private cursor = 0;
+
+  constructor(
+    private readonly service: FakeCampaignService,
+    private readonly hub: TableHub,
+  ) {}
+
+  deliver(campaignId: string): void {
+    this.flush(campaignId, this.cursor);
+  }
+
+  deliverSince(campaignId: string, sinceSeq: number): void {
+    this.flush(campaignId, sinceSeq);
+  }
+
+  private flush(campaignId: string, fromSeq: number): void {
+    this.asked.push(campaignId);
+    const fresh = this.service.journal.filter(
+      (event) => event.campaignId === campaignId && event.seq > fromSeq,
+    );
+    if (fresh.length === 0) return;
+    this.hub.broadcast(zCampaignId.parse(campaignId), fresh);
+    this.cursor = Math.max(this.cursor, fresh.at(-1)?.seq ?? fromSeq);
+  }
+}
+
+/**
+ * LA LIVRAISON TELLE QU'ELLE ÉTAIT AVANT M0-30 : par le RÉSULTAT de
+ * l'intention, jamais par le journal. C'est le défaut de l'issue #67, gardé
+ * sous la main pour que la suite puisse le mesurer dans les deux sens au lieu
+ * d'affirmer qu'il existait.
+ */
+export class ResultDelivery implements EventDelivery {
+  constructor(
+    private readonly service: FakeCampaignService,
+    private readonly hub: TableHub,
+  ) {}
+
+  deliver(campaignId: string): void {
+    this.hub.broadcast(zCampaignId.parse(campaignId), [...this.service.lastResultEvents]);
+  }
+
+  /** Chaque `sinceSeq` qu'on lui a donné — et qu'elle ignore, comme l'ancien code. */
+  readonly ignoredSince: number[] = [];
+
+  deliverSince(campaignId: string, sinceSeq: number): void {
+    // LE PARAMÈTRE EST DÉCLARÉ, ET IGNORÉ EXPRÈS : c'est précisément ce que
+    // faisait le code d'avant — il diffusait le résultat quelle que soit la
+    // séquence. Un double à un paramètre ne saurait plus le dire.
+    this.ignoredSince.push(sinceSeq);
+    this.deliver(campaignId);
+  }
+}
+
+/**
  * ═══ LE FAUX REÇOIT-IL TOUT CE QUE LE VRAI REÇOIT ? ════════════════════════
  *
  * TypeScript accepte une méthode qui déclare MOINS de paramètres que celle
@@ -493,6 +610,8 @@ export type DoubleArities = [
   Exactly<Arity<FakeSocket['send']>, Arity<WsSocket['send']>>,
   Exactly<Arity<FakeSocket['close']>, Arity<WsSocket['close']>>,
   Exactly<Arity<RecordingLogger['warn']>, Arity<WsLogger['warn']>>,
+  Exactly<Arity<FakeDelivery['deliver']>, Arity<EventDelivery['deliver']>>,
+  Exactly<Arity<FakeDelivery['deliverSince']>, Arity<EventDelivery['deliverSince']>>,
 ];
 
 /**
@@ -500,7 +619,18 @@ export type DoubleArities = [
  * plus. LES HUIT SONT CELLES QUI PEUVENT PERDRE QUELQUE CHOSE : `now()` et
  * `next()` ne prennent aucun paramètre, il n'y a rien à y oublier.
  */
-export const DOUBLE_ARITIES: DoubleArities = [true, true, true, true, true, true, true, true];
+export const DOUBLE_ARITIES: DoubleArities = [
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+];
 
 /** A minimal proof, valid against `zTurnProof`. */
 export function aProof(correlationId: string): TurnProofDto {
@@ -566,14 +696,30 @@ export class Table {
 
   readonly hub: TableHub;
 
+  readonly delivery: FakeDelivery;
+
   /** Swapped for a `RecordingLogger` where what was dropped is the point. */
   logger: WsLogger = SILENT_LOGGER;
 
   private frames = 0;
 
-  constructor(readonly narration?: NarrationReplay) {
-    this.hub = createTableHub(this.service);
+  constructor(
+    readonly narration?: NarrationReplay,
+    readonly dispatcher?: NarrationDispatcher,
+  ) {
+    this.hub = createTableHub(this.service, dispatcher);
+    this.delivery = new FakeDelivery(this.service, this.hub);
   }
+
+  /**
+   * Remplace la livraison par celle d'AVANT la correction : par le résultat.
+   * C'est la moitié « avec la violation » des mesures de `delivery-by-sequence`.
+   */
+  useResultDelivery(): void {
+    this.deliveryOverride = new ResultDelivery(this.service, this.hub);
+  }
+
+  private deliveryOverride: EventDelivery | null = null;
 
   /** The next c2s frame identifier. Distinct per call, valid as a UUID. */
   nextFrameId(): string {
@@ -593,6 +739,7 @@ export class Table {
     const socket = new FakeSocket();
     const connection = await attachSocket({
       hub: this.hub,
+      delivery: this.deliveryOverride ?? this.delivery,
       socket,
       request: { session: playerId === null ? null : { playerId }, campaignId },
       access: this.access,
@@ -727,8 +874,15 @@ describe('le harnais des suites WebSocket', () => {
     expect(new FakeSocket().close.length).toBe(2);
     expect(new RecordingLogger().warn.length).toBe(2);
 
+    // `EventDelivery.deliver(campaignId)` et `deliverSince(campaignId,
+    // sinceSeq)`. Un `deliver()` sans paramètre ferait disparaître la campagne
+    // de toute la suite — c'est le huitième mode de la batterie.
+    const fakeDelivery = new FakeDelivery(fake, createTableHub(fake));
+    expect(fakeDelivery.deliver.length).toBe(1);
+    expect(fakeDelivery.deliverSince.length).toBe(2);
+
     // Le filet de compilation, relu ici pour qu'il ne soit pas du code mort.
-    expect(DOUBLE_ARITIES).toStrictEqual(Array.from({ length: 8 }, () => true));
+    expect(DOUBLE_ARITIES).toStrictEqual(Array.from({ length: 10 }, () => true));
   });
 
   it('rend un état ET une preuve qui dépendent du destinataire', async () => {

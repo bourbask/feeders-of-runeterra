@@ -120,8 +120,10 @@
         "targetId": "0000000000000000000000GHOST",
         "attribute": "vif"
       },
-      "note": "Une cible absente de la scene : le moteur refuse AVANT de tirer un de, et le journal ne gagne RIEN. Le refus n'atteint aujourd'hui aucune trame — defaut signale avec la PR, pas entérine ici : cette attente porte sur le journal, pas sur ce que le joueur voit.",
+      "note": "Une cible absente de la scene : le moteur refuse AVANT de tirer un de, et le journal ne gagne RIEN. ET LE JOUEUR LE VOIT : le refus arrive en `s2c.rejected` avec le code de la regle (issue #66, corrigee en M0-30). Avant la correction, cette intention disparaissait sans une trame.",
       "expect": {
+        "accepted": false,
+        "rejection": "target_not_present",
         "events": []
       }
     }

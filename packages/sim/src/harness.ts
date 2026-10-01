@@ -25,20 +25,31 @@
  * in place of `buildNarrator(env)`; everything downstream of that call is the
  * server's own code. Wiring §7.4 back is one optional field on `AppDeps`.
  *
- * ── THE DRAIN IS BY SEQUENCE, NEVER BY THE INTENT'S RESULT ───────────────
- * M0-24 leaves this in writing: entries written by the burn safety net and by
- * the narration are JOURNALLED and ABSENT from `SubmitIntentResult.events`.
- * `ws/handlers.ts` broadcasts that result, so those entries reach no socket
- * through it. `pump()` below therefore re-reads the journal from a cursor
- * after every step and hands what it finds to `hub.broadcast`, which is
- * idempotent per player (`appendVisible` skips a `seq` already counted). A
- * harness that trusted the result would leave a hole exactly where the two
- * hardest rules of this repository live.
+ * ── THE DRAIN IS BY SEQUENCE, AND IT IS THE SERVER'S NOW ─────────────────
+ * M0-24 left this in writing: entries written by the burn safety net and by
+ * the narration are JOURNALLED and ABSENT from `SubmitIntentResult.events`,
+ * so a hub told by the result loses them for ever. This harness used to wrap
+ * `submitIntent` and re-read the journal before `ws/handlers.ts` could speak —
+ * a HARNESS workaround for a SERVER gap, reported as one and opened as issue
+ * #67. M0-30 closed the gap: `game/delivery.ts` reads the journal by sequence,
+ * and the harness composes that very object instead of standing in for it.
  *
- * WHAT THAT HOLE LOOKS LIKE WHEN THE DRAIN IS REMOVED: `tests/scenarios.test.ts`,
- * describe « la diffusion se fait par séquence, jamais par le résultat », it
- * « sans le drain, le fil d'un joueur perd des entrées » — and its low
- * direction, « avec le drain, le même scénario est vert ».
+ * WHAT THE HOLE LOOKS LIKE IS STILL MEASURED, and now at the level where it
+ * lived: `withoutSequenceDrain` hands the socket a delivery that broadcasts
+ * the intent's RESULT, which is exactly what the server did before.
+ * `tests/scenarios.test.ts`, describe « la diffusion se fait par séquence,
+ * jamais par le résultat », it « sans le drain, le fil d'un joueur perd des
+ * entrées » — and its low direction, « avec le drain, le même scénario est
+ * vert ».
+ *
+ * ── AND THE STORYTELLER HERE IS NOT THE SERVER'S ─────────────────────────
+ * REPORTED, because it is the one place this harness stops being "the real
+ * service". `createCampaignService` takes an optional `narrateTurn`
+ * (M0-30); `gamePlugin` passes `runNarrationTurn`, this file does not, so the
+ * seven scenarios still run against M0-24's placeholder narration. Wiring the
+ * real turn in costs a regeneration of the seven golden corpora and a
+ * post-filter verdict on scripted prose; it is a measurement of its own, not
+ * a side effect of this one.
  */
 
 import { createHash } from 'node:crypto';
@@ -64,6 +75,7 @@ import { boxesFilled, createCampaignRng } from '@for/engine';
 import {
   attachSocket,
   createCampaignService,
+  createJournalDelivery,
   createTableHub,
   loadReplay,
   openBurnWindows,
@@ -94,6 +106,7 @@ import type {
 } from '@for/engine';
 import type {
   CampaignService,
+  EventDelivery,
   GameDeps,
   RngSource,
   TableConnection,
@@ -270,11 +283,12 @@ export interface HarnessOptions {
   /** One folder per harness; the temporary directory is shared between agents. */
   readonly tmpPrefix?: string;
   /**
-   * Turns the sequence drain OFF.
+   * Hands the socket the delivery the server had BEFORE M0-30: one that
+   * broadcasts `SubmitIntentResult.events` instead of reading the journal.
    *
    * It exists so that the claim in this file's header can be MEASURED rather
-   * than believed: with the drain off, a player's thread and the journal
-   * disagree, and `checkReplayEquivalence` says so.
+   * than believed: with it on, a player's thread and the journal disagree, and
+   * `checkReplayEquivalence` says so. Issue #67.
    */
   readonly withoutSequenceDrain?: boolean;
 }
@@ -539,37 +553,59 @@ export function createSimHarness(options: HarnessOptions): SimHarness {
   const written = createCampaignService({ deps });
 
   /**
-   * THE SEQUENCE DRAIN, INSERTED WHERE IT CAN BE ORDERED CORRECTLY.
+   * THE SEQUENCE DRAIN IS THE SERVER'S NOW, AND THE WORKAROUND IS GONE.
    *
-   * `ws/handlers.ts` broadcasts `result.value.events` — the entries the
-   * INTENT produced. The burn safety net writes its closing entries EARLIER
-   * in the same call and they are absent from that list (M0-24 says so in
-   * writing), so broadcasting the result first sets each player's `lastSeq`
-   * PAST them, and `appendVisible` then refuses them for ever: they reach no
-   * socket, and they never can. Measured on `06-two-players-interleaved`:
-   * three entries lost, and every delivery number after them shifted.
+   * This harness used to wrap `submitIntent` and re-read the journal before
+   * the handler could speak, because `ws/handlers.ts` broadcast
+   * `result.value.events` and the burn safety net's entries are absent from
+   * that list. That was a HARNESS workaround for a SERVER gap, reported as
+   * one, and opened as issue #67. M0-30 closed the gap:
+   * `game/delivery.ts` reads the journal by sequence and `submit()` calls it.
    *
-   * Draining AFTER the handler's broadcast cannot fix that — the damage is
-   * the cursor. Draining BEFORE it can, and this wrapper is the only seam
-   * where "before" exists: the real `submitIntent` has committed, the journal
-   * is complete, and the handler has not spoken yet. The handler's own
-   * broadcast then delivers nothing new, because `appendVisible` skips a
-   * `seq` already counted.
-   *
-   * THIS IS A HARNESS WORKAROUND FOR A SERVER GAP, and it is reported as one
-   * rather than left to look like a design: the same hole exists in
-   * production, where nothing drains. Diffusion is M0-29's file list.
+   * So the harness composes the SAME delivery the server composes, and the
+   * difference it can still measure is the one that matters — `resultDelivery`
+   * below puts the defect back, deliberately, so the claim stays a
+   * measurement rather than a memory.
    */
-  const service: CampaignService = {
-    ...written,
-    submitIntent: async (input) => {
-      const result = await written.submitIntent(input);
-      pump();
-      return result;
+  /** Ce que la dernière intention a RENDU — jamais tout ce qu'elle a écrit. */
+  const lastResult: { events: readonly JournalEvent[] } = { events: [] };
+
+  const service: CampaignService =
+    options.withoutSequenceDrain !== true
+      ? written
+      : {
+          ...written,
+          submitIntent: async (input) => {
+            const result = await written.submitIntent(input);
+            lastResult.events = result.ok ? result.value.events : [];
+            return result;
+          },
+        };
+
+  let hubRef: TableHub | null = null;
+  const journalDelivery = createJournalDelivery({
+    connection,
+    hub: () => {
+      if (hubRef === null) throw new Error('hub lu avant sa composition');
+      return hubRef;
+    },
+  });
+
+  /** La diffusion D'AVANT : par le résultat de l'intention, jamais par le journal. */
+  const resultDelivery: EventDelivery = {
+    deliver: () => {
+      if (hubRef !== null) hubRef.broadcast(campaignId, lastResult.events);
+    },
+    deliverSince: () => {
+      if (hubRef !== null) hubRef.broadcast(campaignId, lastResult.events);
     },
   };
 
+  const delivery: EventDelivery =
+    options.withoutSequenceDrain === true ? resultDelivery : journalDelivery;
+
   const hub = createTableHub(service);
+  hubRef = hub;
 
   const warnings: { context: object; message: string }[] = [];
   const logger = {
@@ -651,6 +687,7 @@ export function createSimHarness(options: HarnessOptions): SimHarness {
     }
     const attached = await attachSocket({
       hub,
+      delivery,
       socket: simSocket(tape),
       request: { session: { playerId: identity.playerId }, campaignId },
       // The auth layer's verdict, stubbed AT THE GUARD and not inside the game
@@ -681,14 +718,15 @@ export function createSimHarness(options: HarnessOptions): SimHarness {
 
   // ---------------------------------------------------------- the delivery
 
-  let pumped = 0;
-
+  /**
+   * CE QUE LE HARNAIS ÉCRIT LUI-MÊME dans le journal — l'étape `secret` et
+   * l'étape `revert` appendent directement, hors du chemin d'une intention —
+   * n'a aucun chemin de diffusion en production : rien ne les écrit en
+   * production. Elles passent donc par la MÊME livraison que le serveur, et
+   * pas par un drain à part.
+   */
   function pump(): void {
-    if (options.withoutSequenceDrain === true) return;
-    const fresh = readSince(connection, campaignId, pumped);
-    if (fresh.length === 0) return;
-    hub.broadcast(campaignId, fresh);
-    pumped = fresh.at(-1)?.seq ?? pumped;
+    delivery.deliver(campaignId);
   }
 
   // --------------------------------------------------------------- running

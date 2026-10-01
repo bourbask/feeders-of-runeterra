@@ -10,7 +10,8 @@
   "scripts": {
     "dev": "turbo run dev --parallel",
     "build": "turbo run build",
-    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm depcruise && pnpm check:workspace && pnpm content:check && pnpm test && pnpm test:golden && pnpm eval:offline",
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm depcruise && pnpm check:workspace && pnpm check:ci && pnpm content:check && pnpm test && pnpm test:golden && pnpm sim run && pnpm eval:offline",
+    "check:ci": "bash scripts/check-ci-jobs.sh",
     "test": "turbo run test",
     "test:coverage": "turbo run build && vitest run --coverage",
     "lint": "turbo run lint && eslint scripts tooling --no-error-on-unmatched-pattern",

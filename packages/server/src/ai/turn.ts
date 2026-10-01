@@ -80,6 +80,7 @@ import type {
   Rng,
 } from '@for/engine';
 import type { TimeSource } from '../deps.js';
+import type { EventDelivery } from '../game/types.js';
 import type { NarrationBroadcast, NarrationDispatcher } from './broadcast.js';
 import type { AiLogger } from './refusal.js';
 
@@ -91,11 +92,6 @@ import type { AiLogger } from './refusal.js';
  * réservé lève une ligne warn portant les trois champs ».
  */
 export const RESERVED_CHAMPION_LEAK = 'reserved_champion_leak';
-
-/** How the hub is told. By SEQUENCE — see the header. */
-export interface EventDelivery {
-  deliverSince(campaignId: string, sinceSeq: number): void;
-}
 
 export interface TurnDeps {
   readonly connection: SqliteConnection;

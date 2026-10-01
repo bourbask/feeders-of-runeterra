@@ -172,12 +172,12 @@ describe('une seule lecture de la portée dans tout `src/ws`', () => {
     expect(readings[0]).toContain('hub.ts:');
     expect(readings[0]).toContain('switch (event.scope)');
 
-    // La sonde lit bien les quatre fichiers du dossier — sans cette ligne, un
+    // La sonde lit bien les cinq fichiers du dossier — sans cette ligne, un
     // chemin faux rendrait la liste vide et le test vert.
     expect(
       wsSources()
         .map((source) => source.file)
         .sort(),
-    ).toStrictEqual(['connection.ts', 'handlers.ts', 'hub.ts', 'index.ts']);
+    ).toStrictEqual(['connection.ts', 'handlers.ts', 'hub.ts', 'index.ts', 'narration.ts']);
   });
 });

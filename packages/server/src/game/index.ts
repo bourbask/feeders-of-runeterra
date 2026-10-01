@@ -27,14 +27,20 @@
 import { GENERATED_FILES } from '@for/content';
 import fp from 'fastify-plugin';
 
+import { createJournalDelivery } from './delivery.js';
+
+import { NarrationDispatcher } from '../ai/broadcast.js';
 import { buildNarrator } from '../ai/narrator.js';
+import { createTurnRunner } from '../ai/turn-runner.js';
+import { createTableHub } from '../ws/index.js';
 import { createCampaignService } from './campaign-service.js';
 import { toEngineContent } from './content.js';
 
 import type { FallbackTemplates } from '@for/engine';
 import type { FastifyPluginCallback } from 'fastify';
 import type { AppPluginOptions } from '../deps.js';
-import type { CampaignService } from './types.js';
+import type { TableHub } from '../ws/hub.js';
+import type { CampaignService, EventDelivery } from './types.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -46,6 +52,12 @@ declare module 'fastify' {
      * first, and it writes no game state.
      */
     campaigns?: CampaignService;
+    /** Who is connected, and who receives what. Read per request by `ws/`. */
+    tableHub?: TableHub;
+    /** The narration buffer: one generation per campaign, many readers. */
+    narration?: NarrationDispatcher;
+    /** How a committed entry reaches a socket: by sequence, from the journal. */
+    delivery?: EventDelivery;
   }
 }
 
@@ -76,23 +88,72 @@ function fallbackTemplates(): FallbackTemplates {
   return JSON.parse(raw) as FallbackTemplates;
 }
 
+/**
+ * THE RUNTIME OF ONE PROCESS, composed in one place.
+ *
+ * ── THE ONE CYCLE, AND HOW IT IS CUT ─────────────────────────────────────
+ * `TableHub` is built from the `CampaignService`. The service's storyteller
+ * (`ai/turn-runner.ts`) delivers what it writes through `JournalDelivery`.
+ * `JournalDelivery` broadcasts through the hub. Something has to be named
+ * late, and `JournalDeliveryDeps.hub` is a thunk for exactly that — see its
+ * own header. Nothing below is reachable before this function returns.
+ *
+ * ── WHY THE HUB AND THE DISPATCHER ARE DECORATORS ────────────────────────
+ * `app.ts` registers `wsPlugin` BEFORE this one and is closed. A WebSocket
+ * route therefore cannot read these at REGISTRATION time, and does not need
+ * to: it reads them per request, by which point this plugin has run. The same
+ * reasoning `app.ts` writes out for `campaigns`.
+ */
 const plugin: FastifyPluginCallback<AppPluginOptions> = (app, options, done) => {
   const { deps } = options;
 
-  app.decorate(
-    'campaigns',
-    createCampaignService({
-      deps: {
+  const dispatcher = new NarrationDispatcher();
+
+  // Named late, on purpose. See the header.
+  let hub: TableHub | null = null;
+  const delivery = createJournalDelivery({
+    connection: deps.connection,
+    hub: () => {
+      if (hub === null) throw new Error('hub de table lu avant sa composition');
+      return hub;
+    },
+  });
+
+  const service = createCampaignService({
+    deps: {
+      connection: deps.connection,
+      content: toEngineContent(deps.content),
+      fallbacks: fallbackTemplates(),
+      clock: deps.clock,
+      rng: deps.rng,
+      ids: deps.ids,
+      narrator: buildNarrator(deps.env),
+      /**
+       * THE REAL STORYTELLER, finally called. Before M0-30 the intent path
+       * went through `intent-pipeline.ts`'s placeholder and
+       * `runNarrationTurn` had no caller at all.
+       */
+      narrateTurn: createTurnRunner({
         connection: deps.connection,
-        content: toEngineContent(deps.content),
-        fallbacks: fallbackTemplates(),
-        clock: deps.clock,
-        rng: deps.rng,
-        ids: deps.ids,
+        content: deps.content,
         narrator: buildNarrator(deps.env),
-      },
-    }),
-  );
+        ids: deps.ids,
+        clock: deps.clock,
+        logger: deps.logger,
+        dispatcher,
+        delivery,
+        fallbacks: fallbackTemplates(),
+        rng: deps.rng,
+      }),
+    },
+  });
+
+  hub = createTableHub(service, dispatcher);
+
+  app.decorate('campaigns', service);
+  app.decorate('tableHub', hub);
+  app.decorate('narration', dispatcher);
+  app.decorate('delivery', delivery);
 
   done();
 };
