@@ -26,8 +26,8 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import type { NodeContent } from '@for/contracts';
-import { FigureSchema, HookSchema, NodeSchema } from '@for/contracts';
+import type { NodeContent, PeriodContent } from '@for/contracts';
+import { FigureSchema, HookSchema, NodeSchema, PeriodSchema } from '@for/contracts';
 
 import { readContentFiles } from '../src/load.js';
 import { GRAPH_RULES, validateScenarioGraph } from '../src/validate-graph.js';
@@ -268,15 +268,17 @@ describe('le graphe de référence part', () => {
     expect(accepte(graphe())).toBe(NOEUDS_MODERNES.length + NOEUDS_ANCIENS.length);
   });
 
-  it('les quatre règles de la passe de graphe, écrites en toutes lettres', () => {
-    // Les noms viennent de la fiche S-02 et de la décision 4 de l'ADR 0012.
-    // `GRAPH_RULES` est l'autre opérande, et il sort du module de production :
-    // deux chemins, pas un.
+  it('les cinq règles de la passe de graphe, écrites en toutes lettres', () => {
+    // Les noms viennent de la fiche S-02, de la décision 4 de l'ADR 0012, et —
+    // pour la cinquième — de la mesure du testeur de S-02. `GRAPH_RULES` est
+    // l'autre opérande, et il sort du module de production : deux chemins,
+    // pas un.
     expect(Object.values(GRAPH_RULES)).toStrictEqual([
       'trois pistes minimum',
       'aucun nœud orphelin',
       'pas de saut de période',
       'pas de figure hors période',
+      'pas de faction absente de la période',
     ]);
   });
 });
@@ -507,6 +509,160 @@ describe('règle « pas de figure hors période » — la cinquième, celle que 
 });
 
 // ─────────────────────────────────────────────────────────────────────────
+describe('règle « pas de faction absente de la période » — l’anachronisme par l’autre bout', () => {
+  // CE QUE CETTE RÈGLE FERME, MESURÉ AVANT DE L'ÉCRIRE. Sur le vrai dépôt,
+  // `pnpm content:check` acceptait en CODE 0 une figure « avarosans » placée
+  // dans « la-longue-nuit », qui déclare cette faction absente — et acceptait
+  // de même un ressort visant cette faction dans cette période.
+  // `absentFactionIds` est pourtant LE champ que S-01 a écrit en disant
+  // « c'est le champ qui empêche l'anachronisme ».
+
+  it('une figure d’une faction que sa période déclare absente est refusée', () => {
+    const cites = parRegle(
+      refuse(
+        modifier(graphe(), `figures/${FIGURE_ANCIENNE}.json`, (document) => {
+          document['factionId'] = 'avarosans';
+        }),
+      ),
+      GRAPH_RULES.absentFaction,
+    );
+    expect(cites).toHaveLength(1);
+    const message = cites[0]?.message ?? '';
+    expect(message).toContain(`la figure « ${FIGURE_ANCIENNE} »`);
+    expect(message).toContain(`« ${ANCIEN} »`);
+    expect(message).toContain('« avarosans »');
+    expect(message).toContain('déclare absente');
+    // CE QU'IL FAUT AJOUTER : la période ne compte qu'une faction, et le
+    // message la donne. Un refus qui ne nomme pas l'issue est inutilisable.
+    expect(message).toContain('« gardiens-du-givre »');
+    expect(cites[0]?.file).toBe(`figures/${FIGURE_ANCIENNE}.json`);
+    expect(cites[0]?.path).toBe('factionId');
+    expect(cites[0]?.pass).toBe(5);
+
+    // L'autre sens, sur le MÊME bundle : la faction que la période déclare
+    // présente passe.
+    const bundle = validateContent(
+      modifier(graphe(), `figures/${FIGURE_ANCIENNE}.json`, (document) => {
+        document['factionId'] = 'gardiens-du-givre';
+      }),
+      { root: 'content-fixtures' },
+    );
+    expect(bundle.figures.get(FIGURE_ANCIENNE)?.factionId).toBe('gardiens-du-givre');
+  });
+
+  it('un ressort qui vise une faction que sa période déclare absente est refusé', () => {
+    // DEUXIÈME ARÊTE, ET SA PROPRE MESURE. La boucle des ressorts est écrite à
+    // part de celle des figures : la supprimer fait tomber CE test et lui seul.
+    const viser = (periodId: string): Map<string, string> =>
+      modifier(graphe(), 'hooks/on-vous-doit-un-hiver.json', (document) => {
+        document['appliesTo'] = { kind: 'faction', factionId: 'avarosans' };
+        document['periodId'] = periodId;
+        document['suggestedBondIds'] = [];
+      });
+
+    const cites = parRegle(refuse(viser(ANCIEN)), GRAPH_RULES.absentFaction);
+    expect(cites).toHaveLength(1);
+    const message = cites[0]?.message ?? '';
+    expect(message).toContain('le ressort « on-vous-doit-un-hiver »');
+    expect(message).toContain('vise la faction « avarosans »');
+    expect(message).toContain('Mettez dans « appliesTo.factionId »');
+    expect(cites[0]?.file).toBe('hooks/on-vous-doit-un-hiver.json');
+    expect(cites[0]?.path).toBe('appliesTo.factionId');
+
+    // L'autre sens : le MÊME ressort, la MÊME faction, dans la période qui la
+    // déclare présente. C'est la période qui décide, pas la faction.
+    expect(accepte(viser(MODERNE))).toBe(NOEUDS_MODERNES.length + NOEUDS_ANCIENS.length);
+  });
+
+  it('un ressort qui ne vise pas une faction ne dit rien, même dans la période fautive', () => {
+    // La garde `appliesTo.kind !== 'faction'` : sans elle le refus ne compile
+    // pas, avec elle il faut montrer que les trois autres genres passent.
+    const carte = modifier(graphe(), 'hooks/on-vous-doit-un-hiver.json', (document) => {
+      document['appliesTo'] = { kind: 'trait', tag: 'avarosans' };
+      document['periodId'] = ANCIEN;
+      document['suggestedBondIds'] = [];
+    });
+    expect(accepte(carte)).toBe(NOEUDS_MODERNES.length + NOEUDS_ANCIENS.length);
+  });
+
+  it('une figure qui n’appartient à personne ne dit rien', () => {
+    // `factionId: null` veut dire « de nulle part » : aucune période ne peut
+    // déclarer absent ce qui n'est pas une faction.
+    const carte = modifier(graphe(), `figures/${FIGURE_ANCIENNE}.json`, (document) => {
+      document['factionId'] = null;
+    });
+    expect(accepte(carte)).toBe(NOEUDS_MODERNES.length + NOEUDS_ANCIENS.length);
+  });
+
+  it('deux figures fautives donnent deux refus, dans l’ordre des identifiants', () => {
+    // SONDE 7 ET DEUX ACTEURS : la carte des figures est remplie à l'ENVERS, et
+    // le tableau des fichiers est asserté EN ENTIER. Avec une seule figure, ni
+    // l'ordre ni le fait que chaque message nomme la sienne ne voudraient rien
+    // dire. Appel direct, parce que le chargeur trie ses fichiers lui-même.
+    const periods = new Map<string, PeriodContent>([
+      [
+        ANCIEN,
+        PeriodSchema.parse(periode(ANCIEN, null, 300, ['gardiens-du-givre'], ['avarosans'])),
+      ],
+    ]);
+    // Écrites dans l'ordre DÉCROISSANT de leurs identifiants.
+    const figures = new Map(
+      ['la-veilleuse-emmuree', 'eira-qui-a-vu'].map((id) => {
+        const analyse = FigureSchema.parse(figure(id, 'avarosans', ANCIEN));
+        return [analyse.id, analyse] as const;
+      }),
+    );
+    const problemes = validateScenarioGraph({
+      nodes: new Map(),
+      figures,
+      hooks: new Map(),
+      periods,
+    });
+    expect(problemes.map((probleme) => probleme.file)).toStrictEqual([
+      'figures/eira-qui-a-vu.json',
+      'figures/la-veilleuse-emmuree.json',
+    ]);
+    expect(problemes[0]?.message).toContain('« eira-qui-a-vu »');
+    expect(problemes[0]?.message).not.toContain('veilleuse');
+  });
+
+  it('une période absente de la carte ne dit rien : c’est la passe 3 qui la possède', () => {
+    // Le chargeur ne peut pas fabriquer ce cas — la passe 3 jette avant. Seul
+    // l'appel direct montre que la passe 5 SE TAIT au lieu de doubler le
+    // message et d'envoyer le lecteur au mauvais endroit.
+    const figures = new Map([
+      [FIGURE_ANCIENNE, FigureSchema.parse(figure(FIGURE_ANCIENNE, 'avarosans', ANCIEN))],
+    ]);
+    expect(
+      validateScenarioGraph({
+        nodes: new Map(),
+        figures,
+        hooks: new Map(),
+        periods: new Map(),
+      }),
+    ).toStrictEqual([]);
+  });
+
+  it('une période sans aucune faction présente le dit, au lieu de proposer une liste vide', () => {
+    const periods = new Map<string, PeriodContent>([
+      [ANCIEN, PeriodSchema.parse(periode(ANCIEN, null, 300, [], ['avarosans']))],
+    ]);
+    const figures = new Map([
+      [FIGURE_ANCIENNE, FigureSchema.parse(figure(FIGURE_ANCIENNE, 'avarosans', ANCIEN))],
+    ]);
+    const problemes = validateScenarioGraph({
+      nodes: new Map(),
+      figures,
+      hooks: new Map(),
+      periods,
+    });
+    expect(problemes).toHaveLength(1);
+    expect(problemes[0]?.message).toContain('ne compte aucune faction');
+    expect(problemes[0]?.message).toContain('visez une autre période');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
 describe('l’ordre des passes n’est pas une convention', () => {
   it('une piste vers un nœud inexistant tombe en passe 3, jamais en passe 5', () => {
     const problemes = refuse(
@@ -570,7 +726,12 @@ describe('la passe de graphe, appelée directement', () => {
     // les deux `content/` n'a pas un seul nœud. Si cette ligne tombe, le dépôt
     // ne se charge plus jusqu'à S-03.
     expect(
-      validateScenarioGraph({ nodes: new Map(), figures: new Map(), hooks: new Map() }),
+      validateScenarioGraph({
+        nodes: new Map(),
+        figures: new Map(),
+        hooks: new Map(),
+        periods: new Map(),
+      }),
     ).toStrictEqual([]);
   });
 
@@ -587,9 +748,9 @@ describe('la passe de graphe, appelée directement', () => {
         figureIds: ['une-figure-que-personne-ne-connait'],
       })),
     );
-    expect(validateScenarioGraph({ nodes, figures: new Map(), hooks: new Map() })).toStrictEqual(
-      [],
-    );
+    expect(
+      validateScenarioGraph({ nodes, figures: new Map(), hooks: new Map(), periods: new Map() }),
+    ).toStrictEqual([]);
 
     // L'autre sens : la même carte, avec la figure PRÉSENTE et d'une autre
     // période, produit cinq refus.
@@ -599,9 +760,9 @@ describe('la passe de graphe, appelée directement', () => {
         FigureSchema.parse(figure('une-figure-que-personne-ne-connait', 'avarosans', ANCIEN)),
       ],
     ]);
-    expect(validateScenarioGraph({ nodes, figures, hooks: new Map() })).toHaveLength(
-      NOEUDS_MODERNES.length,
-    );
+    expect(
+      validateScenarioGraph({ nodes, figures, hooks: new Map(), periods: new Map() }),
+    ).toHaveLength(NOEUDS_MODERNES.length);
   });
 
   it('une piste vers un nœud absent de la carte ne dit rien non plus', () => {
@@ -615,9 +776,9 @@ describe('la passe de graphe, appelée directement', () => {
     ]);
     // Les quatre pistes visent des nœuds que la carte n'a pas. La passe 5 ne
     // les compte pas, ne les refuse pas, et ne trouve donc aucun orphelin.
-    expect(validateScenarioGraph({ nodes, figures: new Map(), hooks: new Map() })).toStrictEqual(
-      [],
-    );
+    expect(
+      validateScenarioGraph({ nodes, figures: new Map(), hooks: new Map(), periods: new Map() }),
+    ).toStrictEqual([]);
   });
 
   it('les nœuds sont rapportés dans l’ordre de leurs identifiants, pas dans celui de la carte', () => {
@@ -633,7 +794,9 @@ describe('la passe de graphe, appelée directement', () => {
       [FIGURE_ANCIENNE, FigureSchema.parse(figure(FIGURE_ANCIENNE, 'avarosans', MODERNE))],
     ]);
     expect(
-      validateScenarioGraph({ nodes, figures, hooks: new Map() }).map((probleme) => probleme.file),
+      validateScenarioGraph({ nodes, figures, hooks: new Map(), periods: new Map() }).map(
+        (probleme) => probleme.file,
+      ),
     ).toStrictEqual([
       'nodes/la-porte-emmuree.json',
       'nodes/la-salle-des-veilleurs.json',
@@ -658,8 +821,8 @@ describe('la passe de graphe, appelée directement', () => {
         }),
       ],
     ]);
-    expect(validateScenarioGraph({ nodes: new Map(), figures: new Map(), hooks })).toStrictEqual(
-      [],
-    );
+    expect(
+      validateScenarioGraph({ nodes: new Map(), figures: new Map(), hooks, periods: new Map() }),
+    ).toStrictEqual([]);
   });
 });

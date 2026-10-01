@@ -1,6 +1,6 @@
 /**
- * `pnpm content:check` — the four passes of 03-donnees.md section 4.8 plus the
- * scenario-graph pass of ADR 0012 decision 4, as a command. Exit 0 when the
+ * `pnpm content:check` — the five passes of 03-donnees.md section 4.8, the
+ * fifth being the scenario graph of ADR 0012 decision 4, as a command. Exit 0 when the
  * bundle is loadable, exit 1 on the first run that finds anything, with every
  * error reported at once.
  *

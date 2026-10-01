@@ -2121,7 +2121,7 @@ export type ContentBundle = Readonly<{
 export function loadContent(root = 'content'): ContentBundle;
 ```
 
-Quatre passes, dans cet ordre :
+Cinq passes, dans cet ordre. **L'ordre est la garantie** : une référence morte tombe en 3, jamais en 5, sinon le message enverrait le lecteur au mauvais endroit.
 
 1. **Lecture et parse JSON.** Erreur de syntaxe → `ContentSyntaxError { file, line, column }`.
 2. **Validation Zod par fichier.** Chaque `ZodIssue` est rendu en une ligne
@@ -2139,6 +2139,18 @@ Quatre passes, dans cet ordre :
    entrée dans `champions-index.json` avec le même `id`, le même jeu d'`aliases` et la même
    région canonique** (sinon le verrouillage de distribution et l'écran de choix de personnage
    divergeraient en silence).
+5. **Le graphe de scénario** (ADR 0012 décision 4, `validate-graph.ts`). La seule passe qui lise
+   **deux pièces ensemble** ; les quatre précédentes valident une pièce à la fois. Elle tourne
+   **après** la passe 3 et ne parle jamais d'une référence que celle-ci possède déjà. Cinq règles,
+   et chaque message cite la règle entre guillemets, nomme la pièce, et dit quoi ajouter :
+
+   | Règle | Ce qu'elle refuse |
+   |---|---|
+   | « trois pistes minimum » | un nœud dont les pistes vivantes retombent sous trois une fois les sauts de période écartés |
+   | « aucun nœud orphelin » | un nœud, ou un îlot de nœuds, qu'aucune marche depuis un point d'entrée n'atteint |
+   | « pas de saut de période » | une piste qui mène à un nœud d'une autre période |
+   | « pas de figure hors période » | une pièce qui nomme une figure d'une autre période |
+   | « pas de faction absente de la période » | une pièce qui nomme une faction que sa période déclare dans `absentFactionIds` |
 
 En cas d'échec :
 

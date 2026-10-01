@@ -16,6 +16,12 @@
  * pas trois sorties » and « une piste qui revient au même nœud n'est pas une
  * sortie », against the green « trois passe, deux échoue ».
  *
+ * ── ONE DIALECT OF REFUSAL ───────────────────────────────────────────────
+ * The three messages below open with `scenarioRuleHead(SCENARIO_RULES.liveLeads)`,
+ * exactly like the four of the graph pass. Before S-06 they named the node and
+ * stopped there, so one graph answered in two shapes. The rule's NAME is the
+ * same object the graph pass quotes — see `scenario-rules.ts`.
+ *
  * `SCENARIO_NODE_KINDS` MIRRORS NOTHING. The engine has no node; the tuple is
  * owned here and, per the operating rule of ADR 0007, pinned IN FULL LETTERS
  * by `tests/content/scenario.test.ts` « SCENARIO_NODE_KINDS » rather than
@@ -25,6 +31,7 @@
 import { z } from 'zod';
 
 import { FrTextSchema, RefSchema, SlugSchema, TagsSchema } from './common.js';
+import { SCENARIO_RULES, scenarioRuleHead } from './scenario-rules.js';
 
 export const SCENARIO_NODE_KINDS = ['lieu', 'confrontation', 'rencontre', 'revelation'] as const;
 
@@ -81,7 +88,9 @@ export const NodeSchema = z
         ctx.addIssue({
           code: 'custom',
           path: ['leads', index, 'toNodeId'],
-          message: `nœud « ${node.id} » : une piste qui revient au même nœud n'est pas une sortie`,
+          message:
+            `${scenarioRuleHead(SCENARIO_RULES.liveLeads)}le nœud « ${node.id} » a une piste qui ` +
+            `revient à lui-même : ce n'est pas une sortie. Visez un autre nœud.`,
         });
         continue;
       }
@@ -90,8 +99,9 @@ export const NodeSchema = z
           code: 'custom',
           path: ['leads', index, 'toNodeId'],
           message:
-            `nœud « ${node.id} » : la piste vers « ${lead.toNodeId} » est écrite deux fois — ` +
-            `trois pistes vers le même endroit ne font qu'une sortie`,
+            `${scenarioRuleHead(SCENARIO_RULES.liveLeads)}le nœud « ${node.id} » écrit deux fois ` +
+            `la piste vers « ${lead.toNodeId} » : trois pistes vers le même endroit ne font ` +
+            `qu'une sortie. Visez un nœud que ce nœud ne vise pas déjà.`,
         });
         continue;
       }
@@ -103,8 +113,10 @@ export const NodeSchema = z
       code: 'custom',
       path: ['leads'],
       message:
-        `nœud « ${node.id} » : ${String(destinations.size)} sortie(s) distincte(s) pour ` +
-        `${String(MIN_LEADS_PER_NODE)} exigée(s) — ajoutez des pistes vers d'autres nœuds`,
+        `${scenarioRuleHead(SCENARIO_RULES.liveLeads)}le nœud « ${node.id} » a ` +
+        `${String(destinations.size)} sortie(s) distincte(s) pour ` +
+        `${String(MIN_LEADS_PER_NODE)} exigée(s). Ajoutez ` +
+        `${String(MIN_LEADS_PER_NODE - destinations.size)} piste(s) vers d'autres nœuds.`,
     });
   });
 

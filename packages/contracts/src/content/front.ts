@@ -13,11 +13,17 @@
  * `tests/content/scenario.test.ts`, describe « front : les présages comptent
  * exactement les segments » : one `it` removes an entry, the next adds one,
  * and each expects a refusal.
+ *
+ * ── ONE DIALECT OF REFUSAL ───────────────────────────────────────────────
+ * The message opens with `scenarioRuleHead(SCENARIO_RULES.portentsPerSegment)`,
+ * exactly like the four of the graph pass. Before S-06 it named the front and
+ * stopped there, so one graph answered in two shapes.
  */
 
 import { z } from 'zod';
 
 import { FrTextSchema, RefSchema, SegmentCountSchema, SlugSchema, TagsSchema } from './common.js';
+import { SCENARIO_RULES, scenarioRuleHead } from './scenario-rules.js';
 
 export const FrontSchema = z
   .strictObject({
@@ -46,8 +52,12 @@ export const FrontSchema = z
       code: 'custom',
       path: ['portents'],
       message:
-        `front « ${front.id} » : ${String(front.portents.length)} présage(s) pour ` +
-        `${String(front.segments)} segment(s) — il en faut exactement un par segment`,
+        `${scenarioRuleHead(SCENARIO_RULES.portentsPerSegment)}le front « ${front.id} » a ` +
+        `${String(front.portents.length)} présage(s) pour ${String(front.segments)} segment(s). ` +
+        (front.portents.length < front.segments
+          ? `Ajoutez ${String(front.segments - front.portents.length)} présage(s), `
+          : `Retirez ${String(front.portents.length - front.segments)} présage(s), `) +
+        `ou changez « segments ».`,
     });
   });
 
