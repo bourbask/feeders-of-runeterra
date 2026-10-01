@@ -78,6 +78,16 @@ module.exports = {
       to: { path: '^packages/(db|ai|ai-eval|server|content)/' },
     },
     {
+      name: 'scenario-ne-touche-ni-la-base-ni-le-serveur',
+      severity: 'error',
+      comment:
+        '@for/scenario assemble un scenario a partir du contenu : il ne persiste rien, ' +
+        "n'ordonnance rien et n'ouvre aucune socket. C'est cette arete absente qui rend la " +
+        'construction rejouable hors serveur, et testable sans base. S-04, ADR 0012.',
+      from: { path: '^packages/scenario/src' },
+      to: { path: '^packages/(db|server|ai|ai-eval|sim|client)/' },
+    },
+    {
       name: 'pas-de-dependance-orpheline',
       severity: 'error',
       from: {},

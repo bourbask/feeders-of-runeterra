@@ -11,6 +11,9 @@
       "path": "packages/content"
     },
     {
+      "path": "packages/scenario"
+    },
+    {
       "path": "packages/testkit"
     },
     {
