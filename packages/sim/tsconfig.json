@@ -2,19 +2,17 @@
   "extends": "@for/tsconfig/node.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "src",
+    "resolveJsonModule": true
   },
   "include": ["src/**/*"],
   "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "dist"],
   "references": [
-    {
-      "path": "../server"
-    },
-    {
-      "path": "../testkit"
-    },
-    {
-      "path": "../db"
-    }
+    { "path": "../content" },
+    { "path": "../contracts" },
+    { "path": "../db" },
+    { "path": "../engine" },
+    { "path": "../server" },
+    { "path": "../testkit" }
   ]
 }

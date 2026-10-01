@@ -1,0 +1,142 @@
+{
+  "id": "02-vow-to-fulfilment",
+  "title": "Du serment au jalon : le rythme d'un rang dangereux",
+  "seed": "sim-02",
+  "startedAt": "2026-01-07T18:00:00.000Z",
+  "players": [
+    {
+      "symbol": "PYRA",
+      "displayName": "Alice",
+      "character": {
+        "symbol": "CHRA",
+        "championId": "ashe",
+        "displayName": "Ashe",
+        "attributes": {
+          "vif": 2,
+          "coeur": 3,
+          "fer": 2,
+          "ombre": 1,
+          "esprit": 2
+        },
+        "gauges": {
+          "vigueur": 5,
+          "ame": 5,
+          "vivres": 5
+        },
+        "momentum": 2
+      }
+    }
+  ],
+  "entities": [],
+  "scene": null,
+  "steps": [
+    {
+      "kind": "intent",
+      "player": "PYRA",
+      "intent": {
+        "type": "play_session.begin"
+      }
+    },
+    {
+      "kind": "intent",
+      "player": "PYRA",
+      "intent": {
+        "type": "move.swear_a_vow",
+        "text": "Ramener le corps de mon frère au sud.",
+        "rank": "dangereux"
+      },
+      "note": "Le rang dangereux : c'est ce serment que le canari des crans par jalon surveille."
+    },
+    {
+      "kind": "intent",
+      "player": "PYRA",
+      "intent": {
+        "type": "move.swear_a_vow",
+        "text": "Ne plus jamais passer ce col seule.",
+        "rank": "genant"
+      }
+    },
+    {
+      "kind": "vow",
+      "player": "PYRA",
+      "action": "milestone",
+      "index": 0,
+      "note": "UN JALON AU RANG DANGEREUX VAUT HUIT CRANS. Le 8 est ecrit ici en toutes lettres et compare a ce que TICKS_PER_MILESTONE a produit : deux origines. Remplacer la constante du moteur par 7 rend cette etape rouge, et le corpus dore avec elle.",
+      "expect": {
+        "accepted": true,
+        "events": ["move.declared", "track.ticked", "move.resolved", "narration.gm_message"],
+        "tracks": [
+          {
+            "rank": "dangereux",
+            "ticks": 8,
+            "boxes": 2,
+            "status": "open"
+          },
+          {
+            "rank": "genant",
+            "ticks": 0,
+            "boxes": 0,
+            "status": "open"
+          }
+        ]
+      }
+    },
+    {
+      "kind": "vow",
+      "player": "PYRA",
+      "action": "milestone",
+      "index": 0,
+      "expect": {
+        "accepted": true,
+        "tracks": [
+          {
+            "rank": "dangereux",
+            "ticks": 16,
+            "boxes": 4,
+            "status": "open"
+          },
+          {
+            "rank": "genant",
+            "ticks": 0,
+            "boxes": 0,
+            "status": "open"
+          }
+        ]
+      },
+      "note": "Deux jalons : seize crans, quatre cases. Le doublement est la seconde lecture du meme chiffre."
+    },
+    {
+      "kind": "vow",
+      "player": "PYRA",
+      "action": "fulfill",
+      "index": 0,
+      "note": "Un jet de progression contre les cases remplies.",
+      "expect": {
+        "accepted": true
+      }
+    },
+    {
+      "kind": "vow",
+      "player": "PYRA",
+      "action": "forsake",
+      "index": 1,
+      "reason": "Le col a pris le reste de la bande.",
+      "expect": {
+        "accepted": true,
+        "tracks": [
+          {
+            "rank": "dangereux",
+            "ticks": 16,
+            "boxes": 4
+          },
+          {
+            "rank": "genant",
+            "ticks": 0,
+            "boxes": 0,
+            "status": "forsaken"
+          }
+        ]
+      }
+    }
+  ]
+}

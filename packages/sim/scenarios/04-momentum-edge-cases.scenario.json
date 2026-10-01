@@ -1,0 +1,160 @@
+{
+  "id": "04-momentum-edge-cases",
+  "title": "La brûlure en deux temps, dans les deux sens, et le tour annulé",
+  "seed": "sim-04",
+  "startedAt": "2026-01-09T18:00:00.000Z",
+  "players": [
+    {
+      "symbol": "PYRA",
+      "displayName": "Alice",
+      "character": {
+        "symbol": "CHRA",
+        "championId": "ashe",
+        "displayName": "Ashe",
+        "attributes": {
+          "vif": 1,
+          "coeur": 1,
+          "fer": 1,
+          "ombre": 1,
+          "esprit": 1
+        },
+        "gauges": {
+          "vigueur": 5,
+          "ame": 5,
+          "vivres": 5
+        },
+        "momentum": 9
+      }
+    }
+  ],
+  "entities": [],
+  "scene": null,
+  "steps": [
+    {
+      "kind": "intent",
+      "player": "PYRA",
+      "intent": {
+        "type": "move.face_danger",
+        "attribute": "vif",
+        "description": "Sauter la faille sans élan."
+      },
+      "note": "La fenetre s'ouvre : le tour N'EST PAS termine. Aucun effet, aucun `move.resolved`, et les jauges sont exactement celles d'avant le jet.",
+      "expect": {
+        "accepted": true,
+        "events": ["move.declared", "roll.action_resolved"],
+        "window": "open",
+        "outcome": "echec",
+        "gauges": {
+          "CHRA": {
+            "vigueur": 5,
+            "ame": 5,
+            "vivres": 5,
+            "momentum": 9
+          }
+        }
+      }
+    },
+    {
+      "kind": "keep",
+      "player": "PYRA",
+      "note": "GARDER : les consequences sont celles de l'issue INITIALE — l'echec, donc le prix tire par le moteur et la condition qu'il pose. Le souffle ne bouge pas.",
+      "expect": {
+        "accepted": true,
+        "events": [
+          "roll.price_paid",
+          "character.condition_added",
+          "move.resolved",
+          "narration.gm_message"
+        ],
+        "window": "closed",
+        "outcome": "echec",
+        "gauges": {
+          "CHRA": {
+            "vigueur": 5,
+            "ame": 5,
+            "vivres": 5,
+            "momentum": 9
+          }
+        }
+      }
+    },
+    {
+      "kind": "intent",
+      "player": "PYRA",
+      "intent": {
+        "type": "move.face_danger",
+        "attribute": "coeur",
+        "description": "Repasser la faille, la corde en main."
+      },
+      "expect": {
+        "accepted": true,
+        "events": ["move.declared", "roll.action_resolved"],
+        "window": "open",
+        "outcome": "partielle",
+        "gauges": {
+          "CHRA": {
+            "momentum": 9
+          }
+        }
+      }
+    },
+    {
+      "kind": "burn",
+      "player": "PYRA",
+      "note": "BRULER : les consequences sont celles de l'issue REVISEE — une franche, donc AUCUN prix et AUCUNE condition, la ou garder en aurait coute un. Le souffle retombe au reset (2) puis gagne 1.",
+      "expect": {
+        "accepted": true,
+        "events": [
+          "character.momentum_burned",
+          "roll.action_revised",
+          "character.momentum_changed",
+          "move.resolved",
+          "narration.gm_message"
+        ],
+        "window": "closed",
+        "outcome": "franche",
+        "gauges": {
+          "CHRA": {
+            "vigueur": 5,
+            "ame": 5,
+            "vivres": 5,
+            "momentum": 3
+          }
+        }
+      }
+    },
+    {
+      "kind": "intent",
+      "player": "PYRA",
+      "intent": {
+        "type": "move.secure_advantage",
+        "attribute": "esprit",
+        "description": "Assurer la corde."
+      },
+      "expect": {
+        "accepted": true,
+        "outcome": "partielle"
+      }
+    },
+    {
+      "kind": "revert",
+      "step": 4,
+      "reason": "admin:recette",
+      "note": "Le tour de l'étape 4 est annulé : rien n'est effacé, une entrée est ajoutée."
+    },
+    {
+      "kind": "intent",
+      "player": "PYRA",
+      "intent": {
+        "type": "move.secure_advantage",
+        "attribute": "esprit",
+        "description": "Assurer la corde."
+      },
+      "note": "LA MÊME intention, rejouée. L'index de tirage n'a pas reculé.",
+      "expect": {
+        "accepted": true,
+        "outcome": "franche"
+      }
+    }
+  ]
+}

@@ -1,7 +1,15 @@
 /**
- * The storyteller's system prompt must stay BIG.
+ * The storyteller's system prompt lives BETWEEN TWO BOUNDS.
  *
- * ── WHY A FLOOR AND NOT A CEILING ───────────────────────────────────────────
+ * ── THE CEILING CAME LAST, AND IT IS ADR 0011's ─────────────────────────────
+ * Section 4.3 announced 2 400 tokens for `system[0]` and marked it « figé,
+ * mesuré en CI ». Nothing measured it; M0-18 wrote the test and found 4 279.
+ * The project runs on free providers whose ceiling is DAILY and this block is
+ * paid on EVERY turn, so ADR 0011 sends it back to its announced target. The
+ * ceiling below is that decision, written in full letters, and it reddens if
+ * the prompt climbs back over it.
+ *
+ * ── WHY A FLOOR TOO ─────────────────────────────────────────────────────────
  * Providers that cache only cache a MINIMUM PREFIX — 512 to 4 096 tokens
  * depending on the model (section 4.2). A prompt that shrinks below it stops
  * being cached, everywhere, silently, and the bill goes up by a factor of two
@@ -41,6 +49,9 @@ import { FORGE_PROMPT_VERSION, FORGE_SYSTEM_PROMPT } from '../src/prompts/forge.
 /** Section 4.2, in full letters. Never imported from `src/`. */
 const FLOOR_TOKENS = 1900;
 
+/** ADR 0011, in full letters. Never imported from `src/` either. */
+const CEILING_TOKENS = 2400;
+
 /** Section 4.3's stated tolerance on the local estimator. */
 const REFERENCE_TOLERANCE_PCT = 8;
 
@@ -58,6 +69,21 @@ const reference = JSON.parse(
 describe('la taille du prompt système du Conteur', () => {
   it('reste au-dessus du plancher de 1 900 tokens', () => {
     expect(estimateTokens(CONTEUR_SYSTEM_PROMPT)).toBeGreaterThanOrEqual(FLOOR_TOKENS);
+  });
+
+  it('reste sous le plafond de 2 400 tokens — ADR 0011', () => {
+    expect(estimateTokens(CONTEUR_SYSTEM_PROMPT)).toBeLessThanOrEqual(CEILING_TOKENS);
+  });
+
+  /**
+   * The ceiling has to BITE, and the only way to say so is to violate it.
+   * Doubling the prompt is the coarsest violation there is, and it must be
+   * red — a ceiling that a doubled prompt passes is not a ceiling.
+   */
+  it('et ce plafond mord : un prompt doublé le dépasse', () => {
+    expect(estimateTokens(CONTEUR_SYSTEM_PROMPT + CONTEUR_SYSTEM_PROMPT)).toBeGreaterThan(
+      CEILING_TOKENS,
+    );
   });
 
   it('correspond à la référence commitée, à huit pour cent près', () => {
@@ -170,8 +196,13 @@ describe('ce que le prompt doit contenir, et qu’une réécriture jetterait', (
     expect(CONTEUR_SYSTEM_PROMPT).toContain('Les faits de scène');
   });
 
-  it('et sa version est bien conteur/2.0.0', () => {
-    expect(CONTEUR_PROMPT_VERSION).toBe('conteur/2.0.0');
+  /**
+   * 2.1.0, not 2.0.0: the bytes changed (ADR 0011), and the version exists to
+   * make that impossible to do silently — it invalidates every prompt cache
+   * and every recorded N0 output, which is the point.
+   */
+  it('et sa version est bien conteur/2.1.0', () => {
+    expect(CONTEUR_PROMPT_VERSION).toBe('conteur/2.1.0');
   });
 });
 
@@ -241,10 +272,18 @@ describe('le bloc de campagne', () => {
     expect(block).toContain('ni sous aucun de leurs surnoms :\n\n- aucun');
   });
 
-  it('renvoie à propose_npc_introduce pour tout nom hors liste', () => {
-    expect(buildCampaignBlock(campaign)).toContain(
-      'Pour tout personnage nommé qui ne figure pas dans cette liste, passe par propose_npc_introduce.',
+  /**
+   * ADR 0011, prose-only: there is no `propose_*` tool left to send an unknown
+   * name through, so the block closes the door instead of pointing at one. A
+   * line naming a tool that is never sent is an instruction to do something
+   * impossible, which is what a small model answers with a hallucinated call.
+   */
+  it('ferme la porte à tout nom hors liste, sans nommer d’outil', () => {
+    const block = buildCampaignBlock(campaign);
+    expect(block).toContain(
+      'Aucun autre personnage nommé n’entre en scène : ceux qui ne figurent pas dans cette liste n’existent pas encore.',
     );
+    expect(block).not.toContain('propose_');
   });
 });
 

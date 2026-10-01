@@ -1,0 +1,115 @@
+{
+  "id": "05-reconnect-and-resume",
+  "title": "Couper la socket, revenir, et retrouver exactement ce qu'on avait vu",
+  "seed": "sim-05",
+  "startedAt": "2026-01-10T18:00:00.000Z",
+  "players": [
+    {
+      "symbol": "PYRA",
+      "displayName": "Alice",
+      "character": {
+        "symbol": "CHRA",
+        "championId": "ashe",
+        "displayName": "Ashe",
+        "attributes": {
+          "vif": 2,
+          "coeur": 2,
+          "fer": 2,
+          "ombre": 1,
+          "esprit": 3
+        },
+        "gauges": {
+          "vigueur": 5,
+          "ame": 5,
+          "vivres": 5
+        },
+        "momentum": 2
+      }
+    },
+    {
+      "symbol": "PYRB",
+      "displayName": "Bruno",
+      "character": {
+        "symbol": "CHRB",
+        "championId": "braum",
+        "displayName": "Braum",
+        "attributes": {
+          "vif": 1,
+          "coeur": 3,
+          "fer": 3,
+          "ombre": 1,
+          "esprit": 2
+        },
+        "gauges": {
+          "vigueur": 5,
+          "ame": 5,
+          "vivres": 5
+        },
+        "momentum": 2
+      }
+    }
+  ],
+  "entities": [],
+  "scene": null,
+  "steps": [
+    {
+      "kind": "intent",
+      "player": "PYRA",
+      "intent": {
+        "type": "move.face_danger",
+        "attribute": "esprit",
+        "description": "Lire la pente avant de descendre."
+      },
+      "expect": {
+        "accepted": true,
+        "events": [
+          "move.declared",
+          "roll.action_resolved",
+          "character.momentum_changed",
+          "move.resolved",
+          "narration.gm_message"
+        ]
+      }
+    },
+    {
+      "kind": "secret",
+      "player": "PYRA",
+      "text": "Sous la neige, une corde déjà tendue.",
+      "note": "Une entrée privée : le `seq` de Bruno gagne un trou, son numéro de livraison n'en gagne aucun."
+    },
+    {
+      "kind": "reconnect",
+      "player": "PYRB",
+      "note": "Bruno coupe et revient avec le curseur qu'il avait : il doit recevoir un rattrapage, pas un instantané."
+    },
+    {
+      "kind": "intent",
+      "player": "PYRB",
+      "intent": {
+        "type": "move.gather_information",
+        "description": "Demander au vent d'où vient la corde."
+      },
+      "expect": {
+        "accepted": true
+      }
+    },
+    {
+      "kind": "resume",
+      "player": "PYRA",
+      "sinceDeliverySeq": 0,
+      "note": "Un curseur à zéro, très en arrière : le serveur retombe sur un instantané plutôt que sur un rejeu intégral."
+    },
+    {
+      "kind": "intent",
+      "player": "PYRA",
+      "intent": {
+        "type": "move.secure_advantage",
+        "attribute": "vif",
+        "description": "Assurer la corde avant de la suivre."
+      },
+      "expect": {
+        "accepted": true
+      }
+    }
+  ]
+}

@@ -1,4 +1,4 @@
 {
   "extends": "@for/tsconfig/test.json",
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "tests/**/*"]
 }
