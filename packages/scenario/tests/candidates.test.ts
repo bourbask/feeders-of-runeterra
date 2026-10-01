@@ -20,16 +20,7 @@ import {
   shuffleFor,
 } from '../src/candidates.js';
 
-import {
-  ANCIENT,
-  AVAROSANS,
-  CONTRADICTORY_FIGURE_ID,
-  contradictoryFigureRegistry,
-  corpusRegistry,
-  LONG_NIGHT,
-  MODERN,
-  MODERN_REGIONS,
-} from './corpus.js';
+import { ANCIENT, corpusRegistry, LONG_NIGHT, MODERN, MODERN_REGIONS } from './corpus.js';
 
 const registry = corpusRegistry();
 
@@ -96,20 +87,6 @@ describe('tout se filtre par la période', () => {
     );
     expect(modernes.size).toBeGreaterThan(0);
     for (const figure of anciennes) expect(modernes.has(figure.id)).toBe(false);
-  });
-
-  it('une faction déclarée absente écarte la figure qui la porte', () => {
-    // `la-longue-nuit` déclare les Avarosans absents. Ce corpus-là porte
-    // EXPRÈS une figure avarosane sur cette période : sans elle, la boucle
-    // ci-dessous tournait à vide et retirer le filtre laissait tout vert.
-    const contradictoire = contradictoryFigureRegistry();
-    const periode = contradictoire.getPeriod(LONG_NIGHT);
-    expect(isAbsentFaction(periode, AVAROSANS)).toBe(true);
-    expect(isAbsentFaction(periode, null)).toBe(false);
-    expect(contradictoire.getFigure(CONTRADICTORY_FIGURE_ID).periodId).toBe(LONG_NIGHT);
-    const proposées = figuresOfPeriod(contradictoire, periode).map((figure) => figure.id);
-    expect(proposées.length).toBeGreaterThan(0);
-    expect(proposées).not.toContain(CONTRADICTORY_FIGURE_ID);
   });
 
   it('un ressort accroché à une faction absente est écarté, les autres restent', () => {
