@@ -1,0 +1,25 @@
+{
+  "id": "issue-franche",
+  "title": "Corniche franchie — issue franche, sans présage",
+  "actor": "Sejuani",
+  "imposed_price": false,
+  "fact": "Mouvement : Affronter le danger (fer).\nIssue : RÉUSSITE FRANCHE. Présage : non.\nDétail du calcul, pour ta compréhension seule : dé d'action six, attribut trois, bonus zéro, total neuf ; dés de défi quatre et six.\nCe qui a déjà eu lieu et qui est acquis : Sejuani a franchi la corniche sans rien y laisser. Son souffle a gagné un cran. L'horloge « La tempête se lève » n'a pas bougé.",
+  "intent": "Sejuani (joueur : Kevin) : « Je traverse la corniche sans attendre Ulrun, je veux voir la vallée avant la nuit. »",
+  "scene_in": {
+    "place": "col_des_hurleurs — Le Col des Hurleurs, passe étroite battue par le vent, deux cairns effondrés, une corniche de glace au nord.",
+    "time": "fin d'après-midi, jour de tempête.",
+    "present": [
+      { "name": "Sejuani", "detail": "personnage joueur — debout au bord de la corniche" },
+      { "name": "Braum", "detail": "personnage joueur — en retrait, corde en main" },
+      { "name": "Ulrun", "detail": "éclaireur du clan, méfiant — assis contre le cairn nord" }
+    ],
+    "absent": [
+      { "name": "Keld", "detail": "mort" },
+      { "name": "Signy", "detail": "partie" }
+    ]
+  },
+  "locked_champions": [
+    { "name": "Ashe", "aliases": ["la Reine des Neiges", "l'Archère du Givre"] },
+    { "name": "Lissandra", "aliases": ["la Sorcière de Glace", "la Prophétesse Noire"] }
+  ]
+}

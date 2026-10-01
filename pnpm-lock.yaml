@@ -293,6 +293,9 @@ importers:
       '@for/content':
         specifier: workspace:*
         version: link:../content
+      '@for/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@for/testkit':
         specifier: workspace:*
         version: link:../testkit
@@ -300,6 +303,9 @@ importers:
       '@for/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/tsconfig
+      tsx:
+        specifier: ^4.20.6
+        version: 4.23.15
 
   packages/client:
     dependencies:
