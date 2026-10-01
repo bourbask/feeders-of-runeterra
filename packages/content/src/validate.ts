@@ -1,5 +1,6 @@
 /**
- * The four passes of 03-donnees.md section 4.8, over an in-memory file map.
+ * The four passes of 03-donnees.md section 4.8, plus the FIFTH of ADR 0012
+ * decision 4 (`validate-graph.ts`), over an in-memory file map.
  *
  * NOTHING HERE TOUCHES THE DISK. `load.ts` is the only module allowed to read
  * a file (M0-14 acceptance criterion), which is also what lets the SAME four
@@ -69,8 +70,10 @@ import {
   zMoveId,
   zOutcome,
 } from '@for/contracts';
+import type { ContentIssue } from './issue.js';
 import type { JsonPath, JsonSource } from './json-source.js';
 import { formatPath, JsonSyntaxError, lineOf, parseJsonSource } from './json-source.js';
+import { validateScenarioGraph } from './validate-graph.js';
 
 // ─────────────────────────────────────────────────────────────────────────
 // What the loader hands back
@@ -126,18 +129,7 @@ export interface ContentBundle {
 // Errors
 // ─────────────────────────────────────────────────────────────────────────
 
-export type ContentPass = 1 | 2 | 3 | 4;
-
-export interface ContentIssue {
-  /** Root-relative path of the offending file, e.g. `champions/ashe.json`. */
-  readonly file: string;
-  /** Path inside the document, e.g. `startingAssets[0]`. Empty for the file itself. */
-  readonly path: string;
-  readonly message: string;
-  readonly line?: number | undefined;
-  readonly column?: number | undefined;
-  readonly pass: ContentPass;
-}
+export type { ContentIssue, ContentPass } from './issue.js';
 
 export class ContentError extends Error {
   public constructor(
@@ -561,10 +553,11 @@ const HAS_FILE_NAMED_ID = new Set([
  * The four passes. Throws `ContentError` carrying every issue found.
  *
  * Passes 1 to 3 are per file and accumulate together — one run reports every
- * broken file, never just the first. Pass 4 is GLOBAL and runs only when 1 to
- * 3 are clean: counting entities in a bundle whose files failed to parse would
- * report an `expectedCounts` mismatch caused by the earlier error, and bury
- * the real one.
+ * broken file, never just the first. Passes 4 and 5 are GLOBAL and run only
+ * when 1 to 3 are clean: counting entities in a bundle whose files failed to
+ * parse would report an `expectedCounts` mismatch caused by the earlier error,
+ * and bury the real one — and a graph walked over half-loaded nodes would
+ * report an island that is really a typo pass 3 already named.
  */
 export function validateContent(files: ContentFiles, options: ValidateOptions = {}): ContentBundle {
   const root = options.root ?? 'content';
@@ -702,6 +695,21 @@ export function validateContent(files: ContentFiles, options: ValidateOptions = 
   checkUniqueIds(bundle, add);
   checkRegionForest(bundle, add);
   checkChampionIndexAgreement(bundle, add);
+
+  // ── Pass 5 : the scenario graph ───────────────────────────────────────
+  //
+  // AFTER pass 3, and that is the whole point: a lead towards a node that does
+  // not exist is a dead reference, reported there with a suggestion.
+  //
+  // TWO DIFFERENT THINGS HOLD THAT, and they are not interchangeable.
+  //   - The graph pass STAYS SILENT on a lookup that comes up empty — held by
+  //     `tests/scenario-graph.test.ts` « une piste vers un nœud absent de la
+  //     carte ne dit rien non plus », which calls the pass directly.
+  //   - The `throw` above is what stops pass 5 from walking a half-loaded
+  //     bundle at all — held by « un nœud mal formé arrête tout AVANT la
+  //     passe 5 ». Measured: removing the throw leaves the first set of tests
+  //     green, so the first set does NOT hold the second guarantee.
+  for (const issue of validateScenarioGraph(bundle)) add(issue);
 
   if (issues.length > 0) throw new ContentError(issues, root);
   return bundle;
