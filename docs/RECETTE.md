@@ -7,8 +7,8 @@ Elle existe parce que les recalages se ressemblent tous : sur trois vagues, la m
 portaient sur l'un des sept modes ci-dessous, jamais sur la conception. Vingt minutes ici
 suppriment un cycle entier.
 
-> **La règle qui gouverne tout le reste.** Un garde-fou se prouve **en le violant, dans les deux
-> sens** : rouge AVEC la violation, vert SANS. Montrer qu'un test existe ne vaut rien.
+> **La règle qui gouverne tout le reste.** Un garde-fou se prouve **en le cassant, dans les deux
+> sens** : rouge quand on le casse, vert quand on le remet. Montrer qu'un test existe ne vaut rien.
 
 ---
 
@@ -24,8 +24,8 @@ suppriment un cycle entier.
 
 | # | Le mode | La sonde |
 |---|---|---|
-| 1 | une règle de lint sans résolveur, donc muette | écrire la violation qu'elle interdit, exiger le rouge |
-| 2 | un `exclude` de configuration qui tue les arêtes qu'il prétend vérifier | violer **depuis** et **vers** le paquet exclu |
+| 1 | une règle de lint sans résolveur, donc muette | écrire ce qu'elle interdit, exiger le rouge |
+| 2 | un `exclude` de configuration qui tue les arêtes qu'il prétend vérifier | casser **depuis** et **vers** le paquet exclu |
 | 3 | un seuil qu'aucune commande contractuelle n'atteint | lancer la commande de la fiche, pas une variante |
 | 4 | `satisfies z.ZodType<T>` : covariant en sortie, laisse un enum **rétrécir** en silence | retirer un membre du tuple moteur, exiger un test d'exécution rouge |
 | 5 | un chiffre comparé à lui-même | remonter chaque opérande à sa définition : deux chemins, ou rien |
@@ -98,7 +98,7 @@ deux joueurs, à deux instants, à deux destinataires.
 
 ## 7. Ce qu'on écrit dans le compte rendu
 
-Pour chaque garde-fou annoncé : **la violation, la commande, le code de sortie, le test qui tombe.**
+Pour chaque garde-fou annoncé : **la façon de le casser, la commande, le code de sortie, le test qui tombe.**
 Puis la restauration et le vert.
 
 Un critère **faux par construction** se **signale**, il ne se contourne pas. Un prédécesseur a été

@@ -19,7 +19,7 @@ ont été essayées (`./b.js`, `./b`, `./b.ts`, à deux puis trois fichiers) ; `
 confirme que la règle était bien active et le résolveur bien appliqué.
 
 L'invariant « aucun cycle » tient : `dependency-cruiser` l'attrape, règle `pas-de-cycle`,
-vérifiée en la violant. Ce qui ne tenait pas, c'est ce que la configuration ESLint
+vérifiée en la cassant. Ce qui ne tenait pas, c'est ce que la configuration ESLint
 **prétendait** garantir. Une règle déclarée et morte est pire qu'une règle absente : elle
 annonce aux tâches suivantes une protection qui n'existe pas.
 

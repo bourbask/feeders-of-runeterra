@@ -17,7 +17,7 @@ par de la discipline.
    tranche une réussite ni ne décide d'une mutation d'état, même indirectement. Le résultat est
    calculé par `@for/engine` **avant** l'appel au modèle et lui est transmis comme un fait acquis
    à habiller. Si tu te surprends à donner au modèle un paramètre que le moteur convertira
-   ensuite en coût, tu es en train de violer cet invariant par la porte de derrière.
+   ensuite en coût, tu es en train de contourner cet invariant par la porte de derrière.
 2. **La mémoire vit dans la base**, jamais dans la fenêtre de contexte. État structuré plus une
    chronique compactée.
 3. **Le serveur est l'autorité.** Le client n'envoie que des intentions.
@@ -42,6 +42,21 @@ par de la discipline.
   Mesuré, pas supposé : ADR 0007.
 - Les assertions de style du conteur vivent dans `@for/ai`, jamais dans `@for/ai-eval` : elles
   servent à la fois d'eval et de post-filtre de production.
+
+## Qui tient quoi
+
+Deux documents ne sont la propriété de personne s'ils ne sont la propriété d'un rôle. Ils ont donc
+chacun le leur, défini dans `.claude/agents/` — **versionné**, parce qu'un agent qui ne l'est pas
+n'est reproductible par personne.
+
+| Document           | Rôle             | Ce qu'il fait                                                                                   |
+| ------------------ | ---------------- | ----------------------------------------------------------------------------------------------- |
+| `docs/M0-TASKS.md` | `cadreur`        | écrit les fiches, et **revient les corriger** quand le terrain les dément                       |
+| `docs/RECETTE.md`  | `maitre-recette` | fournit la batterie, dit **ce qu'elle ne couvre pas**, et n'y verse que ce qui porte une mesure |
+
+Motif : les deux ont d'abord été tenus à la main, une fois, par l'instance principale. Ça marchait et
+ce n'était **reproductible par personne** — le découpage de M0 existe parce qu'il a été écrit une
+fois, et il aurait disparu avec la fenêtre de contexte qui l'a produit.
 
 ## Les commandes du quotidien
 

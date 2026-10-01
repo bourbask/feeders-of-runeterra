@@ -31,4 +31,8 @@ data/
 packages/db/.check-schema-*/
 
 # Worktrees et etat local des agents : jamais versionnes.
-.claude/
+# PAS tout .claude/ : les definitions d'agents SONT du depot, et un agent non
+# versionne n'est reproductible par personne — c'est ce que ce decoupage corrige.
+.claude/worktrees/
+.claude/tasks/
+.claude/settings.local.json
