@@ -1,0 +1,40 @@
+{
+  "id": "00-smoke-join-and-roll",
+  "title": "Rejoindre la table, ouvrir la séance, lancer un dé",
+  "seed": "sim-00",
+  "startedAt": "2026-01-05T18:00:00.000Z",
+  "players": [
+    {
+      "symbol": "PYRA",
+      "displayName": "Alice",
+      "character": {
+        "symbol": "CHRA",
+        "championId": "ashe",
+        "displayName": "Ashe",
+        "attributes": { "vif": 2, "coeur": 2, "fer": 2, "ombre": 1, "esprit": 3 },
+        "gauges": { "vigueur": 5, "ame": 5, "vivres": 5 },
+        "momentum": 2
+      }
+    }
+  ],
+  "entities": [],
+  "scene": null,
+  "steps": [
+    {
+      "kind": "intent",
+      "player": "PYRA",
+      "intent": { "type": "play_session.begin" },
+      "note": "La séance s'ouvre : c'est la première intention du chemin d'écriture."
+    },
+    {
+      "kind": "intent",
+      "player": "PYRA",
+      "intent": {
+        "type": "move.face_danger",
+        "attribute": "vif",
+        "description": "Traverser la crevasse avant que le vent ne tourne."
+      },
+      "note": "Un jet d'action complet, dés compris."
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "id": "issue-echec",
+  "title": "Corniche manquée — échec avec présage",
+  "actor": "Braum",
+  "imposed_price": false,
+  "fact": "Mouvement : Affronter le danger (vif).\nIssue : ÉCHEC. Présage : oui.\nDétail du calcul, pour ta compréhension seule : dé d'action deux, attribut deux, bonus zéro, total quatre ; dés de défi huit et neuf.\nCe qui a déjà eu lieu et qui est acquis : Braum a glissé sur la corniche et n'est pas passé. Sa vigueur a baissé de deux crans. L'horloge « La tempête se lève » est passée à quatre segments sur six.\nPrésage imposé : un retournement doit survenir dans cette scène — le monde, pas Braum, en est la cause.",
+  "intent": "Braum (joueur : Mira) : « Je rattrape Sejuani sur la corniche, je ne la laisse pas passer seule. »",
+  "scene_in": {
+    "place": "col_des_hurleurs — Le Col des Hurleurs, passe étroite battue par le vent, deux cairns effondrés, une corniche de glace au nord.",
+    "time": "fin d'après-midi, jour de tempête.",
+    "present": [
+      { "name": "Sejuani", "detail": "personnage joueur — de l'autre côté de la corniche" },
+      { "name": "Braum", "detail": "personnage joueur — à genoux sur la glace" },
+      { "name": "Ulrun", "detail": "éclaireur du clan, méfiant — debout près du cairn nord" }
+    ],
+    "absent": [
+      { "name": "Keld", "detail": "mort" },
+      { "name": "Signy", "detail": "partie" }
+    ]
+  },
+  "locked_champions": [
+    { "name": "Ashe", "aliases": ["la Reine des Neiges", "l'Archère du Givre"] },
+    { "name": "Lissandra", "aliases": ["la Sorcière de Glace", "la Prophétesse Noire"] }
+  ]
+}
