@@ -46,6 +46,11 @@ export { buildNarrator, builtinSelector, type NarratorSelector } from './ai/narr
 export { createCampaignService, type CampaignServiceOptions } from './game/campaign-service.js';
 export { toEngineContent } from './game/content.js';
 export {
+  JournalDelivery,
+  createJournalDelivery,
+  type JournalDeliveryDeps,
+} from './game/delivery.js';
+export {
   closeAllBurnWindows,
   openBurnWindows,
   runIntent,
@@ -60,6 +65,7 @@ export { loadReplay, loadState } from './game/snapshots.js';
 export { toTableState } from './game/table-state.js';
 export type {
   CampaignService,
+  EventDelivery,
   PersistedEvent,
   SubmitIntentInput,
   SubmitIntentResult,
@@ -73,6 +79,7 @@ export {
   attachSocket,
   createTableHub,
   isVisibleTo,
+  narrationSinkFor,
   randomFrameIds,
   type AttachInput,
   type CampaignAccess,

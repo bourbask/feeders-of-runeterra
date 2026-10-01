@@ -105,18 +105,16 @@ Trois nuances, à connaître avant de conclure que « la CI ment » :
    paquet, qui ignorent le seuil global de 70 %. C'est la seule commande qui
    l'évalue (ADR 0002 §3). Une couverture qui tombe sous le seuil passe donc en
    local et échoue en CI. Lance `pnpm test:coverage` avant de pousser.
-2. **`pnpm verify` n'inclut pas `bash scripts/check-ci-jobs.sh`**, lancé par le
-   travail 5. À replier dans `verify` en M0-30.
-3. **Cinq étapes tolèrent l'échec** aujourd'hui, parce que leur cible n'est pas
-   livrée. Elles portent `continue-on-error: true # TODO M0-30: retirer`. Le travail
-   apparaît vert alors qu'une étape est rouge — et GitHub rapporte même l'étape
-   tolérée comme « success ». Chacune est donc suivie d'une étape qui pose une
-   **annotation d'avertissement** nommant la tâche qui la livrera : c'est ce qui
-   reste visible sans déplier le journal.
+2. **`pnpm verify` inclut `bash scripts/check-ci-jobs.sh` depuis M0-30**, en plus
+   de ce que lance le travail 5.
+3. **Les cibles de base ne sont pas dans `verify`** : `db:check-schema`,
+   `db:migrate` et `db:seed` (travail 8) écrivent un fichier, et `verify` ne doit
+   pas toucher la base de travail. `bash scripts/smoke-m0.sh` les enchaîne sur une
+   base jetable, et c'est la commande à lancer avant une recette.
 
-## 5. Les tolérances, et quand elles tombent
+## 5. Les tolérances : il n'y en a plus
 
-| Étape tolérée                           | Commande                                   | Livrée par   |
+| Étape anciennement tolérée              | Commande                                   | Livrée par   |
 | --------------------------------------- | ------------------------------------------ | ------------ |
 | 7 · Comparer aux corpus dorés           | `pnpm test:golden`                         | M0-10        |
 | 8 · Schéma, migration à blanc, amorçage | `db:check-schema`, `db:migrate`, `db:seed` | M0-11, M0-26 |
@@ -124,9 +122,11 @@ Trois nuances, à connaître avant de conclure que « la CI ment » :
 | 10 · Éval N0                            | `pnpm eval:offline`                        | M0-27        |
 | 11 · Tous les scénarios                 | `pnpm sim run --format=json`               | M0-28        |
 
-M0-30 retire les cinq lignes. L'invariant qui l'empêche d'en oublier une :
-`scripts/check-ci-jobs.sh` exige autant de marqueurs `TODO M0-30` que de
-`continue-on-error: true`, et le travail 5 le lance à chaque PR.
+M0-30 a retiré les cinq lignes, leurs annotations d'avertissement et les `id:`
+d'étape qui n'existaient que pour elles. `grep -c 'continue-on-error'
+.github/workflows/ci.yml` affiche `0`, et `scripts/check-ci-jobs.sh` — lancé par
+le travail 5 **et** par `pnpm verify` — compte les tolérances restantes à chaque
+PR. Une tolérance qui reviendrait sans son marqueur ferait rougir ce script.
 
 ### Ce que `ai-eval.yml` ne fait pas encore, et qui est écrit en §8
 

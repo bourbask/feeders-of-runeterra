@@ -64,7 +64,7 @@ Une PR a déjà été déclarée recevable avec la CI rouge pour cette seule rai
 
 | Ce qu'on voit | Ce que ça veut dire |
 |---|---|
-| douze jobs verts | les jobs **8 à 11** portent un `continue-on-error` : ils restent verts **en échouant** |
+| douze jobs verts | depuis M0-30, aucune étape ne tolère l'échec : `grep -c continue-on-error` affiche `0` |
 | aucun échec | peut vouloir dire **aucun job** : une PR en conflit n'a pas de CI du tout |
 
 Donc : **compter les check-runs sur le sha de tête**, et regarder les conclusions d'étapes.

@@ -88,8 +88,10 @@
         "attribute": "fer",
         "description": "Assurer la prise."
       },
-      "note": "Alice a un jet en attente : `move_in_progress`. Ce n'est PAS un verrou de tour — Bruno vient de jouer — et le journal ne gagne rien.",
+      "note": "Alice a un jet en attente : `move_in_progress`. Ce n'est PAS un verrou de tour — Bruno vient de jouer — et le journal ne gagne rien. ET LE JOUEUR LE VOIT : `s2c.rejected` porte le code de la regle (issue #66).",
       "expect": {
+        "accepted": false,
+        "rejection": "move_in_progress",
         "events": [],
         "window": "open"
       }

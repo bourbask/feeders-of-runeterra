@@ -35,7 +35,8 @@ import {
 } from './support.test.js';
 
 import type { NarrationBrief } from '@for/engine';
-import type { EventDelivery, TurnDeps } from '../../src/ai/turn.js';
+import type { TurnDeps } from '../../src/ai/turn.js';
+import type { EventDelivery } from '../../src/game/types.js';
 import type { Table } from '../game/support.test.js';
 import type { CapturingLogger, ScriptedNarrator, SinkFrame } from './support.test.js';
 
@@ -91,11 +92,31 @@ function aRig(table: Table, narrator: ScriptedNarrator, over: Partial<TurnDeps> 
    * le filet de sécurité de la brûlure sont journalisées et absentes du
    * résultat, donc diffuser le résultat laisserait un trou de `seq`.
    */
+  let cursor = 0;
+  /**
+   * Déjà livré, par `seq`. C'EST CE QUE FAIT LE VRAI HUB
+   * (`appendVisible` ignore un `seq` déjà compté), et sans ça ce double
+   * rendrait une trame de plus que la production à chaque relecture — un faux
+   * PLUS BAVARD que le vrai est aussi un faux qui ment.
+   */
+  const sent = new Set<number>();
+  const flush = (campaignId: string, fromSeq: number): void => {
+    for (const event of readJournalSince(table.connection, campaignId, fromSeq)) {
+      if (sent.has(event.seq)) continue;
+      sent.add(event.seq);
+      wire.push({ t: 's2c.event', p: { type: event.type } });
+      cursor = Math.max(cursor, event.seq);
+    }
+  };
   const delivery: EventDelivery = {
+    // LES DEUX MÉTHODES, PAS UNE : un double qui n'en déclare qu'une ne
+    // compile plus (`pnpm typecheck:tests`), et c'est voulu — `deliver` est
+    // ce que la socket appelle, `deliverSince` ce que ce fichier-ci appelle.
+    deliver: (campaignId) => {
+      flush(campaignId, cursor);
+    },
     deliverSince: (campaignId, sinceSeq) => {
-      for (const event of readJournalSince(table.connection, campaignId, sinceSeq)) {
-        wire.push({ t: 's2c.event', p: { type: event.type } });
-      }
+      flush(campaignId, sinceSeq);
     },
   };
 

@@ -8,9 +8,17 @@
  *
  * NO PROVIDER SDK CROSSES THIS DIRECTORY, and the repository is public. The
  * server knows `NarratorPort` and nothing else — held by
- * `tests/ai/no-sdk.test.ts`, « aucun SDK de fournisseur dans
- * `packages/server/src` », which replays the grep of the acceptance criterion
- * on every run and requires zero.
+ * `tests/ai/lockout.test.ts`, describe « le serveur ne connaît aucun SDK de
+ * fournisseur » : its two titles replay the grep of the acceptance criterion on
+ * every run and require zero. The SDK's package name is NOT written here — the
+ * grep counts lines, and a comment that quoted it would turn the criterion red
+ * while proving nothing. It is written out once, in that test file.
+ *
+ * THE FILE NAME ABOVE WAS WRONG UNTIL M0-30: this header named
+ * `tests/ai/no-sdk.test.ts`, which does not exist and never did. The test did,
+ * under another name — so the promise was kept, and the pointer was not. Found
+ * by the sweep of M0-30's first acceptance criterion, « aucune promesse
+ * orpheline », which is exactly the defect it looks for.
  *
  * `narrator.ts` is NOT re-exported here: it belongs to M0-24 and is the one
  * place that reads the port's configuration. Importing it through a barrel
