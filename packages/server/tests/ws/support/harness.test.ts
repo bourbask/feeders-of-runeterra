@@ -616,8 +616,14 @@ export type DoubleArities = [
 
 /**
  * Une arité qui diverge rend un `never` ci-dessus, et cette ligne ne compile
- * plus. LES HUIT SONT CELLES QUI PEUVENT PERDRE QUELQUE CHOSE : `now()` et
+ * plus. LES DIX SONT CELLES QUI PEUVENT PERDRE QUELQUE CHOSE : `now()` et
  * `next()` ne prennent aucun paramètre, il n'y a rien à y oublier.
+ *
+ * Dix, et non huit : `EventDelivery` en a ajouté deux (`deliver`,
+ * `deliverSince`). Le chiffre est écrit ici ET recompté à l'exécution au pied
+ * de ce fichier, « déclare exactement les paramètres de l'interface, jamais un
+ * de moins » — un tuple qui grandit sans que la phrase suive est exactement la
+ * promesse périmée que CLAUDE.md interdit, et c'est ce qui était arrivé ici.
  */
 export const DOUBLE_ARITIES: DoubleArities = [
   true,

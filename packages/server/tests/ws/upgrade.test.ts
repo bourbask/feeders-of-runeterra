@@ -212,12 +212,29 @@ interface Tape {
   readonly frames: { t: string; p: Record<string, unknown> }[];
   readonly closes: { code: number }[];
   send(frame: unknown): void;
+  /** L'ÉVÉNEMENT `open`, jamais un délai. Voir l'en-tête de `connect`. */
+  waitOpen(timeoutMs?: number): Promise<number>;
   waitFor(type: string, timeoutMs?: number): Promise<Record<string, unknown>>;
   waitClosed(timeoutMs?: number): Promise<number>;
   close(): void;
 }
 
-/** Un vrai client WebSocket, avec son cookie de session s'il en a un. */
+/**
+ * Un vrai client WebSocket, avec son cookie de session s'il en a un.
+ *
+ * ── ON ATTEND `open`, PAS UNE DURÉE ──────────────────────────────────────
+ * Les deux tests qui envoient une trame attendaient 50 ms en dur avant leur
+ * premier `send`. Mesuré par la recette, arbre propre, `--force` :
+ * `pnpm turbo run test --force` lance onze vitest en parallèle et échouait
+ * **3 fois sur 6** en `InvalidStateError: Sent before connected`, là où le
+ * fichier seul passait 15 fois sur 15. Un délai n'est pas une attente : il
+ * mesure la charge de la machine, pas l'état de la socket.
+ *
+ * `waitOpen()` lit l'événement `open` — exactement ce que
+ * `scripts/smoke-client.ts` fait déjà. Et il se termine aussi quand la socket
+ * se FERME avant de s'ouvrir, pour que l'échec nomme la fermeture au lieu
+ * d'attendre quatre secondes pour rien.
+ */
 function connect(bed: Bed, options: { cookie?: string; campaignId?: string | null }): Tape {
   const query = options.campaignId === null ? '' : `?campaignId=${options.campaignId ?? CAMPAIGN}`;
   // LE CLIENT DE NODE ACCEPTE UN EN-TÊTE, et c'est ce qui évite une
@@ -232,6 +249,10 @@ function connect(bed: Bed, options: { cookie?: string; campaignId?: string | nul
 
   const frames: { t: string; p: Record<string, unknown> }[] = [];
   const closes: { code: number }[] = [];
+  let openedAt: number | null = null;
+  socket.addEventListener('open', () => {
+    openedAt = Date.now();
+  });
   socket.addEventListener('message', (event) => {
     frames.push(JSON.parse(String(event.data)) as { t: string; p: Record<string, unknown> });
   });
@@ -255,6 +276,18 @@ function connect(bed: Bed, options: { cookie?: string; campaignId?: string | nul
     send: (frame: unknown) => {
       socket.send(JSON.stringify(frame));
     },
+    waitOpen: (timeoutMs = 4000) =>
+      poll(
+        () => {
+          const closed = closes[0];
+          if (closed !== undefined) {
+            throw new Error(`socket fermée en ${String(closed.code)} avant son ouverture`);
+          }
+          return openedAt;
+        },
+        timeoutMs,
+        'l’ouverture de la socket',
+      ),
     waitFor: (type: string, timeoutMs = 4000) =>
       poll(() => frames.find((frame) => frame.t === type)?.p ?? null, timeoutMs, type),
     waitClosed: (timeoutMs = 4000) =>
@@ -279,7 +312,7 @@ describe('la montée en WebSocket', () => {
     const bed = await aLiveTable();
     const tape = connect(bed, { cookie: bed.secret });
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await tape.waitOpen();
     tape.send({
       v: 1,
       t: 'c2s.hello',
@@ -323,7 +356,7 @@ describe('la montée en WebSocket', () => {
   it('le départ du transport vide la salle', async () => {
     const bed = await aLiveTable();
     const tape = connect(bed, { cookie: bed.secret });
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await tape.waitOpen();
     tape.send({
       v: 1,
       t: 'c2s.hello',

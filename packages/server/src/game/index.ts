@@ -12,11 +12,19 @@
  *     bundle is frozen and validated at start-up, and a campaign pins its
  *     version, so rebuilding it per turn would be work with no answer to
  *     change;
- *   - the STORYTELLER'S PORT, via `buildNarrator(deps.env)` in
+ *   - the STORYTELLER'S PORT, via `buildNarrator(deps.env, selectNarrator)` in
  *     `src/ai/narrator.ts` — the only place in the server that reads the
  *     port's configuration (01-architecture.md section 2.8). That is why
  *     `AppDeps` carries `env` and not a `NarratorPort`, exactly as the header
- *     of `deps.ts` predicted;
+ *     of `deps.ts` predicted. THE SECOND ARGUMENT IS THE WHOLE WIRING: without
+ *     it `buildNarrator` falls back to the server's own `builtinSelector`,
+ *     which knows `stub` and nothing else, so every other value of
+ *     `NARRATOR_PROVIDER` yielded a port that raises `unavailable` on its
+ *     first call and NO SOCKET WAS EVER OPENED TOWARDS A MODEL. Nothing went
+ *     red, because the pipeline's fallback is good: the turn still resolved
+ *     and the engine's sentence still reached the table. Held by
+ *     `tests/game/narrator-wiring.test.ts`, which names the provider the
+ *     server composes for each configuration;
  *   - the WRITE QUEUE, one for the process, holding one chain per campaign.
  *
  * Everything under `src/game/**` is held to the engine's rule by ESLint:
@@ -24,6 +32,7 @@
  * `@for/engine`. What this code needs arrives through `deps`.
  */
 
+import { selectNarrator } from '@for/ai';
 import { GENERATED_FILES } from '@for/content';
 import fp from 'fastify-plugin';
 
@@ -36,6 +45,7 @@ import { createTableHub } from '../ws/index.js';
 import { createCampaignService } from './campaign-service.js';
 import { toEngineContent } from './content.js';
 
+import type { NarratorPort } from '@for/contracts';
 import type { FallbackTemplates } from '@for/engine';
 import type { FastifyPluginCallback } from 'fastify';
 import type { AppPluginOptions } from '../deps.js';
@@ -58,6 +68,15 @@ declare module 'fastify' {
     narration?: NarrationDispatcher;
     /** How a committed entry reaches a socket: by sequence, from the journal. */
     delivery?: EventDelivery;
+    /**
+     * THE PORT THE PROCESS ACTUALLY COMPOSED, built once at start-up.
+     *
+     * Decorated for one reason: which provider a configuration ends up with was
+     * invisible from outside this file, and that is how `buildNarrator(env)`
+     * sat here unwired from M0-24 to M0-30 with nothing red. Read by
+     * `tests/game/narrator-wiring.test.ts`; nothing in production reads it.
+     */
+    narrator?: NarratorPort;
   }
 }
 
@@ -109,6 +128,14 @@ const plugin: FastifyPluginCallback<AppPluginOptions> = (app, options, done) => 
 
   const dispatcher = new NarrationDispatcher();
 
+  /**
+   * ONE PORT, BUILT ONCE, AND `selectNarrator` IS THE ARGUMENT THAT MAKES IT
+   * REAL. `@for/ai` owns the four implementations; the server owns the
+   * configuration. Two calls to `buildNarrator` would also have built two
+   * ports for one process, which is not what `narrator.ts` promises.
+   */
+  const narrator = buildNarrator(deps.env, selectNarrator);
+
   // Named late, on purpose. See the header.
   let hub: TableHub | null = null;
   const delivery = createJournalDelivery({
@@ -127,7 +154,7 @@ const plugin: FastifyPluginCallback<AppPluginOptions> = (app, options, done) => 
       clock: deps.clock,
       rng: deps.rng,
       ids: deps.ids,
-      narrator: buildNarrator(deps.env),
+      narrator,
       /**
        * THE REAL STORYTELLER, finally called. Before M0-30 the intent path
        * went through `intent-pipeline.ts`'s placeholder and
@@ -136,7 +163,7 @@ const plugin: FastifyPluginCallback<AppPluginOptions> = (app, options, done) => 
       narrateTurn: createTurnRunner({
         connection: deps.connection,
         content: deps.content,
-        narrator: buildNarrator(deps.env),
+        narrator,
         ids: deps.ids,
         clock: deps.clock,
         logger: deps.logger,
@@ -154,6 +181,7 @@ const plugin: FastifyPluginCallback<AppPluginOptions> = (app, options, done) => 
   app.decorate('tableHub', hub);
   app.decorate('narration', dispatcher);
   app.decorate('delivery', delivery);
+  app.decorate('narrator', narrator);
 
   done();
 };

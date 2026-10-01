@@ -136,6 +136,15 @@ jobs:
       - uses: ./.github/actions/setup-node-pnpm
       - name: Installer les dépendances
         run: pnpm install --frozen-lockfile
+      # DEUX FORMES, ET ELLES NE MESURENT PAS LA MÊME CHOSE. `test:coverage` est
+      # UN seul processus vitest ; `pnpm test` en lance onze en parallèle, et
+      # c'est la forme que `pnpm verify` — la porte locale — exécute. Un test
+      # fragile sous charge passait la CI et échouait une fois sur deux chez le
+      # développeur : mesuré en recette de M0-30, 3 échecs sur 6 à `turbo run
+      # test`, 0 sur 3 à `test:coverage`. `--force` parce qu'un journal rejoué
+      # depuis le cache ne mesure rien (docs/RECETTE.md §1).
+      - name: Tests unitaires, dans la forme parallèle de la porte locale
+        run: pnpm exec turbo run test --force
       - name: Tests unitaires avec seuils de couverture
         run: pnpm test:coverage
 

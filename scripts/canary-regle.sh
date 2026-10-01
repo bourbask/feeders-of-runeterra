@@ -45,9 +45,21 @@ BACKUP="$(mktemp -t canari-progress-XXXXXX.ts)"
 readonly BACKUP
 cp "$FILE" "$BACKUP"
 
+# LA SOURCE ET LE `dist/`, LES DEUX. Restaurer la seule source laissait le
+# `dist/` du moteur sur la constante violée : arbre propre, `git status` vide,
+# source juste — et `pnpm sim run` ROUGE, parce que le simulateur lit le
+# `dist/`. Mesuré en recette de M0-30 :
+#   bash scripts/canary-regle.sh                             -> 0
+#   grep dangereux packages/engine/src/types/progress.ts     ->   dangereux: 8,
+#   grep dangereux packages/engine/dist/types/progress.js    ->   dangereux: 7,
+#   pnpm sim run                                             -> ROUGE
+# Un outil de recette qui laisse le dépôt cassé derrière lui est un outil qu'on
+# finit par ne plus lancer. La reconstruction est DANS le `trap`, donc elle a
+# lieu aussi sur Ctrl-C et sur une sortie en erreur.
 restore() {
   cp "$BACKUP" "$FILE"
   rm -f "$BACKUP"
+  pnpm exec tsc -b packages/engine --force >/dev/null 2>&1 || true
 }
 trap restore EXIT INT TERM
 

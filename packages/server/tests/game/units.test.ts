@@ -375,7 +375,8 @@ describe('le port du conteur', () => {
   });
 
   it('démarre quand même sans adaptateur, et lève À L’APPEL', async () => {
-    // `anthropic` n'a pas d'adaptateur avant M0-18. Refuser de démarrer
+    // LE SÉLECTEUR PAR DÉFAUT, celui que ce paquet possède, ne connaît que
+    // `stub` — la production passe celui d'`@for/ai`. Refuser de démarrer
     // mettrait un déploiement à terre pour la seule chose qui a le droit de
     // se dégrader.
     const port = buildNarrator(
@@ -396,8 +397,9 @@ describe('le port du conteur', () => {
   it('prend le sélecteur qu’on lui donne, ce qui est la couture de M0-18', () => {
     const mine = { providerId: 'ollama' } as unknown as NarratorPort;
     const seenConfigs: string[] = [];
-    // Le jour où `@for/ai` exporte `selectNarrator`, le branchement est cet
-    // argument-là, à l'unique appelant. Ce fichier ne se rouvre pas.
+    // C'est par cet argument que `game/index.ts` passe `selectNarrator`
+    // d'`@for/ai` depuis M0-30 ; quel fournisseur il compose alors est mesuré
+    // par `tests/game/narrator-wiring.test.ts`.
     expect(
       buildNarrator(readEnv(vars({ NARRATOR_PROVIDER: 'stub' })), (config) => {
         seenConfigs.push(config.provider);

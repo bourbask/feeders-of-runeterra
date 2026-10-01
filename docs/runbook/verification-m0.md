@@ -65,12 +65,23 @@ Elle enchaîne, sur une base jetable, dans un dossier temporaire supprimé à la
 | --- | --- |
 | installation | `pnpm install --frozen-lockfile : 0` |
 | construction | `pnpm build : 0` |
-| base | `db:migrate`, `db:seed`, `db:check` à `0` |
+| base | `db:migrate`, `db:seed`, puis la ligne que `db:check` écrit lui-même : « 12 oracles … Aucun défaut. » |
 | démarrage | `/readyz : 200` |
 | socket | `s2c.welcome` + `s2c.snapshot` + `s2c.presence`, dans cet ordre |
 | reprise | des `s2c.event` livrés, avec leur `deliverySeq` |
-| « Pourquoi ? » | `c2s.why` → `s2c.turn_proof`, chaque entrée dans `[firstSeq, lastSeq]`, trame < 8 Kio |
+| **un tour vivant** | `c2s.intent` soumis par un joueur dont le personnage est **actif**, puis le premier `s2c.event` **de ce tour-là** |
+| « Pourquoi ? » | `c2s.why` → `s2c.turn_proof` sur ce tour, `firstSeq` **égal** au `seq` de l'événement reçu, chaque entrée dans `[firstSeq, lastSeq]`, trame < 8 Kio |
 | arrêt | `SIGTERM : arrêt propre` |
+
+Le tour vivant est ce que M0-30 a ajouté après recette : la sonde prouvait `c2s.why` sur des
+entrées **amorcées**, redemandées par `c2s.resume`, là où le critère P22 écrit « après réception
+du premier `s2c.event` d'un tour ». Aucune autre suite du dépôt ne joue un tour vivant sur une
+socket — le simulateur ne branche pas `narrateTurn` (§9). C'est la différence entre « le serveur
+démarre » et « la table tourne ».
+
+L'`id` d'enveloppe de l'intention **devient** le `correlationId` du tour, et la sonde le tire de
+l'espace `facade00-…` : avec le préfixe nul, il entrait en collision avec un `correlationId` du
+seed et la preuve couvrait deux tours (`[7, 253]` au lieu de `[249, 253]`).
 
 Un échec affiche les trente dernières lignes du journal du serveur : la sonde ne demande pas
 d'aller le chercher.
@@ -84,7 +95,10 @@ bash scripts/canary-regle.sh   # 0
 ```
 
 Il met `TICKS_PER_MILESTONE.dangereux` à 7, reconstruit le `dist/` du moteur, lance les trois
-suites, exige que **les trois** rougissent sous 30 s, puis restaure le fichier **par copie**.
+suites, exige que **les trois** rougissent sous 30 s, puis restaure le fichier **par copie** —
+**et reconstruit le `dist/`**. Les deux, dans le même `trap`. Restaurer la seule source laissait
+`packages/engine/dist/types/progress.js` sur la constante violée : `git status` vide, source
+juste, et `pnpm sim run` **rouge** après un canari réussi.
 
 | Suite | Commande |
 | --- | --- |
@@ -98,6 +112,25 @@ est en défaut, pas le canari.
 **Contre-sonde du canari lui-même** : remplacer `AFTER` par la valeur d'origine (`dangereux: 8`)
 doit faire sortir le script en **1**, avec les trois suites marquées « le canari n'a PAS
 détecté ». Sans ça, un canari qui ne modifie rien sortirait en 0 et ne prouverait rien.
+
+### Ce que le canari dit, et sur quelles constantes
+
+Le script porte sur **une** constante. Le protocole rejoué sur d'autres, à la main, a montré que
+la phrase du jalon — « modifier une constante de règle fait rougir trois suites » — n'est pas
+vraie partout. Mesuré (`pnpm test:golden` seul, après `tsc -b packages/engine --force`) :
+
+| Corpus doré | Constantes qu'il attrape |
+| --- | --- |
+| `challenge-matrix` | `ACTION_DIE`, `CHALLENGE_DIE`, `ACTION_SCORE_CAP` |
+| `momentum-rules` | `DEFAULT_MOMENTUM_BOUNDS` |
+| `progress-rolls` | `TICKS_PER_MILESTONE`, `TICKS_PER_BOX`, `MAX_PROGRESS_BOXES` |
+| `gauge-rules` *(M0-30)* | `GAUGE_MIN`, `GAUGE_MAX` |
+
+**Aucun corpus** ne couvre, mesuré une par une : `PRICE_DIE`, `DEFAULT_HARM`, `ATTRIBUTE_MIN`,
+`ATTRIBUTE_MAX`, `CLOCK_ADVANCE_MIN`, `CLOCK_ADVANCE_MAX`, `SCENE_PRESENCE_MAX`,
+`LIKELIHOOD_THRESHOLDS`. Les changer laisse la porte dorée **verte**. C'est signalé plutôt que
+refermé en douce : chacune demande un corpus qui joue la mécanique concernée (le prix, les
+dégâts, les horloges, les oracles, la scène), pas une ligne de plus dans un corpus existant.
 
 ---
 
@@ -212,7 +245,34 @@ d'autorisation Discord (elle porte la portée demandée), et le verdict.
   `narrateTurn`, donc les sept scénarios tournent sur la narration de remplacement de M0-24.
   Le vrai tour (`runNarrationTurn`) est tenu par `packages/server/tests/ai/turn.test.ts` et
   exercé en production par `gamePlugin` ;
-- **un fournisseur réel** : `stub` partout. `pnpm eval:probe` mesure un fournisseur, et son
-  verdict informe une décision — il ne ferme pas une porte ;
+- **un fournisseur réel** : cette recette tourne avec `NARRATOR_PROVIDER=stub`, donc **aucune
+  socket ne s'ouvre vers un modèle ici**. Ce n'est pas une limite du serveur : depuis M0-30 le
+  serveur compose l'adaptateur d'`@for/ai` qui correspond au réglage, et le tableau ci-dessous
+  dit lequel. `pnpm eval:probe` mesure un fournisseur, et son verdict informe une décision — il
+  ne ferme pas une porte ;
 - **la montée en charge** : aucune. SQLite WAL suppose un écrivain unique, et le `compose`
   déclare un seul réplica.
+
+### Quel réglage donne quel fournisseur
+
+Jusqu'à M0-30 `game/index.ts` appelait `buildNarrator(deps.env)` **sans le sélecteur
+d'`@for/ai`** : tout réglage autre que `stub` rendait un port qui lève `unavailable` au premier
+appel, le repli déterministe du moteur prenait la main, et **aucune configuration de ce serveur
+ne parlait à un modèle**. Rien ne rougissait, parce que le repli fonctionne. Mesuré en recette,
+`NARRATOR_PROVIDER=ollama` : `narration.gm_failed`, `errorKind: api_error`, aucune socket ouverte.
+
+| `NARRATOR_PROVIDER` | Autres variables exigées | Ce que le serveur compose |
+| --- | --- | --- |
+| `stub` *(le réglage livré)* | aucune | l'adaptateur `stub` d'`@for/ai` : aucun transport, aucune clé, aucune sortie réseau |
+| `anthropic` | `NARRATOR_API_KEY` | l'adaptateur `anthropic` : flux, outils, sortie structurée, cache de préfixe |
+| `openai-compatible` | `NARRATOR_BASE_URL`, `NARRATOR_API_KEY` | l'adaptateur passerelle (OpenRouter, Groq, Together) |
+| `ollama` | `NARRATOR_BASE_URL` | l'adaptateur local ; `NARRATOR_TIMEOUT_MS` est à monter pour un modèle qui charge à froid |
+
+`env.ts` refuse de démarrer si la variable exigée manque — le défaut silencieux n'existe pas.
+Le réglage que `.env.example` et `infra/docker-compose.dev.yml` livrent est `stub`, clé vide :
+le dépôt est public, et un serveur qui tenterait un appel réseau à l'amorçage ne serait pas
+acceptable.
+
+**Tenu par** `packages/server/tests/game/narrator-wiring.test.ts`, qui lit le port que le
+processus a réellement composé (décorateur `app.narrator`) pour chacune des quatre
+configurations. Retirer `selectNarrator` de `game/index.ts` fait tomber sept de ses neuf tests.

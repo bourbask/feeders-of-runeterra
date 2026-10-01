@@ -15,17 +15,36 @@ module.exports = {
       comment:
         '@for/engine est la couche 0 : aucune dépendance, aucun module de plateforme. ' +
         'Sa pureté est ce qui rend le moteur testable et rejouable.',
-      // LES FICHIERS DE TEST SONT HORS DE CETTE RÈGLE, ET SEULEMENT DE
-      // CELLE-CI. Depuis que `exclude` ne masque plus les tests (voir
-      // `options.exclude`), `engine/src/**/*.test.ts` déclare ses arêtes :
-      // `vitest` et `@for/testkit`, qui portent les RNG scriptés. Aucune ne
-      // part dans le `dist/` — et la pureté qui compte est celle du `dist/`,
-      // lue par `packages/engine/src/index.test.ts`, qui scanne le paquet
-      // compilé et son propre `package.json`. Interdire ici ferait rougir une
-      // dépendance de test que la fiche de M0-02 exige.
+      // LES FICHIERS DE TEST SORTENT DE CETTE RÈGLE-CI, PAS DE TOUTE RÈGLE.
+      // Ils déclarent deux arêtes légitimes que la pureté interdit —
+      // `vitest` et `@for/testkit`, qui portent les RNG scriptés — et aucune
+      // ne part dans le `dist/`. Les interdire ici ferait rougir une
+      // dépendance que la fiche de M0-02 exige. Ce qu'ils N'ONT PAS le droit
+      // de faire est tenu juste en dessous par
+      // `engine-tests-ne-prennent-que-vitest-et-testkit` : sans elle,
+      // `import 'node:fs'` en tête de `packages/engine/src/gauges.test.ts`
+      // sortait en 0 au lieu de 1 (mesuré en recette de M0-30).
       from: { path: '^packages/engine/src', pathNot: '\\.test\\.tsx?$' },
       to: {
         pathNot: '^packages/engine/src',
+        dependencyTypesNot: ['type-only'],
+      },
+    },
+    {
+      name: 'engine-tests-ne-prennent-que-vitest-et-testkit',
+      severity: 'error',
+      comment:
+        'La moitié stricte de `engine-est-pur`. Un fichier de test du moteur a le droit ' +
+        "d'importer `vitest` et `@for/testkit`, et RIEN D'AUTRE hors du paquet : ni `node:*`, " +
+        "ni un paquet de la plateforme. Sans cette règle, `import 'node:fs'` en tête de " +
+        '`packages/engine/src/gauges.test.ts` sortait en 0 alors que le même import dans ' +
+        '`gauges.ts` sortait en 1 — deux verdicts pour une seule frontière. ' +
+        '`packages/engine/tests/purity.test.ts` reste dehors : il LIT le `dist/` au disque, ' +
+        "c'est ce que la sonde de pureté fait.",
+      from: { path: '^packages/engine/src/.*\\.test\\.tsx?$' },
+      to: {
+        pathNot:
+          '(^packages/engine/(src|tests)/|node_modules/(vitest|@vitest)/|^packages/testkit/)',
         dependencyTypesNot: ['type-only'],
       },
     },
@@ -39,9 +58,10 @@ module.exports = {
         'Conséquence à connaître AVANT d’écrire un schéma : les tuples `as const` du moteur ' +
         '(ATTRIBUTES, RNG_STREAMS, EFFECT_OPS…) sont des VALEURS et ne peuvent pas être ' +
         'importés ici. Ils sont recopiés dans src/core/enums.ts, gardés dans les deux sens.',
-      // Même raison que pour `engine-est-pur` : depuis que `exclude` ne masque
-      // plus les tests, `contracts/src/**/*.test.ts` déclare son import de
-      // `vitest`. Ce que la règle garde, c'est ce que le paquet EXPORTE.
+      // Même raison que pour `engine-est-pur` : `contracts/src/**/*.test.ts`
+      // déclare son import de `vitest`. Ce que la règle garde, c'est ce que le
+      // paquet EXPORTE. Ce que les tests n'ont pas le droit de faire est tenu
+      // par `contracts-tests-ne-prennent-que-vitest-et-zod`, juste en dessous.
       from: { path: '^packages/contracts/src', pathNot: '\\.test\\.tsx?$' },
       // `node_modules/zod` sans ancre : pnpm résout zod sous
       // `node_modules/.pnpm/zod@<version>/node_modules/zod/`, et la version
@@ -52,6 +72,20 @@ module.exports = {
       to: {
         pathNot: '(^packages/contracts/src|node_modules/zod/)',
         dependencyTypesNot: ['type-only', 'core'],
+      },
+    },
+    {
+      name: 'contracts-tests-ne-prennent-que-vitest-et-zod',
+      severity: 'error',
+      comment:
+        'La moitié stricte de `contracts-ne-depend-que-de-zod`. Un test de bord a le droit ' +
+        "d'importer `vitest` et `zod` ; au-delà, il décrirait un paquet que `@for/contracts` " +
+        "ne connaît pas. Les types canoniques du moteur arrivent en `import type`, qui n'est " +
+        "pas une arête d'exécution.",
+      from: { path: '^packages/contracts/src/.*\\.test\\.tsx?$' },
+      to: {
+        pathNot: '(^packages/contracts/src|node_modules/(zod|vitest|@vitest)/|node_modules/zod/)',
+        dependencyTypesNot: ['type-only'],
       },
     },
     {

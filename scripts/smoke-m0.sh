@@ -5,8 +5,16 @@
 # Elle enchaîne, dans cet ordre et sans intervention : installation,
 # construction, migrations, amorçage, démarrage du serveur, connexion WebSocket
 # AUTHENTIFIÉE, réception de `s2c.welcome` + `s2c.snapshot` + `s2c.presence`,
-# un aller-retour `c2s.why` → `s2c.turn_proof` sur un tour du seed, puis arrêt
-# propre. Elle sort en 0 quand tout cela a eu lieu.
+# la reprise du journal, UN TOUR VIVANT — `c2s.intent` soumis, premier
+# `s2c.event` du tour reçu —, l'aller-retour `c2s.why` → `s2c.turn_proof` sur
+# CE tour, puis arrêt propre. Elle sort en 0 quand tout cela a eu lieu.
+#
+# ── POURQUOI ELLE SOUMET UNE INTENTION ───────────────────────────────────
+# Sans ça elle prouvait que le serveur DÉMARRE, pas que la table TOURNE : la
+# preuve portait sur des entrées amorcées, redemandées par `c2s.resume`, là où
+# le critère P22 écrit « après réception du premier `s2c.event` d'un tour ».
+# Aucune autre suite du dépôt ne joue un tour vivant sur une socket — le
+# simulateur ne branche pas `narrateTurn`. C'est la question du jalon.
 #
 # ── CE QU'ELLE NE TOUCHE PAS ─────────────────────────────────────────────
 # Sa base vit dans un dossier temporaire, jamais `./data/app.db` : une sonde
@@ -90,8 +98,11 @@ pnpm db:migrate >/dev/null 2>&1 || die "pnpm db:migrate a échoué."
 echo "  pnpm db:migrate : 0"
 pnpm db:seed >/dev/null 2>&1 || die "pnpm db:seed a échoué."
 echo "  pnpm db:seed : 0"
-pnpm db:check >/dev/null 2>&1 || die "pnpm db:check a échoué (les 12 oracles)."
-echo "  pnpm db:check : 0 (12 oracles)"
+# LA SORTIE DE LA COMMANDE, PAS UNE PHRASE ÉCRITE ICI : « 12 oracles » annoncé
+# par la sonde serait un chiffre qui ne vient de nulle part. `db:check` nomme
+# lui-même les contrôles qu'il a passés depuis M0-30.
+DB_CHECK="$(pnpm db:check 2>&1)" || die "pnpm db:check a échoué (les 12 oracles)."
+printf '  %s\n' "$(printf '%s' "$DB_CHECK" | tail -n 1)"
 
 step "démarrage"
 node packages/server/dist/main.js >"$LOG" 2>&1 &
