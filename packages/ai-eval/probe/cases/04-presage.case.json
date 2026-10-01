@@ -1,0 +1,189 @@
+{
+  "id": "presage",
+  "title": "Issue partielle avec présage — un retournement est imposé",
+  "tags": ["outcome:partielle", "presage", "npc_present", "absent"],
+  "mentions_any": ["corniche", "cairn", "vent", "glace"],
+  "actor_label": "Sejuani",
+  "player_character_names": ["Sejuani", "Braum"],
+  "reserved_champion_ids": ["ashe", "lissandra"],
+  "scene": {
+    "present_names": ["Braum", "Sejuani", "Ulrun"],
+    "absent_names": ["Keld", "Signy"]
+  },
+  "campaign": {
+    "name": "Le Col des Hurleurs",
+    "tone": "âpre, concret, sans merveilleux gratuit",
+    "house_rules": null,
+    "characters": [
+      {
+        "id": "chr_braum",
+        "name": "Braum",
+        "champion_display_name": "Braum",
+        "pronouns": "il",
+        "one_line": "porte la porte, et la pose où il faut"
+      },
+      {
+        "id": "chr_sejuani",
+        "name": "Sejuani",
+        "champion_display_name": "Sejuani",
+        "pronouns": "elle",
+        "one_line": "mène la battue, et ne demande pas deux fois"
+      }
+    ],
+    "reserved_champion_ids": ["ashe", "lissandra"],
+    "allowed_npcs": [
+      {
+        "id": "ent_ulrun",
+        "name": "Ulrun",
+        "role": "éclaireur du clan",
+        "one_line": "méfiant, compte les vivres à voix basse"
+      },
+      {
+        "id": "ent_hreidar",
+        "name": "Hreidar",
+        "role": "porteur",
+        "one_line": "boite depuis la passe, ne s'en plaint pas"
+      }
+    ]
+  },
+  "context": {
+    "lore": [
+      "Le Col des Hurleurs doit son nom au vent qui s'engouffre entre les deux parois : au plus fort de l'hiver, on n'entend plus l'homme qui marche devant."
+    ],
+    "etat": {
+      "core": "Personnages :\n- Braum : vigueur 4, âme 3, vivres 2, souffle 2\n- Sejuani : vigueur 4, âme 3, vivres 2, souffle 2\nHorloges :\n- La tempête se lève : 2/6\nSerments :\n- Rapporter la hache d'Avarosa (dangereux)",
+      "inventory_and_idle_clocks": "Atouts :\n- Braum : Bouclier de la porte\n- Sejuani : Œil de la battue"
+    },
+    "turns": [
+      "<fait>\nMouvement : Sécuriser un avantage (vif).\nIssue : RÉUSSITE FRANCHE. Présage : non.\nCe qui a déjà eu lieu et qui est acquis : la corde est fixée au cairn nord.\n</fait>",
+      "Tu passes la corde deux fois autour de la pierre et tu tires dessus de tout ton poids. Elle tient. Ulrun lève les yeux, puis les rebaisse sur son compte. Le vent change de bord."
+    ],
+    "chronicle": {
+      "premise": "# Chronique\nLa battue d'Avarosa remonte la passe des Hurleurs avant que la tempête ne ferme le col. Ce qu'elle cherche est de l'autre côté ; ce qui la suit est derrière.",
+      "openArcs": "## Arcs ouverts\n- La tempête se lève : elle ferme le col au sixième cran, et deux crans sont déjà pris.\n- La dette d'Ulrun : il a pris des vivres au clan d'en bas et ne l'a dit à personne.",
+      "otherArcs": "## Arcs dormants\n- Le cairn nord s'est effondré l'hiver dernier ; personne n'a redressé les pierres.",
+      "characters": "## Personnages\n- Sejuani mène, et depuis la passe elle ne dort plus qu'à moitié.\n- Braum ferme la marche avec la corde.",
+      "sceneNpcs": "## PNJ en scène\n- Ulrun, assis contre le cairn nord, compte ce qui reste.",
+      "otherNpcs": "## Autres PNJ\n- Hreidar, porteur, resté à l'abri bas avec les deux traîneaux.",
+      "places": "## Lieux\n- Le Col des Hurleurs : passe étroite, deux cairns effondrés, une corniche de glace au nord.\n- L'abri bas : une avancée de roche, à une heure de marche en arrière.",
+      "sceneFacts": "## Faits liés à la scène\n- Keld est mort sur la corniche, trois jours plus tôt ; on a laissé son sac.\n- Signy est repartie vers la vallée basse sans prévenir.",
+      "otherFacts": "## Autres faits\n- Les vivres de la battue tiennent quatre jours, pas davantage.",
+      "openThreads": "## Fils ouverts\n- Qui a défait les sangles du traîneau, la nuit de la passe.",
+      "recentDigest": "## Séances récentes\n- La battue a franchi la passe, perdu un homme et gagné un jour d'avance."
+    }
+  },
+  "imposed_price_entry_id": null,
+  "vocabulary": {
+    "move_label": "Affronter le danger",
+    "attribute_label": "fer",
+    "outcome_label": "RÉUSSITE PARTIELLE",
+    "effect_sentences": [
+      "Sejuani a franchi la corniche, mais la traversée lui a coûté.",
+      "vigueur -1."
+    ]
+  },
+  "brief": {
+    "correlationId": "1d29a270-9d2d-4f07-adf8-4940dfae5bbb",
+    "sceneId": "0G2ZWQTJV1B3NZ8RW38ADR235F",
+    "audience": {
+      "scope": "table",
+      "recipients": null
+    },
+    "perceivableFacts": [
+      {
+        "kind": "present",
+        "ref": {
+          "kind": "character",
+          "id": "chr_braum"
+        },
+        "name": "Braum",
+        "detail": "en retrait, corde en main",
+        "sinceSeq": 40
+      },
+      {
+        "kind": "present",
+        "ref": {
+          "kind": "character",
+          "id": "chr_sejuani"
+        },
+        "name": "Sejuani",
+        "detail": "debout au bord de la corniche",
+        "sinceSeq": 40
+      },
+      {
+        "kind": "present",
+        "ref": {
+          "kind": "entity",
+          "id": "ent_ulrun"
+        },
+        "name": "Ulrun",
+        "detail": "assis contre le cairn nord",
+        "sinceSeq": 40
+      },
+      {
+        "kind": "absent",
+        "ref": {
+          "kind": "entity",
+          "id": "ent_keld"
+        },
+        "name": "Keld",
+        "detail": "mort",
+        "sinceSeq": 38
+      },
+      {
+        "kind": "absent",
+        "ref": {
+          "kind": "entity",
+          "id": "ent_signy"
+        },
+        "name": "Signy",
+        "detail": "partie vers la vallée basse",
+        "sinceSeq": 38
+      }
+    ],
+    "actorCharacterId": "1HZH7T20V967AC98E0S9S9HS40",
+    "moveId": "face-danger",
+    "outcome": "partielle",
+    "isPresage": true,
+    "roll": {
+      "rollId": "7FAJ2JM6N7PYEKM4TSKH541SAZ",
+      "attribute": "fer",
+      "attributeValue": 3,
+      "actionDie": 4,
+      "adds": [
+        {
+          "source": "asset",
+          "value": 1
+        }
+      ],
+      "rawTotal": 8,
+      "total": 8,
+      "cappedAtTen": false,
+      "challengeDice": [7, 7],
+      "momentumNegated": false,
+      "burned": false
+    },
+    "appliedEffects": [
+      {
+        "effect": {
+          "op": "gauge",
+          "gauge": "vigueur",
+          "delta": -1,
+          "target": "self"
+        },
+        "subjectCharacterId": "1HZH7T20V967AC98E0S9S9HS40",
+        "trackId": null,
+        "eventSeq": 42
+      }
+    ],
+    "presage": {
+      "tableId": "presage",
+      "value": 3,
+      "entryId": "prs-retournement",
+      "text": "un retournement doit survenir dans cette scène : ce qui tenait lâche"
+    },
+    "playerInput": "Je force le passage, Braum assure derrière moi.",
+    "eventSeqs": [41, 42, 43],
+    "fallbackTemplateId": "face-danger/partielle"
+  }
+}

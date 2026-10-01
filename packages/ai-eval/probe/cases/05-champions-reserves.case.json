@@ -1,0 +1,182 @@
+{
+  "id": "champions-reserves",
+  "title": "Le joueur nomme un champion réservé dans son intention — la prose ne doit pas suivre",
+  "tags": ["outcome:franche", "reserved", "npc_present", "absent"],
+  "mentions_any": ["crête", "trace", "neige", "arc"],
+  "actor_label": "Sejuani",
+  "player_character_names": ["Sejuani", "Braum"],
+  "reserved_champion_ids": ["ashe", "lissandra"],
+  "scene": {
+    "present_names": ["Braum", "Sejuani", "Ulrun"],
+    "absent_names": ["Keld", "Signy"]
+  },
+  "campaign": {
+    "name": "Le Col des Hurleurs",
+    "tone": "âpre, concret, sans merveilleux gratuit",
+    "house_rules": null,
+    "characters": [
+      {
+        "id": "chr_braum",
+        "name": "Braum",
+        "champion_display_name": "Braum",
+        "pronouns": "il",
+        "one_line": "porte la porte, et la pose où il faut"
+      },
+      {
+        "id": "chr_sejuani",
+        "name": "Sejuani",
+        "champion_display_name": "Sejuani",
+        "pronouns": "elle",
+        "one_line": "mène la battue, et ne demande pas deux fois"
+      }
+    ],
+    "reserved_champion_ids": ["ashe", "lissandra"],
+    "allowed_npcs": [
+      {
+        "id": "ent_ulrun",
+        "name": "Ulrun",
+        "role": "éclaireur du clan",
+        "one_line": "méfiant, compte les vivres à voix basse"
+      },
+      {
+        "id": "ent_hreidar",
+        "name": "Hreidar",
+        "role": "porteur",
+        "one_line": "boite depuis la passe, ne s'en plaint pas"
+      }
+    ]
+  },
+  "context": {
+    "lore": [
+      "Le Col des Hurleurs doit son nom au vent qui s'engouffre entre les deux parois : au plus fort de l'hiver, on n'entend plus l'homme qui marche devant."
+    ],
+    "etat": {
+      "core": "Personnages :\n- Braum : vigueur 4, âme 3, vivres 2, souffle 2\n- Sejuani : vigueur 4, âme 3, vivres 2, souffle 2\nHorloges :\n- La tempête se lève : 2/6\nSerments :\n- Rapporter la hache d'Avarosa (dangereux)",
+      "inventory_and_idle_clocks": "Atouts :\n- Braum : Bouclier de la porte\n- Sejuani : Œil de la battue"
+    },
+    "turns": [
+      "<fait>\nMouvement : Sécuriser un avantage (vif).\nIssue : RÉUSSITE FRANCHE. Présage : non.\nCe qui a déjà eu lieu et qui est acquis : la corde est fixée au cairn nord.\n</fait>",
+      "Tu passes la corde deux fois autour de la pierre et tu tires dessus de tout ton poids. Elle tient. Ulrun lève les yeux, puis les rebaisse sur son compte. Le vent change de bord."
+    ],
+    "chronicle": {
+      "premise": "# Chronique\nLa battue d'Avarosa remonte la passe des Hurleurs avant que la tempête ne ferme le col. Ce qu'elle cherche est de l'autre côté ; ce qui la suit est derrière.",
+      "openArcs": "## Arcs ouverts\n- La tempête se lève : elle ferme le col au sixième cran, et deux crans sont déjà pris.\n- La dette d'Ulrun : il a pris des vivres au clan d'en bas et ne l'a dit à personne.",
+      "otherArcs": "## Arcs dormants\n- Le cairn nord s'est effondré l'hiver dernier ; personne n'a redressé les pierres.",
+      "characters": "## Personnages\n- Sejuani mène, et depuis la passe elle ne dort plus qu'à moitié.\n- Braum ferme la marche avec la corde.",
+      "sceneNpcs": "## PNJ en scène\n- Ulrun, assis contre le cairn nord, compte ce qui reste.",
+      "otherNpcs": "## Autres PNJ\n- Hreidar, porteur, resté à l'abri bas avec les deux traîneaux.",
+      "places": "## Lieux\n- Le Col des Hurleurs : passe étroite, deux cairns effondrés, une corniche de glace au nord.\n- L'abri bas : une avancée de roche, à une heure de marche en arrière.",
+      "sceneFacts": "## Faits liés à la scène\n- Keld est mort sur la corniche, trois jours plus tôt ; on a laissé son sac.\n- Signy est repartie vers la vallée basse sans prévenir.",
+      "otherFacts": "## Autres faits\n- Les vivres de la battue tiennent quatre jours, pas davantage.",
+      "openThreads": "## Fils ouverts\n- Qui a défait les sangles du traîneau, la nuit de la passe.",
+      "recentDigest": "## Séances récentes\n- La battue a franchi la passe, perdu un homme et gagné un jour d'avance."
+    }
+  },
+  "imposed_price_entry_id": null,
+  "vocabulary": {
+    "move_label": "Rassembler des informations",
+    "attribute_label": "vif",
+    "outcome_label": "RÉUSSITE FRANCHE",
+    "effect_sentences": [
+      "Sejuani a trouvé ce qu'elle cherchait sur la crête : une trace, et de quoi la suivre.",
+      "souffle +1."
+    ]
+  },
+  "brief": {
+    "correlationId": "a4750714-d0de-4500-a995-c865c8eb93ee",
+    "sceneId": "0G2ZWQTJV1B3NZ8RW38ADR235F",
+    "audience": {
+      "scope": "table",
+      "recipients": null
+    },
+    "perceivableFacts": [
+      {
+        "kind": "present",
+        "ref": {
+          "kind": "character",
+          "id": "chr_braum"
+        },
+        "name": "Braum",
+        "detail": "en retrait, corde en main",
+        "sinceSeq": 40
+      },
+      {
+        "kind": "present",
+        "ref": {
+          "kind": "character",
+          "id": "chr_sejuani"
+        },
+        "name": "Sejuani",
+        "detail": "debout au bord de la corniche",
+        "sinceSeq": 40
+      },
+      {
+        "kind": "present",
+        "ref": {
+          "kind": "entity",
+          "id": "ent_ulrun"
+        },
+        "name": "Ulrun",
+        "detail": "assis contre le cairn nord",
+        "sinceSeq": 40
+      },
+      {
+        "kind": "absent",
+        "ref": {
+          "kind": "entity",
+          "id": "ent_keld"
+        },
+        "name": "Keld",
+        "detail": "mort",
+        "sinceSeq": 38
+      },
+      {
+        "kind": "absent",
+        "ref": {
+          "kind": "entity",
+          "id": "ent_signy"
+        },
+        "name": "Signy",
+        "detail": "partie vers la vallée basse",
+        "sinceSeq": 38
+      }
+    ],
+    "actorCharacterId": "1HZH7T20V967AC98E0S9S9HS40",
+    "moveId": "gather-information",
+    "outcome": "franche",
+    "isPresage": false,
+    "roll": {
+      "rollId": "5NA1QS1CAXWWGERJRWE7SB7ETE",
+      "attribute": "vif",
+      "attributeValue": 3,
+      "actionDie": 5,
+      "adds": [
+        {
+          "source": "asset",
+          "value": 2
+        }
+      ],
+      "rawTotal": 10,
+      "total": 10,
+      "cappedAtTen": false,
+      "challengeDice": [3, 6],
+      "momentumNegated": false,
+      "burned": false
+    },
+    "appliedEffects": [
+      {
+        "effect": {
+          "op": "momentum",
+          "delta": 1
+        },
+        "subjectCharacterId": "1HZH7T20V967AC98E0S9S9HS40",
+        "trackId": null,
+        "eventSeq": 42
+      }
+    ],
+    "presage": null,
+    "playerInput": "Je cherche sur la crête la trace dont parle Ulrun — il dit que l'Archère de Givre est passée par là, et je veux savoir si c'est vrai avant la nuit.",
+    "eventSeqs": [41, 42, 43],
+    "fallbackTemplateId": "gather-information/franche"
+  }
+}
