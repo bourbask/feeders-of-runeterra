@@ -31,9 +31,15 @@ import type {
   ChampionContent,
   ChampionIndexEntryContent,
   ConditionContent,
+  EncounterContent,
+  FigureContent,
+  FrontContent,
+  HookContent,
   ManifestContent,
   MoveContent,
+  NodeContent,
   OracleTableContent,
+  PeriodContent,
   PresageTableContent,
   PriceTableContent,
   RegionContent,
@@ -44,9 +50,15 @@ import {
   ChampionIndexSchema,
   ChampionSchema,
   ConditionsFileSchema,
+  EncounterSchema,
+  FigureSchema,
+  FrontSchema,
+  HookSchema,
   ManifestSchema,
   MoveSchema,
+  NodeSchema,
   OracleTableSchema,
+  PeriodSchema,
   PresageTableSchema,
   PriceTableSchema,
   RegionSchema,
@@ -93,6 +105,19 @@ export interface ContentBundle {
   readonly assets: ReadonlyMap<string, AssetContent>;
   readonly conditions: ReadonlyMap<string, ConditionContent>;
   readonly truths: readonly TruthContent[];
+  /**
+   * The six scenario families of ADR 0012. EMPTY IS LEGAL: S-01 ships the
+   * vocabulary, S-03 ships the pieces, and the loader must accept a bundle
+   * that has the first without the second — held by
+   * `tests/scenario-vocabulary.test.ts` « un bundle SANS aucune pièce de
+   * scénario charge quand même ».
+   */
+  readonly periods: ReadonlyMap<string, PeriodContent>;
+  readonly fronts: ReadonlyMap<string, FrontContent>;
+  readonly nodes: ReadonlyMap<string, NodeContent>;
+  readonly figures: ReadonlyMap<string, FigureContent>;
+  readonly hooks: ReadonlyMap<string, HookContent>;
+  readonly encounters: ReadonlyMap<string, EncounterContent>;
   /** Paths found under the root that no schema validates. See the header. */
   readonly unvalidated: readonly string[];
 }
@@ -212,6 +237,17 @@ export const KNOWN_DIRECTORIES = [
   'assets',
   'truths',
   'fallbacks',
+  // ADR 0012 — the six scenario families. KNOWN, and deliberately NOT in
+  // `REQUIRED_DIRECTORIES`: S-01 delivers the schemas and S-03 the content, so
+  // between the two an absent `periods/` is a bundle that still loads. The day
+  // S-03 lands, what makes them non-optional is `expectedCounts`, which
+  // `checkCounts` demands as soon as one document of a family is present.
+  'periods',
+  'fronts',
+  'nodes',
+  'figures',
+  'hooks',
+  'encounters',
 ] as const;
 
 /** Files that MUST be there. An absent one is never a default. */
@@ -248,7 +284,25 @@ export const UNVALIDATED_PATHS = ['fallbacks/narration.json'] as const;
 
 /** The kinds `RefSchema(kind)` uses across `@for/contracts/content`. */
 export type RefKind =
-  'move' | 'champion' | 'region' | 'oracle' | 'asset' | 'condition' | 'table' | 'truth';
+  | 'move'
+  | 'champion'
+  | 'region'
+  | 'oracle'
+  | 'asset'
+  | 'condition'
+  | 'table'
+  | 'truth'
+  | 'period'
+  | 'front'
+  | 'node'
+  | 'figure'
+  | 'hook'
+  | 'encounter'
+  // A FACTION HAS NO FILE. Faction ids are declared inside `regions/*.json`,
+  // under `factions[].id`, and that set is what `ref:faction` resolves
+  // against. Without this kind, `period.absentFactionIds` would be a list of
+  // free slugs nobody checks — and the field exists precisely to be checked.
+  | 'faction';
 
 const REF_LABELS: Readonly<Record<RefKind, string>> = {
   move: 'mouvement',
@@ -259,6 +313,13 @@ const REF_LABELS: Readonly<Record<RefKind, string>> = {
   condition: 'condition',
   table: 'table',
   truth: 'vérité',
+  period: 'période',
+  front: 'front',
+  node: 'nœud',
+  figure: 'figure',
+  hook: 'ressort',
+  encounter: 'rencontre',
+  faction: 'faction',
 };
 
 /**
@@ -472,11 +533,29 @@ const schemaFor = (file: string): unknown => {
   if (file.startsWith('oracles/')) return OracleTableSchema;
   if (file.startsWith('assets/')) return AssetSchema;
   if (file.startsWith('truths/')) return TruthsFileSchema;
+  if (file.startsWith('periods/')) return PeriodSchema;
+  if (file.startsWith('fronts/')) return FrontSchema;
+  if (file.startsWith('nodes/')) return NodeSchema;
+  if (file.startsWith('figures/')) return FigureSchema;
+  if (file.startsWith('hooks/')) return HookSchema;
+  if (file.startsWith('encounters/')) return EncounterSchema;
   return undefined;
 };
 
 /** Files that carry an `id` which must equal the file name (section 4.1). */
-const HAS_FILE_NAMED_ID = new Set(['moves', 'champions', 'regions', 'oracles', 'assets']);
+const HAS_FILE_NAMED_ID = new Set([
+  'moves',
+  'champions',
+  'regions',
+  'oracles',
+  'assets',
+  'periods',
+  'fronts',
+  'nodes',
+  'figures',
+  'hooks',
+  'encounters',
+]);
 
 /**
  * The four passes. Throws `ContentError` carrying every issue found.
@@ -655,6 +734,21 @@ function indexRawIds(parsed: readonly ParsedFile[]): Readonly<Record<RefKind, re
   };
 
   const oracleIds = idsOf('oracles');
+  // Faction ids live INSIDE the region documents, so they are gathered rather
+  // than listed: emptying `regions/` empties this set, and every `ref:faction`
+  // in the bundle then fails. A hard-coded list would survive that and guard
+  // nothing.
+  const factionIds = new Set<string>();
+  for (const entry of parsed) {
+    if (directoryOf(entry.file) !== 'regions') continue;
+    const record = entry.source.value as Record<string, unknown> | null;
+    const factions = record?.['factions'];
+    if (!Array.isArray(factions)) continue;
+    for (const faction of factions) {
+      const id = (faction as Record<string, unknown> | null)?.['id'];
+      if (typeof id === 'string') factionIds.add(id);
+    }
+  }
   return {
     move: idsOf('moves'),
     // A sheet may name a champion who has no sheet: the INDEX is the table of
@@ -668,6 +762,13 @@ function indexRawIds(parsed: readonly ParsedFile[]): Readonly<Record<RefKind, re
     truth: parsed
       .filter((entry) => directoryOf(entry.file) === 'truths')
       .flatMap((entry) => listOf(entry.file, 'truths')),
+    period: idsOf('periods'),
+    front: idsOf('fronts'),
+    node: idsOf('nodes'),
+    figure: idsOf('figures'),
+    hook: idsOf('hooks'),
+    encounter: idsOf('encounters'),
+    faction: [...factionIds],
   };
 }
 
@@ -757,6 +858,12 @@ function assemble(
     assets: mapOf(pick<AssetContent>('assets')),
     conditions: mapOf(conditionsFile.conditions),
     truths: deepFreeze(pick<TruthsFileContent>('truths').flatMap((file) => file.truths)),
+    periods: mapOf(pick<PeriodContent>('periods')),
+    fronts: mapOf(pick<FrontContent>('fronts')),
+    nodes: mapOf(pick<NodeContent>('nodes')),
+    figures: mapOf(pick<FigureContent>('figures')),
+    hooks: mapOf(pick<HookContent>('hooks')),
+    encounters: mapOf(pick<EncounterContent>('encounters')),
     unvalidated: deepFreeze([...unvalidated]),
   });
 }
@@ -803,8 +910,18 @@ function checkCounts(
     tables: present.filter((file) => directoryOf(file) === 'tables').length,
     assets: bundle.assets.size,
     championIndex: bundle.championIndex.size,
+    // ADR 0012. OPTIONAL in the schema, because S-01 ships the vocabulary and
+    // S-03 the pieces; the second loop below is what stops that from becoming
+    // a family nobody counts.
+    periods: bundle.periods.size,
+    fronts: bundle.fronts.size,
+    nodes: bundle.nodes.size,
+    figures: bundle.figures.size,
+    hooks: bundle.hooks.size,
+    encounters: bundle.encounters.size,
   };
   for (const [key, expected] of Object.entries(manifest.expectedCounts)) {
+    if (expected === undefined) continue;
     const got = actual[key as keyof typeof actual];
     if (got !== expected) {
       add({
@@ -814,6 +931,29 @@ function checkCounts(
         pass: 4,
       });
     }
+  }
+
+  // A FAMILY THAT IS SHIPPED IS A FAMILY THAT IS COUNTED.
+  //
+  // The seven original counts are required by `ManifestSchema`, so this loop
+  // only ever fires on the six optional ones. Without it, S-03 could add
+  // twenty nodes, forget the manifest line, and lose nineteen of them to a
+  // truncated `COPY` without a single command turning red — which is the exact
+  // bug `expectedCounts` exists to catch (section 4.7).
+  //
+  // Walked, not pinned: emptying `actual` makes this loop check nothing, and
+  // the test « toute famille chargée est comptée » is what notices.
+  const declared = manifest.expectedCounts as Readonly<Record<string, number | undefined>>;
+  for (const [key, got] of Object.entries(actual)) {
+    if (got === 0 || declared[key] !== undefined) continue;
+    add({
+      file: 'manifest.json',
+      path: `expectedCounts.${key}`,
+      message:
+        `${String(got)} ${key} chargé(s) et aucun compte annoncé : ajoutez ` +
+        `« expectedCounts.${key} » au manifeste, sinon un fichier perdu ne se verrait pas`,
+      pass: 4,
+    });
   }
 }
 
@@ -864,6 +1004,12 @@ function checkUniqueIds(bundle: ContentBundle, add: Add): void {
   for (const id of bundle.assets.keys()) claim('atout', id);
   for (const id of bundle.conditions.keys()) claim('condition', id);
   for (const truth of bundle.truths) claim('vérité', truth.id);
+  for (const id of bundle.periods.keys()) claim('période', id);
+  for (const id of bundle.fronts.keys()) claim('front', id);
+  for (const id of bundle.nodes.keys()) claim('nœud', id);
+  for (const id of bundle.figures.keys()) claim('figure', id);
+  for (const id of bundle.hooks.keys()) claim('ressort', id);
+  for (const id of bundle.encounters.keys()) claim('rencontre', id);
 }
 
 /** `regions.parentId` forms a FOREST: no cycle, no unknown parent. */
