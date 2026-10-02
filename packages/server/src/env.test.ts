@@ -208,13 +208,18 @@ describe('la validation conditionnelle du conteur (02-mj-ia.md §0.6)', () => {
   });
 });
 
-describe('les trois variables d’appoint (P19)', () => {
+describe('les quatre variables d’appoint (P19, et #95)', () => {
   it('reçoivent leurs valeurs par défaut, jamais undefined', () => {
     const env = readEnv(baseVars({ NARRATOR_PROVIDER: 'stub' }));
 
     expect(env.NARRATOR_TOOLS).toBe('probe');
     expect(env.NARRATOR_TIMEOUT_MS).toBe(60_000);
     expect(env.NARRATOR_CONTEXT_WINDOW).toBeNull();
+    // Issue #95. Le chiffre n'est pas lu depuis `src/` : « off » est écrit
+    // ici en toutes lettres, parce que c'est une DÉCISION, pas un détail.
+    // Les jetons de raisonnement comptent dans le plafond de complétion, et
+    // un modèle laissé libre de réfléchir dépense les 800 sans rien écrire.
+    expect(env.NARRATOR_REASONING).toBe('off');
   });
 
   it('arrivent telles quelles dans le NarratorConfig que lit buildNarrator', () => {
@@ -226,6 +231,7 @@ describe('les trois variables d’appoint (P19)', () => {
     expect(config.tools).toBe('probe');
     expect(config.timeoutMs).toBe(60_000);
     expect(config.contextWindowTokens).toBeNull();
+    expect(config.reasoning).toBe('off');
     expect(Object.values(config).some((value) => value === undefined)).toBe(false);
   });
 
@@ -236,6 +242,7 @@ describe('les trois variables d’appoint (P19)', () => {
         NARRATOR_TOOLS: 'off',
         NARRATOR_TIMEOUT_MS: '900000',
         NARRATOR_CONTEXT_WINDOW: '8192',
+        NARRATOR_REASONING: 'on',
       }),
     );
 
@@ -243,6 +250,7 @@ describe('les trois variables d’appoint (P19)', () => {
       tools: 'off',
       timeoutMs: 900_000,
       contextWindowTokens: 8192,
+      reasoning: 'on',
     });
   });
 });

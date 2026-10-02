@@ -26,7 +26,11 @@
 
 import process from 'node:process';
 
-import { NARRATOR_PROVIDER_IDS, NARRATOR_TOOLS_MODES } from '@for/contracts';
+import {
+  NARRATOR_PROVIDER_IDS,
+  NARRATOR_REASONING_MODES,
+  NARRATOR_TOOLS_MODES,
+} from '@for/contracts';
 import { z } from 'zod';
 
 import type { NarratorConfig, NarratorProviderId } from '@for/contracts';
@@ -113,11 +117,18 @@ const zEnvFields = z.object({
   NARRATOR_MODEL: z.string().min(1).optional(),
   NARRATOR_MODEL_STRUCTURED: z.string().min(1).optional(),
 
-  // The three auxiliary variables (P19). THEY CARRY A DEFAULT RATHER THAN
-  // BEING OPTIONAL: `buildNarrator` reads all three unconditionally, so an
-  // `undefined` reaching it would be a silent configuration bug — which is
-  // exactly what the fiche asks this file to make impossible.
+  // The FOUR auxiliary variables (P19, plus `NARRATOR_REASONING` from issue
+  // #95). THEY CARRY A DEFAULT RATHER THAN BEING OPTIONAL: `buildNarrator`
+  // reads all four unconditionally, so an `undefined` reaching it would be a
+  // silent configuration bug — which is exactly what the fiche asks this file
+  // to make impossible.
+  //
+  // `NARRATOR_REASONING` defaults to `off` because reasoning tokens count
+  // against the completion ceiling, and `TURN_OUTPUT_TOKENS` is 800: a model
+  // left to think spends all 800 and emits nothing. Measured, see the header
+  // of `NARRATOR_REASONING_MODES`.
   NARRATOR_TOOLS: z.enum(NARRATOR_TOOLS_MODES).default('probe'),
+  NARRATOR_REASONING: z.enum(NARRATOR_REASONING_MODES).default('off'),
   NARRATOR_TIMEOUT_MS: z.coerce.number().int().positive().default(60_000),
   NARRATOR_CONTEXT_WINDOW: z.coerce.number().int().positive().nullable().default(null),
 });
@@ -214,6 +225,7 @@ export function narratorConfig(env: Env): NarratorConfig {
     model: env.NARRATOR_MODEL ?? null,
     modelStructured: env.NARRATOR_MODEL_STRUCTURED ?? null,
     tools: env.NARRATOR_TOOLS,
+    reasoning: env.NARRATOR_REASONING,
     timeoutMs: env.NARRATOR_TIMEOUT_MS,
     contextWindowTokens: env.NARRATOR_CONTEXT_WINDOW,
   };

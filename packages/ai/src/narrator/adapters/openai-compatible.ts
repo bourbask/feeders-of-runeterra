@@ -167,6 +167,28 @@ export function createOpenAiCompatibleNarrator(
    * TENU PAR tests/narrator-model-required.test.ts.
    */
   const model = requireModel(config.model, PROVIDER);
+
+  /**
+   * ISSUE #95 — ÉTEINDRE LE RAISONNEMENT, OU N'OBTENIR AUCUNE PROSE.
+   *
+   * Les jetons de raisonnement comptent dans le plafond de complétion, et
+   * `TURN_OUTPUT_TOKENS` vaut 800. Mesuré sur la vraie requête du corpus
+   * (3 322 jetons) contre `nvidia/nemotron-3-super-120b-a12b:free` :
+   * `finish: length`, 800 jetons de complétion dont 800 de raisonnement,
+   * ZÉRO caractère de prose. La même requête avec ce champ : `finish: stop`,
+   * 176 jetons, 592 caractères de prose.
+   *
+   * ET C'EST L'INVARIANT 1 : le moteur a déjà tranché quand le conteur est
+   * appelé. Faire délibérer le modèle sur une issue acquise, c'est payer le
+   * budget du tour pour une question que personne n'a posée.
+   *
+   * Un fournisseur qui ne connaît pas `reasoning` ignore le champ — c'est une
+   * extension d'OpenRouter, et le format d'OpenAI tolère les clés inconnues.
+   *
+   * TENU PAR tests/narrator-reasoning.test.ts.
+   */
+  const reasoningField =
+    config.reasoning === 'off' ? ({ reasoning: { enabled: false } } as const) : {};
   if (config.apiKey === null || config.apiKey.length === 0) {
     throw new NarratorError({
       code: 'unauthenticated',
@@ -232,6 +254,7 @@ export function createOpenAiCompatibleNarrator(
     narrer(req: NarrateRequest): AsyncIterable<NarrateEvent> {
       const body = {
         model,
+        ...reasoningField,
         stream: true,
         max_tokens: req.maxOutputTokens,
         messages: [
@@ -312,6 +335,7 @@ export function createOpenAiCompatibleNarrator(
       const startedAt = clock();
       const body = {
         model: structuredModel,
+        ...reasoningField,
         max_tokens: req.maxOutputTokens,
         messages: [
           { role: 'system', content: systemText(req.system) },

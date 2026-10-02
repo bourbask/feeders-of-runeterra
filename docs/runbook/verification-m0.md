@@ -305,6 +305,7 @@ NARRATOR_MODEL=<éditeur>/<modèle>  # l'identifiant exact du catalogue
 | --- | --- |
 | `NARRATOR_CONTEXT_WINDOW` | l'adaptateur suppose **32 000 tokens** faute de mieux, parce qu'une passerelle dit rarement sa fenêtre. Un modèle plus étroit fera tronquer trop tard ; un modèle plus large sera sous-employé |
 | `NARRATOR_TOOLS` | reste à `probe`, donc l'adaptateur annonce `tools: false` **tant que personne n'a mesuré**. Chez OpenRouter le support des outils dépend du modèle, pas de la passerelle |
+| `NARRATOR_REASONING` | **`off` par défaut, et il faut le laisser ainsi** sauf mesure contraire. Les jetons de raisonnement comptent dans le plafond de complétion, qui vaut 800 : un modèle libre de réfléchir les dépense tous et ne rend **aucune** prose (issue #95). Presque tous les modèles gratuits d'OpenRouter raisonnent par défaut |
 | `NARRATOR_MODEL_STRUCTURED` | la sortie structurée (`response_format: json_schema`, `strict: true`) n'est pas servie par tous les modèles du catalogue. Un modèle qui la tient peut être désigné ici sans changer celui de la narration |
 
 **La clé ne passe jamais par la ligne de commande.** `eval:probe` a un `--model` et un
