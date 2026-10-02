@@ -265,10 +265,23 @@ ne parlait à un modèle**. Rien ne rougissait, parce que le repli fonctionne. M
 | --- | --- | --- |
 | `stub` *(le réglage livré)* | aucune | l'adaptateur `stub` d'`@for/ai` : aucun transport, aucune clé, aucune sortie réseau |
 | `anthropic` | `NARRATOR_API_KEY` | l'adaptateur `anthropic` : flux, outils, sortie structurée, cache de préfixe |
-| `openai-compatible` | `NARRATOR_BASE_URL`, `NARRATOR_API_KEY` | l'adaptateur passerelle (OpenRouter, Groq, Together) |
-| `ollama` | `NARRATOR_BASE_URL` | l'adaptateur local ; `NARRATOR_TIMEOUT_MS` est à monter pour un modèle qui charge à froid |
+| `openai-compatible` | `NARRATOR_BASE_URL`, `NARRATOR_API_KEY`, `NARRATOR_MODEL` | l'adaptateur passerelle (OpenRouter, Groq, Together) |
+| `ollama` | `NARRATOR_BASE_URL`, `NARRATOR_MODEL` | l'adaptateur local ; `NARRATOR_TIMEOUT_MS` est à monter pour un modèle qui charge à froid |
 
 `env.ts` refuse de démarrer si la variable exigée manque — le défaut silencieux n'existe pas.
+
+**`NARRATOR_MODEL` n'est exigé que des deux du bas, et ce n'est pas un oubli** (issue #89).
+`anthropic` a un défaut nommé, `ANTHROPIC_DEFAULT_MODEL` ; les deux autres n'en ont pas, et ne
+peuvent pas en avoir : l'un sert ce que son hôte a téléchargé, l'autre ce que sa passerelle
+expose. Inventer un nom pour eux échangerait un modèle vide contre un modèle faux — le même 400,
+un pas plus loin de la cause.
+
+Mesuré avant le correctif : le corps partait avec `"model":""`, le fournisseur répondait 400, et
+le tour retombait sur la prose de repli du moteur. **Rien ne rougissait, parce que le repli
+fonctionne** — c'est le même aveuglement que celui du sélecteur ci-dessus, trouvé de la même
+façon, en lisant le corps de la requête plutôt qu'en vérifiant qu'elle partait.
+
+`NARRATOR_MODEL_STRUCTURED` reste facultatif partout : vide, il retombe sur `NARRATOR_MODEL`.
 Le réglage que `.env.example` et `infra/docker-compose.dev.yml` livrent est `stub`, clé vide :
 le dépôt est public, et un serveur qui tenterait un appel réseau à l'amorçage ne serait pas
 acceptable.
@@ -276,3 +289,8 @@ acceptable.
 **Tenu par** `packages/server/tests/game/narrator-wiring.test.ts`, qui lit le port que le
 processus a réellement composé (décorateur `app.narrator`) pour chacune des quatre
 configurations. Retirer `selectNarrator` de `game/index.ts` fait tomber sept de ses neuf tests.
+
+**Et pour le modèle**, `packages/ai/tests/narrator-model-required.test.ts` : les deux adaptateurs
+refusent **à la construction**, sans ouvrir de socket, et `packages/server/src/env.test.ts`
+refuse la configuration en nommant la variable. Remettre `config.model ?? ''` fait tomber huit
+des dix-sept tests du premier ; retirer la clause d'`env.ts` en fait tomber deux du second.

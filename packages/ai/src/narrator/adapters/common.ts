@@ -14,6 +14,10 @@
  * deployment in the middle of a generation loses what was never handed over.
  */
 
+import { NarratorError } from '@for/contracts';
+
+import { wrapUnknown } from '../http.js';
+
 import type {
   NarrateEvent,
   NarrateFinish,
@@ -23,7 +27,39 @@ import type {
   NarratorUsage,
 } from '@for/contracts';
 
-import { wrapUnknown } from '../http.js';
+/**
+ * The model name an adapter is about to put on the wire, or a refusal.
+ *
+ * `ollama` and `openai-compatible` HAVE NO SENSIBLE DEFAULT MODEL, unlike
+ * `anthropic`: one serves whatever the host happens to have pulled, the other
+ * whatever its gateway exposes. Inventing a name for either would trade an
+ * empty `model` for a wrong one — the same 400, one step further from the
+ * cause.
+ *
+ * Before this guard the two sent `config.model ?? ''`, and a real provider
+ * answered 400 while the turn fell back to the engine's deterministic prose.
+ * The fallback worked so well that nothing went red; issue #89 was found by
+ * reading the BODY of the request, not by checking that one was sent.
+ *
+ * `packages/server/src/env.ts` refuses to boot these two providers without
+ * `NARRATOR_MODEL`, so the server can never reach here. `@for/ai` is called
+ * outside the server too — the eval harness builds its own `NarratorConfig` —
+ * which is what keeps this reachable rather than decorative.
+ *
+ * HELD BY tests/narrator-model-required.test.ts « n'envoie aucune requête
+ * quand le modèle manque ».
+ */
+export function requireModel(
+  model: string | null | undefined,
+  providerId: NarratorProviderId,
+): string {
+  if (model !== undefined && model !== null && model.trim() !== '') return model;
+  throw new NarratorError({
+    code: 'model_not_found',
+    providerId,
+    message: `NARRATOR_MODEL est obligatoire pour « ${providerId} » : cet adaptateur n'a pas de modèle par défaut`,
+  });
+}
 
 export const ZERO_USAGE: NarratorUsage = Object.freeze({
   inputTokens: 0,

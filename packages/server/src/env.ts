@@ -59,6 +59,24 @@ export const PROVIDERS_REQUIRING_API_KEY: readonly NarratorProviderId[] = [
   'openai-compatible',
 ];
 
+/**
+ * The two adapters that have NO DEFAULT MODEL OF THEIR OWN.
+ *
+ * `anthropic` ships `ANTHROPIC_DEFAULT_MODEL`; these two cannot, because one
+ * serves whatever the host pulled locally and the other whatever its gateway
+ * exposes. Until this row existed, `.env.example` said "vide => défaut de
+ * l'adaptateur" and that was true for one provider out of three: the other two
+ * put `model: ""` on the wire and collected a 400 (issue #89).
+ *
+ * Refusing at boot rather than at the first turn is the same choice section
+ * 0.6 makes for `NARRATOR_BASE_URL`: a table that starts is a table whose
+ * storyteller answers.
+ */
+export const PROVIDERS_REQUIRING_MODEL: readonly NarratorProviderId[] = [
+  'openai-compatible',
+  'ollama',
+];
+
 /** `''` and `'   '` mean "not set", everywhere. See the header. */
 function blankToUndefined(source: Record<string, string | undefined>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
@@ -128,6 +146,15 @@ export const zEnv = zEnvFields.superRefine((env, ctx) => {
         code: 'custom',
         path: ['NARRATOR_API_KEY'],
         message: `NARRATOR_API_KEY est obligatoire quand NARRATOR_PROVIDER vaut « ${env.NARRATOR_PROVIDER} »`,
+      });
+    }
+  }
+  if (PROVIDERS_REQUIRING_MODEL.includes(env.NARRATOR_PROVIDER)) {
+    if (env.NARRATOR_MODEL === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['NARRATOR_MODEL'],
+        message: `NARRATOR_MODEL est obligatoire quand NARRATOR_PROVIDER vaut « ${env.NARRATOR_PROVIDER} » : cet adaptateur n'a pas de modèle par défaut`,
       });
     }
   }
