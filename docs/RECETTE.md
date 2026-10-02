@@ -4,7 +4,7 @@ Ce que **tout développeur exécute sur son propre travail** avant d'ouvrir sa P
 testeur refait ensuite sans le croire sur parole.
 
 Elle existe parce que les recalages se ressemblent tous : sur trois vagues, la moitié des retours
-portaient sur l'un des sept modes ci-dessous, jamais sur la conception. Vingt minutes ici
+portaient sur l'un des neuf modes ci-dessous, jamais sur la conception. Vingt minutes ici
 suppriment un cycle entier.
 
 > **La règle qui gouverne tout le reste.** Un garde-fou se prouve **en le cassant, dans les deux
@@ -20,7 +20,7 @@ suppriment un cycle entier.
 | `tsc -b --force` après toute sonde qui touche `@for/engine` | idem, en pire : le garde-fou semble mordre alors qu'il ne mord pas |
 | `--force` sur chaque tâche turbo | sans lui, turbo rejoue les journaux d'un **autre** worktree |
 
-## 2. Les sept modes, et la sonde qui les attrape
+## 2. Les neuf modes, et la sonde qui les attrape
 
 | # | Le mode | La sonde |
 |---|---|---|
@@ -32,8 +32,9 @@ suppriment un cycle entier.
 | 6 | une liste qui est sa propre source de boucle | **la vider**. Si rien ne tombe, elle ne garde rien |
 | 7 | une fixture déjà triée, ou à un seul élément, là où le critère parle d'ordre | fournir au moins **deux** entrées, dans un ordre **non naturel**, et asserter le **tableau exact** |
 | 8 | un **double de test plus laxiste que l'interface** qu'il remplace | comparer la signature du faux à celle du vrai : TypeScript accepte une fonction qui prend **moins** de paramètres, donc un argument que le faux ignore devient invisible aux tests |
+| 9 | une **interdiction satisfaite par le vide** : « pas de chiffre », « pas de champion réservé » sont vraies d'une chaîne vide | noter une **entrée vide** et exiger « sans objet », jamais « réussie ». Mesuré : deux modèles ont rendu douze proses vides sur douze, et le rapport affichait **treize règles dures sur seize à 100 %** (#94) |
 
-## 3. Les six questions à se poser sur chaque assertion écrite
+## 3. Les sept questions à se poser sur chaque assertion écrite
 
 1. D'où vient **chaque** opérande ? S'ils remontent à la même définition, l'assertion est vide.
 2. Ce chiffre vient d'un **critère d'acceptation** ? Il s'écrit en toutes lettres. Du **moteur** ?

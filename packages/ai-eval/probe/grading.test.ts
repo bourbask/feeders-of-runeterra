@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { loadProbeCases } from './cases.js';
 import {
+  NO_PROSE_DETAIL,
   PREMISES,
   contextFor,
   gradeSample,
@@ -147,5 +148,84 @@ describe('la notation de la sonde', () => {
       no_reserved_champion: () => false,
     });
     expect(stateOf(grades, 'no_reserved_champion')).toBe('failed');
+  });
+
+  /**
+   * ISSUE #94 — CE QUI EST MESURÉ EST L'INVERSE DE CE QU'ON ESPÈRE.
+   *
+   * Deux modèles gratuits d'OpenRouter ont rendu douze proses vides sur douze,
+   * et le rapport affichait TREIZE RÈGLES DURES SUR SEIZE À 100 %. Une chaîne
+   * vide ne contient aucun chiffre et ne nomme aucun champion réservé : les
+   * treize étaient vraies et ne voulaient rien dire.
+   */
+  describe('une prose vide (issue #94)', () => {
+    it.each(['', '   ', '\n\t '])('ne fait réussir AUCUNE règle — %j', (vide) => {
+      const reading: Reading = readAnswer(vide, withPrice);
+      const grades = gradeSample(withPrice, reading, HARD_ASSERTIONS, PREMISES);
+
+      expect(grades).toHaveLength(HARD_ASSERTIONS.length);
+      expect(grades.filter((grade) => grade.state === 'passed')).toEqual([]);
+    });
+
+    it('rend « sans objet » les treize interdictions que le vide satisfaisait', () => {
+      const grades = gradeSample(withPrice, readAnswer('', withPrice), HARD_ASSERTIONS, PREMISES);
+
+      // Les noms sont écrits, pas dérivés : une règle qui disparaîtrait de
+      // `HARD_ASSERTIONS` doit faire rougir ce cas, pas le rendre plus court.
+      for (const id of [
+        'no_digits',
+        'no_rules_lexicon',
+        'no_outcome_decision',
+        'no_reserved_champion',
+        'no_pc_agency',
+        'no_terminal_prompt',
+        'no_time_skip',
+        'banned_style_lexicon',
+        'no_named_emotion',
+        'sentence_length_cap',
+        'max_one_dialogue_line',
+        'no_atmosphere_ending',
+        'no_absent_reappearance',
+      ]) {
+        expect(stateOf(grades, id)).toBe('not_applicable');
+      }
+    });
+
+    it('dit POURQUOI, quand la règle elle-même n’a rien à dire', () => {
+      const grades = gradeSample(withPrice, readAnswer('', withPrice), HARD_ASSERTIONS, PREMISES);
+
+      expect(grades.find((grade) => grade.id === 'no_digits')?.detail).toBe(NO_PROSE_DETAIL);
+    });
+
+    it('price_respected n’y est pas : c’est une EXIGENCE, pas une interdiction', () => {
+      // Une interdiction est satisfaite par le vide ; une exigence ne l'est
+      // jamais. Celle-ci demande un mot-clé de l'entrée DANS la prose, donc
+      // elle tombe sur du vide — et c'est la bonne réponse.
+      const grades = gradeSample(withPrice, readAnswer('', withPrice), HARD_ASSERTIONS, PREMISES);
+
+      expect(stateOf(grades, 'price_respected')).toBe('failed');
+    });
+
+    it('mais un ÉCHEC sur du vide reste un échec — sentence_count tombe', () => {
+      // Zéro phrase n'est pas « sans objet » : la règle a regardé, et elle a
+      // quelque chose à dire. C'était la seule ligne honnête du rapport.
+      const grades = gradeSample(withPrice, readAnswer('', withPrice), HARD_ASSERTIONS, PREMISES);
+
+      expect(stateOf(grades, 'sentence_count')).toBe('failed');
+      expect(grades.find((grade) => grade.id === 'sentence_count')?.detail).toContain('0 phrases');
+    });
+
+    it('et une vraie prose est notée comme avant — le garde ne mord que le vide', () => {
+      const grades = gradeSample(
+        withPrice,
+        readAnswer(`${GOOD_PROSE} Le froid te mord encore.`, withPrice),
+        HARD_ASSERTIONS,
+        PREMISES,
+      );
+
+      expect(stateOf(grades, 'no_digits')).toBe('passed');
+      expect(stateOf(grades, 'price_respected')).toBe('passed');
+      expect(grades.some((grade) => grade.state === 'passed')).toBe(true);
+    });
   });
 });
