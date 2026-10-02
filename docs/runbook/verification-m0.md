@@ -282,6 +282,48 @@ fonctionne** — c'est le même aveuglement que celui du sélecteur ci-dessus, t
 façon, en lisant le corps de la requête plutôt qu'en vérifiant qu'elle partait.
 
 `NARRATOR_MODEL_STRUCTURED` reste facultatif partout : vide, il retombe sur `NARRATOR_MODEL`.
+
+### Brancher OpenRouter
+
+OpenRouter agrège plusieurs fournisseurs derrière une seule clé, et parle le format d'OpenAI.
+**C'est l'adaptateur `openai-compatible` tel quel : il n'y a pas de fournisseur à ajouter.**
+`openai-compatible.ts` poste sur `{NARRATOR_BASE_URL}/chat/completions` avec un en-tête
+`Authorization: Bearer`, ce qui est exactement l'API d'OpenRouter. Les en-têtes `HTTP-Referer`
+et `X-Title` qu'OpenRouter accepte sont facultatifs : ils servent au classement des applications
+sur sa place de marché, pas à l'appel.
+
+```
+NARRATOR_PROVIDER=openai-compatible
+NARRATOR_BASE_URL=https://openrouter.ai/api/v1
+NARRATOR_API_KEY=<la clé>          # dans .env, qui est ignoré par git
+NARRATOR_MODEL=<éditeur>/<modèle>  # l'identifiant exact du catalogue
+```
+
+**Trois réglages qui comptent, et qu'aucun défaut ne devinera :**
+
+| Réglage | Pourquoi |
+| --- | --- |
+| `NARRATOR_CONTEXT_WINDOW` | l'adaptateur suppose **32 000 tokens** faute de mieux, parce qu'une passerelle dit rarement sa fenêtre. Un modèle plus étroit fera tronquer trop tard ; un modèle plus large sera sous-employé |
+| `NARRATOR_TOOLS` | reste à `probe`, donc l'adaptateur annonce `tools: false` **tant que personne n'a mesuré**. Chez OpenRouter le support des outils dépend du modèle, pas de la passerelle |
+| `NARRATOR_MODEL_STRUCTURED` | la sortie structurée (`response_format: json_schema`, `strict: true`) n'est pas servie par tous les modèles du catalogue. Un modèle qui la tient peut être désigné ici sans changer celui de la narration |
+
+**La clé ne passe jamais par la ligne de commande.** `eval:probe` a un `--model` et un
+`--base-url`, et délibérément pas de `--api-key` : un secret dans `argv` finit dans l'historique
+du shell, dans `ps` et dans tout journal de CI qui réaffiche sa commande. Ce dépôt est public.
+
+**Mesurer avant de choisir** — c'est exactement ce pour quoi M0-31 a construit la sonde. Les
+drapeaux `--provider`, `--model` et `--base-url` s'apparient **par position**, donc plusieurs
+modèles se comparent sur le même corpus en une commande :
+
+```
+pnpm eval:probe \
+  --provider=openai-compatible --model=<modèle A> --base-url=https://openrouter.ai/api/v1 \
+  --provider=openai-compatible --model=<modèle B> --base-url=https://openrouter.ai/api/v1
+```
+
+Le verdict s'écrit dans `docs/runbook/conteur-fournisseurs.md`. Sortie 0 que la mesure soit
+favorable ou non : **une mesure est une information, pas une porte**, et aucune CI n'appelle
+cette commande.
 Le réglage que `.env.example` et `infra/docker-compose.dev.yml` livrent est `stub`, clé vide :
 le dépôt est public, et un serveur qui tenterait un appel réseau à l'amorçage ne serait pas
 acceptable.
