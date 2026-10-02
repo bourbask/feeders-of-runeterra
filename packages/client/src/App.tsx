@@ -2,9 +2,11 @@ import { useQuery } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import type { CampaignId } from '@for/engine';
+
 import type { HttpDeps } from './api/http.js';
 import { HttpError } from './api/http.js';
-import { meQuery } from './api/queries.js';
+import { campaignLogQuery, meQuery } from './api/queries.js';
 import { clientEnv, websocketUrl } from './env.js';
 import { CampaignList } from './routes/CampaignList.js';
 import { CharacterPicker } from './routes/CharacterPicker.js';
@@ -38,7 +40,7 @@ function useHash(): string {
  * connection and dropped with it: a store that outlived a table would show one
  * table's journal under another table's name.
  */
-function TableScreen(props: { readonly campaignId: string }): ReactNode {
+function TableScreen(props: { readonly campaignId: string; readonly http: HttpDeps }): ReactNode {
   const transport = useRef<SocketHandle | null>(null);
 
   const store = useMemo(
@@ -77,6 +79,22 @@ function TableScreen(props: { readonly campaignId: string }): ReactNode {
     };
   }, [props.campaignId, store]);
 
+  /**
+   * LE PASSÉ VIENT D'HTTP, LE DIRECT DE LA SOCKET.
+   *
+   * `s2c.snapshot` place le curseur de reprise sur la tête du journal : une
+   * première connexion n'a donc aucun trou à signaler, ne demande rien, et
+   * laisserait le fil vide sur une table qui a déjà deux cents entrées. La
+   * route existait et personne ne l'appelait.
+   */
+  const log = useQuery(campaignLogQuery(props.http, props.campaignId as CampaignId));
+  const entries = log.data?.entries;
+
+  useEffect(() => {
+    if (entries === undefined) return;
+    store.getState().backfill(entries);
+  }, [entries, store]);
+
   return (
     <TableStoreProvider store={store}>
       <TableRoom />
@@ -103,7 +121,7 @@ export function App(props: { readonly http: HttpDeps }): ReactNode {
 
   switch (route.nom) {
     case 'table':
-      return <TableScreen campaignId={route.campaignId} />;
+      return <TableScreen campaignId={route.campaignId} http={props.http} />;
     case 'personnage':
       return <CharacterPicker campaignId={route.campaignId} personnages={me.data.characters} />;
     case 'campagnes':
