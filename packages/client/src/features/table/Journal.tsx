@@ -33,10 +33,11 @@ export function Journal(): ReactNode {
   // tableau neuf a chaque appel, et `useSyncExternalStore` refuse un instantane
   // qui change d'identite a chaque rendu.
   const lines = useTable((state) => state.lines);
+  const history = useTable((state) => state.history);
   const revocations = useTable((state) => state.revocations);
   const lignes = useMemo(
-    () => journalLines({ lines, revocations }).filter(isReadable),
-    [lines, revocations],
+    () => journalLines({ lines, history, revocations }).filter(isReadable),
+    [lines, history, revocations],
   );
 
   if (lignes.length === 0) {
@@ -47,7 +48,7 @@ export function Journal(): ReactNode {
     <ol className="fr-journal">
       {lignes.map((ligne) => (
         <li
-          key={ligne.deliverySeq}
+          key={`${String(ligne.seq)}:${String(ligne.deliverySeq)}`}
           className={`fr-journal__ligne fr-journal__ligne--${ligne.kind}${
             ligne.revoked === null ? '' : ' fr-journal__ligne--annulee'
           }`}

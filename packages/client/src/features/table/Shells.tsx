@@ -20,7 +20,7 @@ export function Sheet(): ReactNode {
       <EmptyState>
         {personnages === 0
           ? 'Aucun personnage à cette table pour l’instant.'
-          : `${String(personnages)} personnage(s) à la table. La fiche arrive avec M0-21.`}
+          : `${String(personnages)} personnage(s) à la table. La fiche n’est pas dans M0.`}
       </EmptyState>
     </Panel>
   );
@@ -41,7 +41,7 @@ export function MoveBar(): ReactNode {
     <Panel titre="Mouvements">
       <EmptyState>
         Le client n’envoie que des intentions : la barre de mouvements arrive avec le pipeline
-        d’intentions (M0-21).
+        d’intentions n’est pas câblé côté client en M0.
       </EmptyState>
     </Panel>
   );

@@ -89,6 +89,20 @@ export interface TableState {
   /** This player's dense delivery head (ADR 0010). THE resume cursor. */
   readonly lastDeliverySeq: number;
   readonly lines: readonly JournalLine[];
+  /**
+   * WHAT HAPPENED BEFORE THIS SOCKET OPENED, read over HTTP.
+   *
+   * It is NOT the live feed and it is NOT reset by a snapshot: a snapshot
+   * replaces the server's PROJECTION, and the past is not a projection. The
+   * socket can never supply it — `s2c.snapshot` sets the resume cursor to the
+   * head, so a first connection has no gap, asks for nothing, and would show an
+   * empty feed on a campaign with two hundred entries.
+   *
+   * ORDERED BY `seq`, NOT `deliverySeq`: the HTTP log has no delivery numbering.
+   * It is read-only; revocation still applies at read time, in `journalLines()`,
+   * exactly as it does for the live lines.
+   */
+  readonly history: readonly JournalLine[];
   /** `seq -> mark`. Applied at read time by `journalLines()`. */
   readonly revocations: Readonly<Record<number, RevokedMark>>;
   readonly presence: readonly PresenceMember[];
@@ -110,6 +124,10 @@ export interface TableState {
   readonly hello: () => void;
   readonly toggleProof: (correlationId: string) => void;
   readonly requestResume: () => void;
+  /** Hands the HTTP journal page to the store. Replaces, never appends. */
+  readonly backfill: (
+    entries: readonly { readonly seq: number; readonly event: GameEvent }[],
+  ) => void;
 }
 
 export interface TableStoreDeps {
@@ -120,9 +138,23 @@ export interface TableStoreDeps {
   readonly clientVersion: string;
 }
 
+/**
+ * What `s2c.snapshot` wipes. `history` IS DELIBERATELY ABSENT: property 2 says
+ * a snapshot replaces the server's projection, and the past is not part of it.
+ * Clearing it would blank the feed on every reconnection until a second HTTP
+ * read came back.
+ */
 const EMPTY: Omit<
   TableState,
-  'receive' | 'setStatus' | 'hello' | 'toggleProof' | 'requestResume' | 'status' | 'welcome'
+  | 'receive'
+  | 'setStatus'
+  | 'hello'
+  | 'toggleProof'
+  | 'requestResume'
+  | 'backfill'
+  | 'history'
+  | 'status'
+  | 'welcome'
 > = {
   table: null,
   lastSeq: 0,
@@ -144,8 +176,17 @@ const EMPTY: Omit<
  * field: a line struck by a `system.reverted` that arrived before it still
  * comes out struck, and nothing is ever removed from `lines` to make it so.
  */
-export function journalLines(state: Pick<TableState, 'lines' | 'revocations'>): JournalLine[] {
-  return state.lines.map((line) => {
+export function journalLines(
+  state: Pick<TableState, 'lines' | 'revocations'> & Partial<Pick<TableState, 'history'>>,
+): JournalLine[] {
+  // DÉDOUBLONNÉ PAR `seq`, ET LE DIRECT GAGNE. Une entrée peut arriver par les
+  // deux chemins : la page HTTP est lue au moment où la socket s'ouvre, donc un
+  // événement émis entre les deux est dans les deux. Celle du direct porte son
+  // `deliverySeq`, l'autre non — garder celle du direct est ce qui permet à la
+  // reprise de continuer à se repérer.
+  const live = new Set(state.lines.map((line) => line.seq));
+  const past = (state.history ?? []).filter((line) => !live.has(line.seq));
+  return [...past, ...state.lines].map((line) => {
     const mark = state.revocations[line.seq];
     return mark === undefined ? line : { ...line, revoked: mark };
   });
@@ -153,10 +194,10 @@ export function journalLines(state: Pick<TableState, 'lines' | 'revocations'>): 
 
 /** Whether a turn is struck. Used by « Pourquoi ? », which survives the strike. */
 export function turnRevocation(
-  state: Pick<TableState, 'lines' | 'revocations'>,
+  state: Pick<TableState, 'lines' | 'revocations'> & Partial<Pick<TableState, 'history'>>,
   correlationId: string,
 ): RevokedMark | null {
-  for (const line of state.lines) {
+  for (const line of [...(state.history ?? []), ...state.lines]) {
     if (line.correlationId !== correlationId) continue;
     const mark = state.revocations[line.seq];
     if (mark !== undefined) return mark;
@@ -377,6 +418,7 @@ export function createTableStore(deps: TableStoreDeps): StoreApi<TableState> {
     return {
       status: 'idle',
       welcome: null,
+      history: [],
       ...EMPTY,
 
       receive: (raw: unknown): void => {
@@ -406,6 +448,14 @@ export function createTableStore(deps: TableStoreDeps): StoreApi<TableState> {
       },
 
       requestResume,
+
+      backfill: (entries): void => {
+        // `deliverySeq` vaut zéro : la page HTTP n'en porte pas, et aucune de
+        // ces lignes ne sert de repère de reprise — `journalLines` les range
+        // par position dans le tableau, trié ici par `seq`.
+        const ordered = [...entries].sort((a, b) => a.seq - b.seq);
+        set({ history: ordered.map((entry) => lineOfEvent(entry.event, 0)) });
+      },
 
       /**
        * Opens or closes « Pourquoi ? ». EXACTLY ONE `c2s.why` per opening, and

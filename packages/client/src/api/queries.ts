@@ -58,6 +58,19 @@ export const campaignsQuery = (deps: HttpDeps) => ({
   queryFn: async () => fetchCampaigns(deps),
 });
 
+/**
+ * One page of a table's journal, read when the table screen opens.
+ *
+ * THE SOCKET CANNOT SUPPLY THIS. `s2c.snapshot` sets the resume cursor to the
+ * head, so a first connection has no gap to report and asks for nothing: the
+ * feed would stay empty on a campaign that already has two hundred entries.
+ * The live feed and the past come from two different places on purpose.
+ */
+export const campaignLogQuery = (deps: HttpDeps, id: CampaignId) => ({
+  queryKey: queryKeys.campaignLog(id, 0),
+  queryFn: async () => fetchCampaignLog(deps, id, 0),
+});
+
 export const campaignQuery = (deps: HttpDeps, id: CampaignId) => ({
   queryKey: queryKeys.campaign(id),
   queryFn: async () => fetchCampaign(deps, id),
