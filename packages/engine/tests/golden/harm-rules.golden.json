@@ -1,0 +1,31 @@
+{
+  "format": "amount in=<what the intent carried> -> harm=<points a gauge loses> | turn   in=<same> -> vigueur=<from>-><to> d=<delta> clamped=<y/n> | <no harm>",
+  "rows": [
+    "amount in=absent -> harm=+01",
+    "amount in=nan    -> harm=+01",
+    "amount in=+inf   -> harm=+01",
+    "amount in=-inf   -> harm=+01",
+    "amount in=-003.0 -> harm=+00",
+    "amount in=-001.0 -> harm=+00",
+    "amount in=-000.5 -> harm=+00",
+    "amount in=+000.0 -> harm=+00",
+    "amount in=+000.4 -> harm=+00",
+    "amount in=+001.0 -> harm=+01",
+    "amount in=+001.5 -> harm=+01",
+    "amount in=+002.0 -> harm=+02",
+    "amount in=+007.0 -> harm=+07",
+    "turn   in=absent -> vigueur=+05->+04 d=-01 clamped=n",
+    "turn   in=nan    -> vigueur=+05->+04 d=-01 clamped=n",
+    "turn   in=+inf   -> vigueur=+05->+04 d=-01 clamped=n",
+    "turn   in=-inf   -> vigueur=+05->+04 d=-01 clamped=n",
+    "turn   in=-003.0 -> aucun degat",
+    "turn   in=-001.0 -> aucun degat",
+    "turn   in=-000.5 -> aucun degat",
+    "turn   in=+000.0 -> aucun degat",
+    "turn   in=+000.4 -> aucun degat",
+    "turn   in=+001.0 -> vigueur=+05->+04 d=-01 clamped=n",
+    "turn   in=+001.5 -> vigueur=+05->+04 d=-01 clamped=n",
+    "turn   in=+002.0 -> vigueur=+05->+03 d=-02 clamped=n",
+    "turn   in=+007.0 -> vigueur=+05->+00 d=-07 clamped=y"
+  ]
+}
