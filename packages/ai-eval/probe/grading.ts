@@ -150,6 +150,9 @@ export function missingPremises(
 
 // -------------------------------------------------------------- the scoring
 
+/** Why a rule was vacuous when the model wrote nothing. See `gradeSample`. */
+export const NO_PROSE_DETAIL = 'aucune prose à juger';
+
 /**
  * Score one answer: one `SampleGrade` per hard rule, in declaration order.
  *
@@ -157,6 +160,24 @@ export function missingPremises(
  * cheapest explanation of WHY it was vacuous — and the verdict is then
  * downgraded to `not_applicable`. A rule that FAILS is never downgraded: a
  * failure means it had something to say, whatever the table thinks.
+ *
+ * ── NO PROSE, NO VERDICT (issue #94) ────────────────────────────────────────
+ * The premise above the table: there has to be something to read. A prohibition
+ * is satisfied by an EMPTY STRING — no digit, no reserved champion, no settled
+ * outcome — and counting those as passes made a model that wrote nothing score
+ * better than any model that wrote something.
+ *
+ * Measured: two free OpenRouter models answered twelve samples out of twelve
+ * with empty prose, and the report showed THIRTEEN OF THE SIXTEEN HARD RULES
+ * AT 100 %. The two honest lines were `sentence_count` (0 %, « 0 phrases ») and
+ * `price_respected` (0 %). Both models were fixed by #95; the reading was wrong
+ * either way.
+ *
+ * It lives here rather than as a row of `PREMISES` because it is not one: that
+ * table answers « which context makes THIS rule vacuous », one rule at a time,
+ * from the context alone. This one holds for every rule and comes from the
+ * answer. A failure still stands — `sentence_count` fails on an empty answer,
+ * and it is right to.
  */
 export function gradeSample(
   probeCase: ProbeCase,
@@ -165,10 +186,15 @@ export function gradeSample(
   premises: Readonly<Record<string, (ctx: AssertionContext) => boolean>> = PREMISES,
 ): readonly SampleGrade[] {
   const ctx = contextFor(probeCase, reading);
+  const hasProse = reading.prose.trim().length > 0;
   return rules.map((rule) => {
     const result: AssertionResult = rule.run(reading.prose, ctx);
-    const applicable = premises[rule.id]?.(ctx) ?? true;
+    const applicable = hasProse && (premises[rule.id]?.(ctx) ?? true);
     const state: GradeState = result.passed ? (applicable ? 'passed' : 'not_applicable') : 'failed';
-    return { id: rule.id, state, detail: result.detail };
+    const detail =
+      state === 'not_applicable' && !hasProse && result.detail.length === 0
+        ? NO_PROSE_DETAIL
+        : result.detail;
+    return { id: rule.id, state, detail };
   });
 }
