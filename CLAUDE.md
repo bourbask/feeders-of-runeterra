@@ -56,7 +56,7 @@ pnpm check:workspace # cohérence des package.json et de la liste contractuelle 
 pnpm db:reset        # base locale remise à zéro puis réamorcée
 pnpm sim run <scénario>
 bash scripts/smoke-m0.sh      # installation -> socket -> « Pourquoi ? » -> arrêt
-bash scripts/canary-regle.sh  # le canari : une constante de règle fait rougir trois suites
+bash scripts/canary-regle.sh  # le canari : sur SA constante, trois suites rougissent
 ```
 
 **`pnpm typecheck` ne regarde pas les fichiers de test.** Ce sont deux tâches turbo distinctes, et

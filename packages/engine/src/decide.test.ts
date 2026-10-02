@@ -852,6 +852,69 @@ describe('the eleven moves', () => {
     expect(typesOf(result.value.events)).toContain('clock.filled');
   });
 
+  /**
+   * THE TWO ADVANCE BOUNDS, CLAMPED — issue #99.
+   *
+   * Before this test `CLOCK_ADVANCE_MIN` and `CLOCK_ADVANCE_MAX` had NO unit
+   * test in the engine at all: the only net was the golden corpus added by
+   * #98, plus the copy check in `@for/contracts`. A constant with one net is
+   * a constant whose net nobody notices going slack.
+   *
+   * THE ASKS AND THE EXPECTED SEGMENTS ARE WRITTEN IN FULL LETTERS, never read
+   * from the constants this test exists to pin — a number compared to itself
+   * passes whatever the engine does (ADR 0007).
+   */
+  it.each([
+    { ask: -7, delta: 1, why: 'bien sous le plancher' },
+    { ask: 0, delta: 1, why: 'le plancher est un, pas zéro' },
+    { ask: 1, delta: 1, why: 'le plancher lui-même' },
+    { ask: 2, delta: 2, why: 'entre les deux bornes' },
+    { ask: 3, delta: 3, why: 'le plafond lui-même' },
+    { ask: 4, delta: 3, why: 'juste au-dessus du plafond' },
+    { ask: 11, delta: 3, why: 'bien au-dessus' },
+  ])('borne une avance de $ask segment(s) à $delta — $why', ({ ask, delta }) => {
+    const base = aContent();
+    const content = aContent({
+      moves: {
+        ...base.moves,
+        'secure-advantage': {
+          ...base.moves['secure-advantage']!,
+          outcomes: {
+            ...base.moves['secure-advantage']!.outcomes,
+            echec: { effects: [{ op: 'clock_advance', segments: ask }] },
+          },
+        },
+      },
+    });
+    const clock = {
+      id: CLOCK,
+      title: 'La tempete',
+      description: '',
+      segments: 10 as const,
+      filled: 0,
+      status: 'ticking' as const,
+      visibility: 'public' as const,
+      consequence: 'le col se ferme',
+      createdSeq: 1,
+      updatedSeq: 1,
+    };
+
+    const result = decide(
+      aPlayableState({ clocks: [clock] }),
+      { type: 'move.secure_advantage', attribute: 'vif', description: '' },
+      aCtx(MISS, {}, { content }),
+    );
+
+    if (isErr(result)) throw new Error(result.error.code);
+    const advanced = result.value.events.find((event) => event.type === 'clock.advanced');
+    if (advanced?.type !== 'clock.advanced') throw new Error('aucune avance');
+    expect(advanced.payload.delta).toBe(delta);
+    // L'horloge part de zéro, donc le point d'arrivée redit la borne par un
+    // autre chemin : le journal, et non le calcul.
+    expect(advanced.payload.from).toBe(0);
+    expect(advanced.payload.to).toBe(delta);
+  });
+
   it('writes nothing when a clock is already full or none is ticking', () => {
     const full = {
       id: CLOCK,

@@ -125,12 +125,30 @@ vraie partout. Mesuré (`pnpm test:golden` seul, après `tsc -b packages/engine 
 | `momentum-rules` | `DEFAULT_MOMENTUM_BOUNDS` |
 | `progress-rolls` | `TICKS_PER_MILESTONE`, `TICKS_PER_BOX`, `MAX_PROGRESS_BOXES` |
 | `gauge-rules` *(M0-30)* | `GAUGE_MIN`, `GAUGE_MAX` |
+| `price-rules` *(#98)* | `PRICE_DIE` |
+| `harm-rules` *(#98)* | `DEFAULT_HARM` |
+| `clock-rules` *(#98)* | `CLOCK_SEGMENT_COUNTS`, `CLOCK_ADVANCE_MIN`, `CLOCK_ADVANCE_MAX` |
+| `oracle-rules` *(#98)* | `LIKELIHOOD_THRESHOLDS` |
+| `scene-rules` *(#98)* | `SCENE_PRESENCE_MAX`, `BRIEF_PERCEIVABLE_FACTS_MAX` |
+| `attribute-rules` *(#98)* | `ATTRIBUTE_MIN`, `ATTRIBUTE_MAX`, `ATTRIBUTE_SPREAD` |
 
-**Aucun corpus** ne couvre, mesuré une par une : `PRICE_DIE`, `DEFAULT_HARM`, `ATTRIBUTE_MIN`,
-`ATTRIBUTE_MAX`, `CLOCK_ADVANCE_MIN`, `CLOCK_ADVANCE_MAX`, `SCENE_PRESENCE_MAX`,
-`LIKELIHOOD_THRESHOLDS`. Les changer laisse la porte dorée **verte**. C'est signalé plutôt que
-refermé en douce : chacune demande un corpus qui joue la mécanique concernée (le prix, les
-dégâts, les horloges, les oracles, la scène), pas une ligne de plus dans un corpus existant.
+**Les corpus dorés couvrent désormais les dix.** Ce qui manque est ailleurs, et se dit en une
+ligne : *modifier une constante de règle fait rougir trois suites* reste **vrai pour trois
+constantes sur dix**, parce que la troisième suite — le simulateur — n'exerce pas les sept
+autres. Mesuré, pas supposé : aucun de ses sept scénarios ne demande d'oracle, ne crée de
+personnage, n'ouvre de scène peuplée, n'avance d'horloge, ni ne laisse `endure-harm` prendre son
+montant par défaut. Contre-épreuve : à `SCENE_PRESENCE_MAX = 0`, `pnpm sim run` est encore vert.
+
+| Suites rouges | Constantes |
+| --- | --- |
+| **3 sur 3** | `PRICE_DIE` ; `ATTRIBUTE_MIN` et `ATTRIBUTE_MAX` **si on resserre** la borne (1→2, 3→2) |
+| **2 sur 3** | `DEFAULT_HARM`, `ATTRIBUTE_SPREAD`, `CLOCK_SEGMENT_COUNTS`, `SCENE_PRESENCE_MAX`, `LIKELIHOOD_THRESHOLDS` |
+| **2 sur 3** *(depuis #99)* | `CLOCK_ADVANCE_MIN`, `CLOCK_ADVANCE_MAX` — elles n'avaient **aucun** test unitaire dans le moteur avant, le corpus était leur seul filet |
+
+Refermer la dernière suite demande d'écrire des scénarios de simulateur **et** d'ajouter un effet
+`clock_advance` au contenu de jeu — donc de toucher aux règles. C'est l'issue #99, et elle n'est
+pas faite. Tant qu'elle ne l'est pas, la phrase ci-dessus est la formulation juste ; celle du
+jalon ne l'est pas.
 
 ---
 
