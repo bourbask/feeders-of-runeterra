@@ -87,6 +87,10 @@ export function buildConfig(
     model: env['NARRATOR_MODEL'] ?? null,
     modelStructured: env['NARRATOR_MODEL_STRUCTURED'] ?? null,
     tools: 'off',
+    // Issue #95. La mesure se fait dans le mode de production : raisonnement
+    // éteint. `NARRATOR_REASONING=on` dans l'environnement le rallume, et
+    // c'est la façon de MESURER si un modèle écrit mieux en réfléchissant.
+    reasoning: env['NARRATOR_REASONING'] === 'on' ? 'on' : 'off',
     timeoutMs: Number.isFinite(timeout) && timeout > 0 ? timeout : DEFAULT_TIMEOUT_MS,
     contextWindowTokens:
       env['NARRATOR_CONTEXT_WINDOW'] === undefined ? null : Number(env['NARRATOR_CONTEXT_WINDOW']),

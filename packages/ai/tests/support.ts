@@ -19,6 +19,8 @@ export const BASE_CONFIG: NarratorConfig = {
   modelStructured: null,
   // Section 0.6: `probe` is the schema default, so it is what the fixtures use.
   tools: 'probe',
+  // Issue #95: `off` is the schema default, so it is what the fixtures use.
+  reasoning: 'off',
   timeoutMs: 60_000,
   contextWindowTokens: null,
 };
