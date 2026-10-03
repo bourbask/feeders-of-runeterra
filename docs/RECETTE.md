@@ -4,11 +4,11 @@ Ce que **tout développeur exécute sur son propre travail** avant d'ouvrir sa P
 testeur refait ensuite sans le croire sur parole.
 
 Elle existe parce que les recalages se ressemblent tous : sur trois vagues, la moitié des retours
-portaient sur l'un des sept modes ci-dessous, jamais sur la conception. Vingt minutes ici
+portaient sur l'un des neuf modes ci-dessous, jamais sur la conception. Vingt minutes ici
 suppriment un cycle entier.
 
-> **La règle qui gouverne tout le reste.** Un garde-fou se prouve **en le violant, dans les deux
-> sens** : rouge AVEC la violation, vert SANS. Montrer qu'un test existe ne vaut rien.
+> **La règle qui gouverne tout le reste.** Un garde-fou se prouve **en le cassant, dans les deux
+> sens** : rouge quand on le casse, vert quand on le remet. Montrer qu'un test existe ne vaut rien.
 
 ---
 
@@ -20,20 +20,21 @@ suppriment un cycle entier.
 | `tsc -b --force` après toute sonde qui touche `@for/engine` | idem, en pire : le garde-fou semble mordre alors qu'il ne mord pas |
 | `--force` sur chaque tâche turbo | sans lui, turbo rejoue les journaux d'un **autre** worktree |
 
-## 2. Les sept modes, et la sonde qui les attrape
+## 2. Les neuf modes, et la sonde qui les attrape
 
 | # | Le mode | La sonde |
 |---|---|---|
-| 1 | une règle de lint sans résolveur, donc muette | écrire la violation qu'elle interdit, exiger le rouge |
-| 2 | un `exclude` de configuration qui tue les arêtes qu'il prétend vérifier | violer **depuis** et **vers** le paquet exclu |
+| 1 | une règle de lint sans résolveur, donc muette | écrire ce qu'elle interdit, exiger le rouge |
+| 2 | un `exclude` de configuration qui tue les arêtes qu'il prétend vérifier | casser **depuis** et **vers** le paquet exclu |
 | 3 | un seuil qu'aucune commande contractuelle n'atteint | lancer la commande de la fiche, pas une variante |
 | 4 | `satisfies z.ZodType<T>` : covariant en sortie, laisse un enum **rétrécir** en silence | retirer un membre du tuple moteur, exiger un test d'exécution rouge |
 | 5 | un chiffre comparé à lui-même | remonter chaque opérande à sa définition : deux chemins, ou rien |
 | 6 | une liste qui est sa propre source de boucle | **la vider**. Si rien ne tombe, elle ne garde rien |
 | 7 | une fixture déjà triée, ou à un seul élément, là où le critère parle d'ordre | fournir au moins **deux** entrées, dans un ordre **non naturel**, et asserter le **tableau exact** |
 | 8 | un **double de test plus laxiste que l'interface** qu'il remplace | comparer la signature du faux à celle du vrai : TypeScript accepte une fonction qui prend **moins** de paramètres, donc un argument que le faux ignore devient invisible aux tests |
+| 9 | une **interdiction satisfaite par le vide** : « pas de chiffre », « pas de champion réservé » sont vraies d'une chaîne vide | noter une **entrée vide** et exiger « sans objet », jamais « réussie ». Mesuré : deux modèles ont rendu douze proses vides sur douze, et le rapport affichait **treize règles dures sur seize à 100 %** (#94) |
 
-## 3. Les six questions à se poser sur chaque assertion écrite
+## 3. Les sept questions à se poser sur chaque assertion écrite
 
 1. D'où vient **chaque** opérande ? S'ils remontent à la même définition, l'assertion est vide.
 2. Ce chiffre vient d'un **critère d'acceptation** ? Il s'écrit en toutes lettres. Du **moteur** ?
@@ -64,7 +65,7 @@ Une PR a déjà été déclarée recevable avec la CI rouge pour cette seule rai
 
 | Ce qu'on voit | Ce que ça veut dire |
 |---|---|
-| douze jobs verts | les jobs **8 à 11** portent un `continue-on-error` : ils restent verts **en échouant** |
+| douze jobs verts | depuis M0-30, aucune étape ne tolère l'échec : `grep -c continue-on-error` affiche `0` |
 | aucun échec | peut vouloir dire **aucun job** : une PR en conflit n'a pas de CI du tout |
 
 Donc : **compter les check-runs sur le sha de tête**, et regarder les conclusions d'étapes.
@@ -98,7 +99,7 @@ deux joueurs, à deux instants, à deux destinataires.
 
 ## 7. Ce qu'on écrit dans le compte rendu
 
-Pour chaque garde-fou annoncé : **la violation, la commande, le code de sortie, le test qui tombe.**
+Pour chaque garde-fou annoncé : **la façon de le casser, la commande, le code de sortie, le test qui tombe.**
 Puis la restauration et le vert.
 
 Un critère **faux par construction** se **signale**, il ne se contourne pas. Un prédécesseur a été

@@ -359,6 +359,7 @@ describe('le hub ne décide rien (invariant 1)', () => {
       'handlers.ts',
       'hub.ts',
       'index.ts',
+      'narration.ts',
     ]);
     expect(sources.some((source) => source.text.includes('isVisibleTo'))).toBe(true);
   });
@@ -382,50 +383,67 @@ describe('le hub ne décide rien (invariant 1)', () => {
   });
 });
 
-describe("le greffon Fastify, et ce qu'il n'enregistre pas", () => {
+describe('le greffon Fastify, et la route de montée', () => {
   /**
-   * L'EN-TÊTE DE `index.ts` L'ANNONCE EN CAPITALES — « `wsPlugin` STILL
-   * REGISTERS NO ROUTE » — et c'est un manque REPORTÉ, pas un oubli : la
-   * montée en WebSocket demande `@fastify/websocket`, qui n'est pas une
-   * dépendance du paquet et que la liste de fichiers de M0-25 ne permet pas
-   * d'ajouter. Les deux moitiés du rapport se lisent ici plutôt qu'elles ne se
-   * croient.
+   * LE MANQUE QUE M0-25 AVAIT REPORTÉ EST REFERMÉ, ET LA MESURE EST INVERSÉE.
+   *
+   * Son en-tête disait, en capitales : « `wsPlugin` STILL REGISTERS NO ROUTE,
+   * and that is a reported gap rather than an oversight. The HTTP upgrade
+   * needs `@fastify/websocket`, which is not a dependency of `@for/server` […]
+   * `attachSocket` is the seam that task will call ». M0-30 a ajouté la
+   * dépendance et appelé la couture : ce test lit donc les deux moitiés DANS
+   * L'AUTRE SENS — une route, et une dépendance. Retirer la route rend la
+   * première rouge ; retirer la dépendance du manifeste rend la seconde rouge.
    */
-  function routesAddedBy(register: (app: FastifyInstance) => void): string[] {
+  /**
+   * CE QUE LE GREFFON LIT À L'ENREGISTREMENT, ET RIEN DE PLUS : la connexion
+   * (pour `createCampaignAccess`) et l'horloge (pour le battement, `unref`'d).
+   * Le reste n'est touché qu'à la montée d'une socket, et aucune ne monte ici.
+   */
+  function wsDeps(): AppDeps {
+    return {
+      connection: { prepare: () => ({ get: () => undefined, all: () => [] }) },
+      clock: { now: () => 0 },
+    } as unknown as AppDeps;
+  }
+
+  async function routesAddedBy(register: (app: FastifyInstance) => void): Promise<string[]> {
     const app = Fastify();
     const routes: string[] = [];
     app.addHook('onRoute', (route) => {
       routes.push(`${String(route.method)} ${route.url}`);
     });
     register(app);
+    await app.ready();
+    await app.close();
     return routes;
   }
 
-  it("n'enregistre aucune route, et `@fastify/websocket` n'est pas une dépendance du paquet", () => {
-    let finished = false;
-    // Appelé comme Fastify l'appelle. Les options ne sont pas lues par ce
-    // greffon — c'est exactement ce qui se mesure, donc rien n'est construit.
-    const routes = routesAddedBy((app) => {
-      wsPlugin(app, { deps: undefined as unknown as AppDeps }, () => {
-        finished = true;
-      });
+  it('enregistre la route de montée, et une seule', async () => {
+    const routes = await routesAddedBy((app) => {
+      void app.register(wsPlugin, { deps: wsDeps() });
     });
 
-    expect(finished).toBe(true);
-    expect(routes).toStrictEqual([]);
+    // `HEAD` vient de Fastify, qui l'ajoute pour tout `GET` : la route déclarée
+    // est une, et la liste est écrite telle que Fastify la rend.
+    expect(routes).toStrictEqual(['GET /ws', 'HEAD /ws']);
+  });
 
-    // LA SONDE LIT BIEN QUELQUE CHOSE : un greffon qui déclare une route la
-    // fait apparaître. Sans cette ligne, `[]` serait vert sur un crochet muet.
+  it('la sonde lit bien quelque chose : un greffon qui déclare une route la fait apparaître', async () => {
+    // Sans cette ligne, la liste attendue ci-dessus serait verte sur un crochet
+    // muet ou une instance qui ne démarre jamais.
     expect(
-      routesAddedBy((app) => {
+      await routesAddedBy((app) => {
         app.get('/sonde', () => 'ok');
       }),
     ).toStrictEqual(['GET /sonde', 'HEAD /sonde']);
+  });
 
+  it('`@fastify/websocket` est désormais une dépendance déclarée du paquet', () => {
     const manifest = JSON.parse(readFileSync(join(WS_DIR, '..', '..', 'package.json'), 'utf8')) as {
       dependencies: Record<string, string>;
     };
-    expect(Object.keys(manifest.dependencies)).not.toContain('@fastify/websocket');
+    expect(Object.keys(manifest.dependencies)).toContain('@fastify/websocket');
     // Et le manifeste lu est bien celui du serveur.
     expect(Object.keys(manifest.dependencies)).toContain('fastify');
   });

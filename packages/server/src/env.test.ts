@@ -77,6 +77,7 @@ describe('les variables de base', () => {
 
 describe('la validation conditionnelle du conteur (02-mj-ia.md §0.6)', () => {
   const URL_OK = 'http://localhost:11434/v1';
+  const MODEL_OK = 'qwen2.5:3b-instruct';
 
   it('refuse une configuration sans NARRATOR_PROVIDER en nommant la variable', () => {
     // Section 0.6 marks the row "obligatoire : oui", and the sentence above the
@@ -108,7 +109,13 @@ describe('la validation conditionnelle du conteur (02-mj-ia.md §0.6)', () => {
 
   it('openai-compatible sans NARRATOR_BASE_URL échoue en nommant la variable', () => {
     expect(
-      failureVariables(baseVars({ NARRATOR_PROVIDER: 'openai-compatible', NARRATOR_API_KEY: 'k' })),
+      failureVariables(
+        baseVars({
+          NARRATOR_PROVIDER: 'openai-compatible',
+          NARRATOR_API_KEY: 'k',
+          NARRATOR_MODEL: MODEL_OK,
+        }),
+      ),
     ).toContain('NARRATOR_BASE_URL');
 
     expect(
@@ -117,6 +124,7 @@ describe('la validation conditionnelle du conteur (02-mj-ia.md §0.6)', () => {
           NARRATOR_PROVIDER: 'openai-compatible',
           NARRATOR_API_KEY: 'k',
           NARRATOR_BASE_URL: URL_OK,
+          NARRATOR_MODEL: MODEL_OK,
         }),
       ).NARRATOR_BASE_URL,
     ).toBe(URL_OK);
@@ -124,7 +132,12 @@ describe('la validation conditionnelle du conteur (02-mj-ia.md §0.6)', () => {
 
   it('ollama passe avec NARRATOR_API_KEY VIDE, et échoue sans NARRATOR_BASE_URL', () => {
     const env = readEnv(
-      baseVars({ NARRATOR_PROVIDER: 'ollama', NARRATOR_BASE_URL: URL_OK, NARRATOR_API_KEY: '' }),
+      baseVars({
+        NARRATOR_PROVIDER: 'ollama',
+        NARRATOR_BASE_URL: URL_OK,
+        NARRATOR_API_KEY: '',
+        NARRATOR_MODEL: MODEL_OK,
+      }),
     );
     expect(env.NARRATOR_API_KEY).toBeUndefined();
     expect(narratorConfig(env).apiKey).toBeNull();
@@ -132,6 +145,53 @@ describe('la validation conditionnelle du conteur (02-mj-ia.md §0.6)', () => {
     expect(failureVariables(baseVars({ NARRATOR_PROVIDER: 'ollama' }))).toContain(
       'NARRATOR_BASE_URL',
     );
+  });
+
+  /**
+   * ISSUE #89, ET LES QUATRE FOURNISSEURS L'UN APRÈS L'AUTRE.
+   *
+   * Même raison que l'en-tête de ce fichier : boucler sur
+   * `PROVIDERS_REQUIRING_MODEL` rendrait le vidage de la liste indétectable.
+   * Les deux qui exigent le modèle sont écrits, et les deux qui s'en passent
+   * aussi — c'est la moitié qui manquait quand `.env.example` promettait un
+   * défaut d'adaptateur pour tout le monde.
+   */
+  it('openai-compatible et ollama exigent NARRATOR_MODEL en nommant la variable', () => {
+    expect(
+      failureVariables(
+        baseVars({
+          NARRATOR_PROVIDER: 'openai-compatible',
+          NARRATOR_API_KEY: 'k',
+          NARRATOR_BASE_URL: URL_OK,
+        }),
+      ),
+    ).toContain('NARRATOR_MODEL');
+
+    expect(
+      failureVariables(baseVars({ NARRATOR_PROVIDER: 'ollama', NARRATOR_BASE_URL: URL_OK })),
+    ).toContain('NARRATOR_MODEL');
+  });
+
+  it('stub et anthropic s’en passent : leur adaptateur a bien un défaut', () => {
+    expect(readEnv(baseVars({ NARRATOR_PROVIDER: 'stub' })).NARRATOR_MODEL).toBeUndefined();
+    expect(
+      readEnv(baseVars({ NARRATOR_PROVIDER: 'anthropic', NARRATOR_API_KEY: 'k' })).NARRATOR_MODEL,
+    ).toBeUndefined();
+  });
+
+  it('NARRATOR_MODEL vide est traité comme absent, pas comme un modèle', () => {
+    // `blankToUndefined` fait la moitié du travail ; sans la règle
+    // conditionnelle, cette configuration démarrait et mettait `model: ""`
+    // sur le fil. C'est exactement le corps mesuré dans l'issue #89.
+    expect(
+      failureVariables(
+        baseVars({
+          NARRATOR_PROVIDER: 'ollama',
+          NARRATOR_BASE_URL: URL_OK,
+          NARRATOR_MODEL: '   ',
+        }),
+      ),
+    ).toContain('NARRATOR_MODEL');
   });
 
   it('les quatre cas ci-dessus couvrent tous les fournisseurs déclarés', () => {
@@ -148,13 +208,18 @@ describe('la validation conditionnelle du conteur (02-mj-ia.md §0.6)', () => {
   });
 });
 
-describe('les trois variables d’appoint (P19)', () => {
+describe('les quatre variables d’appoint (P19, et #95)', () => {
   it('reçoivent leurs valeurs par défaut, jamais undefined', () => {
     const env = readEnv(baseVars({ NARRATOR_PROVIDER: 'stub' }));
 
     expect(env.NARRATOR_TOOLS).toBe('probe');
     expect(env.NARRATOR_TIMEOUT_MS).toBe(60_000);
     expect(env.NARRATOR_CONTEXT_WINDOW).toBeNull();
+    // Issue #95. Le chiffre n'est pas lu depuis `src/` : « off » est écrit
+    // ici en toutes lettres, parce que c'est une DÉCISION, pas un détail.
+    // Les jetons de raisonnement comptent dans le plafond de complétion, et
+    // un modèle laissé libre de réfléchir dépense les 800 sans rien écrire.
+    expect(env.NARRATOR_REASONING).toBe('off');
   });
 
   it('arrivent telles quelles dans le NarratorConfig que lit buildNarrator', () => {
@@ -166,6 +231,7 @@ describe('les trois variables d’appoint (P19)', () => {
     expect(config.tools).toBe('probe');
     expect(config.timeoutMs).toBe(60_000);
     expect(config.contextWindowTokens).toBeNull();
+    expect(config.reasoning).toBe('off');
     expect(Object.values(config).some((value) => value === undefined)).toBe(false);
   });
 
@@ -176,6 +242,7 @@ describe('les trois variables d’appoint (P19)', () => {
         NARRATOR_TOOLS: 'off',
         NARRATOR_TIMEOUT_MS: '900000',
         NARRATOR_CONTEXT_WINDOW: '8192',
+        NARRATOR_REASONING: 'on',
       }),
     );
 
@@ -183,6 +250,7 @@ describe('les trois variables d’appoint (P19)', () => {
       tools: 'off',
       timeoutMs: 900_000,
       contextWindowTokens: 8192,
+      reasoning: 'on',
     });
   });
 });

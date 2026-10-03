@@ -37,7 +37,7 @@ import { z } from 'zod';
 
 import { errorFromResponse, readNdjson, wrapUnknown, type NarratorFetch } from '../http.js';
 import { extractAndValidate } from '../structured.js';
-import { driveStream, type ProviderEvent } from './common.js';
+import { driveStream, requireModel, type ProviderEvent } from './common.js';
 
 const PROVIDER = 'ollama' as const;
 
@@ -96,6 +96,23 @@ export function createOllamaNarrator(
       message: 'NARRATOR_BASE_URL is required by this provider',
     });
   }
+
+  /**
+   * ISSUE #89 — AU MÊME ENDROIT QUE L'URL, ET POUR LA MÊME RAISON.
+   *
+   * Cet adaptateur n'a pas de modèle par défaut : il sert ce que son hôte a
+   * sous la main. Avant ce garde, `config.model ?? ''` mettait un modèle vide
+   * sur le fil, le fournisseur répondait 400 et le tour retombait sur la prose
+   * de repli du moteur — assez bien pour que rien ne rougisse.
+   *
+   * ICI PLUTÔT QUE DANS `narrer()` : `narrer()` rend un itérable PARESSEUX et
+   * ne lève pas, c'est ce qui le distingue du port « indisponible »
+   * (`tests/game/narrator-wiring.test.ts` s'appuie dessus). Une erreur de
+   * configuration se dit à la construction, comme l'URL juste au-dessus.
+   *
+   * TENU PAR tests/narrator-model-required.test.ts.
+   */
+  const model = requireModel(config.model, PROVIDER);
   const base = config.baseUrl.replace(/\/+$/, '');
   const window = config.contextWindowTokens ?? OLLAMA_CONTEXT_WINDOW_TOKENS;
 
@@ -133,7 +150,6 @@ export function createOllamaNarrator(
     capabilities,
 
     narrer(req: NarrateRequest): AsyncIterable<NarrateEvent> {
-      const model = config.model ?? '';
       const body = {
         model,
         stream: true,
@@ -220,12 +236,12 @@ export function createOllamaNarrator(
     },
 
     async structurer<T>(req: StructureRequest<T>): Promise<StructureResult<T>> {
-      const model = config.modelStructured ?? config.model ?? '';
+      const structuredModel = config.modelStructured ?? model;
       const clock = options.now ?? (() => Date.now());
       const startedAt = clock();
       const response = await post(
         {
-          model,
+          model: structuredModel,
           stream: false,
           messages: [
             { role: 'system', content: systemText(req.system) },

@@ -6,18 +6,23 @@
  * that speak to the port, and M0-24 owns it: M0-29 writes the rest of
  * `src/ai/**` and CONSUMES this without rewriting it.
  *
- * ── A DEVIATION, REPORTED RATHER THAN HIDDEN ─────────────────────────────
+ * ── THE SELECTOR IS A PARAMETER, AND PRODUCTION PASSES `@for/ai`'S ───────
  * Section 2.8 prints `buildNarrator` as two lines: build a `NarratorConfig`
- * from `env.ts`, then call `selectNarrator()` from `@for/ai`. The first line
- * exists — `narratorConfig(env)` was delivered by M0-20. THE SECOND DOES NOT:
- * `@for/ai` currently exports one constant, its own name. M0-18 writes
- * `selectNarrator` and the four adapters IN THE SAME WAVE as this task, and
- * M0-24 does not depend on M0-18.
+ * from `env.ts`, then call `selectNarrator()` from `@for/ai`. M0-24 shipped
+ * the first line only — `@for/ai` had no selector yet — so the second argument
+ * defaults to `builtinSelector` below, which knows `stub` and answers
+ * `unavailable` for everything else.
  *
- * So `buildNarrator` takes the selector as a PARAMETER, defaulting to the one
- * below. The day M0-18 lands, wiring it is `buildNarrator(env, selectNarrator)`
- * at the one call site, in `game/index.ts` — this file does not reopen, and no
- * adapter is written here. What IS written here is the `stub`, because the
+ * M0-30 WIRED THE REAL ONE: `game/index.ts` calls
+ * `buildNarrator(deps.env, selectNarrator)`, and
+ * `tests/game/narrator-wiring.test.ts` names the provider the server composes
+ * for each configuration — drop the argument there and it goes red. Until that
+ * wiring landed, NO CONFIGURATION OF THIS SERVER COULD REACH A MODEL, and
+ * nothing was red, because the pipeline's fallback is good enough to hide it.
+ *
+ * `builtinSelector` stays: it is what a unit test uses when it wants the port
+ * without `@for/ai`, and it is the only `NarratorPort` this package owns.
+ * No adapter is written here. What IS written here is the `stub`, because the
  * simulator, the CI and every test in this repository have to run with no key
  * and no socket, and that is the port's own reason for existing
  * (02-mj-ia.md section 0.6: "`stub` n'est PAS un fournisseur").
@@ -155,6 +160,12 @@ export const builtinSelector: NarratorSelector = (config) =>
  * function knows a provider name, a base URL or a key exists, which is what
  * makes the eval harness runnable outside the server and the game layer
  * testable with no configuration at all.
+ *
+ * THE DEFAULT IS THE SERVER'S OWN SELECTOR, NOT `@for/ai`'S. Production passes
+ * `selectNarrator` explicitly (`game/index.ts`); a caller that omits it gets a
+ * port that speaks to nobody but `stub`. That is a deliberate default for
+ * tests, and `tests/game/narrator-wiring.test.ts` is what keeps production
+ * from inheriting it by accident.
  */
 export function buildNarrator(env: Env, select: NarratorSelector = builtinSelector): NarratorPort {
   return select(narratorConfig(env));

@@ -338,14 +338,35 @@ export const NARRATOR_TOOLS_MODES = ['on', 'off', 'probe'] as const;
 export type NarratorToolsMode = (typeof NARRATOR_TOOLS_MODES)[number];
 
 /**
+ * Whether the adapter lets the provider THINK before answering.
+ *
+ * `off` IS THE DEFAULT, AND IT IS NOT AN OPTIMISATION. Invariant 1: the engine
+ * has already decided when the storyteller is called, and the model dresses an
+ * acquired fact. A model deliberating over a settled outcome spends the turn's
+ * whole output budget on a question nobody asked.
+ *
+ * Measured, not assumed (issue #95): the real corpus request against
+ * `nvidia/nemotron-3-super-120b-a12b:free` with `max_tokens: 800` returned
+ * `finish: length`, 800 completion tokens of which 800 were reasoning, and NOT
+ * ONE CHARACTER of prose — twelve samples out of twelve. The same request with
+ * reasoning switched off returned 176 tokens and 592 characters of prose.
+ * Reasoning tokens count against the completion ceiling.
+ *
+ * `on` exists because some models write better when they think, and that is a
+ * thing to MEASURE with `pnpm eval:probe`, not to decide here.
+ */
+export const NARRATOR_REASONING_MODES = ['on', 'off'] as const;
+export type NarratorReasoningMode = (typeof NARRATOR_REASONING_MODES)[number];
+
+/**
  * What `selectNarrator()` receives (section 0.6). Built once, at start-up, by
  * `packages/server/src/env.ts` — the ONLY place in the system that reads the
  * environment. `@for/ai` never touches `process.env`, which is what makes the
  * eval harness runnable outside the server.
  *
  * Every field is present and nullable rather than optional: `buildNarrator`
- * reads all eight unconditionally, and an `undefined` there would be a silent
- * configuration bug (section 0.6, the three auxiliary variables).
+ * reads all NINE unconditionally, and an `undefined` there would be a silent
+ * configuration bug (section 0.6, the four auxiliary variables).
  */
 export interface NarratorConfig {
   readonly provider: NarratorProviderId;
@@ -354,6 +375,8 @@ export interface NarratorConfig {
   readonly model: string | null;
   readonly modelStructured: string | null;
   readonly tools: NarratorToolsMode;
+  /** Issue #95. `off` by default — see `NARRATOR_REASONING_MODES`. */
+  readonly reasoning: NarratorReasoningMode;
   readonly timeoutMs: number;
   /** Null ⇒ the adapter's own default window. */
   readonly contextWindowTokens: number | null;

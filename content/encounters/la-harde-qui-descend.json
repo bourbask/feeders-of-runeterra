@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "la-harde-qui-descend",
+  "name": "La harde qui descend",
+  "kind": "bete",
+  "periodId": "freljord-moderne",
+  "regionKinds": ["etendue", "territoire"],
+  "oracleRef": "complication",
+  "summary": "Des bêtes de proie descendues plus bas que la saison ne l'explique, et qui ne fuient plus les feux.",
+  "tags": ["bete", "hiver"]
+}

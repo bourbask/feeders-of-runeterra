@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "la-pierre-gravee",
+  "name": "La pierre gravée",
+  "kind": "trouvaille",
+  "periodId": "union-des-trois-soeurs",
+  "regionKinds": ["site", "etendue"],
+  "oracleRef": "place-features",
+  "summary": "Une pierre dressée que personne n'a entretenue et que personne n'a renversée non plus, avec des marques encore lisibles.",
+  "tags": ["trouvaille", "ancien"]
+}

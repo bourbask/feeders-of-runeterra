@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "la-salle-commune",
+  "name": "La salle commune",
+  "kind": "rencontre",
+  "situation": "Une pièce, un feu, et quarante personnes qui savent tout les unes des autres. On y partage le feu selon les formes, ce qui oblige plus qu'un serment. Un homme de la Griffe y dort depuis deux semaines, descendu avec sa bande et resté seul ; on l'a nourri sans lui demander pourquoi, et il n'a rien dit. Le toit a cédé une fois déjà, ailleurs, dans un autre hameau, et tout le monde ici connaît l'histoire par cœur.",
+  "stakeQuestion": "Qu'est-ce que l'homme d'en haut est venu chercher, et que devra-t-on lui accorder ?",
+  "figureIds": ["torvald-qui-est-descendu", "l-enfant-du-pont"],
+  "regionId": "rakelstake",
+  "periodId": "freljord-moderne",
+  "entryPoint": false,
+  "leads": [
+    {
+      "toNodeId": "le-convoi-qui-manque",
+      "trigger": "Il a vu passer des traîneaux là où il ne devait pas y en avoir."
+    },
+    {
+      "toNodeId": "le-feu-partage",
+      "trigger": "Le rite du feu se tient dehors, et il oblige celui qui l'accepte."
+    },
+    {
+      "toNodeId": "le-pont-de-planches",
+      "trigger": "Il propose de réparer le pont, ce qui n'est pas gratuit."
+    }
+  ],
+  "tags": ["hameau", "rencontre"]
+}

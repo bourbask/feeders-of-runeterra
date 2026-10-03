@@ -10,7 +10,8 @@
   "scripts": {
     "dev": "turbo run dev --parallel",
     "build": "turbo run build",
-    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm depcruise && pnpm check:workspace && pnpm content:check && pnpm test && pnpm test:golden && pnpm eval:offline",
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm depcruise && pnpm check:workspace && pnpm check:ci && pnpm content:check && pnpm test && pnpm test:golden && pnpm sim run && pnpm eval:offline",
+    "check:ci": "bash scripts/check-ci-jobs.sh",
     "test": "turbo run test",
     "test:coverage": "turbo run build && vitest run --coverage",
     "lint": "turbo run lint && eslint scripts tooling --no-error-on-unmatched-pattern",
@@ -21,7 +22,7 @@
     "check:workspace": "tsx scripts/check-workspace.ts",
     "test:golden": "turbo run build --filter @for/testkit && vitest run tests/golden",
     "golden:update": "GOLDEN_UPDATE=1 pnpm test:golden",
-    "sim": "node scripts/pas-encore.mjs M0-28 \"simulateur de table headless\"",
+    "sim": "tsx packages/sim/src/cli.ts",
     "db:generate": "pnpm --filter @for/db exec drizzle-kit generate",
     "db:check-schema": "tsx packages/db/src/cli/check-schema.ts",
     "db:migrate": "tsx packages/db/src/cli/migrate.ts",
@@ -32,12 +33,12 @@
     "db:check": "tsx packages/db/src/cli/check.ts",
     "content:index": "tsx scripts/generate-content-index.ts",
     "content:check": "tsx scripts/content-check.ts",
-    "eval:offline": "node scripts/pas-encore.mjs M0-27 \"eval N0, hors ligne\"",
-    "eval:record": "node scripts/pas-encore.mjs M0-27 \"enregistrement des sorties de reference\"",
+    "eval:offline": "turbo run build --filter @for/ai --filter @for/testkit && tsx packages/ai-eval/src/run-offline.ts",
+    "eval:record": "turbo run build --filter @for/ai --filter @for/testkit && tsx packages/ai-eval/src/record.ts",
     "eval:live": "node scripts/pas-encore.mjs M1 \"niveau N1 : jalon M1\"",
     "eval:judge": "node scripts/pas-encore.mjs M1 \"niveau N2 : jalon M1\"",
-    "eval:smoke": "node scripts/pas-encore.mjs M0-32 \"sonde de fumee du conteur\"",
-    "eval:probe": "node scripts/pas-encore.mjs M0-31 \"mesure complete d un fournisseur\""
+    "eval:smoke": "turbo run build --filter @for/ai && tsx packages/ai-eval/smoke/run-smoke.ts",
+    "eval:probe": "turbo run build --filter @for/ai --filter @for/content && tsx packages/ai-eval/probe/run-probe.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",

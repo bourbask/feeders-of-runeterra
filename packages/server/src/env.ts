@@ -26,7 +26,11 @@
 
 import process from 'node:process';
 
-import { NARRATOR_PROVIDER_IDS, NARRATOR_TOOLS_MODES } from '@for/contracts';
+import {
+  NARRATOR_PROVIDER_IDS,
+  NARRATOR_REASONING_MODES,
+  NARRATOR_TOOLS_MODES,
+} from '@for/contracts';
 import { z } from 'zod';
 
 import type { NarratorConfig, NarratorProviderId } from '@for/contracts';
@@ -57,6 +61,24 @@ export const PROVIDERS_REQUIRING_BASE_URL: readonly NarratorProviderId[] = [
 export const PROVIDERS_REQUIRING_API_KEY: readonly NarratorProviderId[] = [
   'anthropic',
   'openai-compatible',
+];
+
+/**
+ * The two adapters that have NO DEFAULT MODEL OF THEIR OWN.
+ *
+ * `anthropic` ships `ANTHROPIC_DEFAULT_MODEL`; these two cannot, because one
+ * serves whatever the host pulled locally and the other whatever its gateway
+ * exposes. Until this row existed, `.env.example` said "vide => défaut de
+ * l'adaptateur" and that was true for one provider out of three: the other two
+ * put `model: ""` on the wire and collected a 400 (issue #89).
+ *
+ * Refusing at boot rather than at the first turn is the same choice section
+ * 0.6 makes for `NARRATOR_BASE_URL`: a table that starts is a table whose
+ * storyteller answers.
+ */
+export const PROVIDERS_REQUIRING_MODEL: readonly NarratorProviderId[] = [
+  'openai-compatible',
+  'ollama',
 ];
 
 /** `''` and `'   '` mean "not set", everywhere. See the header. */
@@ -95,11 +117,18 @@ const zEnvFields = z.object({
   NARRATOR_MODEL: z.string().min(1).optional(),
   NARRATOR_MODEL_STRUCTURED: z.string().min(1).optional(),
 
-  // The three auxiliary variables (P19). THEY CARRY A DEFAULT RATHER THAN
-  // BEING OPTIONAL: `buildNarrator` reads all three unconditionally, so an
-  // `undefined` reaching it would be a silent configuration bug — which is
-  // exactly what the fiche asks this file to make impossible.
+  // The FOUR auxiliary variables (P19, plus `NARRATOR_REASONING` from issue
+  // #95). THEY CARRY A DEFAULT RATHER THAN BEING OPTIONAL: `buildNarrator`
+  // reads all four unconditionally, so an `undefined` reaching it would be a
+  // silent configuration bug — which is exactly what the fiche asks this file
+  // to make impossible.
+  //
+  // `NARRATOR_REASONING` defaults to `off` because reasoning tokens count
+  // against the completion ceiling, and `TURN_OUTPUT_TOKENS` is 800: a model
+  // left to think spends all 800 and emits nothing. Measured, see the header
+  // of `NARRATOR_REASONING_MODES`.
   NARRATOR_TOOLS: z.enum(NARRATOR_TOOLS_MODES).default('probe'),
+  NARRATOR_REASONING: z.enum(NARRATOR_REASONING_MODES).default('off'),
   NARRATOR_TIMEOUT_MS: z.coerce.number().int().positive().default(60_000),
   NARRATOR_CONTEXT_WINDOW: z.coerce.number().int().positive().nullable().default(null),
 });
@@ -128,6 +157,15 @@ export const zEnv = zEnvFields.superRefine((env, ctx) => {
         code: 'custom',
         path: ['NARRATOR_API_KEY'],
         message: `NARRATOR_API_KEY est obligatoire quand NARRATOR_PROVIDER vaut « ${env.NARRATOR_PROVIDER} »`,
+      });
+    }
+  }
+  if (PROVIDERS_REQUIRING_MODEL.includes(env.NARRATOR_PROVIDER)) {
+    if (env.NARRATOR_MODEL === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['NARRATOR_MODEL'],
+        message: `NARRATOR_MODEL est obligatoire quand NARRATOR_PROVIDER vaut « ${env.NARRATOR_PROVIDER} » : cet adaptateur n'a pas de modèle par défaut`,
       });
     }
   }
@@ -187,6 +225,7 @@ export function narratorConfig(env: Env): NarratorConfig {
     model: env.NARRATOR_MODEL ?? null,
     modelStructured: env.NARRATOR_MODEL_STRUCTURED ?? null,
     tools: env.NARRATOR_TOOLS,
+    reasoning: env.NARRATOR_REASONING,
     timeoutMs: env.NARRATOR_TIMEOUT_MS,
     contextWindowTokens: env.NARRATOR_CONTEXT_WINDOW,
   };

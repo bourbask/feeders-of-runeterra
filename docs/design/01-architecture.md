@@ -42,6 +42,7 @@ Scope npm : `@for/*` (prive, jamais publie ; `"private": true` partout).
 | `@for/testkit` | `packages/testkit` | RNG scriptes, constructeurs de fixtures, runner de corpus dores, assertions de domaine. | `@for/engine`, `@for/contracts` |
 | `@for/db` | `packages/db` | Schema Drizzle, migrations SQL, ouverture SQLite WAL, repositories, journal d'evenements, snapshots. | `drizzle-orm`, `better-sqlite3`, `@for/contracts` |
 | `@for/ai` | `packages/ai` | **Adaptateurs du port du conteur** (`02-mj-ia.md` §0.3 a §0.5), assemblage de contexte, prompts, surface d'outils, parseurs de sortie, **assertions de style** (partagees eval / post-filtre), construction des requetes de forge et de chronique. **Pas de persistance, pas d'ordonnancement de job, aucune lecture de `process.env`.** | `@anthropic-ai/sdk` (**optionnelle** : seul l'adaptateur `anthropic` l'utilise), `@for/contracts`, `@for/content` |
+| `@for/scenario` | `packages/scenario` | Construction guidee d'un scenario (ADR 0012, S-04) : les dix etapes de `docs/design/04-scenarios.md` §6, le port de decision et ses adaptateurs simules, le melange sur le flux nomme `scenario`. **Pur** : `types: []`, aucun acces disque, reseau ou base. | `@for/engine`, `@for/contracts`, `@for/content` |
 | `@for/server` | `packages/server` | Fastify : HTTP, OAuth Discord, sessions, hub WebSocket, **service applicatif de table** (orchestration intent -> engine -> db -> diffusion -> IA). | Fastify & co, tous les packages ci-dessus |
 | `@for/client` | `packages/client` | SPA Vite + React. Affichage, saisie d'intentions, rendu du journal. | `react`, `@for/contracts`, `@for/engine` (lecture seule) |
 | `@for/ai-eval` | `packages/ai-eval` | Harnais d'eval des sorties IA : corpus de cas, sorties enregistrees, runners N0/N1/N2, graders. **Ne contient aucune assertion** : elles vivent dans `@for/ai/src/assertions/`. | `@for/ai`, `@for/content`, `@for/testkit` |
@@ -69,9 +70,9 @@ Outillage partage, **hors** `packages/` :
         @for/content      @for/testkit        @for/db          (couche 2)
               ^                ^                  ^
               |                |                  |
-              +-------+   @for/ai   +-------------+            (couche 3)
-                      |      ^      |
-                      +------+------+
+              +-------+ @for/ai   @for/scenario +---------+     (couche 3)
+                      |     ^           ^         |
+                      +-----+-----------+---------+
                              |
                 @for/server        @for/ai-eval                (couche 4)
                  ^        ^
@@ -105,6 +106,12 @@ Regles d'arete, **verifiees en CI** par `dependency-cruiser` (`.dependency-cruis
    `rollProgress`.
 6. `@for/testkit` est une `devDependency` partout sauf dans `@for/sim`, ou elle est runtime.
 7. Aucun cycle. `dependency-cruiser` echoue sur la regle `pas-de-cycle`.
+8. `@for/scenario` n'importe **jamais** `@for/db`, `@for/server`, `@for/ai`, `@for/ai-eval`,
+   `@for/sim` ni `@for/client` (regle `scenario-ne-touche-ni-la-base-ni-le-serveur`). Son
+   `tsconfig` porte `types: []`, donc un builtin Node ne compile pas, et un bloc de lint
+   `pureteDuScenario` attrape l'import a effet de bord nu, que le compilateur laisse passer.
+   Un modele reel se branche derriere `ScenarioDecisionPort` depuis `@for/server` ; le paquet
+   ne nomme aucun SDK.
 
 ### 1.3 Purete de `@for/engine` — definition operationnelle
 
@@ -150,7 +157,7 @@ feeders-of-runeterra/
   tooling/tsconfig/                   # @for/tsconfig
   tooling/eslint-config/              # @for/eslint-config
   tooling/prettier-config/            # @for/prettier-config
-  packages/{engine,contracts,content,testkit,db,ai,ai-eval,server,client,sim}/
+  packages/{engine,contracts,content,scenario,testkit,db,ai,ai-eval,server,client,sim}/
   content/                            # contenu de jeu versionne (JSON) — voir 03-donnees.md §4
   infra/
     Dockerfile                        # multi-stage, image unique server+client
@@ -227,7 +234,7 @@ pnpm db:migrate
 pnpm db:studio
 pnpm db:seed
 pnpm content:index  # scripts/generate-content-index.ts
-pnpm content:check  # chargeur 4 passes ; sort en code 1 sur la moindre erreur
+pnpm content:check  # chargeur 5 passes ; sort en code 1 sur la moindre erreur
 pnpm db:reset       # rm data/app.db* + migrate + seed  <- commande du quotidien
 pnpm db:rebuild     # reconstruit les projections depuis le journal
 pnpm db:check       # 12 oracles d'integrite
@@ -504,7 +511,7 @@ packages/content/
     index.ts                     # registre COMPLET — serveur / sim uniquement
     ui.ts                        # sous-entree "@for/content/ui" : libelles seuls, leger
     generated/index.ts           # GENERE — imports statiques de tous les JSON de content/
-    load.ts                      # loadContent(): ContentBundle, 4 passes (03-donnees.md §4.8)
+    load.ts                      # loadContent(): ContentBundle, 5 passes (03-donnees.md §4.8)
     registry.ts                  # getChampion(), listChampions(), getOracle(), ...
     validate.ts                  # validateContent(): parse tout via @for/contracts/content
     manifest.ts                  # hash de contenu + CONTENT_VERSION
@@ -1324,7 +1331,7 @@ Runner `ubuntu-latest`, Node 24, `pnpm/action-setup`, cache pnpm + cache Turbore
 > tableau de documentation n'est pas un seuil.
 | 7 | `test-golden` | `pnpm test:golden` ; echoue aussi si `GOLDEN_UPDATE` est present dans l'environnement | **oui** |
 | 8 | `migrations` | `pnpm db:check-schema` (aucune migration en attente, dump == `schema.expected.sql`) + `pnpm db:migrate` + `pnpm db:seed` sur base jetable | **oui** |
-| 9 | `content` | `pnpm content:check` (chargeur 4 passes, code 1 en cas d'erreur) + `pnpm content:index && git diff --exit-code` | **oui** |
+| 9 | `content` | `pnpm content:check` (chargeur 5 passes, code 1 en cas d'erreur) + `pnpm content:index && git diff --exit-code` | **oui** |
 | 10 | `ai-eval-offline` | `pnpm eval:offline` — niveau **N0**, zero appel API, zero cle (02-mj-ia.md §8.5) | **oui** |
 | 11 | `sim` | `pnpm sim run --format=json` (tous les scenarios). **`pnpm sim fuzz` n'est PAS dans la porte de PR en M0** : la trame malformee — le seul cas dangereux — est deja couverte par `packages/contracts/tests/envelope-fuzz.test.ts` (job 6), et fuzzer des intentions valides contre un moteur sans feature de jeu achete peu pour un risque d'instabilite reel sur une porte visee a 8 minutes. Le mode tourne a la demande ; bloquant en M1 (M0-28) | **oui** |
 | 12 | `build` | `pnpm build` | **oui** |

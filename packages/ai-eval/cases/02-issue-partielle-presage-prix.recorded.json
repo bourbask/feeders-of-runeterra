@@ -1,0 +1,18 @@
+{
+  "case_id": "02-issue-partielle-presage-prix",
+  "provider": "stub",
+  "model": "ecrit-a-la-main-m0",
+  "prompt_version": "conteur/2.1.0",
+  "tools_version": "tools/1.0.0",
+  "recorded_at": "2026-09-30T00:00:00.000Z",
+  "samples": [
+    {
+      "response": "Tu passes la corniche est en raclant l'épaule contre la glace et le coffre passe avec toi. Ulrun tient la corde un moment, puis la lâche et se retourne vers le cairn sans expliquer pourquoi. La corde te file des mains et te laisse une brûlure en travers de la paume. Ton allié de montée te regarde depuis l'autre bord, immobile.\n\n<scene_apres>{\"lieu\": \"col_des_hurleurs\", \"presents\": [{\"nom\": \"Ingvild\", \"etat\": \"debout sur l'épaule de pierre\"}, {\"nom\": \"Ulrun\", \"etat\": \"accroupi près de la corde\"}], \"partis\": [], \"refus\": null}</scene_apres>",
+      "tool_calls": []
+    },
+    {
+      "response": "Tu franchis la corniche à plat ventre, l'épaule contre la glace, et le coffre suit. Derrière toi, ton allié lâche la corde et se retourne vers le cairn nord sans un mot. Le chanvre te file entre les doigts et t'ouvre la paume sur toute la largeur. La neige prend la couleur du sang là où ta main s'est posée.\n\n<scene_apres>{\"lieu\": \"col_des_hurleurs\", \"presents\": [{\"nom\": \"Ingvild\", \"etat\": \"debout sur l'épaule de pierre\"}, {\"nom\": \"Ulrun\", \"etat\": \"accroupi près de la corde\"}], \"partis\": [], \"refus\": null}</scene_apres>",
+      "tool_calls": []
+    }
+  ]
+}

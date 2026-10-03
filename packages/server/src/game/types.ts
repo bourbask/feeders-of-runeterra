@@ -92,6 +92,35 @@ export interface SubmitIntentResult {
   readonly pending?: BurnWindow | null;
 }
 
+/**
+ * HOW THE HUB IS TOLD. By SEQUENCE, never by the result of an intent.
+ *
+ * DECLARED HERE, with the rest of the contracts, and no longer in
+ * `src/ai/turn.ts`: `src/game/delivery.ts` implements it and both
+ * `src/ws/handlers.ts` (a player's gesture) and `src/ai/turn.ts` (the
+ * storyteller's entries) call it. An interface declared inside one of its two
+ * callers would make the other one's import look like a layering accident.
+ *
+ * WHY IT EXISTS AT ALL — issue #67. The burn window's safety net writes
+ * entries that are journalled and ABSENT from `SubmitIntentResult.events`, so
+ * a caller that broadcast the result left a permanent hole: the hub advances
+ * each player's cursor past the skipped entries, and no `c2s.resume` ever asks
+ * for them again. `src/game/delivery.ts` carries the measurement.
+ */
+export interface EventDelivery {
+  /**
+   * Delivers everything journalled for `campaignId` that this delivery has
+   * not handed over yet. What `ws/handlers.ts` calls after a write: it has no
+   * sequence to offer and must not invent one.
+   */
+  deliver(campaignId: string): void;
+  /**
+   * The same, starting no later than `sinceSeq`. What `ai/turn.ts` calls: it
+   * knows the journal head it saw before the narration wrote anything.
+   */
+  deliverSince(campaignId: string, sinceSeq: number): void;
+}
+
 /** What `getTurnProof` answers: the projection, and whether it was cut to fit. */
 export interface TurnProofResult {
   readonly proof: TurnProofDto;

@@ -1,5 +1,13 @@
 /**
- * The three golden corpora of the rules.
+ * The four golden corpora of the rules.
+ *
+ * THE FOURTH ONE EXISTS BECAUSE THE CANARY WAS MEASURED WITH A HOLE IN IT.
+ * `scripts/canary-regle.sh` claims that changing one rule constant turns three
+ * suites red. Replayed on four constants during the acceptance review of
+ * M0-30: `TICKS_PER_MILESTONE.dangereux` 8→7, `CHALLENGE_DIE` 10→9 and
+ * `TICKS_PER_BOX` 4→3 each gave three reds — but `GAUGE_MAX` 5→4 AND 5→3 left
+ * the golden corpora GREEN, because none of the three read a gauge. A gauge
+ * constant walked through the golden gate. `gauge-rules` closes that hole.
  *
  * They are the reference oracle of the project: whoever changes a rule
  * constant gets a diff that NAMES what changed. That is the only requirement
@@ -31,14 +39,22 @@ import type { ChallengeInput } from '../../src/dice/challenge.js';
 import { rollChallenge } from '../../src/dice/challenge.js';
 import { rollProgress } from '../../src/dice/progress.js';
 import {
+  applyGaugeDelta,
+  applyGaugeSetDelta,
+  clampGauge,
+  isGaugeAtCeiling,
+  isGaugeAtFloor,
+  isGaugeInRange,
+} from '../../src/gauges.js';
+import {
   applyMomentumDelta,
   burnMomentum,
   clampMomentum,
   isMomentumNegated,
 } from '../../src/momentum.js';
 import { boxesFilled, fillBoxes, markProgress } from '../../src/progress-track.js';
-import type { MomentumBounds } from '../../src/types/gauges.js';
-import { DEFAULT_MOMENTUM_BOUNDS } from '../../src/types/gauges.js';
+import type { GaugeSet, MomentumBounds } from '../../src/types/gauges.js';
+import { DEFAULT_MOMENTUM_BOUNDS, GAUGES } from '../../src/types/gauges.js';
 import { MAX_PROGRESS_TICKS, PROGRESS_RANKS } from '../../src/types/progress.js';
 
 const GOLDEN = { dir: new URL('.', import.meta.url) };
@@ -406,6 +422,74 @@ function progressRows(): string[] {
   return rows;
 }
 
+// ------------------------------------------------------------------ gauges
+
+const GAUGE_FORMAT =
+  'clamp  value=<v> -> <clamped> | ' +
+  'delta  from=<v> d=<delta> -> value=<v> applied=<a> clamped=<y/n> | ' +
+  'set    gauge=<id> d=<delta> -> vigueur=<v> ame=<v> vivres=<v> | ' +
+  'floor  value=<v> -> <y/n> | ceil   value=<v> -> <y/n> | range  value=<v> -> <y/n>';
+
+/**
+ * THE SWEEP IS WRITTEN IN FULL, NEVER DERIVED FROM `GAUGE_MAX`.
+ *
+ * A range spelled `GAUGE_MAX + 3` would slide with the constant and the corpus
+ * would pin nothing: fifth failure mode of `docs/RECETTE.md`, a number
+ * compared with itself. These two are the window the gauges are read through —
+ * three below the floor the specification names, three above the ceiling it
+ * names — and they stay put when the constant moves.
+ */
+const SWEEP_FROM = -3;
+const SWEEP_TO = 8;
+
+function gaugeRows(): string[] {
+  const rows: string[] = [];
+
+  for (let value = SWEEP_FROM; value <= SWEEP_TO; value += 1) {
+    rows.push(`clamp  value=${signed(value)} -> ${signed(clampGauge(value))}`);
+  }
+
+  // Every starting point of the sweep against a delta that crosses each bound.
+  for (let from = SWEEP_FROM; from <= SWEEP_TO; from += 1) {
+    for (const delta of [-9, -5, -2, -1, 0, 1, 2, 5, 9]) {
+      const change = applyGaugeDelta(from, delta);
+      rows.push(
+        `delta  from=${signed(from)} d=${signed(delta)} -> value=${signed(change.value)} ` +
+          `applied=${signed(change.applied)} clamped=${yesNo(change.clamped)}`,
+      );
+    }
+  }
+
+  // The whole set, one gauge at a time: the other two must not move. A set
+  // operation that returned its argument would show up here as three columns
+  // changing at once.
+  const start: GaugeSet = { vigueur: 5, ame: 3, vivres: 1 };
+  for (const gauge of GAUGES) {
+    for (const delta of [-5, -1, 1, 5]) {
+      const next = applyGaugeSetDelta(start, gauge, delta);
+      rows.push(
+        `set    gauge=${gauge.padEnd(8)} d=${signed(delta)} -> ` +
+          `vigueur=${signed(next.vigueur)} ame=${signed(next.ame)} vivres=${signed(next.vivres)}`,
+      );
+    }
+  }
+
+  for (let value = SWEEP_FROM; value <= SWEEP_TO; value += 1) {
+    rows.push(`floor  value=${signed(value)} -> ${yesNo(isGaugeAtFloor(value))}`);
+  }
+  for (let value = SWEEP_FROM; value <= SWEEP_TO; value += 1) {
+    rows.push(`ceil   value=${signed(value)} -> ${yesNo(isGaugeAtCeiling(value))}`);
+  }
+  // Non-integers included: `isGaugeInRange` is the only predicate that refuses
+  // them, and a corpus of whole numbers would never say so.
+  for (const value of [-3, -1, -0.5, 0, 0.5, 1, 4, 4.5, 5, 6, 8]) {
+    const shown = `${value < 0 ? '-' : '+'}${Math.abs(value).toFixed(1).padStart(4, '0')}`;
+    rows.push(`range  value=${shown} -> ${yesNo(isGaugeInRange(value))}`);
+  }
+
+  return rows;
+}
+
 // ------------------------------------------------------------------- suite
 
 describe('the golden corpora of the rules', () => {
@@ -431,6 +515,34 @@ describe('the golden corpora of the rules', () => {
     const rows = progressRows();
     expect(rows.length).toBeGreaterThanOrEqual(150);
     expectGolden('progress-rolls', { format: PROGRESS_FORMAT, rows }, GOLDEN);
+  });
+
+  it('pins the gauge rules', () => {
+    const rows = gaugeRows();
+    expect(rows.length).toBeGreaterThanOrEqual(150);
+    expect(new Set(rows).size).toBe(rows.length);
+    expectGolden('gauge-rules', { format: GAUGE_FORMAT, rows }, GOLDEN);
+  });
+});
+
+describe('what the gauge corpus is an oracle for', () => {
+  it('reads the floor, the ceiling and a delta the bounds swallowed', () => {
+    // Each of these is a decision the corpus exists to pin. Deleting a family
+    // above makes THIS test name which one, instead of leaving a smaller
+    // corpus passing quietly.
+    const rows = gaugeRows();
+    const count = (predicate: (row: string) => boolean): number => rows.filter(predicate).length;
+
+    expect(count((row) => row.startsWith('floor') && row.endsWith('-> y'))).toBeGreaterThan(0);
+    expect(count((row) => row.startsWith('ceil') && row.endsWith('-> y'))).toBeGreaterThan(0);
+    expect(count((row) => row.includes('clamped=y'))).toBeGreaterThan(0);
+    expect(count((row) => row.includes('clamped=n'))).toBeGreaterThan(0);
+    expect(count((row) => row.startsWith('range') && row.endsWith('-> n'))).toBeGreaterThan(0);
+    // The three gauges, by name: a set operation that forgot one would show up
+    // as a missing family rather than as a changed value.
+    for (const gauge of GAUGES) {
+      expect(count((row) => row.includes(`gauge=${gauge}`))).toBeGreaterThan(0);
+    }
   });
 });
 

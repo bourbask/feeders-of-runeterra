@@ -6,8 +6,8 @@ export default defineConfig({
     globals: true,
     coverage: {
       provider: 'v8',
-      include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/index.ts'],
+      include: ['src/**/*.ts', 'smoke/**/*.ts', 'probe/**/*.ts'],
+      exclude: ['src/**/*.test.ts', 'src/index.ts', 'smoke/**/*.test.ts', 'probe/**/*.test.ts'],
       thresholds: { lines: 70, branches: 70, functions: 70, statements: 70 },
     },
   },

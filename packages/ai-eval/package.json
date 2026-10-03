@@ -18,14 +18,20 @@
     "typecheck:tests": "tsc -p tsconfig.test.json --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "eval:smoke": "tsx smoke/run-smoke.ts",
+    "eval:offline": "tsx src/run-offline.ts",
+    "eval:record": "tsx src/record.ts",
+    "eval:probe": "tsx probe/run-probe.ts"
   },
   "dependencies": {
     "@for/ai": "workspace:*",
+    "@for/contracts": "workspace:*",
     "@for/content": "workspace:*",
     "@for/testkit": "workspace:*"
   },
   "devDependencies": {
-    "@for/tsconfig": "workspace:*"
+    "@for/tsconfig": "workspace:*",
+    "tsx": "^4.20.6"
   }
 }

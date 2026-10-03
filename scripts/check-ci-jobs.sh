@@ -115,6 +115,7 @@ done
 invocations_listees=(
   'install --frozen-lockfile' # sous-commande de pnpm, pas un script du dépôt
   'sim run --format=json'     # sous-commandes de `sim`, documentées en §2.2
+  'exec turbo run test --force' # la forme parallèle de `pnpm test`, travail 6 — voir son commentaire
 )
 
 scripts_racine="$(

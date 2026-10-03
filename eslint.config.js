@@ -35,6 +35,21 @@ const outillage = [
 // paquet, exactement comme les tests eux-mêmes.
 const appointDeTest = [
   {
+    // Les sondes de `packages/*/smoke/` et `packages/*/probe/` sont des
+    // scripts lancés par tsx. Le tsconfig de build n'émet que `src/`, donc le
+    // service de projet ne les voit pas et le lint échouait sur une erreur
+    // d'analyse, pas sur une règle. Elles se rattachent au tsconfig de test du
+    // paquet, comme les tests.
+    files: ['packages/*/smoke/**/*.ts', 'packages/*/probe/**/*.ts'],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+        project: ['./tsconfig.test.json'],
+        tsconfigRootDir: process.cwd(),
+      },
+    },
+  },
+  {
     files: ['packages/*/tests/**/*.ts', 'tests/**/*.ts'],
     languageOptions: {
       parserOptions: {
@@ -46,4 +61,44 @@ const appointDeTest = [
   },
 ];
 
-export default [...base, ...enginePurity, ...react, ...outillage, ...appointDeTest];
+// @for/scenario est pur, comme le moteur : pas d'entree-sortie, pas d'horloge, pas
+// de hasard ambiant. Son tsconfig lui retire deja tout typage Node — un
+// `import { x } from 'node:fs'` est une TS2307 — mais l'import a effet de bord nu,
+// `import 'node:fs';`, compile sans broncher. C'est cette regle-la qui l'attrape.
+const pureteDuScenario = [
+  {
+    files: ['packages/scenario/src/**/*.ts'],
+    ignores: ['**/*.test.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['node:*', 'fs', 'path', 'crypto', 'os', 'http', 'https', 'child_process'],
+              message:
+                '@for/scenario est pur : ni reseau, ni disque, ni base. Le registre de contenu, ' +
+                'le port de decision et la graine arrivent par un parametre.',
+            },
+          ],
+        },
+      ],
+      'no-restricted-globals': [
+        'error',
+        { name: 'process', message: '@for/scenario est pur.' },
+        { name: 'fetch', message: '@for/scenario est pur.' },
+        { name: 'crypto', message: '@for/scenario est pur.' },
+        { name: 'setTimeout', message: '@for/scenario est pur.' },
+      ],
+    },
+  },
+];
+
+export default [
+  ...base,
+  ...enginePurity,
+  ...pureteDuScenario,
+  ...react,
+  ...outillage,
+  ...appointDeTest,
+];

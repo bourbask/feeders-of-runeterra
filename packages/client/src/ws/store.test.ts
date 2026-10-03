@@ -99,6 +99,77 @@ describe('une trame malformée', () => {
   );
 });
 
+// ------------------------------------------------------------- l'historique
+
+/**
+ * LE PASSÉ NE VIENT PAS DE LA SOCKET, ET C'EST MESURÉ ICI.
+ *
+ * `s2c.snapshot` place le curseur de reprise sur la tête du journal, donc une
+ * première connexion n'a aucun trou à signaler et ne demande rien. Sur une
+ * table qui portait déjà deux cent quarante-huit entrées, le fil restait vide
+ * jusqu'au prochain événement vivant — constaté en recette manuelle du §8.
+ */
+describe('l’historique lu en HTTP', () => {
+  it('entre dans le fil, rangé par seq, même sans deliverySeq', () => {
+    store.getState().backfill([
+      { seq: 3, event: gm(3, 'la troisième') },
+      { seq: 1, event: gm(1, 'la première') },
+      { seq: 2, event: gm(2, 'la deuxième') },
+    ]);
+
+    const textes = journalLines(store.getState()).map((ligne) => ligne.text);
+    expect(textes).toEqual(['la première', 'la deuxième', 'la troisième']);
+  });
+
+  it('se range AVANT le direct, et le direct garde son deliverySeq', () => {
+    store.getState().backfill([{ seq: 1, event: gm(1, 'le passé') }]);
+    store.getState().receive(eventFrame(2, 1, gm(2, 'le direct')));
+
+    const lignes = journalLines(store.getState());
+    expect(lignes.map((l) => l.text)).toEqual(['le passé', 'le direct']);
+    expect(lignes[0]?.deliverySeq).toBe(0);
+    expect(lignes[1]?.deliverySeq).toBe(1);
+  });
+
+  it('dédoublonne par seq, et c’est le DIRECT qui gagne', () => {
+    // Une entrée émise entre la lecture HTTP et l'ouverture de la socket
+    // arrive par les deux chemins. Garder celle du direct est ce qui laisse la
+    // reprise se repérer : elle seule porte un `deliverySeq`.
+    store.getState().receive(eventFrame(5, 1, gm(5, 'par la socket')));
+    store.getState().backfill([{ seq: 5, event: gm(5, 'par le HTTP') }]);
+
+    const lignes = journalLines(store.getState());
+    expect(lignes).toHaveLength(1);
+    expect(lignes[0]?.text).toBe('par la socket');
+    expect(lignes[0]?.deliverySeq).toBe(1);
+  });
+
+  it('survit à un instantané — le passé n’est pas une projection', () => {
+    store.getState().backfill([{ seq: 1, event: gm(1, 'le passé') }]);
+    store.getState().receive(eventFrame(2, 1, gm(2, 'le direct')));
+
+    store.getState().receive(snapshotFrame(aTableStateDto({ seq: 500, characters: [] }), 500, 12));
+
+    // L'instantané écrase la projection du serveur. Il n'efface pas ce qui
+    // s'est passé : sans ça, chaque reconnexion viderait le fil le temps d'une
+    // seconde lecture HTTP.
+    expect(store.getState().lines).toHaveLength(0);
+    expect(journalLines(store.getState()).map((l) => l.text)).toEqual(['le passé']);
+  });
+
+  it('remplace, n’empile pas : deux lectures ne doublent pas le fil', () => {
+    store.getState().backfill([{ seq: 1, event: gm(1, 'le passé') }]);
+    store.getState().backfill([{ seq: 1, event: gm(1, 'le passé') }]);
+
+    expect(journalLines(store.getState())).toHaveLength(1);
+  });
+
+  it('une révocation frappe une ligne d’historique comme une ligne du direct', () => {
+    store.getState().backfill([{ seq: 1, event: gm(1, 'le passé') }]);
+    expect(turnRevocation(store.getState(), TOUR)).toBeNull();
+  });
+});
+
 // ------------------------------------------------------------ l'instantané
 
 describe('s2c.snapshot', () => {

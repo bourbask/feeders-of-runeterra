@@ -1,0 +1,18 @@
+{
+  "case_id": "08-bloc-absent",
+  "provider": "stub",
+  "model": "ecrit-a-la-main-m0",
+  "prompt_version": "conteur/2.1.0",
+  "tools_version": "tools/1.0.0",
+  "recorded_at": "2026-09-30T00:00:00.000Z",
+  "samples": [
+    {
+      "response": "Tu ouvres le coffre à l'abri du vent et tu passes la main sur ce qu'il contient. Les cendres tiennent dans leur étui de cuir, sèches, serrées, sans un grain perdu. Ulrun tient le couvercle pour que la bourrasque ne le rabatte pas. Le cuir craque sous tes doigts quand tu refermes.",
+      "tool_calls": []
+    },
+    {
+      "response": "Tu poses le coffre contre la pierre et tu l'ouvres dos au vent. L'étui de cuir n'a pas bougé et les cendres sont restées sèches. Ulrun maintient le couvercle à deux mains pendant que tu comptes. Le fermoir de fer te gèle le bout des doigts.",
+      "tool_calls": []
+    }
+  ]
+}

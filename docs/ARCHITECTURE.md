@@ -274,6 +274,7 @@ Scope `@for/*`, tous prives, tous ESM. Six couches acycliques, verifiees par
 | 2 | `@for/content` | Chargeur, registre typé, libelles. Les donnees sont dans `content/` a la racine | `@for/contracts` |
 | 2 | `@for/testkit` | RNG scriptes, fixtures, runner de corpus dores, assertions de domaine | `@for/engine`, `@for/contracts` |
 | 2 | `@for/db` | Drizzle, migrations, SQLite WAL, journal, projections | `drizzle-orm`, `better-sqlite3`, `@for/contracts` |
+| 3 | `@for/scenario` | Construction guidee d'un scenario (ADR 0012) : les dix etapes, le port de decision, le melange sur le flux nomme `scenario`. **Pur** : ni reseau, ni disque, ni base | `@for/engine`, `@for/contracts`, `@for/content` |
 | 3 | `@for/ai` | Port du conteur et ses adaptateurs, prompts, outils, contexte, assertions. **Sans persistance, sans jobs, sans lecture d'environnement** | `@anthropic-ai/sdk` (**optionnelle**, utilisee par le seul adaptateur `anthropic`), `@for/contracts`, `@for/content` |
 | 4 | `@for/server` | Fastify, OAuth, hub WS, `CampaignService`, workers IA | tout ce qui precede |
 | 4 | `@for/ai-eval` | Corpus, runners N0/N1/N2, graders, la **sonde de fumee** (`smoke/`, M0-32) et la **sonde de fournisseur** (`probe/`, M0-31) | `@for/ai`, `@for/contracts`, `@for/content`, `@for/testkit` |

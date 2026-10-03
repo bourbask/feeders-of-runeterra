@@ -60,6 +60,7 @@ import { zIntent } from '@for/contracts';
 import {
   appendEvents,
   assertAcceptsIntents,
+  campaignSeq,
   getCampaign,
   listMemberPlayerIds,
   settleIntentOnce,
@@ -104,6 +105,39 @@ import type {
 } from '@for/engine';
 import type { RngSource, TimeSource } from '../deps.js';
 
+/** What `narrateTurn` is handed once the turn is committed and durable. */
+export interface NarrateTurnInput {
+  readonly campaignId: string;
+  /** The committed state, after the turn's entries. */
+  readonly state: CampaignState;
+  readonly brief: NarrationBrief;
+  readonly correlationId: string;
+  /**
+   * Journal head BEFORE this call wrote ANYTHING — the burn window's safety
+   * net included. It is what the storyteller hands to `EventDelivery`, so an
+   * entry written by the net and absent from `SubmitIntentResult.events`
+   * (issue #67) still reaches a socket.
+   */
+  readonly sinceSeq: number;
+}
+
+/**
+ * THE REAL STORYTELLER, when the process has one.
+ *
+ * `narrate` below is M0-24's placeholder: one call, the brief as JSON, no
+ * prompt, no post-filter, no `<scene_apres>`, no refusal. Its own header says
+ * so. `src/ai/turn.ts` (M0-29) is the real turn, and `src/ai/turn-runner.ts`
+ * composes it; `gamePlugin` passes it here.
+ *
+ * OPTIONAL, AND THE DIVERGENCE IS REPORTED RATHER THAN HIDDEN: `@for/sim`
+ * composes `createCampaignService` itself and does NOT pass this hook, so the
+ * seven scenarios and their golden corpora keep running against the
+ * placeholder. The simulator therefore drives the real write path, the real
+ * hub and the real engine, and NOT the real storyteller. Wiring it there is a
+ * regeneration of seven corpora and a different task's measurement.
+ */
+export type NarrateTurn = (input: NarrateTurnInput) => Promise<void>;
+
 export interface GameDeps {
   readonly connection: SqliteConnection;
   readonly content: EngineContent;
@@ -113,6 +147,8 @@ export interface GameDeps {
   readonly rng: RngSource;
   readonly ids: IdFactory;
   readonly narrator: NarratorPort;
+  /** See `NarrateTurn`. Absent = M0-24's placeholder narration. */
+  readonly narrateTurn?: NarrateTurn;
 }
 
 export interface PipelineInput {
@@ -483,7 +519,16 @@ async function narrate(
   state: CampaignState,
   brief: NarrationBrief,
   correlationId: string,
+  sinceSeq: number,
 ): Promise<void> {
+  // THE REAL TURN, WHEN THERE IS ONE. Everything below this line is M0-24's
+  // placeholder, kept for the callers that compose `GameDeps` without a
+  // storyteller — `@for/sim` and the pipeline's own suite. See `NarrateTurn`.
+  if (deps.narrateTurn !== undefined) {
+    await deps.narrateTurn({ campaignId, state, brief, correlationId, sinceSeq });
+    return;
+  }
+
   const requestId = deps.ids.next();
   let text = '';
   let failure: string | null = null;
@@ -615,6 +660,13 @@ export async function runIntent(deps: GameDeps, input: PipelineInput): Promise<P
     return { kind: 'validation_failed', detail: parsed.error.issues[0]?.message ?? 'intention' };
   }
   const intent = parsed.data;
+
+  /**
+   * The journal head BEFORE anything of this call is written — read here and
+   * not after the write, because the burn window's safety net appends BEFORE
+   * the transaction and its entries must be delivered too (issue #67).
+   */
+  const headBeforeTurn = campaignSeq(deps.connection, campaignId) ?? 0;
 
   const journal = journalOf(deps, campaignId);
   let state = loadReplay(deps.connection, campaignId).state;
@@ -773,7 +825,7 @@ export async function runIntent(deps: GameDeps, input: PipelineInput): Promise<P
   // revise, and narrating it now would tell it twice.
   const brief = result.brief;
   if (result.pending === null && !result.replayed && brief !== undefined) {
-    await narrate(deps, campaignId, state, brief, turnCorrelation);
+    await narrate(deps, campaignId, state, brief, turnCorrelation, headBeforeTurn);
   }
   return result;
 }

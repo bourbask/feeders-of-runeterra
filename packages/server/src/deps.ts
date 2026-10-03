@@ -14,12 +14,12 @@
  * 2.8 lists `ai` among the injected dependencies, but the same section puts
  * the construction of the port in `src/ai/narrator.ts` — "the ONLY place in
  * the server that reads the storyteller's configuration" — and that file is
- * owned by M0-24. `selectNarrator` does not exist yet either: `@for/ai` is
- * being written by M0-18 in THIS wave. Putting a `NarratorPort` field here
- * would therefore force M0-24 to reopen `deps.ts` and `main.ts`, neither of
- * which is in its file list. `env` is in the record instead, and
- * `buildNarrator(deps.env)` is a one-line call from the plugin that needs it.
- * Reported as a deviation from section 2.8 rather than applied in silence.
+ * owned by M0-24, which could not reopen `deps.ts` or `main.ts`. `env` is in
+ * the record instead, and `buildNarrator(deps.env, selectNarrator)` is a
+ * one-line call from the plugin that needs it (`game/index.ts`). The port the
+ * process composed is readable as the `narrator` decorator, so that WHICH
+ * provider a configuration selects is observable from a test — it was not,
+ * and that is how the selector sat unpassed from M0-24 to M0-30.
  */
 
 import { randomBytes } from 'node:crypto';

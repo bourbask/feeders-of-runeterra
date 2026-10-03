@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "torvald-qui-est-descendu",
+  "name": "Torvald qui est descendu",
+  "disposition": "neutre",
+  "factionId": "griffe-d-hiver",
+  "periodId": "freljord-moderne",
+  "wants": "Rester en bas : il a vu des greniers pleins et il n'a plus aucune envie de remonter.",
+  "refuses": "Dire à sa bande ce qu'il a promis en échange d'un toit et d'une place au feu.",
+  "knows": "Par où passe une bande de guerre quand elle tient à ne pas être vue depuis la crête.",
+  "tags": ["bande-de-guerre", "transfuge"]
+}

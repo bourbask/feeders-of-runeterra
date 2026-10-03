@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "la-veille-du-givre",
+  "name": "La veille du Givre",
+  "kind": "rencontre",
+  "situation": "On vous accueille, on vous nourrit, on répond à toutes vos questions. Les couloirs sont chauds là où ils devraient être froids, et froids là où ils devraient être chauds. Celle qui reçoit sait ce qu'il y a en bas et le prix qui a été payé pour l'y mettre ; elle ne laisse descendre que ceux qui ont compris ce qu'ils vont voir. Un autre, dans la maison, voudrait qu'on dise enfin tout haut ce que la Citadelle garde, et il n'est pas seul à le vouloir. Les portes ont été fermées aux marchands cette saison, pour la première fois.",
+  "stakeQuestion": "Que garde la Citadelle, et pourquoi maintenant elle ferme ?",
+  "figureIds": ["eira-la-veilleuse", "hjalmar-le-questionneur"],
+  "regionId": "frostguard-citadel",
+  "periodId": "freljord-moderne",
+  "entryPoint": false,
+  "leads": [
+    {
+      "toNodeId": "le-couloir-qui-descend",
+      "trigger": "On vous autorise à descendre, ce qui devrait vous étonner."
+    },
+    {
+      "toNodeId": "les-pierres-dressees",
+      "trigger": "Les pierres achetées en sel sont ici, et pas à leur place."
+    },
+    {
+      "toNodeId": "la-faille-hurlante",
+      "trigger": "Ce qu'on garde ici se comprend mieux vu de la faille."
+    }
+  ],
+  "tags": ["citadelle", "veille"]
+}

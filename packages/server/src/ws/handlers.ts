@@ -58,7 +58,7 @@ import type { ContentRegistry } from '@for/content';
 import type { C2SMessage, C2SMessageType, WsRateLimit } from '@for/contracts';
 import type { CharacterId, Intent } from '@for/engine';
 import type { TimeSource } from '../deps.js';
-import type { CampaignService } from '../game/types.js';
+import type { CampaignService, EventDelivery } from '../game/types.js';
 import type { NarrationStatus, TableConnection } from './connection.js';
 import type { TableHub } from './hub.js';
 
@@ -154,6 +154,13 @@ export interface NarrationReplay {
 export interface HandlerDeps {
   readonly hub: TableHub;
   readonly service: CampaignService;
+  /**
+   * HOW A WRITE REACHES A SOCKET. Required, and it has to be: the one thing
+   * it replaces — `hub.broadcast(campaignId, result.value.events)` — compiled,
+   * passed every test, and lost three journal entries per game (issue #67).
+   * An optional port with a fallback would have kept the defect one `??` away.
+   */
+  readonly delivery: EventDelivery;
   readonly content: ContentRegistry;
   readonly clock: TimeSource;
   readonly narration?: NarrationReplay;
@@ -251,9 +258,46 @@ async function handleHello(
 }
 
 /**
+ * What the server says when THE RULES refuse, as opposed to when the server
+ * could not serve the request.
+ *
+ * ONE SENTENCE, AND DELIBERATELY NOT THE RULE'S OWN. `RuleViolation` carries
+ * a code and machine details, no human text — the engine speaks no language
+ * (`engine/src/types/violations.ts`), and the French wording of each code
+ * lives in `packages/client/src/api/error-messages.ts`. `zS2CRejected.message`
+ * is `z.string().min(1)`, so a sentence has to travel; this is the one that
+ * says nothing the client would have to agree with. What the client reads is
+ * the CODE — `client/src/ws/store.test.ts`, « `s2c.rejected` retient le code,
+ * pas une phrase ».
+ */
+export const RULE_REFUSAL_MESSAGE = 'Les règles refusent ce geste.';
+
+/**
  * The only mutating frame. The engine decides inside `submitIntent`; this
- * routine hands over an `Intent` and broadcasts whatever came back already
- * journalled and already numbered.
+ * routine hands over an `Intent` and then lets the DELIVERY read the journal.
+ *
+ * ══ A RULE REFUSAL IS AN ANSWER, NOT A SILENCE (issue #66) ════════════════
+ *
+ * `submitIntent` has THREE outcomes, not two: `err(AppError)` — the server
+ * could not serve it —, `ok({ accepted: false, rejection })` — the rules said
+ * no, which is part of the fiction —, and `ok({ accepted: true })`. This
+ * routine used to answer `s2c.rejected` on the first only, so a player whose
+ * move the rules refused received NOTHING AT ALL: the intent vanished. Two
+ * simulator scenarios reproduced it (`03` step 4, `target_not_present`; `06`
+ * step 2, `move_in_progress`), and `zRejectionCode` — which exists precisely
+ * to carry either family — was reachable by no path.
+ *
+ * HELD BY `tests/ws/rejection.test.ts`, « un refus de règle devient
+ * `s2c.rejected`, avec le code de la règle » and « et une erreur technique
+ * garde son propre code : les deux familles ne sont pas fusionnées ». Remove
+ * the `accepted` branch and the first goes red.
+ *
+ * ══ THE DELIVERY READS THE JOURNAL, NEVER THIS RESULT (issue #67) ═════════
+ *
+ * `result.value.events` is what the INTENT returned. The burn window's safety
+ * net and the narration write entries that are journalled and absent from it,
+ * and the hub advances each player's cursor past them while counting — so a
+ * hub told by the result loses them for ever. See `game/delivery.ts`.
  *
  * WHAT THE SERVER SIGNS IS MEASURED, with two actors and two callers:
  * `tests/ws/routing.test.ts`, « signe l'écriture avec la campagne, le joueur de
@@ -263,7 +307,7 @@ async function handleHello(
  * path by « un refus du service devient `s2c.rejected`, jamais un événement ».
  */
 async function submit(ctx: HandlerContext, intentId: string, intent: Intent): Promise<void> {
-  const { hub, service } = ctx.deps;
+  const { delivery, service } = ctx.deps;
   const { campaignId, playerId } = ctx.connection.session;
 
   const result = await service.submitIntent({ campaignId, playerId, intentId, intent });
@@ -271,7 +315,14 @@ async function submit(ctx: HandlerContext, intentId: string, intent: Intent): Pr
     ctx.connection.sendRejected(intentId, result.error.code, result.error.userMessage);
     return;
   }
-  hub.broadcast(campaignId, result.value.events);
+
+  const rejection = result.value.rejection;
+  if (rejection !== undefined) {
+    ctx.connection.sendRejected(intentId, rejection.code, RULE_REFUSAL_MESSAGE);
+    return;
+  }
+
+  delivery.deliver(campaignId);
 }
 
 async function handleIntent(
