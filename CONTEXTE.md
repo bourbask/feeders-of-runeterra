@@ -164,23 +164,23 @@ La session a fini sur "You've hit your weekly limit". Je vérifie l'état réel 
 
 ## Le projet
 
-**Feeders of Runeterra** — `~/others/feeders-of-runeterra`, repo public `bourbask/feeders-of-runeterra`. JDR 100% Runeterra avec un **MJ mécanique IA** (pas de型的 MJ humain), page web, jouable en missions courtes solo/asynchrone *et* en campagne de groupe. Contrainte tenue depuis le début : **zéro token payant** → fournisseurs gratuits (Kokoro, on-device Windows/Edge, WaveNet).
+**Feeders of Runeterra** — `~/others/feeders-of-runeterra`, repo public `bourbask/feeders-of-runeterra`. JDR 100% Runeterra avec un **MJ mécanique IA** (pas de型的 MJ humain), page web, jouable en missions courtes solo/asynchrone _et_ en campagne de groupe. Contrainte tenue depuis le début : **zéro token payant** → fournisseurs gratuits (Kokoro, on-device Windows/Edge, WaveNet).
 
 ## Où en étaient les agents
 
 `develop` est à jour (810c756). **10 PR ouvertes**, dont 1 draft, et **2 issues ouvertes** :
 
-| PR | Tâche | État |
-|---|---|---|
-| #58 | ADR 0011 — budget d'un tour | prête |
-| #59 | M0-22 contexte/budget/assertions | prête |
-| #60 | M0-32 sonde de fumée fournisseur | prête |
-| #61 | docs méthode scénario (ADR 0012) | prête |
-| #62 | S-01 vocabulaire scénario | prête |
-| #63 | M0-28 simulateur headless | prête |
-| #64 | M0-29 travailleurs IA / diffusion | prête |
-| #65 | S-02 validation du graphe | prête |
-| #68 | S-03 frise du Freljord + contenu | prête |
+| PR  | Tâche                             | État               |
+| --- | --------------------------------- | ------------------ |
+| #58 | ADR 0011 — budget d'un tour       | prête              |
+| #59 | M0-22 contexte/budget/assertions  | prête              |
+| #60 | M0-32 sonde de fumée fournisseur  | prête              |
+| #61 | docs méthode scénario (ADR 0012)  | prête              |
+| #62 | S-01 vocabulaire scénario         | prête              |
+| #63 | M0-28 simulateur headless         | prête              |
+| #64 | M0-29 travailleurs IA / diffusion | prête              |
+| #65 | S-02 validation du graphe         | prête              |
+| #68 | S-03 frise du Freljord + contenu  | prête              |
 | #69 | S-04 outil de construction guidée | **draft, recalée** |
 
 Une branche `integration/m0-fin` porte `develop` + #59 + #60, mesurée verte — le raccourci pour tout prendre d'un bloc.
@@ -192,12 +192,13 @@ Une branche `integration/m0-fin` porte `develop` + #59 + #60, mesurée verte —
 La dernière réponse de Claude corrigeait sa propre annonce : **M0-29 n'est pas « la dernière avant que la table soit jouable »**. La couche IA est complète et gardée, mais **elle n'a aucun appelant** — le câblage traverse `src/ws/` et `src/game/`, hors périmètre de sa fiche. Le câblage, c'est **M0-30**, seule tâche autorisée à corriger n'importe quel paquet. Donc : chemin réel **M0-27 → M0-30**, et la table jouable arrive à M0-30, pas avant.
 
 Deux autres choses notées en passant :
+
 - **Aucun scénario ne produit d'entrée de portée `subset`** — le filtre est permissif sur un cas que rien n'émet en M0. Filet reporté à M1, le jour où la visibilité par groupe s'ouvre.
 - **Issues #66 et #67** (bugs réels trouvés par le simulateur) : un refus de règle n'atteint jamais le joueur, et des entrées du journal perdues définitivement. À prendre après #64.
 
 ## En suspens côté édition
 
-- **S-04 a été recalée** sur cinq sondes inertes (tests qui comparent la *forme* d'un objet sans son *contenu*) ; la pire porte sur `chosen`, ce qui donne au modèle ce qui précède — le vider laisse 84 tests verts. C'est exactement la raison d'être d'un modèle plutôt que d'un tirage au sort.
+- **S-04 a été recalée** sur cinq sondes inertes (tests qui comparent la _forme_ d'un objet sans son _contenu_) ; la pire porte sur `chosen`, ce qui donne au modèle ce qui précède — le vider laisse 84 tests verts. C'est exactement la raison d'être d'un modèle plutôt que d'un tirage au sort.
 - **S-06 est née d'une mesure** : `absentFactionIds` n'empêche pas l'anachronisme. Une figure Avarosane dans une période qui déclare la faction absente charge en code 0.
 
 ## Tes deux dernières questions, sans réponse
@@ -350,20 +351,21 @@ J'ai ce qu'il faut. Voici l'analyse complète.
 
 **Non, tu n'as pas été facturé à l'API.** Les faits dans `~/.claude.json` :
 
-| Champ | Valeur | Lecture |
-|---|---|---|
-| `primaryApiKey` | `null` | Aucune clé API. Authentification OAuth. |
-| `billingType` | `stripe_subscription` | Abonnement, pas du paiement à l'usage. |
-| `userRateLimitTier` | `default_claude_max_5x` | Claude **Max 5x**. |
-| `organizationType` | `claude_team` | Siège géré par **Europrocurement**. |
-| `hasExtraUsageEnabled` | **`true`** | ← le seul vrai vecteur de facturation. |
+| Champ                  | Valeur                  | Lecture                                 |
+| ---------------------- | ----------------------- | --------------------------------------- |
+| `primaryApiKey`        | `null`                  | Aucune clé API. Authentification OAuth. |
+| `billingType`          | `stripe_subscription`   | Abonnement, pas du paiement à l'usage.  |
+| `userRateLimitTier`    | `default_claude_max_5x` | Claude **Max 5x**.                      |
+| `organizationType`     | `claude_team`           | Siège géré par **Europrocurement**.     |
+| `hasExtraUsageEnabled` | **`true`**              | ← le seul vrai vecteur de facturation.  |
 
 Le `costUSD` que Claude Code affiche est un **compteur notionnel** : ce que tes tokens coûteraient au tarif public de l'API. Ce n'est pas une facture. Sur un Max, le coût marginal est zéro.
 
 **Mais il y a un vrai point d'attention, et ce n'est pas celui que tu crois.** Ton compte est un **siège d'équipe责令 à ta boîte**, avec `hasExtraUsageEnabled: true`. Ça veut dire que le dépassement des quotas d'abonnement **peut** être refacturé à l为单位 API à ta boîte. Or tu viens précisément de faire claquer une limite hebdo. Ce n'est pas la même question que « abonnement ou API » — c'est « l'extra usage a-t-il été facturé ».
 
 **Je ne peux pas voir ta facture.** Deux endroits à vérifier, dans cet ordre :
-1. Claude.ai → ton organisation Europrocurement → *Billing / Usage*. Regarde s'il y a une ligne **extra usage** ou *overage* distincte de l'abonnement.
+
+1. Claude.ai → ton organisation Europrocurement → _Billing / Usage_. Regarde s'il y a une ligne **extra usage** ou _overage_ distincte de l'abonnement.
 2. La console API Anthropic (`console.anthropic.com`) — si elle est vide, c'est la preuve qu'aucun appel API facturé n'a eu lieu.
 
 Si les deux sont vides : tu n'as rien payé, et le « $2000 » est une valeur affichée, pas une dépense.
@@ -372,16 +374,16 @@ Si les deux sont vides : tu n'as rien payé, et le « $2000 » est une valeur af
 
 J'ai agrégé les **227 fichiers** de la session (main + tous les sous-agents) :
 
-| Jour | Appels | Sortie | Lecture cache |
-|---|---|---|---|
-| 15 sept | 28 | 26 k | 1,6 M |
-| 17 sept | 1 502 | 1,71 M | 257 M |
-| 21 sept | 2 169 | 1,24 M | 303 M |
-| 23 sept | 841 | 400 k | 123 M |
-| **24 sept** | **10 082** | 1,95 M | **1 498 M** |
-| **25 sept** | **9 155** | 645 k | **1 665 M** |
-| 26 sept | 1 928 | 115 k | 345 M |
-| **Total** | **25 705** | **6,1 M** | **4 19 M** |
+| Jour        | Appels     | Sortie    | Lecture cache |
+| ----------- | ---------- | --------- | ------------- |
+| 15 sept     | 28         | 26 k      | 1,6 M         |
+| 17 sept     | 1 502      | 1,71 M    | 257 M         |
+| 21 sept     | 2 169      | 1,24 M    | 303 M         |
+| 23 sept     | 841        | 400 k     | 123 M         |
+| **24 sept** | **10 082** | 1,95 M    | **1 498 M**   |
+| **25 sept** | **9 155**  | 645 k     | **1 665 M**   |
+| 26 sept     | 1 928      | 115 k     | 345 M         |
+| **Total**   | **25 705** | **6,1 M** | **4 19 M**    |
 
 Trois lectures :
 
@@ -396,9 +398,11 @@ Trois lectures :
 J'ai vérifié moi-même la critique centrale de Claude, et **elle est inexacte**. Claude disait : « la couche IA n'a aucun appelant ». C'est faux.
 
 `packages/server/src/game/index.ts:92` fait bel et bien :
+
 ```ts
 narrator: buildNarrator(deps.env),
 ```
+
 Le jeu **est** câblé. Le problème est ailleurs, et il est bien plus précis :
 
 ```ts
@@ -426,13 +430,15 @@ Le code le dit lui-même, en trois endroits : `deps.ts:21` (« one-line call »)
 **Oui, et le socle est excellent. Le processus a un défaut précis.**
 
 Ce qui est bon :
+
 - **34 434 lignes de source, 34 544 lignes de tests.** Ratio 1:1. Pour une codebase qui n'a jamais été jouée, c'est le bon instinct.
 - **10 590 lignes de spécification avant le code**, 11 ADR. Le contrat est écrit, pas deviné.
 - **L'architecture est saine** : `02-mj-ia.md` interdit explicitement qu'un fournisseur ou une clé franchisse le port. `tests/no-env.test.ts` grep tout le paquet et échoue à la première occurrence. Un stub qui inventerait une phrase française mettrait de la prose dans `@for/server` — ils l'ont écrit dans le commentaire du code. C'est le genre de rigueur qui rend un projet agentifiable.
 - **L'agentification a produit de vrais défauts de conception** : la règle de S-02 (« tout nœud est atteignable ») laissait passer 4 nœuds mutuellement inatteignables ; `absentFactionIds` ne empêchait pas l'anachronisme ; `chosen` vidé laissait 84 tests verts. Claude a laissé les agents **trouver et corriger les erreurs de sa propre fiche** plutôt que de les hushed. C'est rare et c'est précieux.
 
 Le défaut :
-- **Le fan-out a optimisé le « task done » plutôt que le « chemin jouable ».** 9 vagues, 10 PR en attente, 34 k lignes de tests, et le raccordement au fournisseur — la *seule* chose qui manquait pour voir le jeu — est resté non fait parce qu'il n'appartenait à aucune fiche. C'est le défaut classique de l'agentification : chaque agent optimise son périmètre, personne n'optimise le **chemin critique**.
+
+- **Le fan-out a optimisé le « task done » plutôt que le « chemin jouable ».** 9 vagues, 10 PR en attente, 34 k lignes de tests, et le raccordement au fournisseur — la _seule_ chose qui manquait pour voir le jeu — est resté non fait parce qu'il n'appartenait à aucune fiche. C'est le défaut classique de l'agentification : chaque agent optimise son périmètre, personne n'optimise le **chemin critique**.
 - **L'scope creep documentaire.** 2 128 lignes de `M0-TASKS.md` et 818 de `M0-REVUE.md` pour un socle. Le ratio effort-conception/implémentation devient un risque.
 
 Ma recommandation : **tu ne merdes pas M0-30 dans une vague d'agents. Tu fais la ligne toi-même, tu la merges, et tu lances un playtest.** Vois la proserake sortir d'un vrai fournisseur. Après ça seulement, tu décides si la suite du plan vaut son prix. Le plan a produit un bon système ; il n'a pas encore produit une preuve que le jeu marche.
@@ -532,12 +538,12 @@ Une phrase d'erreur nue. Inutile pour juger le visuel.
 
 Le serveur **refuse de démarrer** sans ces quatre variables, sans défaut possible (`env.ts:73-82`) :
 
-| Variable | Contrainte |
-|---|---|
-| `SESSION_SECRET` | ≥ 32 caractères |
-| `DISCORD_CLIENT_ID` | non vide |
-| `DISCORD_CLIENT_SECRET` | non vide |
-| `DISCORD_REDIRECT_URI` | URL valide |
+| Variable                | Contrainte      |
+| ----------------------- | --------------- |
+| `SESSION_SECRET`        | ≥ 32 caractères |
+| `DISCORD_CLIENT_ID`     | non vide        |
+| `DISCORD_CLIENT_SECRET` | non vide        |
+| `DISCORD_REDIRECT_URI`  | URL valide      |
 
 Or tu m'avais dit ne pas avoir pu récupérer le secret. **C'est le seul vrai obstacle.** Tout le reste est prêt.
 
@@ -556,7 +562,7 @@ Or tu m'avais dit ne pas avoir pu récupérer le secret. **C'est le seul vrai ob
 
 Deux chemins, selon ce que tu préfères :
 
-**A — Tu récupères le secret Discord** (portail développeur → ton appli → OAuth2 → *Reset Secret*, ça se fait en 2 minutes, le secret s'affiche une seule fois). Ensuite je monte le `.env`, je migre, je seed, et tu as la table complète. Zéro modification de code.
+**A — Tu récupères le secret Discord** (portail développeur → ton appli → OAuth2 → _Reset Secret_, ça se fait en 2 minutes, le secret s'affiche une seule fois). Ensuite je monte le `.env`, je migre, je seed, et tu as la table complète. Zéro modification de code.
 
 **B — Je te fais un bypass de dev** : une route `/api/auth/dev-login` gardée par `NODE_ENV=development`, qui crée une session sans passer par Discord. C'est ~20 lignes, ça touche le serveur, et ça déroge à une règle du projet qui tient « la table ne décide rien ».
 
@@ -604,15 +610,15 @@ Tout est clair. Je crée le `.env` avec le secret de session déjà généré �
 
 ## Ce que j'ai rempli pour toi
 
-| Variable | Valeur |
-|---|---|
-| `NODE_ENV` | `development` |
-| `PORT` | `8787` (le défaut documenté) |
-| `PUBLIC_URL` | `http://localhost:5173` |
-| `LOG_LEVEL` | `debug` (plus verbeux, utile en dev) |
-| `DATABASE_PATH` | `./data/app.db` |
-| `SESSION_SECRET` | **généré, 64 caractères** (openssl) — tu n'as rien à faire |
-| `NARRATOR_PROVIDER` | `stub` — aucune sortie réseau |
+| Variable            | Valeur                                                     |
+| ------------------- | ---------------------------------------------------------- |
+| `NODE_ENV`          | `development`                                              |
+| `PORT`              | `8787` (le défaut documenté)                               |
+| `PUBLIC_URL`        | `http://localhost:5173`                                    |
+| `LOG_LEVEL`         | `debug` (plus verbeux, utile en dev)                       |
+| `DATABASE_PATH`     | `./data/app.db`                                            |
+| `SESSION_SECRET`    | **généré, 64 caractères** (openssl) — tu n'as rien à faire |
+| `NARRATOR_PROVIDER` | `stub` — aucune sortie réseau                              |
 
 ## Ce qu'il te reste à fillir — 3 lignes
 
@@ -708,11 +714,11 @@ Tout est en place. **Ouvre `http://localhost:5173`.**
 
 ## Ce qui tourne
 
-| | | |
-|---|---|---|
-| Serveur Fastify | `http://localhost:8787` | stub narrator, aucune sortie réseau |
-| Client Vite | `http://localhost:5173` | proxy `/api` + `/ws` vers 8787 |
-| Base SQLite | `data/app.db` | 22 tables, migrations OK |
+|                  |                         |                                                     |
+| ---------------- | ----------------------- | --------------------------------------------------- |
+| Serveur Fastify  | `http://localhost:8787` | stub narrator, aucune sortie réseau                 |
+| Client Vite      | `http://localhost:5173` | proxy `/api` + `/ws` vers 8787                      |
+| Base SQLite      | `data/app.db`           | 22 tables, migrations OK                            |
 | Campagne de démo | `pacte-griffe-de-givre` | 248 entrées, 5 personnages, 2 séances, 3 chroniques |
 
 `/healthz` → `ok`, `/readyz` → `{"database":true,"migrations":true}`.
@@ -751,9 +757,9 @@ Une chose à surveiller au passage : le build a signalé une dépendance circula
 
 **Toi**
 
-Ok, plusieurs soucis: déjà, j'ai confondu deux id clients sur le portail discord, les values étaient presques identitiques mais en faite non, j'ai fini par donner le bon id dans l'url, ça m'a bien afficher la demande d'auth discord de mon bot vers mon compte, j'ai pu valider et passer à l'étape suivante, mais ensuite j'ai reçus une erreur au format json, me disant que le callback Discord ne pouvait pas répondre pour le moment. (pourtant j'ai bien ajouté l'url de callback que tu m'as demandé dans le portail dev, j'ai bien enregistré la modif... sans doute un problème avec le fait que ça soit une url local non ?) Ensuite j'ai modifié l'url pour voir le résultat de l'auth sur l'appli, et j'ai une erreur qui me dit que la page n'existe pas: code	"route_not_found"
-message	"Cette adresse n'existe pas."
-requestId	"01M3KMJTF4KRYY1KBCVPCWGBBV"  avec l'url localhost: http://localhost:8787/ et l'url http://localhost:5173/ me demande à nouveau comme si de rien n'était de me login via discord
+Ok, plusieurs soucis: déjà, j'ai confondu deux id clients sur le portail discord, les values étaient presques identitiques mais en faite non, j'ai fini par donner le bon id dans l'url, ça m'a bien afficher la demande d'auth discord de mon bot vers mon compte, j'ai pu valider et passer à l'étape suivante, mais ensuite j'ai reçus une erreur au format json, me disant que le callback Discord ne pouvait pas répondre pour le moment. (pourtant j'ai bien ajouté l'url de callback que tu m'as demandé dans le portail dev, j'ai bien enregistré la modif... sans doute un problème avec le fait que ça soit une url local non ?) Ensuite j'ai modifié l'url pour voir le résultat de l'auth sur l'appli, et j'ai une erreur qui me dit que la page n'existe pas: code "route_not_found"
+message "Cette adresse n'existe pas."
+requestId "01M3KMJTF4KRYY1KBCVPCWGBBV" avec l'url localhost: http://localhost:8787/ et l'url http://localhost:5173/ me demande à nouveau comme si de rien n'était de me login via discord
 
 **Assistant**
 
@@ -831,9 +837,9 @@ Le serveur avait démarré à 09:09:01 avec l'**ancien** client ID dans le `.env
 
 La preuve :
 
-| | Valeur |
-|---|---|
-| `.env` sur disque | `1550137414658428948` ✔ le bon |
+|                    | Valeur                           |
+| ------------------ | -------------------------------- |
+| `.env` sur disque  | `1550137414658428948` ✔ le bon   |
 | Serveur en mémoire | `1524849609585983558` ✗ l'ancien |
 
 Tout le temps où tu essayais, c'est **l'ancienne application Discord** qui recevait ta connexion, pendant que le serveur envoyait le **secret de la nouvelle**. Deux apps qui ne se connaissent pas → Discord refuse l'échange de jeton en 400. Et comme tu as modifié l'URL d'autorisation à la main pour forcer le bon ID, Discord émettait un code pour la nouvelle app que le serveur essayait d'échanger avec l'ancienne. Cul-de-sac.
@@ -848,7 +854,7 @@ J'ai vérifié tes identifiants avant de toucher à quoi que ce soit, en envoyan
 
 **`http://localhost:8787/` → `route_not_found`** : c'est normal, pas un bug. Le serveur ne sert que l'API (`/healthz`, `/readyz`, `/api/*`, `/ws`). Il n'a aucune route racine. La page web, c'est `5173` uniquement.
 
-**`http://localhost:5173/` → reconnexion demandée** : également normal et *conséquence* du premier échec. L'échange de jeton ayant échoué, aucun cookie de session n'a été posé. Rien à corriger.
+**`http://localhost:5173/` → reconnexion demandée** : également normal et _conséquence_ du premier échec. L'échange de jeton ayant échoué, aucun cookie de session n'a été posé. Rien à corriger.
 
 ## Deux choses à retenir pour la suite
 
@@ -1018,10 +1024,10 @@ Le test qui distingue le fatal du récupérable ne peut pas voir un serveur qui 
 
 ## Deux orphelins, même cause
 
-| Composant | État | Ce qui manque |
-|---|---|---|
-| Narrateur | 4 adaptateurs écrits, testés | **1 ligne** : passer `selectNarrator` à `buildNarrator` |
-| WebSocket | hub, trames, limites, heartbeat, diffusion | **une dépendance + ~12 lignes** de route |
+| Composant | État                                       | Ce qui manque                                           |
+| --------- | ------------------------------------------ | ------------------------------------------------------- |
+| Narrateur | 4 adaptateurs écrits, testés               | **1 ligne** : passer `selectNarrator` à `buildNarrator` |
+| WebSocket | hub, trames, limites, heartbeat, diffusion | **une dépendance + ~12 lignes** de route                |
 
 Les deux fois, la faute n'est pas dans le composant : c'est qu'**aucune fiche n'avait le droit de franchir la couture**. Le projet a produit des excellentissimes modules et un plan qui ne les relie pas.
 
@@ -1046,7 +1052,7 @@ Dis-moi.
 **Toi**
 
 Non on touche pas, c'est pas grave, déjà je suis content de voir l'interface, je vois par contre que visuellement ça correspond pas du tout à la maquette sur laquelle on bossais avec Claude... regarde le code: <html lang="fr"><head>
-    <script type="module">import { injectIntoGlobalHook } from "/@react-refresh";
+<script type="module">import { injectIntoGlobalHook } from "/@react-refresh";
 injectIntoGlobalHook(window);
 window.$RefreshReg$ = () => {};
 window.$RefreshSig$ = () => (type) => type;</script>
@@ -1056,6 +1062,7 @@ window.$RefreshSig$ = () => (type) => type;</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Feeders of Runeterra</title>
+
   <style type="text/css" data-vite-dev-id="/home/kevinb/others/feeders-of-runeterra/packages/client/src/styles/global.css">/*
  * Le Freljord : peu de couleurs, beaucoup de contraste, rien qui clignote.
  * Aucune animation de dés (ADR 0009) — et aucune animation tout court sur les
@@ -1245,7 +1252,6 @@ body {
   <body>
     <div id="racine"><main class="fr-ecran fr-ecran--table"><header class="fr-table__entete"><h1>La table</h1><p class="fr-table__etat">Liaison : coupée — reconnexion en cours</p></header><div class="fr-table__corps"><section class="fr-panneau" aria-label="Le fil"><h2 class="fr-panneau__titre">Le fil</h2><p class="fr-vide">La table est ouverte. Rien ne s’est encore passé.</p></section><aside class="fr-table__cote"><section class="fr-panneau" aria-label="À la table"><h2 class="fr-panneau__titre">À la table</h2><p class="fr-vide">Personne d’autre n’est connecté.</p></section><section class="fr-panneau" aria-label="Fiche"><h2 class="fr-panneau__titre">Fiche</h2><p class="fr-vide">Aucun personnage à cette table pour l’instant.</p></section><section class="fr-panneau" aria-label="Jauges"><h2 class="fr-panneau__titre">Jauges</h2><p class="fr-vide">Vigueur, âme et vivres s’affichent quand un personnage rejoint la table.</p></section><section class="fr-panneau" aria-label="Horloges"><h2 class="fr-panneau__titre">Horloges</h2><p class="fr-vide">Aucune horloge ne tourne.</p></section><section class="fr-panneau" aria-label="Serments"><h2 class="fr-panneau__titre">Serments</h2><p class="fr-vide">Aucun serment prêté.</p></section><section class="fr-panneau" aria-label="Mouvements"><h2 class="fr-panneau__titre">Mouvements</h2><p class="fr-vide">Le client n’envoie que des intentions : la barre de mouvements arrive avec le pipeline d’intentions (M0-21).</p></section></aside></div><p class="fr-vide">L’instantané de la table n’est pas encore arrivé.</p></main></div>
     <script type="module" src="/src/main.tsx"></script>
-  
 
 </body></html>  On n'a pas de visuel des jauges, de choix du personnage, ou autre...
 
@@ -1275,12 +1281,12 @@ Tu as raison, et ce n'est pas une régression. **Il n'y a jamais eu de maquette 
 
 ## Ce que j'ai cherché
 
-| Cherché | Résultat |
-|---|---|
-| Maquette, wireframe, mockup | **rien** dans `docs/` |
-| Charte graphique, design system, palette | **rien** |
-| Une spec du CSS | **le fichier n'est même pas cité** |
-| Un ADR sur le visuel | **aucun** |
+| Cherché                                  | Résultat                           |
+| ---------------------------------------- | ---------------------------------- |
+| Maquette, wireframe, mockup              | **rien** dans `docs/`              |
+| Charte graphique, design system, palette | **rien**                           |
+| Une spec du CSS                          | **le fichier n'est même pas cité** |
+| Un ADR sur le visuel                     | **aucun**                          |
 
 Sur 10 590 lignes de spécification, **zéro mot sur l'apparence**. La section `01-architecture.md §2.9` qui décrit le client ne parle que de structure de fichiers et d'architecture d'état — Zustand, le store miroir, l'interdiction de `reduce()` côté client, la reprise sur `deliverySeq`. Pas un mot de mise en page ni de couleur.
 
@@ -1386,14 +1392,14 @@ J'ai ce qu'il faut. Un constat important d'abord, parce qu'il change la méthode
 
 J'ai croisé les 10 PR ouvertes avec leurs fichiers touchés :
 
-| Zone | Touchée par une PR ouverte ? |
-|---|---|
-| `packages/client/**` | **non — aucune des 10** |
-| `docs/design/01-architecture.md` | oui (#69) |
-| `pnpm-lock.yaml` | oui (#63, #60, #69) |
-| `eslint.config.js` | oui (#60, #69) |
-| `package.json` racine | oui (#60, #63) |
-| `docs/design/04-scenarios.md` | va être créée (#61) |
+| Zone                             | Touchée par une PR ouverte ? |
+| -------------------------------- | ---------------------------- |
+| `packages/client/**`             | **non — aucune des 10**      |
+| `docs/design/01-architecture.md` | oui (#69)                    |
+| `pnpm-lock.yaml`                 | oui (#63, #60, #69)          |
+| `eslint.config.js`               | oui (#60, #69)               |
+| `package.json` racine            | oui (#60, #63)               |
+| `docs/design/04-scenarios.md`    | va être créée (#61)          |
 
 `packages/client` est le seul grand territory vide. Les 10 PR travaillent sur le contenu, l'IA, le simulateur, les contrats — personne n'est dans le client. Donc on peut y travailler sans risque de collision.
 
@@ -1405,13 +1411,13 @@ Mais ça pose une **contrainte dure** : on ne peut pas ajouter de dépendance. S
 
 Cinq couches, du plus abstrait au plus concret. L'erreur classique est de commencer par la couche 3.
 
-| # | Couche | Contenu | Exemple ici |
-|---|---|---|---|
-| 1 | **Tokens** | les valeurs brutes, nommées par *rôle* | `--fr-fond`, `--fr-accent` |
-| 2 | **Primitives** | les briques sans sens métier | `Panel`, `Button`, `EmptyState` |
-| 3 | **Composants métier** | assemblages qui knows le jeu | `Jauge`, `BarreMouvements` |
-| 4 | **Layouts** | où les composants se placent | `TableRoom`, `CharacterPicker` |
-| 5 | **Écrans** | pages complètes avec leurs états | Login, table, selection perso |
+| #   | Couche                | Contenu                                | Exemple ici                     |
+| --- | --------------------- | -------------------------------------- | ------------------------------- |
+| 1   | **Tokens**            | les valeurs brutes, nommées par _rôle_ | `--fr-fond`, `--fr-accent`      |
+| 2   | **Primitives**        | les briques sans sens métier           | `Panel`, `Button`, `EmptyState` |
+| 3   | **Composants métier** | assemblages qui knows le jeu           | `Jauge`, `BarreMouvements`      |
+| 4   | **Layouts**           | où les composants se placent           | `TableRoom`, `CharacterPicker`  |
+| 5   | **Écrans**            | pages complètes avec leurs états       | Login, table, selection perso   |
 
 Et par-dessus, deux choses que tout vrai design system a et qui sont souvent les plus utiles :
 
@@ -1422,11 +1428,11 @@ Et par-dessus, deux choses que tout vrai design system a et qui sont souvent les
 
 Trois réponses possibles en pratique :
 
-| Approche | Vérité dans | Pour qui | Verdict ici |
-|---|---|---|---|
-| Design-first | Figma | une équipe avec designer | **non** — il n'y a pas de designer dans la boucle |
-| Code-first | le CSS | l'équipe dev | **oui** — c'est ce que je recommande |
-| Token pipeline | un `.json`build par un outil | de grandes équipes | non — surdimensionné |
+| Approche       | Vérité dans                  | Pour qui                 | Verdict ici                                       |
+| -------------- | ---------------------------- | ------------------------ | ------------------------------------------------- |
+| Design-first   | Figma                        | une équipe avec designer | **non** — il n'y a pas de designer dans la boucle |
+| Code-first     | le CSS                       | l'équipe dev             | **oui** — c'est ce que je recommande              |
+| Token pipeline | un `.json`build par un outil | de grandes équipes       | non — surdimensionné                              |
 
 **Code-first**, sans hésiter. Et pour une raison qui est propre à ce dépôt : `CLAUDE.md` exige que toute promesse nomme le test qui la tient. Un design system déclaré dans Figma n'a aucun test possible ici. Un design system en CSS variables, lui, se teste — on peut écrire un test qui interdit à un composant d'utiliser une couleur hors tokens.
 
@@ -1447,7 +1453,7 @@ C'est une règle de lint, pas un test. Un nom de variable custom interdit par ES
 Il y a déjà des os. Le fichier `global.css` a 7 variables qui sont **déjà sémantiques** — c'est bien :
 
 ```css
---fond: #0d1117;        /* pas --gris-900 */
+--fond: #0d1117; /* pas --gris-900 */
 --texte-discret: #9aa7b4;
 --accent: #6fb3d2;
 ```
@@ -1460,9 +1466,13 @@ C'est le cœur du travail, et c'est là que ça devient un vrai système.
 
 ```css
 /* 1. PRIMITIVES — les valeurs, jamais utilisées directement par un composant */
---fr-c-900: #0d1117;    --fr-c-800: #151b23;   --fr-c-700: #2a3441;
---fr-c-300: #9aa7b4;    --fr-c-100: #e6edf3;
---fr-c-bleu: #6fb3d2;   --fr-c-rouge: #b06a6a;
+--fr-c-900: #0d1117;
+--fr-c-800: #151b23;
+--fr-c-700: #2a3441;
+--fr-c-300: #9aa7b4;
+--fr-c-100: #e6edf3;
+--fr-c-bleu: #6fb3d2;
+--fr-c-rouge: #b06a6a;
 
 /* 2. SÉMANTIQUES — le rôle. C'est le seul niveau qu'un composant a le droit de toucher. */
 --fr-fond: var(--fr-c-900);
@@ -1474,11 +1484,15 @@ C'est le cœur du travail, et c'est là que ça devient un vrai système.
 --fr-annule: var(--fr-c-rouge);
 
 /* 3. ESPACEMENT — une échelle, pas des valeurs libres */
---fr-e-1: 0.25rem;  --fr-e-2: 0.5rem;   --fr-e-3: 0.75rem;
---fr-e-4: 1rem;     --fr-e-5: 1.25rem;  --fr-e-6: 1.5rem;
+--fr-e-1: 0.25rem;
+--fr-e-2: 0.5rem;
+--fr-e-3: 0.75rem;
+--fr-e-4: 1rem;
+--fr-e-5: 1.25rem;
+--fr-e-6: 1.5rem;
 
 /* 4. TYPO — une échelle, pas cinq tailles inventées */
---fr-t-petit: 0.8rem;    /* étiquettes, en capitales espacées */
+--fr-t-petit: 0.8rem; /* étiquettes, en capitales espacées */
 --fr-t-normal: 1rem;
 --fr-t-titre: 1.25rem;
 ```
@@ -1486,41 +1500,41 @@ C'est le cœur du travail, et c'est là que ça devient un vrai système.
 Ce que ça achète, concrètement, dans ce dépôt :
 
 - **« peu de couleurs » devient vérifiable.** On peut écrire un test qui compte les couleurs distinctes du CSS et échoue au-delà de 7. L'ADR 0009 (« rien qui clignote ») et l'intention « Freljord : peu de couleurs » deviennent des règles, pas des intentions.
-- **Le jour où on veut un thème clair** (ou une version «Reads du winter », plus froide), on réécrit 8 lignes. Aujourd'hui, c'est impossible : `--trait: #2a3441` est utilisé comme bordure *et* comme pastille de présence.
+- **Le jour où on veut un thème clair** (ou une version «Reads du winter », plus froide), on réécrit 8 lignes. Aujourd'hui, c'est impossible : `--trait: #2a3441` est utilisé comme bordure _et_ comme pastille de présence.
 - **Les 9 espacements arbitraires** du fichier actuel (`1.5rem`, `1rem`, `1.25rem`, `0.75rem`, `0.4rem`, `0.6rem`…) deviennent 6.
 
 ### Étape 3 — Le problème que personne n'a vu : 21 intentions, une barre
 
 Voici le vrai contenu de design du projet, extrait de `packages/contracts/src/intents/index.ts`. Ce sont les **seules** 21 choses qu'un joueur peut faire :
 
-| intention | ce qu'elle demande |
-|---|---|
-| `move.face_danger` | un attribut (choix) |
-| `move.secure_advantage` | une description |
-| `move.gather_information` | une description *(attribut forcé à `esprit`)* |
-| `move.probe_a_soul` | une cible (entité ou description) |
-| `move.strike` | cible + attribut (`fer` ou `vif` seulement) |
-| `move.endure_harm` | un montant (optionnel) |
-| `move.endure_cold` | rien |
-| `move.swear_a_vow` | un texte + un rang |
-| `move.reach_a_milestone` | une piste |
-| `move.fulfill_your_vow` | une piste |
-| `move.forsake_your_vow` | une piste + une raison |
-| `momentum.burn` / `momentum.keep` | un jeton, **fenêtre fermée** |
-| `oracle.ask` / `oracle.draw` | une question / rien |
-| `speech.say` | du texte libre |
-| `campaign.join` / `campaign.leave` | — |
-| `character.create_draft` | champion + répartition + background |
-| `play_session.begin` / `play_session.end` | **MJ seulement** |
+| intention                                 | ce qu'elle demande                            |
+| ----------------------------------------- | --------------------------------------------- |
+| `move.face_danger`                        | un attribut (choix)                           |
+| `move.secure_advantage`                   | une description                               |
+| `move.gather_information`                 | une description _(attribut forcé à `esprit`)_ |
+| `move.probe_a_soul`                       | une cible (entité ou description)             |
+| `move.strike`                             | cible + attribut (`fer` ou `vif` seulement)   |
+| `move.endure_harm`                        | un montant (optionnel)                        |
+| `move.endure_cold`                        | rien                                          |
+| `move.swear_a_vow`                        | un texte + un rang                            |
+| `move.reach_a_milestone`                  | une piste                                     |
+| `move.fulfill_your_vow`                   | une piste                                     |
+| `move.forsake_your_vow`                   | une piste + une raison                        |
+| `momentum.burn` / `momentum.keep`         | un jeton, **fenêtre fermée**                  |
+| `oracle.ask` / `oracle.draw`              | une question / rien                           |
+| `speech.say`                              | du texte libre                                |
+| `campaign.join` / `campaign.leave`        | —                                             |
+| `character.create_draft`                  | champion + répartition + background           |
+| `play_session.begin` / `play_session.end` | **MJ seulement**                              |
 
 Douze `move.*` d'un coup. C'est **le** problème d'ergonomie du jeu, et le panneau « Mouvements » est aujourd'hui une boîte vide qui dit « le client n'envoie que des intentions ». Personne n'a encore décidé comment on presents douze mouvements à un joueur qui en a cinq attributs.
 
 La réponse standard en game design d'interface, et ce que je proposerais :
 
 - **pas une barre de 12 boutons** — c'est illisible et ça donne douze poids égaux
-- **une liste de mouvements groupés par ce qu'ils costing** : *ce qui risque de blesser* (face_danger, strike), *ce qui protège* (secure_advantage, endure_harm, endure_cold), *ce qui cherche à savoir* (gather_information, probe_a_soul), *ce qui engage* (swear_a_vow, reach_a_milestone, fulfill_your_vow, forsake_your_vow)
+- **une liste de mouvements groupés par ce qu'ils costing** : _ce qui risque de blesser_ (face_danger, strike), _ce qui protège_ (secure_advantage, endure_harm, endure_cold), _ce qui cherche à savoir_ (gather_information, probe_a_soul), _ce qui engage_ (swear_a_vow, reach_a_milestone, fulfill_your_vow, forsake_your_vow)
 - **un mouvement selected ouvre un petit formulaire**, parce que 7 des 12 demandent un champ
-- et surtout : **`momentum.burn` / `keep` ne sont pas dans la barre**. Ils n'existent que dans la fenêtre ouverte d'un jet, et doivent apparaître *là, à ce moment*, ou nulle part. C'est écrit dans le code : « on a stale click, on a window already closed, is refused ».
+- et surtout : **`momentum.burn` / `keep` ne sont pas dans la barre**. Ils n'existent que dans la fenêtre ouverte d'un jet, et doivent apparaître _là, à ce moment_, ou nulle part. C'est écrit dans le code : « on a stale click, on a window already closed, is refused ».
 
 C'est exactement le genre de décision qu'une maquette tranche, et qu'aucune fiche M0 ne demande.
 
@@ -1539,39 +1553,39 @@ Un fichier `docs/design/05-interface.md` — **05** et pas 04, parce que #61 cr�
 
 La matrice, à remplir, ressemble à ça :
 
-| Emplacement | Actions disponibles | États |
-|---|---|---|
-| Panneau « Jauges » | aucune (lecture seule) | vide / 0 / critique |
-| Panneau « Mouvements » | 12 `move.*` | fermé / mouvement sélectionné / champ invalide |
-| Bandeau sous un jet ouvert | `momentum.burn`, `momentum.keep` | visible seulement si fenêtre ouverte |
-| Panneau « Horloges » | aucune | vide / 1..n horloges |
-| Panneau « Serments » | `fulfill_your_vow`, `forsake_your_vow` | vide / serments |
-| Zone de texte permanente | `speech.say` | inactif si à vous de parler / actif à vous |
-| Menu MJ | `play_session.begin`, `play_session.end` | masqué pour un joueur |
+| Emplacement                | Actions disponibles                      | États                                          |
+| -------------------------- | ---------------------------------------- | ---------------------------------------------- |
+| Panneau « Jauges »         | aucune (lecture seule)                   | vide / 0 / critique                            |
+| Panneau « Mouvements »     | 12 `move.*`                              | fermé / mouvement sélectionné / champ invalide |
+| Bandeau sous un jet ouvert | `momentum.burn`, `momentum.keep`         | visible seulement si fenêtre ouverte           |
+| Panneau « Horloges »       | aucune                                   | vide / 1..n horloges                           |
+| Panneau « Serments »       | `fulfill_your_vow`, `forsake_your_vow`   | vide / serments                                |
+| Zone de texte permanente   | `speech.say`                             | inactif si à vous de parler / actif à vous     |
+| Menu MJ                    | `play_session.begin`, `play_session.end` | masqué pour un joueur                          |
 
 Chaque ligne est une décision. C'est ce document que les agents d'aprèsarningprendront, et il est **en français, en tables**, comme le veut `CLAUDE.md`.
 
 ### Étape 6 — L'outillage : ce qu'on fait, ce qu'on ne fait pas
 
-| Outil standard | Verdict | Pourquoi |
-|---|---|---|
-| **Storybook** | plus tard | la référence, mais ajoute 200 lignes de lockfile → conflit avec #60/#63/#69. Il y a un contournement : une page `/design` du client qui rend tous les composants. Zéro dépendance, et c'est même mieux ici, parce que ça vit dans le même dépôt |
-| **Figma** | non | pas de designer dans la boucle, et la vérité doit être testable |
-| Un token JSON + build | non | surdimensionné à ce stade |
-| Un test de tokens | **oui, immédiatement** | c'est ce qui distingue un système d'une feuille de style |
+| Outil standard        | Verdict                | Pourquoi                                                                                                                                                                                                                                        |
+| --------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Storybook**         | plus tard              | la référence, mais ajoute 200 lignes de lockfile → conflit avec #60/#63/#69. Il y a un contournement : une page `/design` du client qui rend tous les composants. Zéro dépendance, et c'est même mieux ici, parce que ça vit dans le même dépôt |
+| **Figma**             | non                    | pas de designer dans la boucle, et la vérité doit être testable                                                                                                                                                                                 |
+| Un token JSON + build | non                    | surdimensionné à ce stade                                                                                                                                                                                                                       |
+| Un test de tokens     | **oui, immédiatement** | c'est ce qui distingue un système d'une feuille de style                                                                                                                                                                                        |
 
 ---
 
 ## Ce que je propose de faire, dans cet ordre
 
-| # | Étape | Fichiers | Dépendances |
-|---|---|---|---|
-| 1 | Le document d'interface : tokens, plans d'écrans, matrice d'actions | `docs/design/05-interface.md` (nouveau) | aucune |
-| 2 | Les trois couches de tokens + échelles | `styles/tokens.css` (nouveau) + 1 ligne dans `global.css` | aucune |
-| 3 | Le test qui interdit les valeurs hors tokens | `styles/tokens.test.ts` (nouveau) | aucune |
-| 4 | Compléter les primitives (`Button` a besoin de variants) | `components/ui/*.tsx` | aucune |
-| 5 | Les composants métier : `Jauge`, `BarreMouvements` | `features/table/*.tsx` (nouveau) | aucune |
-| 6 | Une page `/design` qui montre tout, pour valider à l'œil | une route + un lien | aucune |
+| #   | Étape                                                               | Fichiers                                                  | Dépendances |
+| --- | ------------------------------------------------------------------- | --------------------------------------------------------- | ----------- |
+| 1   | Le document d'interface : tokens, plans d'écrans, matrice d'actions | `docs/design/05-interface.md` (nouveau)                   | aucune      |
+| 2   | Les trois couches de tokens + échelles                              | `styles/tokens.css` (nouveau) + 1 ligne dans `global.css` | aucune      |
+| 3   | Le test qui interdit les valeurs hors tokens                        | `styles/tokens.test.ts` (nouveau)                         | aucune      |
+| 4   | Compléter les primitives (`Button` a besoin de variants)            | `components/ui/*.tsx`                                     | aucune      |
+| 5   | Les composants métier : `Jauge`, `BarreMouvements`                  | `features/table/*.tsx` (nouveau)                          | aucune      |
+| 6   | Une page `/design` qui montre tout, pour valider à l'œil            | une route + un lien                                       | aucune      |
 
 Les étapes 1 et 2 ne touchent **aucun fichier existant** sauf `global.css` (une ligne d'import). Les 3 à 6 créent des fichiers nouveaux. À la fin, tu as une page où tu peux juger le rendu, et les agents d'après ont un document à respecter au lieu de réinventer l'ergonomie.
 
@@ -1581,7 +1595,7 @@ Deux points où j'ai tranché faute d'information, à corriger si je me trompe :
 
 **Toi**
 
-Pour ton étape 3, je suis d'accord avec toi, cependant pas sûr de toutes façons que ces actions survivent à la v1. Pour moi c'est des actions qui sont induites dans le texte qu'on envoi au LLM. Il y a cependant d'autres actions qui seront réelles et qui seront faites en dehors de la fenetre de texte, mais je crois me rappeler qu'on avait décider de les faires pour la V2 plutôt ? Je parle des features intéractives avec l'inventaire qu'on va mettre en place sur les espaces vides à gauche et à droite de l'interface (faire en sorte d'avoir dans une large colonne centrale les essentiels, genre une colonne fine à gauche avec les stats, le profil du personnage, etc... une large colonne à la droite avec le texte de l'oracle, en dessous un espace pour que l'utilisateur envoi du texte. Comme ça ça nous donne pas mal d'espace sur les côtés pour un écran classique de pc d'ordi portable ou écran de pc fixe, pour afficher des sprites d'items. J'imagine une sprite de carte par exemple, qu'on puisse ouvrire en cliquant dessus, avec une feature de canvas de dessin par dessus, pour pouvoir faire de la prise de note + des intéractions type: cliquer-glisser la carte sur l'encard d'un allié pour partagé l'ouverture de la carte avec lui et pouvoir gribouiller sur la carte à deux, pouvoir cliquer-droit dessus pour avoir d'autres intéractions possible type partager la vue avec tous les alliés ou des alliés dans une modale avec la liste des joueurs, puis cocher ceux avec qui ont veut faire le partage, et rendre ce systeme d'intéraction global pour pouvoir l'appliquer à n'importe quel item, selon la nature de l'item, genre pour un consommable on veut pas partager le fait de le consulter, mais pouvoir partager la quantité ou l'effet. pour un item utilisable, on veut partager l'effet, pour un outil, on veut pouvoir partager ses features, il y a des items qui sont non partageables etc... mais tout ça c'est un travail qu'on commencait à faire avec un agent de Claude, je te parle de tout ça pour garder ça en tete dans la réalisation du plan de réalisation de l'UI/UX. 2tape 4, pour les jauges, on pourra les distinguer visuellement par des couleurs, comme c'est actuellement dans l'artifact. Je verrais ensuite si on peu pas leur donner plus de vie avec des sprites animées, genre pour la vie je fait un tube en verre avec un liquide rouge animé dedans qui dessent ou monte en fonction des dégats encaissés et les soins reçus, pour l'ame, je sais pas... genre un tube en verre avec des petites boules blanches qui se balades au hasard et dont la densité correspond à la quantité ? J'ai peur que ça soit pas visuellement efficace... on fera sans doute la même chose que pour la vigueur, mais avec des petites boules lumineuses dans le volume. Pour les vivres je sais pas... on verra bien ! En plus tout ça c'est de la théorie, déjà des jauges avec des couleurs c'est bien. étape 5: ok étape6: ok btw voici le contenu html de l'artifact en question: <html lang="fr-FR" data-frame-uuid="5ce6c184-ca8e-4d95-b8b6-c784bb816201" data-frame-uchost="5ce6c184-ca8e-4d95-b8b6-c784bb816201.frame.claudeusercontent.com" style="--frame-print-h: 1107px;"><head><meta property="og:title" content="Claude Artifact"><meta name="twitter:title" content="Claude Artifact"><meta name="description" content="Try out Artifacts created by Claude users"><meta property="og:description" content="Try out Artifacts created by Claude users"><meta name="twitter:description" content="Try out Artifacts created by Claude users"><meta property="og:image" content="https://claude.ai/images/claude_ogimage.png"><meta name="twitter:image" content="https://claude.ai/images/claude_ogimage.png"><meta property="og:image:width" content="1138"><meta property="og:image:height" content="640"><meta property="og:image:alt" content="Claude Artifact"><meta name="twitter:card" content="summary"><meta name="robots" content="noindex, nofollow"><link rel="preconnect" href="https://assets-proxy.anthropic.com" crossorigin=""><link rel="dns-prefetch" href="https://assets-proxy.anthropic.com"><meta name="build-timestamp" content="1790567482"><meta name="build-git-hash" content="af69baab47cac00482265d269949cd4783b4848e"><meta charset="utf-8"><meta name="frame-shell-i18n" data-shipped="en-US,de-DE,fr-FR,ko-KR,ja-JP,es-419,es-ES,it-IT,hi-IN,pt-BR,id-ID" data-catalogs="de-DE:83d815007ccb,fr-FR:1b96421a35e3,ko-KR:d10d4a0ad6cb,ja-JP:a48921027e8c,es-419:3cac357433eb,es-ES:e2cd0de8abd8,it-IT:48809be9f4dd,hi-IN:bc55d10f95e4,pt-BR:5a0149865cc2,id-ID:9c801e98333a,am:dda7c4c829bc,bho:6320e2891aaa,bn:0fc550a84c63,da:b08d62c512ce,fi:299c4d291d23,fil:2048b3e10123,gu:3bb01b043d0c,ha:936ef037c80d,ig:e34f4c8a46c3,kn:03be8320b2f7,ml:58bfa3de966e,mr:6785e4e82e4a,nb:02f9bf4266d6,nl:3e3ca26cb2b0,ny:7f9fbe53bb22,om:f0b79df0eaad,pt-PT:fb2183911f46,rn:9df0fda06caf,ru:f45e59947a3f,rw:17990efd1d76,so:f4a6e7d6c9df,sv:0d98b9064126,sw:1c59e2e580b3,ta:9ea1a5f93fed,te:fc729526d2dd,th:9f0ba45b49fd,tr:0e088bc8639c,uk:cbf3115b93c1,vi:0ed4b10506d5,wo:8002584d25ce,yo:4f0d7da5f9af,zh-Hans:f85dca0f6bfe,zh-Hant:d94f640f44ef"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><meta name="referrer" content="no-referrer"><title>Les Serments du Freljord</title><script nonce="">window.__frameInlineProbe=new Error,function(e,t,o){try{var n=window===top&&history.state,r=n&&n.__tempLocation;if(r&&void 0===n.__tempKey&&"string"==typeof r.href){var a=new URL(r.href,location.origin);a.origin===location.origin&&(location.replace(a.href),e.leaving="")}}catch{}if(t?.embedded&&(e.embedded=e.host=""),parent!==window){var i=location.origin,c=location.ancestorOrigins;if(c)c[0]===i&&c[c.length-1]===i&&(e.embedded="");else if(parent===top&&document.referrer)try{new URL(document.referrer).origin===i&&(e.embedded="")}catch{}try{var s=window.frameElement;s&&s.ownerDocument.documentElement.hasAttribute("data-frame-uuid")&&(e.nested="")}catch{}}"embedded"in e&&"none"===(t?.chrome??o.get("chrome"))&&(e.chrome="none",document.querySelector("meta[name=viewport]").setAttribute("content","width=device-width,initial-scale=1,viewport-fit=cover"));var d="desktop"===t?.platform?"host-tools":"comment-mode",m="embedded"in e?t?null!=t.hostcaps?t.hostcaps:(" "+o.get("hostcaps")+" ").indexOf(" "+d+" ")<0?"":d:o.get("hostcaps"):"",l=String(m||"").split(" ").filter(function(e,t,o){return("comment-mode"===e||"comments-list"===e||"page-comments"===e||"artifact-nav"===e||"artifact-nav-vanity"===e||"comment-summon"===e||"open-in-claude"===e||"open-chat"===e||"cloud-session"===e||"cowork-task"===e||"no-send-all"===e||"summon-into-chat"===e||"summon-into-session"===e||"summon-into-channel"===e||"connector-off"===e||"confirm-page-sends"===e||"viewer-context"===e||"chrome"===e||"export"===e||"chrome-readonly"===e||"selection-menu"===e||"chat-beside"===e||"header"===e||"duplicate"===e||"sheet-arrow"===e||"presence"===e||"host-tools"===e||"context-card"===e||"context-send"===e||"host-nav"===e||"url-anchor"===e||"edge-to-edge"===e||"scroll-chain"===e||"save-file"===e||"save-blob"===e||"host-keys"===e)&&o.indexOf(e)===t});l.length&&(e.hostcaps=l.join(" "));var h={mode:["light","dark","system"],platform:["web","desktop"],font:["anthropic","system"]};for(var f of Object.keys(h)){var p=t?.[f]??o.get(f[0]);if("mode"===f&&null==t?.mode&&!("embedded"in e))try{var u=JSON.parse(localStorage.getItem("LSS-userThemeMode"));u&&"object"==typeof u&&(u=u.value),"light"!==u&&"dark"!==u||(p=u)}catch(e){}h[f].includes(p)&&(e[f]=p)}}(document.documentElement.dataset,window.claudeDesktopArtifactPane,new URLSearchParams(location.search))</script><script nonce="">!function(){try{var e=document.documentElement.dataset,t=e.frameUuid;if(!t||"leaving"in e||"nested"in e)return;var r=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,a=new URLSearchParams(location.search),n=self===top&&!("embedded"in document.documentElement.dataset),o=a.get("org"),i=(document.cookie.match(/(?:^|;\s*)lastActiveOrg=([^;]*)/)||[])[1],s=null,c=null;try{var l=n?localStorage.getItem("frame_org_hints"):null;if(null!==l&&l.length<=16384){var m=JSON.parse(l),d=m&&"object"==typeof m?m[t]:null;d&&"object"==typeof d&&"string"==typeof d.o&&"string"==typeof d.a&&r.test(d.a)&&(c=d.o)}}catch(e){}var u=performance.getEntriesByType&&performance.getEntriesByType("navigation")[0]||{};if(n&&("reload"===u.type||"back_forward"===u.type))try{s=sessionStorage.getItem("frame_boot_org:"+t)}catch(e){}var f=o&&r.test(o)?o:s&&r.test(s)?s:c&&r.test(c)?c:i&&r.test(i)?i:null,g=a.get("via"),h=null!==g?g:n?"user_open":"embedded_view",p=a.get("sk"),v=new URLSearchParams;f&&v.set("org",f),h&&v.set("via",h),p&&/^[A-Za-z0-9_-]{16,64}$/.test(p)&&v.set("sk",p);var w=location.pathname.split("/").pop()||"";try{w=decodeURIComponent(w)}catch(e){}var _="";w.toLowerCase().slice(-37)==="-"+t.toLowerCase()?_=w.slice(0,w.length-37):w.length>23&&"-"===w.charAt(w.length-23)&&/^[1-9A-HJ-NP-Za-km-z]{22}$/.test(w.slice(-22))&&(_=w.slice(0,w.length-23)),/^[a-z0-9][a-z0-9-]{0,59}$/.test(_)&&v.set("vanity",_);var y=window.__frameSessionId;null==y&&(y=window.__frameSessionId=crypto.randomUUID?crypto.randomUUID():"");var b="initial";try{var S=function(e){try{var t=sessionStorage.getItem(e);if(!y||!t)return!1;var r=e+"_claim",a=y+"|"+t,n=sessionStorage.getItem(r);if(n===a)return!0;var o=n?n.split("|"):[],i=Number(o[2]);return!(3!==o.length||"reload"!==o[0]||o[1]!==t||!Number.isFinite(i)||Date.now()-i>=3e4)&&(sessionStorage.setItem(r,a),sessionStorage.getItem(r)===a)}catch(e){return!1}},I=(sessionStorage.getItem("frame_chunk_reload")||"").split(":"),k=Number(I[2]),A=I[0]===t&&("chrome"===I[1]||"deferred"===I[1]||"broker"===I[1])&&Number.isFinite(k)&&Date.now()-k<3e5,P="frame_hot_hard_reload:"+t,E=(sessionStorage.getItem(P)||"").split(":"),F=Number(E[2]),N=E[0]===t&&Number.isFinite(F)&&Date.now()-F<3e5,U=function(e){var r=sessionStorage.getItem(e);if(!r)return!1;var a=r.lastIndexOf(":"),n=Number(r.slice(a+1));return r.slice(0,a)===t&&Number.isFinite(n)&&Date.now()-n<3e5}("frame_pin_reload")&&S("frame_pin_reload"),D=A&&S("frame_chunk_reload"),B=N&&S(P);(U||D||B)&&(b="reboot")}catch(e){}v.set("bk",b),v.set("actor","id");var C="/api/frame/"+t+"?"+v.toString(),T=function(e,t){var r=null==e?null:e.toLowerCase();return null!==r&&-1!==t.indexOf(r)?r:null},x=navigator.userAgent,X={"X-Frame-CP":"go","X-Frame-Platform":T(a.get("platform"),["web","desktop","ios","android","cli"])||(x.includes(" Electron/")?"desktop":/Android/.test(x)?"android":/iPad|iPhone|iPod/.test(x)||x.includes("Macintosh")&&navigator.maxTouchPoints>1?"ios":"web")},L=T(a.get("surface"),["chat","cowork","code","slack","teams","standalone"])||(n?"standalone":"");L&&(X["X-Frame-Surface"]=L);var $=document.head.querySelector('meta[name="build-timestamp"]');$&&$.content&&(X["X-Frame-Client-Version"]=$.content),y&&(X["X-Frame-Session-Id"]=y);var z=function(){return fetch(C,{credentials:"same-origin",headers:X,priority:"high",signal:AbortSignal.timeout(2e4)})};if(parent!==window&&"embedded"in document.documentElement.dataset){var H=null;try{var O=parent.__frameHostBoot;if((H=O&&O[C]||null)&&H.takenAt){var R=performance.getEntriesByType("navigation")[0];(R&&"reload"===R.type||Date.now()-H.takenAt>=5e3)&&(delete O[C],H=null)}}catch(e){H=null}if(H&&H.res&&"function"==typeof H.res.then){H.takenAt||(H.takenAt=Date.now()),H.sid&&(X["X-Frame-Session-Id"]=window.__frameSessionId=H.sid),"number"==typeof H.at&&"string"==typeof H.from&&(window.__frameHostStart={at:H.at,from:H.from});var j=new Promise(function(e,t){H.res.then(e,t)}).then(function(e){try{var t=204===e.status||205===e.status||304===e.status;return new Response(t?null:e.body,{status:e.status,statusText:e.statusText,headers:e.headers})}catch(e){return z()}});return j.catch(function(){}),window.__frameBootPrefetch={url:C,res:j},void(window.__frameHostBootDrop=function(){O[C]===H&&delete O[C],H.res=null})}}var J=z();if(J.catch(function(){}),window.__frameBootPrefetch={url:C,res:J},!f){var Z=fetch("/api/account",{credentials:"same-origin",signal:AbortSignal.timeout(8e3)});Z.catch(function(){}),window.__frameAccountPrefetch={res:Z}}}catch(e){}}(),function(){try{var e=document.documentElement.dataset,t=e.frameUchost;if(!e.frameUuid||!t||"leaving"in e||"nested"in e)return;var r=document.createElement("iframe"),a={f:r};r.hidden=!0,r.setAttribute("aria-hidden","true"),r.setAttribute("sandbox","allow-same-origin"),r.referrerPolicy="no-referrer",r.dataset.warmup="true",r.src=(/(^|\.)localhost(:\d+)?$/.test(t)?location.protocol:"https:")+"//"+t+"/_warmup",r.onload=function(){void 0===a.at&&(a.at=performance.now())},a.cap=setTimeout(function(){r.remove()},6e4),document.documentElement.appendChild(r),window.__frameWarmup=a}catch(e){}}()</script><script nonce="">!function(){var e={locale:"en-US",messages:null,ready:null};window.__frameI18n=e;try{for(var t=document.querySelector('meta[name="frame-shell-i18n"]'),n=(t&&t.getAttribute("data-shipped")||"").split(",").filter(function(e){return/^[\w-]+$/.test(e)}),a=Object.create(null),r=(t&&t.getAttribute("data-catalogs")||"").split(","),l=0;l<r.length;l++){var o=/^([\w-]+):(\w+)$/.exec(r[l]);o&&!(o[1]in a)&&(a[o[1]]=o[2])}var i=function(e){for(var t=Object.create(null),a=0;a<n.length;a++){var r=n[a].toLowerCase();t[r]=n[a];var l=r.split("-")[0];l in t||(t[l]=n[a])}for(var o=0;o<e.length;o++){var i=e[o];if("string"==typeof i&&i){var c=i.toLowerCase();if(c in t)return t[c];var u=c.split("-")[0];if(u&&u in t)return t[u]}}return null},c=function(e){if("string"!=typeof e||!e)return null;for(var t in a)if(t.toLowerCase()===e.toLowerCase())return t;return i([e])},u=document.documentElement.dataset,s=window.claudeDesktopArtifactPane,f="embedded"in u?c(s&&null!=s.locale?s.locale:new URLSearchParams(location.search).get("locale")):null;if(null===f){var d=null;try{d=localStorage.getItem("spa:locale")}catch(e){}f=d?c(d)||"en-US":i(navigator.languages||[])||"en-US"}e.locale=f,document.documentElement.lang=f,"en-US"!==f&&a[f]&&(e.ready=fetch("/i18n/frame-shell/"+f+".json?v="+a[f],{credentials:"same-origin",signal:"undefined"!=typeof AbortSignal&&AbortSignal.timeout?AbortSignal.timeout(2e4):void 0}).then(function(e){return e.ok?e.json():null}).then(function(t){t&&"object"==typeof t&&!Array.isArray(t)&&(e.messages=t)}),e.ready.catch(function(){}))}catch(e){}}()</script><link rel="preload" as="font" type="font/woff2" crossorigin="" href="https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/cc27851ad-DDVos-BJ.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin="" href="https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/c0f671921-DOhnclAl.woff2"><script type="module" crossorigin="" src="https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/frame-shell-BgGyxQfM.js" nonce=""></script><link rel="modulepreload" crossorigin="" href="https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/preload-helper-CRBeoZqM.js"><link rel="modulepreload" crossorigin="" href="https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/shared-frame-boot-DU18HmzW.js"><link rel="modulepreload" crossorigin="" href="https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/frame-shell-chrome-eaegP4KJ.js"><link rel="modulepreload" crossorigin="" href="https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/shared-frame-BmGGVgTa.js"><link rel="modulepreload" crossorigin="" href="https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/rolldown-runtime-FTVRdoNn.js"><link rel="modulepreload" crossorigin="" href="https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/vendor-frame-CanqSLcR.js"><link rel="modulepreload" crossorigin="" href="https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/frame-shell-deferred-4D-4T6Cn.js"><link rel="modulepreload" crossorigin="" href="https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/frame-shell-broker-Cvm72Jwr.js"><style nonce="">:root{--font-anthropic-sans:"anthropic-sans", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "PingFang TC", "Hiragino Sans", "Apple SD Gothic Neo", "Kohinoor Devanagari", "Kohinoor Bangla", "Kohinoor Telugu", "Tamil Sangam MN", "Kohinoor Gujarati", "Malayalam Sangam MN", "Nirmala UI", "Noto Sans Devanagari UI", "Noto Sans Devanagari", "Noto Sans Bengali UI", "Noto Sans Bengali", "Noto Sans Telugu UI", "Noto Sans Telugu", "Noto Sans Tamil UI", "Noto Sans Tamil", "Noto Sans Gujarati UI", "Noto Sans Gujarati", "Noto Sans Kannada UI", "Noto Sans Kannada", "Noto Sans Malayalam UI", "Noto Sans Malayalam", Thonburi, "Leelawadee UI", "Noto Sans Thai UI", "Noto Sans Thai", Kefa, Ebrima, "Noto Sans Ethiopic", "Abyssinica SIL", sans-serif}@font-face{font-family:anthropic-sans;src:url(https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/cc27851ad-DDVos-BJ.woff2)format("woff2");font-weight:300 800;font-style:normal;font-display:swap;font-feature-settings:"dlig" 0}@font-face{font-family:anthropic-sans;src:url(https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/c9d3a3a49-CJtkx3-S.woff2)format("woff2");font-weight:300 800;font-style:italic;font-display:swap;font-feature-settings:"dlig" 0}:root{--font-anthropic-serif:"anthropic-serif", ui-serif, Georgia, "Times New Roman", "Kohinoor Devanagari", "Kohinoor Bangla", "Kohinoor Telugu", "Tamil Sangam MN", "Kohinoor Gujarati", "Malayalam Sangam MN", "Nirmala UI", "Noto Sans Devanagari UI", "Noto Sans Devanagari", "Noto Sans Bengali UI", "Noto Sans Bengali", "Noto Sans Telugu UI", "Noto Sans Telugu", "Noto Sans Tamil UI", "Noto Sans Tamil", "Noto Sans Gujarati UI", "Noto Sans Gujarati", "Noto Sans Kannada UI", "Noto Sans Kannada", "Noto Sans Malayalam UI", "Noto Sans Malayalam", Thonburi, "Leelawadee UI", "Noto Sans Thai UI", "Noto Sans Thai", Kefa, Ebrima, "Noto Sans Ethiopic", "Abyssinica SIL", serif}@font-face{font-family:anthropic-serif;src:url(https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/c66fc489e-2VcCjn5t.woff2)format("woff2");font-weight:300 800;font-style:normal;font-display:swap;font-feature-settings:"dlig" 0}@font-face{font-family:anthropic-serif;src:url(https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/cc410af59-Dcb-9NUS.woff2)format("woff2");font-weight:300 800;font-style:italic;font-display:swap;font-feature-settings:"dlig" 0}:root{--bg:#fff;--fg:#0b0b0b;--mut:#52514e;--spin:#898781;--line:#0b0b0b1a;--div:#0b0b0b0d;--bord:#0b0b0b33;--hov:#0b0b0b0d;--surf:#fff;--brand:#c6613f;--primary:#0b0b0b;--primary-hov:#2c2c2a;--on-primary:#fff;--sec:#ffffff1a;--sec-ring:#0b0b0b1a;--sec-hov:#0b0b0b0d;--picto:#e7e6e1;--page:#fcfcfb}@media (prefers-color-scheme:dark){html:not([data-mode]){--bg:#1a1a19;--fg:#f0efec;--mut:#c3c2b7;--line:#ffffff1a;--div:#ffffff0d;--bord:#fff3;--hov:#ffffff13;--surf:#20201f;--primary:#fff;--primary-hov:#e1e0d9;--on-primary:#0b0b0b;--sec:#ffffff1a;--sec-ring:transparent;--sec-hov:#ffffff24;--picto:#454442;--page:#151515}}html[data-mode=light]{--lightningcss-light:initial;--lightningcss-dark: ;color-scheme:light}html[data-mode=dark]{--bg:#1a1a19;--fg:#f0efec;--mut:#c3c2b7;--line:#ffffff1a;--div:#ffffff0d;--bord:#fff3;--hov:#ffffff13;--surf:#20201f;--primary:#fff;--primary-hov:#e1e0d9;--on-primary:#0b0b0b;--sec:#ffffff1a;--sec-ring:transparent;--sec-hov:#ffffff24;--picto:#454442;--page:#151515;--lightningcss-light: ;--lightningcss-dark:initial;color-scheme:dark}@font-face{font-family:Anthropicons-Variable;src:url(https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/c0f671921-DOhnclAl.woff2)format("woff2-variations");font-weight:400 700;font-display:block}@property --bar{syntax:"<length>";inherits:true;initial-value:0}:root{--bar-h:calc(2.5rem * var(--cds-rem-scale,1));--bar:var(--bar-h);--lightningcss-light:initial;--lightningcss-dark: ;color-scheme:light dark}@media (prefers-color-scheme:dark){:root{--lightningcss-light: ;--lightningcss-dark:initial}}@layer{*{box-sizing:border-box;margin:0;padding:0}button{font:inherit;border:0;background:0 0;cursor:pointer;color:inherit}}html,body{overscroll-behavior:none;background:var(--bg);height:100%;color:var(--fg);overflow:hidden}html[data-hostcaps~=scroll-chain],html[data-hostcaps~=scroll-chain] body{overscroll-behavior:auto}body{font:13px/1.4 anthropic-sans,-apple-system,BlinkMacSystemFont,system-ui,sans-serif}#hdr{height:var(--bar-h);justify-content:space-between;align-items:center;gap:8px;padding:0 12px;display:flex;position:relative}html:not([data-embedded]) #hdr,html:not([data-embedded]) #hdr-degraded{border-bottom:1px solid var(--div)}#top-edge{height:var(--bar);background-color:var(--bg);position:fixed;top:0;left:0;right:0}html[data-embedded] #top-edge{display:none}.l,.r{align-items:center;gap:8px;display:flex}.l{flex:1;min-width:0}.r{flex:none}.byline{font-size:var(--cds-font-size-caption,.75rem);color:var(--mut);white-space:nowrap;text-overflow:ellipsis;flex-shrink:0;max-width:312px;overflow:hidden}.l>button[data-title-menu]{flex-shrink:1000;min-width:0;margin-left:-6px;overflow:hidden}.l button[data-title-menu]>span,.l button[data-title-menu] .truncate{min-width:0}.skel{background:var(--hov);border-radius:4px;display:inline-block}.skel-home{flex:none;width:16px;height:16px;margin-right:4px}.skel-title{width:8em;height:1em}.skel-avatar{border-radius:50%;width:24px;height:24px}.degraded-title{white-space:nowrap;text-overflow:ellipsis;font-size:13px;font-weight:400;overflow:hidden}#hdr-degraded,body.chrome-degraded #hdr{display:none}body.chrome-degraded #hdr-degraded{height:var(--bar-h);align-items:center;gap:8px;padding:0 12px;display:flex;position:relative}@media (width<=768px){html:not([data-embedded]) .l{grid-template-columns:minmax(0,1fr);place-items:center start;gap:0;display:grid}html:not([data-embedded]) .l>*{max-width:100%}html:not([data-embedded]) .l>.byline{margin-top:-3px}html:not([data-embedded]) .l>[data-storage]{margin-top:-4px}}html[data-embedded]{--bar-h:calc(2.625rem * var(--cds-rem-scale,1))}html[data-embedded] #hdr{padding:0 8px}html[data-embedded] .byline{flex-shrink:1;max-width:100%}html[data-embedded] .skel-home,html[data-embedded] .skel-title,html[data-embedded] .skel-avatar,html[data-embedded][data-chrome=none] #hdr,html[data-embedded][data-chrome=none] #hdr-degraded,html[data-header-hidden] #hdr,html[data-header-hidden] #hdr-degraded,html[data-header-hidden] #top-edge,html[data-header-hidden] [data-chrome-pill]{display:none}html[data-embedded][data-chrome=none],html[data-header-hidden]{--bar:0px}html[data-host][data-chrome=none]{--bar:env(safe-area-inset-top,0px)}main{inset:var(--bar) 0 0 0;display:flex;position:absolute}html[data-host][data-chrome=none][data-extended-edges~=top] main{top:0}html[data-host][data-chrome=none][data-extended-edges~=top] #loading{top:var(--bar)}#frame-slot{flex:1;min-width:0;position:relative}#loading{justify-content:center;align-items:center;display:flex;position:absolute;inset:0}#loading[hidden]{display:none}#loading.slow{text-align:center;color:var(--mut);flex-direction:column;gap:12px;padding:0 24px;font-size:13px}#loading.slow>button{order:1}#loading:after{content:"";box-sizing:border-box;background:conic-gradient(transparent 40%, var(--spin)) border-box, linear-gradient(var(--line), var(--line)) border-box;border:2px solid #0000;border-radius:50%;width:20px;height:20px;animation:1s linear infinite spin;mask:radial-gradient(farthest-side,#0000 calc(100% - 2px),#000 calc(100% - 1.5px))}@keyframes spin{to{transform:rotate(360deg)}}#frame-content{opacity:0;border:0;width:100%;height:100%;transition:opacity .12s;position:absolute;inset:0}#frame-slot>iframe.swap:not(.ready){opacity:0;pointer-events:none;border:0;width:100%;height:100%;position:absolute;inset:0}#frame-slot>iframe.swap.hot-under:not(.ready){opacity:1}#frame-slot>iframe.hot-under~#frame-content{background:var(--bg)}#frame-slot>iframe.retired{opacity:0;pointer-events:none;border:0;width:100%;height:100%;position:absolute;inset:0}#frame-content.swap{transition:none}#frame-content.swap.crossfade{transition:opacity .12s}#frame-slot>iframe.fading-out{opacity:1;pointer-events:none;border:0;width:100%;height:100%;position:absolute;inset:0}#frame-content.ready{opacity:1}@media (prefers-reduced-motion:reduce){#loading:after{animation:none}#frame-content{transition:none}}body.err #hdr,body.err #hdr-degraded,body.err #top-edge,#err[hidden]{display:none}#err{text-align:center;color:var(--fg);place-content:safe center;gap:8px;padding:96px 16px 128px;display:grid;position:absolute;inset:0;overflow-y:auto}
+Pour ton étape 3, je suis d'accord avec toi, cependant pas sûr de toutes façons que ces actions survivent à la v1. Pour moi c'est des actions qui sont induites dans le texte qu'on envoi au LLM. Il y a cependant d'autres actions qui seront réelles et qui seront faites en dehors de la fenetre de texte, mais je crois me rappeler qu'on avait décider de les faires pour la V2 plutôt ? Je parle des features intéractives avec l'inventaire qu'on va mettre en place sur les espaces vides à gauche et à droite de l'interface (faire en sorte d'avoir dans une large colonne centrale les essentiels, genre une colonne fine à gauche avec les stats, le profil du personnage, etc... une large colonne à la droite avec le texte de l'oracle, en dessous un espace pour que l'utilisateur envoi du texte. Comme ça ça nous donne pas mal d'espace sur les côtés pour un écran classique de pc d'ordi portable ou écran de pc fixe, pour afficher des sprites d'items. J'imagine une sprite de carte par exemple, qu'on puisse ouvrire en cliquant dessus, avec une feature de canvas de dessin par dessus, pour pouvoir faire de la prise de note + des intéractions type: cliquer-glisser la carte sur l'encard d'un allié pour partagé l'ouverture de la carte avec lui et pouvoir gribouiller sur la carte à deux, pouvoir cliquer-droit dessus pour avoir d'autres intéractions possible type partager la vue avec tous les alliés ou des alliés dans une modale avec la liste des joueurs, puis cocher ceux avec qui ont veut faire le partage, et rendre ce systeme d'intéraction global pour pouvoir l'appliquer à n'importe quel item, selon la nature de l'item, genre pour un consommable on veut pas partager le fait de le consulter, mais pouvoir partager la quantité ou l'effet. pour un item utilisable, on veut partager l'effet, pour un outil, on veut pouvoir partager ses features, il y a des items qui sont non partageables etc... mais tout ça c'est un travail qu'on commencait à faire avec un agent de Claude, je te parle de tout ça pour garder ça en tete dans la réalisation du plan de réalisation de l'UI/UX. 2tape 4, pour les jauges, on pourra les distinguer visuellement par des couleurs, comme c'est actuellement dans l'artifact. Je verrais ensuite si on peu pas leur donner plus de vie avec des sprites animées, genre pour la vie je fait un tube en verre avec un liquide rouge animé dedans qui dessent ou monte en fonction des dégats encaissés et les soins reçus, pour l'ame, je sais pas... genre un tube en verre avec des petites boules blanches qui se balades au hasard et dont la densité correspond à la quantité ? J'ai peur que ça soit pas visuellement efficace... on fera sans doute la même chose que pour la vigueur, mais avec des petites boules lumineuses dans le volume. Pour les vivres je sais pas... on verra bien ! En plus tout ça c'est de la théorie, déjà des jauges avec des couleurs c'est bien. étape 5: ok étape6: ok btw voici le contenu html de l'artifact en question: <html lang="fr-FR" data-frame-uuid="5ce6c184-ca8e-4d95-b8b6-c784bb816201" data-frame-uchost="5ce6c184-ca8e-4d95-b8b6-c784bb816201.frame.claudeusercontent.com" style="--frame-print-h: 1107px;"><head><meta property="og:title" content="Claude Artifact"><meta name="twitter:title" content="Claude Artifact"><meta name="description" content="Try out Artifacts created by Claude users"><meta property="og:description" content="Try out Artifacts created by Claude users"><meta name="twitter:description" content="Try out Artifacts created by Claude users"><meta property="og:image" content="https://claude.ai/images/claude_ogimage.png"><meta name="twitter:image" content="https://claude.ai/images/claude_ogimage.png"><meta property="og:image:width" content="1138"><meta property="og:image:height" content="640"><meta property="og:image:alt" content="Claude Artifact"><meta name="twitter:card" content="summary"><meta name="robots" content="noindex, nofollow"><link rel="preconnect" href="https://assets-proxy.anthropic.com" crossorigin=""><link rel="dns-prefetch" href="https://assets-proxy.anthropic.com"><meta name="build-timestamp" content="1790567482"><meta name="build-git-hash" content="af69baab47cac00482265d269949cd4783b4848e"><meta charset="utf-8"><meta name="frame-shell-i18n" data-shipped="en-US,de-DE,fr-FR,ko-KR,ja-JP,es-419,es-ES,it-IT,hi-IN,pt-BR,id-ID" data-catalogs="de-DE:83d815007ccb,fr-FR:1b96421a35e3,ko-KR:d10d4a0ad6cb,ja-JP:a48921027e8c,es-419:3cac357433eb,es-ES:e2cd0de8abd8,it-IT:48809be9f4dd,hi-IN:bc55d10f95e4,pt-BR:5a0149865cc2,id-ID:9c801e98333a,am:dda7c4c829bc,bho:6320e2891aaa,bn:0fc550a84c63,da:b08d62c512ce,fi:299c4d291d23,fil:2048b3e10123,gu:3bb01b043d0c,ha:936ef037c80d,ig:e34f4c8a46c3,kn:03be8320b2f7,ml:58bfa3de966e,mr:6785e4e82e4a,nb:02f9bf4266d6,nl:3e3ca26cb2b0,ny:7f9fbe53bb22,om:f0b79df0eaad,pt-PT:fb2183911f46,rn:9df0fda06caf,ru:f45e59947a3f,rw:17990efd1d76,so:f4a6e7d6c9df,sv:0d98b9064126,sw:1c59e2e580b3,ta:9ea1a5f93fed,te:fc729526d2dd,th:9f0ba45b49fd,tr:0e088bc8639c,uk:cbf3115b93c1,vi:0ed4b10506d5,wo:8002584d25ce,yo:4f0d7da5f9af,zh-Hans:f85dca0f6bfe,zh-Hant:d94f640f44ef"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><meta name="referrer" content="no-referrer"><title>Les Serments du Freljord</title><script nonce="">window.__frameInlineProbe=new Error,function(e,t,o){try{var n=window===top&&history.state,r=n&&n.__tempLocation;if(r&&void 0===n.__tempKey&&"string"==typeof r.href){var a=new URL(r.href,location.origin);a.origin===location.origin&&(location.replace(a.href),e.leaving="")}}catch{}if(t?.embedded&&(e.embedded=e.host=""),parent!==window){var i=location.origin,c=location.ancestorOrigins;if(c)c[0]===i&&c[c.length-1]===i&&(e.embedded="");else if(parent===top&&document.referrer)try{new URL(document.referrer).origin===i&&(e.embedded="")}catch{}try{var s=window.frameElement;s&&s.ownerDocument.documentElement.hasAttribute("data-frame-uuid")&&(e.nested="")}catch{}}"embedded"in e&&"none"===(t?.chrome??o.get("chrome"))&&(e.chrome="none",document.querySelector("meta[name=viewport]").setAttribute("content","width=device-width,initial-scale=1,viewport-fit=cover"));var d="desktop"===t?.platform?"host-tools":"comment-mode",m="embedded"in e?t?null!=t.hostcaps?t.hostcaps:(" "+o.get("hostcaps")+" ").indexOf(" "+d+" ")<0?"":d:o.get("hostcaps"):"",l=String(m||"").split(" ").filter(function(e,t,o){return("comment-mode"===e||"comments-list"===e||"page-comments"===e||"artifact-nav"===e||"artifact-nav-vanity"===e||"comment-summon"===e||"open-in-claude"===e||"open-chat"===e||"cloud-session"===e||"cowork-task"===e||"no-send-all"===e||"summon-into-chat"===e||"summon-into-session"===e||"summon-into-channel"===e||"connector-off"===e||"confirm-page-sends"===e||"viewer-context"===e||"chrome"===e||"export"===e||"chrome-readonly"===e||"selection-menu"===e||"chat-beside"===e||"header"===e||"duplicate"===e||"sheet-arrow"===e||"presence"===e||"host-tools"===e||"context-card"===e||"context-send"===e||"host-nav"===e||"url-anchor"===e||"edge-to-edge"===e||"scroll-chain"===e||"save-file"===e||"save-blob"===e||"host-keys"===e)&&o.indexOf(e)===t});l.length&&(e.hostcaps=l.join(" "));var h={mode:["light","dark","system"],platform:["web","desktop"],font:["anthropic","system"]};for(var f of Object.keys(h)){var p=t?.[f]??o.get(f[0]);if("mode"===f&&null==t?.mode&&!("embedded"in e))try{var u=JSON.parse(localStorage.getItem("LSS-userThemeMode"));u&&"object"==typeof u&&(u=u.value),"light"!==u&&"dark"!==u||(p=u)}catch(e){}h[f].includes(p)&&(e[f]=p)}}(document.documentElement.dataset,window.claudeDesktopArtifactPane,new URLSearchParams(location.search))</script><script nonce="">!function(){try{var e=document.documentElement.dataset,t=e.frameUuid;if(!t||"leaving"in e||"nested"in e)return;var r=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,a=new URLSearchParams(location.search),n=self===top&&!("embedded"in document.documentElement.dataset),o=a.get("org"),i=(document.cookie.match(/(?:^|;\s*)lastActiveOrg=([^;]*)/)||[])[1],s=null,c=null;try{var l=n?localStorage.getItem("frame_org_hints"):null;if(null!==l&&l.length<=16384){var m=JSON.parse(l),d=m&&"object"==typeof m?m[t]:null;d&&"object"==typeof d&&"string"==typeof d.o&&"string"==typeof d.a&&r.test(d.a)&&(c=d.o)}}catch(e){}var u=performance.getEntriesByType&&performance.getEntriesByType("navigation")[0]||{};if(n&&("reload"===u.type||"back_forward"===u.type))try{s=sessionStorage.getItem("frame_boot_org:"+t)}catch(e){}var f=o&&r.test(o)?o:s&&r.test(s)?s:c&&r.test(c)?c:i&&r.test(i)?i:null,g=a.get("via"),h=null!==g?g:n?"user_open":"embedded_view",p=a.get("sk"),v=new URLSearchParams;f&&v.set("org",f),h&&v.set("via",h),p&&/^[A-Za-z0-9_-]{16,64}$/.test(p)&&v.set("sk",p);var w=location.pathname.split("/").pop()||"";try{w=decodeURIComponent(w)}catch(e){}var _="";w.toLowerCase().slice(-37)==="-"+t.toLowerCase()?_=w.slice(0,w.length-37):w.length>23&&"-"===w.charAt(w.length-23)&&/^[1-9A-HJ-NP-Za-km-z]{22}$/.test(w.slice(-22))&&(_=w.slice(0,w.length-23)),/^[a-z0-9][a-z0-9-]{0,59}$/.test(_)&&v.set("vanity",_);var y=window.__frameSessionId;null==y&&(y=window.__frameSessionId=crypto.randomUUID?crypto.randomUUID():"");var b="initial";try{var S=function(e){try{var t=sessionStorage.getItem(e);if(!y||!t)return!1;var r=e+"_claim",a=y+"|"+t,n=sessionStorage.getItem(r);if(n===a)return!0;var o=n?n.split("|"):[],i=Number(o[2]);return!(3!==o.length||"reload"!==o[0]||o[1]!==t||!Number.isFinite(i)||Date.now()-i>=3e4)&&(sessionStorage.setItem(r,a),sessionStorage.getItem(r)===a)}catch(e){return!1}},I=(sessionStorage.getItem("frame_chunk_reload")||"").split(":"),k=Number(I[2]),A=I[0]===t&&("chrome"===I[1]||"deferred"===I[1]||"broker"===I[1])&&Number.isFinite(k)&&Date.now()-k<3e5,P="frame_hot_hard_reload:"+t,E=(sessionStorage.getItem(P)||"").split(":"),F=Number(E[2]),N=E[0]===t&&Number.isFinite(F)&&Date.now()-F<3e5,U=function(e){var r=sessionStorage.getItem(e);if(!r)return!1;var a=r.lastIndexOf(":"),n=Number(r.slice(a+1));return r.slice(0,a)===t&&Number.isFinite(n)&&Date.now()-n<3e5}("frame_pin_reload")&&S("frame_pin_reload"),D=A&&S("frame_chunk_reload"),B=N&&S(P);(U||D||B)&&(b="reboot")}catch(e){}v.set("bk",b),v.set("actor","id");var C="/api/frame/"+t+"?"+v.toString(),T=function(e,t){var r=null==e?null:e.toLowerCase();return null!==r&&-1!==t.indexOf(r)?r:null},x=navigator.userAgent,X={"X-Frame-CP":"go","X-Frame-Platform":T(a.get("platform"),["web","desktop","ios","android","cli"])||(x.includes(" Electron/")?"desktop":/Android/.test(x)?"android":/iPad|iPhone|iPod/.test(x)||x.includes("Macintosh")&&navigator.maxTouchPoints>1?"ios":"web")},L=T(a.get("surface"),["chat","cowork","code","slack","teams","standalone"])||(n?"standalone":"");L&&(X["X-Frame-Surface"]=L);var $=document.head.querySelector('meta[name="build-timestamp"]');$&&$.content&&(X["X-Frame-Client-Version"]=$.content),y&&(X["X-Frame-Session-Id"]=y);var z=function(){return fetch(C,{credentials:"same-origin",headers:X,priority:"high",signal:AbortSignal.timeout(2e4)})};if(parent!==window&&"embedded"in document.documentElement.dataset){var H=null;try{var O=parent.__frameHostBoot;if((H=O&&O[C]||null)&&H.takenAt){var R=performance.getEntriesByType("navigation")[0];(R&&"reload"===R.type||Date.now()-H.takenAt>=5e3)&&(delete O[C],H=null)}}catch(e){H=null}if(H&&H.res&&"function"==typeof H.res.then){H.takenAt||(H.takenAt=Date.now()),H.sid&&(X["X-Frame-Session-Id"]=window.__frameSessionId=H.sid),"number"==typeof H.at&&"string"==typeof H.from&&(window.__frameHostStart={at:H.at,from:H.from});var j=new Promise(function(e,t){H.res.then(e,t)}).then(function(e){try{var t=204===e.status||205===e.status||304===e.status;return new Response(t?null:e.body,{status:e.status,statusText:e.statusText,headers:e.headers})}catch(e){return z()}});return j.catch(function(){}),window.__frameBootPrefetch={url:C,res:j},void(window.__frameHostBootDrop=function(){O[C]===H&&delete O[C],H.res=null})}}var J=z();if(J.catch(function(){}),window.__frameBootPrefetch={url:C,res:J},!f){var Z=fetch("/api/account",{credentials:"same-origin",signal:AbortSignal.timeout(8e3)});Z.catch(function(){}),window.__frameAccountPrefetch={res:Z}}}catch(e){}}(),function(){try{var e=document.documentElement.dataset,t=e.frameUchost;if(!e.frameUuid||!t||"leaving"in e||"nested"in e)return;var r=document.createElement("iframe"),a={f:r};r.hidden=!0,r.setAttribute("aria-hidden","true"),r.setAttribute("sandbox","allow-same-origin"),r.referrerPolicy="no-referrer",r.dataset.warmup="true",r.src=(/(^|\.)localhost(:\d+)?$/.test(t)?location.protocol:"https:")+"//"+t+"/_warmup",r.onload=function(){void 0===a.at&&(a.at=performance.now())},a.cap=setTimeout(function(){r.remove()},6e4),document.documentElement.appendChild(r),window.__frameWarmup=a}catch(e){}}()</script><script nonce="">!function(){var e={locale:"en-US",messages:null,ready:null};window.__frameI18n=e;try{for(var t=document.querySelector('meta[name="frame-shell-i18n"]'),n=(t&&t.getAttribute("data-shipped")||"").split(",").filter(function(e){return/^[\w-]+$/.test(e)}),a=Object.create(null),r=(t&&t.getAttribute("data-catalogs")||"").split(","),l=0;l<r.length;l++){var o=/^([\w-]+):(\w+)$/.exec(r[l]);o&&!(o[1]in a)&&(a[o[1]]=o[2])}var i=function(e){for(var t=Object.create(null),a=0;a<n.length;a++){var r=n[a].toLowerCase();t[r]=n[a];var l=r.split("-")[0];l in t||(t[l]=n[a])}for(var o=0;o<e.length;o++){var i=e[o];if("string"==typeof i&&i){var c=i.toLowerCase();if(c in t)return t[c];var u=c.split("-")[0];if(u&&u in t)return t[u]}}return null},c=function(e){if("string"!=typeof e||!e)return null;for(var t in a)if(t.toLowerCase()===e.toLowerCase())return t;return i([e])},u=document.documentElement.dataset,s=window.claudeDesktopArtifactPane,f="embedded"in u?c(s&&null!=s.locale?s.locale:new URLSearchParams(location.search).get("locale")):null;if(null===f){var d=null;try{d=localStorage.getItem("spa:locale")}catch(e){}f=d?c(d)||"en-US":i(navigator.languages||[])||"en-US"}e.locale=f,document.documentElement.lang=f,"en-US"!==f&&a[f]&&(e.ready=fetch("/i18n/frame-shell/"+f+".json?v="+a[f],{credentials:"same-origin",signal:"undefined"!=typeof AbortSignal&&AbortSignal.timeout?AbortSignal.timeout(2e4):void 0}).then(function(e){return e.ok?e.json():null}).then(function(t){t&&"object"==typeof t&&!Array.isArray(t)&&(e.messages=t)}),e.ready.catch(function(){}))}catch(e){}}()</script><link rel="preload" as="font" type="font/woff2" crossorigin="" href="https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/cc27851ad-DDVos-BJ.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin="" href="https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/c0f671921-DOhnclAl.woff2"><script type="module" crossorigin="" src="https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/frame-shell-BgGyxQfM.js" nonce=""></script><link rel="modulepreload" crossorigin="" href="https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/preload-helper-CRBeoZqM.js"><link rel="modulepreload" crossorigin="" href="https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/shared-frame-boot-DU18HmzW.js"><link rel="modulepreload" crossorigin="" href="https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/frame-shell-chrome-eaegP4KJ.js"><link rel="modulepreload" crossorigin="" href="https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/shared-frame-BmGGVgTa.js"><link rel="modulepreload" crossorigin="" href="https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/rolldown-runtime-FTVRdoNn.js"><link rel="modulepreload" crossorigin="" href="https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/vendor-frame-CanqSLcR.js"><link rel="modulepreload" crossorigin="" href="https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/frame-shell-deferred-4D-4T6Cn.js"><link rel="modulepreload" crossorigin="" href="https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/frame-shell-broker-Cvm72Jwr.js"><style nonce="">:root{--font-anthropic-sans:"anthropic-sans", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "PingFang TC", "Hiragino Sans", "Apple SD Gothic Neo", "Kohinoor Devanagari", "Kohinoor Bangla", "Kohinoor Telugu", "Tamil Sangam MN", "Kohinoor Gujarati", "Malayalam Sangam MN", "Nirmala UI", "Noto Sans Devanagari UI", "Noto Sans Devanagari", "Noto Sans Bengali UI", "Noto Sans Bengali", "Noto Sans Telugu UI", "Noto Sans Telugu", "Noto Sans Tamil UI", "Noto Sans Tamil", "Noto Sans Gujarati UI", "Noto Sans Gujarati", "Noto Sans Kannada UI", "Noto Sans Kannada", "Noto Sans Malayalam UI", "Noto Sans Malayalam", Thonburi, "Leelawadee UI", "Noto Sans Thai UI", "Noto Sans Thai", Kefa, Ebrima, "Noto Sans Ethiopic", "Abyssinica SIL", sans-serif}@font-face{font-family:anthropic-sans;src:url(https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/cc27851ad-DDVos-BJ.woff2)format("woff2");font-weight:300 800;font-style:normal;font-display:swap;font-feature-settings:"dlig" 0}@font-face{font-family:anthropic-sans;src:url(https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/c9d3a3a49-CJtkx3-S.woff2)format("woff2");font-weight:300 800;font-style:italic;font-display:swap;font-feature-settings:"dlig" 0}:root{--font-anthropic-serif:"anthropic-serif", ui-serif, Georgia, "Times New Roman", "Kohinoor Devanagari", "Kohinoor Bangla", "Kohinoor Telugu", "Tamil Sangam MN", "Kohinoor Gujarati", "Malayalam Sangam MN", "Nirmala UI", "Noto Sans Devanagari UI", "Noto Sans Devanagari", "Noto Sans Bengali UI", "Noto Sans Bengali", "Noto Sans Telugu UI", "Noto Sans Telugu", "Noto Sans Tamil UI", "Noto Sans Tamil", "Noto Sans Gujarati UI", "Noto Sans Gujarati", "Noto Sans Kannada UI", "Noto Sans Kannada", "Noto Sans Malayalam UI", "Noto Sans Malayalam", Thonburi, "Leelawadee UI", "Noto Sans Thai UI", "Noto Sans Thai", Kefa, Ebrima, "Noto Sans Ethiopic", "Abyssinica SIL", serif}@font-face{font-family:anthropic-serif;src:url(https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/c66fc489e-2VcCjn5t.woff2)format("woff2");font-weight:300 800;font-style:normal;font-display:swap;font-feature-settings:"dlig" 0}@font-face{font-family:anthropic-serif;src:url(https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/cc410af59-Dcb-9NUS.woff2)format("woff2");font-weight:300 800;font-style:italic;font-display:swap;font-feature-settings:"dlig" 0}:root{--bg:#fff;--fg:#0b0b0b;--mut:#52514e;--spin:#898781;--line:#0b0b0b1a;--div:#0b0b0b0d;--bord:#0b0b0b33;--hov:#0b0b0b0d;--surf:#fff;--brand:#c6613f;--primary:#0b0b0b;--primary-hov:#2c2c2a;--on-primary:#fff;--sec:#ffffff1a;--sec-ring:#0b0b0b1a;--sec-hov:#0b0b0b0d;--picto:#e7e6e1;--page:#fcfcfb}@media (prefers-color-scheme:dark){html:not([data-mode]){--bg:#1a1a19;--fg:#f0efec;--mut:#c3c2b7;--line:#ffffff1a;--div:#ffffff0d;--bord:#fff3;--hov:#ffffff13;--surf:#20201f;--primary:#fff;--primary-hov:#e1e0d9;--on-primary:#0b0b0b;--sec:#ffffff1a;--sec-ring:transparent;--sec-hov:#ffffff24;--picto:#454442;--page:#151515}}html[data-mode=light]{--lightningcss-light:initial;--lightningcss-dark: ;color-scheme:light}html[data-mode=dark]{--bg:#1a1a19;--fg:#f0efec;--mut:#c3c2b7;--line:#ffffff1a;--div:#ffffff0d;--bord:#fff3;--hov:#ffffff13;--surf:#20201f;--primary:#fff;--primary-hov:#e1e0d9;--on-primary:#0b0b0b;--sec:#ffffff1a;--sec-ring:transparent;--sec-hov:#ffffff24;--picto:#454442;--page:#151515;--lightningcss-light: ;--lightningcss-dark:initial;color-scheme:dark}@font-face{font-family:Anthropicons-Variable;src:url(https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/c0f671921-DOhnclAl.woff2)format("woff2-variations");font-weight:400 700;font-display:block}@property --bar{syntax:"<length>";inherits:true;initial-value:0}:root{--bar-h:calc(2.5rem * var(--cds-rem-scale,1));--bar:var(--bar-h);--lightningcss-light:initial;--lightningcss-dark: ;color-scheme:light dark}@media (prefers-color-scheme:dark){:root{--lightningcss-light: ;--lightningcss-dark:initial}}@layer{_{box-sizing:border-box;margin:0;padding:0}button{font:inherit;border:0;background:0 0;cursor:pointer;color:inherit}}html,body{overscroll-behavior:none;background:var(--bg);height:100%;color:var(--fg);overflow:hidden}html[data-hostcaps~=scroll-chain],html[data-hostcaps~=scroll-chain] body{overscroll-behavior:auto}body{font:13px/1.4 anthropic-sans,-apple-system,BlinkMacSystemFont,system-ui,sans-serif}#hdr{height:var(--bar-h);justify-content:space-between;align-items:center;gap:8px;padding:0 12px;display:flex;position:relative}html:not([data-embedded]) #hdr,html:not([data-embedded]) #hdr-degraded{border-bottom:1px solid var(--div)}#top-edge{height:var(--bar);background-color:var(--bg);position:fixed;top:0;left:0;right:0}html[data-embedded] #top-edge{display:none}.l,.r{align-items:center;gap:8px;display:flex}.l{flex:1;min-width:0}.r{flex:none}.byline{font-size:var(--cds-font-size-caption,.75rem);color:var(--mut);white-space:nowrap;text-overflow:ellipsis;flex-shrink:0;max-width:312px;overflow:hidden}.l>button[data-title-menu]{flex-shrink:1000;min-width:0;margin-left:-6px;overflow:hidden}.l button[data-title-menu]>span,.l button[data-title-menu] .truncate{min-width:0}.skel{background:var(--hov);border-radius:4px;display:inline-block}.skel-home{flex:none;width:16px;height:16px;margin-right:4px}.skel-title{width:8em;height:1em}.skel-avatar{border-radius:50%;width:24px;height:24px}.degraded-title{white-space:nowrap;text-overflow:ellipsis;font-size:13px;font-weight:400;overflow:hidden}#hdr-degraded,body.chrome-degraded #hdr{display:none}body.chrome-degraded #hdr-degraded{height:var(--bar-h);align-items:center;gap:8px;padding:0 12px;display:flex;position:relative}@media (width<=768px){html:not([data-embedded]) .l{grid-template-columns:minmax(0,1fr);place-items:center start;gap:0;display:grid}html:not([data-embedded]) .l>_{max-width:100%}html:not([data-embedded]) .l>.byline{margin-top:-3px}html:not([data-embedded]) .l>[data-storage]{margin-top:-4px}}html[data-embedded]{--bar-h:calc(2.625rem * var(--cds-rem-scale,1))}html[data-embedded] #hdr{padding:0 8px}html[data-embedded] .byline{flex-shrink:1;max-width:100%}html[data-embedded] .skel-home,html[data-embedded] .skel-title,html[data-embedded] .skel-avatar,html[data-embedded][data-chrome=none] #hdr,html[data-embedded][data-chrome=none] #hdr-degraded,html[data-header-hidden] #hdr,html[data-header-hidden] #hdr-degraded,html[data-header-hidden] #top-edge,html[data-header-hidden] [data-chrome-pill]{display:none}html[data-embedded][data-chrome=none],html[data-header-hidden]{--bar:0px}html[data-host][data-chrome=none]{--bar:env(safe-area-inset-top,0px)}main{inset:var(--bar) 0 0 0;display:flex;position:absolute}html[data-host][data-chrome=none][data-extended-edges~=top] main{top:0}html[data-host][data-chrome=none][data-extended-edges~=top] #loading{top:var(--bar)}#frame-slot{flex:1;min-width:0;position:relative}#loading{justify-content:center;align-items:center;display:flex;position:absolute;inset:0}#loading[hidden]{display:none}#loading.slow{text-align:center;color:var(--mut);flex-direction:column;gap:12px;padding:0 24px;font-size:13px}#loading.slow>button{order:1}#loading:after{content:"";box-sizing:border-box;background:conic-gradient(transparent 40%, var(--spin)) border-box, linear-gradient(var(--line), var(--line)) border-box;border:2px solid #0000;border-radius:50%;width:20px;height:20px;animation:1s linear infinite spin;mask:radial-gradient(farthest-side,#0000 calc(100% - 2px),#000 calc(100% - 1.5px))}@keyframes spin{to{transform:rotate(360deg)}}#frame-content{opacity:0;border:0;width:100%;height:100%;transition:opacity .12s;position:absolute;inset:0}#frame-slot>iframe.swap:not(.ready){opacity:0;pointer-events:none;border:0;width:100%;height:100%;position:absolute;inset:0}#frame-slot>iframe.swap.hot-under:not(.ready){opacity:1}#frame-slot>iframe.hot-under~#frame-content{background:var(--bg)}#frame-slot>iframe.retired{opacity:0;pointer-events:none;border:0;width:100%;height:100%;position:absolute;inset:0}#frame-content.swap{transition:none}#frame-content.swap.crossfade{transition:opacity .12s}#frame-slot>iframe.fading-out{opacity:1;pointer-events:none;border:0;width:100%;height:100%;position:absolute;inset:0}#frame-content.ready{opacity:1}@media (prefers-reduced-motion:reduce){#loading:after{animation:none}#frame-content{transition:none}}body.err #hdr,body.err #hdr-degraded,body.err #top-edge,#err[hidden]{display:none}#err{text-align:center;color:var(--fg);place-content:safe center;gap:8px;padding:96px 16px 128px;display:grid;position:absolute;inset:0;overflow-y:auto}
 @font-face{font-family:Anthropicons-Variable;src:url(https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/c0f671921-DOhnclAl.woff2)format("woff2-variations");font-weight:400 700;font-display:block}
 _[sortie d'outil tronquée : 8882 caractères de CSS/HTML brut]_
 _[sortie d'outil tronquée : 333191 caractères de CSS/HTML brut]_
@@ -1595,7 +1609,7 @@ _(vide)_
 
 **Assistant**
 
-Je commence par le point qui bloque tout le reste : **le HTML que vous avez collé n'est pas la maquette.** C'est le *chrome* de Claude (les boutons « Partager », la barre d'outils de l'artifact, le `frame.claudeusercontent.com`) — le design est dans une iframe sandboxée que je ne peux pas lire. Donc je n'ai pas l'image. En revanche votre description est assez précise pour travailler, je la prends comme source.
+Je commence par le point qui bloque tout le reste : **le HTML que vous avez collé n'est pas la maquette.** C'est le _chrome_ de Claude (les boutons « Partager », la barre d'outils de l'artifact, le `frame.claudeusercontent.com`) — le design est dans une iframe sandboxée que je ne peux pas lire. Donc je n'ai pas l'image. En revanche votre description est assez précise pour travailler, je la prends comme source.
 
 Je vérifie le contexte du dépôt avant d'écrire.
 [outil]
@@ -1741,7 +1755,7 @@ Il y a des caractères corrompus que j'ai laissés passer. Je les trouve et je c
 
 `docs/design/05-interface.md` est écrit — 801 lignes, seul fichier modifié, aucun des 12 fichiers des PRs ouvertes touché (`git status` ne montre que le `??`).
 
-**D'abord, le HTML que vous avez collé :** c'est le *chrome* de Claude (bouton Partager, barre d'outils, `frame.claudeusercontent.com`), pas la maquette. Le design est dans une iframe sandboxée que je ne peux pas lire. J'ai donc travaillé sur votre description, qui est plus précise qu'une capture.
+**D'abord, le HTML que vous avez collé :** c'est le _chrome_ de Claude (bouton Partager, barre d'outils, `frame.claudeusercontent.com`), pas la maquette. Le design est dans une iframe sandboxée que je ne peux pas lire. J'ai donc travaillé sur votre description, qui est plus précise qu'une capture.
 
 **Un point de vocabulaire à trancher :** `01-architecture.md` §11 annonce l'interface comme `docs/design/04-ux-table.md`. Le 04 est pris par `04-scenarios.md` (PR #61), et `01-architecture.md` est modifié par la PR #69. Donc je l'ai nommé `05-interface.md` et j'ai laissé une note en tête du document pour que le pointeur de 01 soit corrigé à la fusion. Je n'ai pas touché à 01.
 
@@ -1751,18 +1765,18 @@ Il y a des caractères corrompus que j'ai laissés passer. Je les trouve et je c
 
 **§2 — j'ai mesuré vos couleurs actuelles (WCAG 2.1) et il y a deux vrais défauts :**
 
-| Paire | Ratio | |
-|---|---|---|
-| `--texte` sur fond | 16,02 | ✔ |
-| `--accent` sur panneau | 7,47 | ✔ |
-| **`--annule` `#b06a6a` sur panneau** | **4,22** | **✘ AA** |
-| **`--trait` `#2a3441` sur fond** | **1,50** | **✘ (3:1)** |
+| Paire                                | Ratio    |             |
+| ------------------------------------ | -------- | ----------- |
+| `--texte` sur fond                   | 16,02    | ✔           |
+| `--accent` sur panneau               | 7,47     | ✔           |
+| **`--annule` `#b06a6a` sur panneau** | **4,22** | **✘ AA**    |
+| **`--trait` `#2a3441` sur fond**     | **1,50** | **✘ (3:1)** |
 
 `--annule` échoue le contraste AA **et** il est appliqué à `.fr-annule` et `.fr-erreur` — c'est-à-dire exactement aux refus du modèle et aux erreurs réseau, le texte qu'un joueur doit lire du premier coup. C'est le seul changement de valeur d'un jeton existant que je propose, et il est justifié. Le second : un panneau posé sur un panneau n'a plus que sa bordure à 1,50:1 pour se délimiter.
 
 **§4 Le découpage que vous avez décrit** — colonne fine à gauche (vous), large au centre (le fil), colonne droite réservée aux objets, compositeur **collé au bas de la colonne centrale** et pas en travers de l'écran (sur un 13", deux rem gagnés en lecture valent mieux que la barre flottante). Un point que j'ai tranché seul : **les deux rails n'ont pas la même largeur**, parce que le centre est une colonne de lecture de 65–72ch et les côtés sont des surfaces d'objets. Et **sous 1180px le carnet ne disparaît pas, il change de rang** — un objet qu'on ne voit plus est un objet qu'on ne possède pas.
 
-**§8 Le carnet d'objets.** Votre système de partage par nature d'objet est écrit comme une table `PartagePolicy` : consommable → quantité et effet mais **jamais le fait qu'on l'a consulté** ; utilisable → l'effet ; outil → les fonctionnalités ; secret et unique → rien. Avec une phrase qui résume la règle : *on partage ce qu'un joueur dirait à voix haute autour de la table, et rien d'autre.* Une conséquence que j'ai soulignée parce qu'elle est structurante : `PartagePolicy` doit vivre dans le **contenu versionné**, pas dans le client — sinon l'invariant 3 tombe.
+**§8 Le carnet d'objets.** Votre système de partage par nature d'objet est écrit comme une table `PartagePolicy` : consommable → quantité et effet mais **jamais le fait qu'on l'a consulté** ; utilisable → l'effet ; outil → les fonctionnalités ; secret et unique → rien. Avec une phrase qui résume la règle : _on partage ce qu'un joueur dirait à voix haute autour de la table, et rien d'autre._ Une conséquence que j'ai soulignée parce qu'elle est structurante : `PartagePolicy` doit vivre dans le **contenu versionné**, pas dans le client — sinon l'invariant 3 tombe.
 
 **§5–§7** : le fil à trois rails est déjà tranché par l'ADR 0008, je n'ai écrit que la spec visuelle du rail. Et le sélecteur de destinataire est toujours visible, segmenté à trois positions, avec des cases à cocher devant tout le monde — plus l'avertissement bloquant quand on déclassifie.
 
@@ -1952,7 +1966,7 @@ Un point technique à corriger avant de vous répondre : mon CSS de grille ne fa
 
 ## Ce que j'ai changé
 
-**Règle 7 et règle 8 ajoutées** (`§0`) : *jamais deux panneaux l'un sur l'autre*, et *toute modale naît au centre*. Elles sont testables — `atMostOneDialog.test.tsx` vérifie qu'à tout instant il y a ≤ 1 `[aria-modal]` dans l'arbre, tiroirs compris.
+**Règle 7 et règle 8 ajoutées** (`§0`) : _jamais deux panneaux l'un sur l'autre_, et _toute modale naît au centre_. Elles sont testables — `atMostOneDialog.test.tsx` vérifie qu'à tout instant il y a ≤ 1 `[aria-modal]` dans l'arbre, tiroirs compris.
 
 Ça m'a forcé à corriger le §8.2 : la toile de dessin, je l'avais écrite « par-dessus, en position absolue », ce qui était un second panneau déguisé. Elle est maintenant **une surface à l'intérieur de la carte**, sans cadre ni en-tête ni bouton de fermeture — et le doc dit explicitement que si on lui donnait un en-tête, ce serait deux panneaux et la règle le refuse. C'est la seule superposition autorisée, et elle ne l'est qu'à cette condition.
 
@@ -2455,7 +2469,7 @@ Build Vite OK, HMR OK, tests client 233/233 verts. Le reste du monorepo inchang�
 
 Je soumets comme terminé, tel que demandé par l'étape 1 (et les corrections documentaires afférentes).
 
---- 
+---
 
 ## Résumé exécutif
 
@@ -3141,9 +3155,10 @@ Non, le produit n'est pas buggé. Ce que j'ai eu, c'est :
 2. **3 erreurs de lint** — que j'avais introduites dans mes propres fichiers (`DesignShowcase.tsx` et `tokens.test.ts`). Corrigées.
 
 Maintenant tout est vert :
+
 - **255/255 tests** passent
 - **typecheck** propre
-- **lint** propre  
+- **lint** propre
 - **build** réussit
 
 La vitrine `/design` est fonctionnelle et vérifiée. Tu peux la voir sur `http://localhost:5173/#/design`.
@@ -3532,6 +3547,7 @@ reprend où on en était, le model que j'utilisais était en train de boucler de
 Le modèle précédent bouclait. Je reprends proprement, sans relire ce que j'ai déjà lu.
 
 **Ce qui est fait et vérifié** (255/255 tests verts, lint, typecheck, build OK) :
+
 - `tokens.css` — 75 jetons, 3 étages
 - `contraste.ts` — mesure WCAG partagée
 - `tokens.test.ts` — 54 tests qui interdisent toute valeur en dur
@@ -3680,7 +3696,7 @@ Maintenant je remplace les marges par l'inventaire dans les deux cellules.
 
 **Assistant**
 
-Réponse à ta question : **les horloges ne sont pas une invention à moi.** Elles viennent de `docs/design/02-mj-ia.md` — le document de conception du MJ/IA écrit avant que j'arrive. J'y trouve le détail : une horloge est une *menace nommée* (« La tempête se lève ») avec un nombre de segments que le moteur remplit au fil des tours ; quand elle est pleine, **le moteur** déclenche sa conséquence.
+Réponse à ta question : **les horloges ne sont pas une invention à moi.** Elles viennent de `docs/design/02-mj-ia.md` — le document de conception du MJ/IA écrit avant que j'arrive. J'y trouve le détail : une horloge est une _menace nommée_ (« La tempête se lève ») avec un nombre de segments que le moteur remplit au fil des tours ; quand elle est pleine, **le moteur** déclenche sa conséquence.
 
 Donc le fond est bon, c'est mon rendu qui était opaque. « Le col — 2 / 4 » ne dit rien. Je le refais.
 [outil]
@@ -3951,7 +3967,7 @@ Mon test est trop large : il confond une **taille** (une pastille, un bouton) et
 
 **Assistant**
 
-Ce sont toutes des **tailles d'élément** — une pastille, un tube de jauge, une poignée — pas des hauteurs de zone. Mon test confond les deux. Je le resserre sur le vrai défaut : une hauteur qui doit *contenir* du contenu arbitraire.
+Ce sont toutes des **tailles d'élément** — une pastille, un tube de jauge, une poignée — pas des hauteurs de zone. Mon test confond les deux. Je le resserre sur le vrai défaut : une hauteur qui doit _contenir_ du contenu arbitraire.
 [outil]
 
 **Assistant**
@@ -4035,7 +4051,7 @@ Le serveur sert bien la bonne valeur. **Recharge `http://localhost:5173/#/design
 
 ## Ce qui n'allait pas
 
-Tu avais raison, c'était mon bug. J'avais écrit `height: var(--e-12)` sur `.dz-vignette` en croyant prendre « la plus grande hauteur disponible ». Or `--e-12` vaut **6rem** — c'est une *marge*, pas une boîte. Le tableau de table (34rem de contenu) débordait d'une boîte de 6rem, et comme j'avais retiré son `overflow` au même moment, il se déversait sur les sections suivantes. D'où l'empilement.
+Tu avais raison, c'était mon bug. J'avais écrit `height: var(--e-12)` sur `.dz-vignette` en croyant prendre « la plus grande hauteur disponible ». Or `--e-12` vaut **6rem** — c'est une _marge_, pas une boîte. Le tableau de table (34rem de contenu) débordait d'une boîte de 6rem, et comme j'avais retiré son `overflow` au même moment, il se déversait sur les sections suivantes. D'où l'empilement.
 
 Le même raccourci était sur la toile de dessin. Les deux corrigés.
 
@@ -4046,7 +4062,7 @@ Deux tests nouveaux, et ils sont tombés sur un vrai défaut de fond pendant que
 - **`min-height` sur une zone à contenu libre ne peut plus venir de `--e-*`** — la toile de dessin était aussi en `var(--e-10)`, je l'ai_attrapée.
 - **Toute hauteur de cadre est un jeton nommé** — un `--e-*` est anonyme, personne ne la trouve donc personne ne la change.
 
-J'ai d'abord écrit ce test trop large (il interdisait aussi les pastilles et les tubes de jauge, où un cran d'échelle est correct) — 10 faux positifs. Je l'ai resserré sur la vraie distinction : un tube de jauge a une *forme*, un cadre a une *hauteur*.
+J'ai d'abord écrit ce test trop large (il interdisait aussi les pastilles et les tubes de jauge, où un cran d'échelle est correct) — 10 faux positifs. Je l'ai resserré sur la vraie distinction : un tube de jauge a une _forme_, un cadre a une _hauteur_.
 
 Le jeton `--vignette-hauteur: 34rem` existe maintenant, et la vitrine le présente (le garde-fou « aucun jeton caché » l'a signalé, c'est à lui que je le dois).
 
@@ -4176,7 +4192,7 @@ Oups, j'ai supprimé les règles au lieu de les convertir. Je les remets.
 
 **Assistant**
 
-Les largeurs fixes sont encore là, dans les variantes de tiroir — là où elles sont légitimes (un tiroir *remplace* une colonne, il ne cohabite pas avec elle). Mais je vérifie qu'elles ne s'appliquent pas aux rails des colonnes latérales.
+Les largeurs fixes sont encore là, dans les variantes de tiroir — là où elles sont légitimes (un tiroir _remplace_ une colonne, il ne cohabite pas avec elle). Mais je vérifie qu'elles ne s'appliquent pas aux rails des colonnes latérales.
 [outil]
 
 **Assistant**
@@ -4269,4 +4285,3 @@ L'export est complet et lisible. Je l'ajoute à la racine du dépôt, là où Cl
 
 822 Ko — trop gros, ça va noyer Claude. Je réduis aux décisions et aux retours, en gardant les commandes et les fichiers.
 [outil]
-

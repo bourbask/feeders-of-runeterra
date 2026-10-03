@@ -171,10 +171,22 @@ export const VARIANTES: readonly Variante[] = [
 ];
 
 /** Les trois états d'une table (05 §4.7). */
-export const ETATS_TABLE: readonly { readonly nom: string; readonly quoi: string; readonly qui: string }[] = [
-  { nom: 'Seul', quoi: 'un seul joueur ; la colonne de droite dit ce qu’on attend', qui: 'sous le seuil de joueurs d’un front' },
+export const ETATS_TABLE: readonly {
+  readonly nom: string;
+  readonly quoi: string;
+  readonly qui: string;
+}[] = [
+  {
+    nom: 'Seul',
+    quoi: 'un seul joueur ; la colonne de droite dit ce qu’on attend',
+    qui: 'sous le seuil de joueurs d’un front',
+  },
   { nom: 'Assise', quoi: 'grille complète, quatre colonnes', qui: 'la norme' },
-  { nom: 'Séparée', quoi: 'les colonnes latérales restent, le fil se scinde en deux sous-fils', qui: 'une portée `subset` non vide' },
+  {
+    nom: 'Séparée',
+    quoi: 'les colonnes latérales restent, le fil se scinde en deux sous-fils',
+    qui: 'une portée `subset` non vide',
+  },
 ];
 
 /** Le carnet d'objets, et ce qu'on peut partager de chaque nature (05 §8.4).
@@ -188,7 +200,8 @@ export interface Objet {
   readonly partageable: boolean;
 }
 
-export const OBJETS: readonly Objet[] = [  {
+export const OBJETS: readonly Objet[] = [
+  {
     nom: 'Fiole devigour',
     nature: 'consommable',
     partage: 'la quantité et l’effet, jamais le fait qu’on l’ait consultée',
@@ -295,8 +308,15 @@ export const ETATS_CAS: readonly EtatCase[] = [
  *  pas relire en dix secondes n'est pas une règle, c'est un vœu. */
 export const REGLES: readonly { readonly numero: number; readonly texte: string }[] = [
   { numero: 1, texte: 'Peu de couleurs. Vingt-deux valeurs brutes, et tout le reste est un rôle.' },
-  { numero: 2, texte: 'La couleur ne porte jamais seule une information. Glyphe, libellé ou forme la doublent.' },
-  { numero: 3, texte: 'Rien qui bouge sans qu’on l’ait demandé. Aucune animation de jet (ADR 0009).' },
+  {
+    numero: 2,
+    texte:
+      'La couleur ne porte jamais seule une information. Glyphe, libellé ou forme la doublent.',
+  },
+  {
+    numero: 3,
+    texte: 'Rien qui bouge sans qu’on l’ait demandé. Aucune animation de jet (ADR 0009).',
+  },
   { numero: 4, texte: 'Le fil de narration est la seule colonne de lecture, et il est au centre.' },
   { numero: 5, texte: 'Désactivé n’est pas invisible : l’opacité baisse, le texte reste.' },
   { numero: 6, texte: 'Un brouillon n’est jamais perdu. Il est dans le store, pas dans le DOM.' },

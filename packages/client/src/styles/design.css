@@ -493,7 +493,11 @@
 }
 
 .dz-chrome {
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
   font-size: 0.8rem;
   color: var(--texte-discret);
   margin: var(--e-1) 0 0;

@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react';
 
 import { Button } from '../components/ui/Button.js';
+import type { Paire } from '../styles/contraste.js';
+import { PAIRES_COMPOSANT, PAIRES_TEXTE } from '../styles/contraste.js';
+import '../styles/design.css';
 import type { Jeton, Objet, VarianteId } from './design-data.js';
 import {
   DESTINATAIRES,
@@ -14,9 +17,6 @@ import {
   SEMANTIQUE,
   VARIANTES,
 } from './design-data.js';
-import type { Paire } from '../styles/contraste.js';
-import { PAIRES_COMPOSANT, PAIRES_TEXTE } from '../styles/contraste.js';
-import '../styles/design.css';
 
 /**
  * La vitrine `/design` : la maquette, dans le produit.
@@ -56,8 +56,8 @@ function Regles(): ReactNode {
     <section className="dz-section" id="regles">
       <h2>§0 — Les huit règles</h2>
       <p className="dz-lede">
-        Tout le reste du document en découle. Une règle qu’on ne peut pas relire
-        en dix secondes n’est pas une règle, c’est un vœu.
+        Tout le reste du document en découle. Une règle qu’on ne peut pas relire en dix secondes
+        n’est pas une règle, c’est un vœu.
       </p>
       <ol className="dz-jetons">
         {REGLES.map((regle) => (
@@ -89,7 +89,11 @@ function Pastille({ jeton }: { readonly jeton: Jeton }): ReactNode {
   );
 }
 
-function Etage(props: { readonly titre: string; readonly note: string; readonly jetons: readonly Jeton[] }): ReactNode {
+function Etage(props: {
+  readonly titre: string;
+  readonly note: string;
+  readonly jetons: readonly Jeton[];
+}): ReactNode {
   return (
     <>
       <h3>{props.titre}</h3>
@@ -108,9 +112,9 @@ function Jetons(): ReactNode {
     <section className="dz-section" id="jetons">
       <h2>§1 — Les jetons</h2>
       <p className="dz-lede">
-        Trois étages. Un composant référence l’étage 2 et l’étage 3, jamais
-        l’étage 1 : une primitive existe pour qu’un rôle soit défini une fois,
-        et un rôle qui réécrit son hexadécimal ne l’utilise pas, il la duplique.
+        Trois étages. Un composant référence l’étage 2 et l’étage 3, jamais l’étage 1 : une
+        primitive existe pour qu’un rôle soit défini une fois, et un rôle qui réécrit son
+        hexadécimal ne l’utilise pas, il la duplique.
         <code>styles/tokens.test.ts</code> fait respecter la règle.
       </p>
       <Etage
@@ -154,10 +158,9 @@ function Contrastes(): ReactNode {
     <section className="dz-section" id="contrastes">
       <h2>§2 — La couleur, mesurée</h2>
       <p className="dz-lede">
-        Les ratios ci-dessous sont <strong>calculés</strong>, jamais estimés. Le
-        test de la vitrine les recalcule à partir de <code>tokens.css</code> et
-        échoue si l’écran affiche un nombre faux — donc si un jeton bouge sans
-        que la mesure bouge avec lui.
+        Les ratios ci-dessous sont <strong>calculés</strong>, jamais estimés. Le test de la vitrine
+        les recalcule à partir de <code>tokens.css</code> et échoue si l’écran affiche un nombre
+        faux — donc si un jeton bouge sans que la mesure bouge avec lui.
       </p>
 
       <h3>Du texte sur un fond — AA exige 4,5</h3>
@@ -181,10 +184,9 @@ function Contrastes(): ReactNode {
       <h3>Un composant d’interface — WCAG 1.4.11 exige 3</h3>
       <p className="dz-note">
         Le 3:1 ne s’applique pas à toute ligne de l’écran, seulement à ce qui est
-        <em>nécessaire</em> pour identifier un composant. Un panneau est identifié
-        par son titre, un anneau de focus ne peut l’être que par lui-même. C’est
-        pourquoi <code>--trait</code> reste en dessous, et <code>--trait-fort</code>{' '}
-        au-dessus.
+        <em>nécessaire</em> pour identifier un composant. Un panneau est identifié par son titre, un
+        anneau de focus ne peut l’être que par lui-même. C’est pourquoi <code>--trait</code> reste
+        en dessous, et <code>--trait-fort</code> au-dessus.
       </p>
       <table className="dz-tableau">
         <thead>
@@ -205,8 +207,8 @@ function Contrastes(): ReactNode {
 
       <h3>Le texte, pour de vrai</h3>
       <p className="dz-note">
-        Un carré de couleur ne prouve rien sur la lisibilité. Il faut du texte,
-        sur le fond réel, à la taille réelle.
+        Un carré de couleur ne prouve rien sur la lisibilité. Il faut du texte, sur le fond réel, à
+        la taille réelle.
       </p>
       <ul className="dz-paires">
         {PAIRES_TEXTE.map((paire) => (
@@ -242,7 +244,9 @@ function Jauge(props: JaugeProps): ReactNode {
   const pastilles = Array.from({ length: props.max }, (_, index) => index < props.sur);
   const sansCouleur = props.sansCouleur === true;
   return (
-    <div className={`dz-jauge dz-jauge--${props.nature}${sansCouleur ? ' dz-jauge--sans-couleur' : ''}`}>
+    <div
+      className={`dz-jauge dz-jauge--${props.nature}${sansCouleur ? ' dz-jauge--sans-couleur' : ''}`}
+    >
       <div className="dz-jauge__ligne">
         <span className="dz-jauge__nom">{props.nom}</span>
         <span
@@ -289,8 +293,7 @@ function Fiche(): ReactNode {
       <ul className="dz-liste">
         <li>Le Vent du Nord</li>
         <li>
-          <em>Quand</em> tu te places entre un allié et ce qui l’attaque, tu
-          absorbs 1
+          <em>Quand</em> tu te places entre un allié et ce qui l’attaque, tu absorbs 1
         </li>
       </ul>
     </>
@@ -447,9 +450,7 @@ function Fil(props: {
     <div className="dz-centre">
       <p className="dz-centre__titre">Le fil</p>
       {props.erreur === true ? (
-        <p className="dz-bandeau">
-          Le modèle n’a pas répondu. Ton texte est resté dans le champ.
-        </p>
+        <p className="dz-bandeau">Le modèle n’a pas répondu. Ton texte est resté dans le champ.</p>
       ) : null}
       <ul className="dz-fil">
         {props.separe === true ? (
@@ -543,10 +544,7 @@ function Tiroir(props: {
   );
 }
 
-function Vignette(props: {
-  readonly legende: ReactNode;
-  readonly children: ReactNode;
-}): ReactNode {
+function Vignette(props: { readonly legende: ReactNode; readonly children: ReactNode }): ReactNode {
   return (
     <figure className="dz-largeur">
       <figcaption>{props.legende}</figcaption>
@@ -634,19 +632,17 @@ function Decoupage(): ReactNode {
     <section className="dz-section" id="decoupage">
       <h2>§4 — Le découpage de la table</h2>
       <p className="dz-lede">
-        Quatre colonnes, dont deux élastiques. Les deux extérieures sont des
-        marges qui s’adaptent et qui servent d’inventaire ; les deux intérieures
-        sont la fiche et le fil. Le centre est une colonne de lecture — c’est
-        pour ça qu’il n’est pas large comme les côtés, et c’est pour ça que les
-        côtés ne sont pas égaux.
+        Quatre colonnes, dont deux élastiques. Les deux extérieures sont des marges qui s’adaptent
+        et qui servent d’inventaire ; les deux intérieures sont la fiche et le fil. Le centre est
+        une colonne de lecture — c’est pour ça qu’il n’est pas large comme les côtés, et c’est pour
+        ça que les côtés ne sont pas égaux.
       </p>
 
       <h3>Les quatre paliers</h3>
       <p className="dz-note">
         Quatre des cinq rangs ne sont pas des media queries : ce sont des
-        <em> arrangements</em> du même composant. Ce qui change d’un palier à
-        l’autre, c’est où vit le contenu — rail, marge, tiroir, bandeau — et
-        jamais le contenu lui-même.
+        <em> arrangements</em> du même composant. Ce qui change d’un palier à l’autre, c’est où vit
+        le contenu — rail, marge, tiroir, bandeau — et jamais le contenu lui-même.
       </p>
 
       {VARIANTES.map((variante) => (
@@ -658,8 +654,7 @@ function Decoupage(): ReactNode {
                 {String(variante.rang)} — {variante.titre}
               </strong>
               <span>
-                {variante.dessous} · cède : {variante.ceQuiCede} · reste :{' '}
-                {variante.ceQuiReste}
+                {variante.dessous} · cède : {variante.ceQuiCede} · reste : {variante.ceQuiReste}
               </span>
             </>
           }
@@ -670,12 +665,11 @@ function Decoupage(): ReactNode {
 
       <h3>Un tiroir, un seul à la fois</h3>
       <p className="dz-note">
-        Le tiroir gauche est <strong>volontairement moins accessible</strong> que
-        le droit, et c’est un choix de jeu autant que d’interface : la fiche est
-        l’information qu’on consulte, l’inventaire est celle dont on a besoin
-        tout de suite au moment de jouer un mouvement. Un tiroir fermé annonce son
-        contenu, parce qu’un bouton-poussoir nu est un bouton dont on ne devine pas
-        l’usage.
+        Le tiroir gauche est <strong>volontairement moins accessible</strong> que le droit, et c’est
+        un choix de jeu autant que d’interface : la fiche est l’information qu’on consulte,
+        l’inventaire est celle dont on a besoin tout de suite au moment de jouer un mouvement. Un
+        tiroir fermé annonce son contenu, parce qu’un bouton-poussoir nu est un bouton dont on ne
+        devine pas l’usage.
       </p>
       <div className="dz-calque-demo">
         <div className="dz-rangee-tiroirs">
@@ -701,9 +695,9 @@ function EtatsTable(): ReactNode {
     <section className="dz-section" id="etats-table">
       <h2>§4.7 — Les trois états d’une table</h2>
       <p className="dz-note">
-        Le mode « séparée » ne réinvente pas l’écran : il affiche deux fois le
-        fil, à deux endroits, parce que la chronologie de l’histoire ne se scinde
-        pas (ADR 0008, décision 1). Les colonnes latérales restent.
+        Le mode « séparée » ne réinvente pas l’écran : il affiche deux fois le fil, à deux endroits,
+        parce que la chronologie de l’histoire ne se scinde pas (ADR 0008, décision 1). Les colonnes
+        latérales restent.
       </p>
       <Vignette
         legende={
@@ -769,17 +763,16 @@ function Jauges(): ReactNode {
       <h2>§6 — Les trois jauges</h2>
       <p className="dz-lede">
         Vigueur, âme, vivres. L’aplat ne porte que la <strong>teinte</strong> ; la
-        <strong> valeur est écrite à côté, en texte</strong>. Un aplat sans nombre
-        est une forme décorative, et c’est la règle 2 appliquée à une jauge.
+        <strong> valeur est écrite à côté, en texte</strong>. Un aplat sans nombre est une forme
+        décorative, et c’est la règle 2 appliquée à une jauge.
       </p>
 
       <h3>Le cas de l’âme</h3>
       <p className="dz-note">
-        Sur un thème froid et sombre, une jauge « spirituelle » en blanc se confond
-        avec le texte. C’est assumé : trois jauges qui se ressemblent ne se
-        distinguent pas, trois jauges de couleurs différentes se lisent dans
-        l’ordre. Et voici la preuve — la version sans couleur, où il ne reste que
-        la forme et le nombre :
+        Sur un thème froid et sombre, une jauge « spirituelle » en blanc se confond avec le texte.
+        C’est assumé : trois jauges qui se ressemblent ne se distinguent pas, trois jauges de
+        couleurs différentes se lisent dans l’ordre. Et voici la preuve — la version sans couleur,
+        où il ne reste que la forme et le nombre :
       </p>
       <div className="dz-jetons">
         <div className="dz-etat">
@@ -845,10 +838,9 @@ function Jauges(): ReactNode {
 
       <h3>Le momentum n’est pas une jauge</h3>
       <p className="dz-note">
-        <code>momentum.burn</code> et <code>momentum.keep</code> n’existent que
-        pendant la fenêtre de jet : un survol tardif sur une fenêtre fermée est
-        refusé. Il est donc un <strong>badge</strong> attaché au jet, pas une
-        quatrième jauge.
+        <code>momentum.burn</code> et <code>momentum.keep</code> n’existent que pendant la fenêtre
+        de jet : un survol tardif sur une fenêtre fermée est refusé. Il est donc un{' '}
+        <strong>badge</strong> attaché au jet, pas une quatrième jauge.
       </p>
       <p>
         <span className="dz-carte">
@@ -866,10 +858,9 @@ function Destinataires(): ReactNode {
     <section className="dz-section" id="destinataires">
       <h2>§7 — Le sélecteur de destinataire</h2>
       <p className="dz-lede">
-        Toujours rendu, jamais dans un menu : c’est le composant le plus
-        important de l’écran, et un menu le range trop bien (ADR 0008, décision
-        4). Le joueur déclassifie lui-même, et on ne le fait jamais à sa place
-        sans prévenir.
+        Toujours rendu, jamais dans un menu : c’est le composant le plus important de l’écran, et un
+        menu le range trop bien (ADR 0008, décision 4). Le joueur déclassifie lui-même, et on ne le
+        fait jamais à sa place sans prévenir.
       </p>
 
       <div className="dz-carte-ouverte">
@@ -890,8 +881,8 @@ function Destinataires(): ReactNode {
           </ul>
           <h3>Répondre en public</h3>
           <p className="dz-note">
-            Ce bloc était restreint à <strong>Furie, Kazu et Serys</strong>. Le
-            rendre public retirera sa portée à 3 joueurs qui n’ont rien demandé.
+            Ce bloc était restreint à <strong>Furie, Kazu et Serys</strong>. Le rendre public
+            retirera sa portée à 3 joueurs qui n’ont rien demandé.
           </p>
           <div className="dz-paires">
             <Button onClick={(): void => undefined}>Rendre public</Button>
@@ -901,18 +892,17 @@ function Destinataires(): ReactNode {
           </div>
         </div>
         <div className="dz-toile dz-toile--grille">
-          Aperçu du bloc tel que la table le verra : la portée décide de la
-          couleur du rail, jamais du texte.
+          Aperçu du bloc tel que la table le verra : la portée décide de la couleur du rail, jamais
+          du texte.
         </div>
       </div>
 
       <h3>Un refus du modèle ne vide pas le sélecteur</h3>
       <p className="dz-note">
-        Le cas le plus facile à mal faire : le modèle refuse faute de destinataire,
-        et l’interface remet le sélecteur à zéro « pour être propre ». Le joueur
-        perd alors son choix, et il ne saura jamais qu’il y en avait un. Le refus
-        entre dans le fil comme un événement, et le sélecteur garde exactement ce
-        qu’il avait.
+        Le cas le plus facile à mal faire : le modèle refuse faute de destinataire, et l’interface
+        remet le sélecteur à zéro « pour être propre ». Le joueur perd alors son choix, et il ne
+        saura jamais qu’il y en avait un. Le refus entre dans le fil comme un événement, et le
+        sélecteur garde exactement ce qu’il avait.
       </p>
       <div className="dz-jetons">
         <div className="dz-etat">
@@ -930,15 +920,13 @@ function Destinataires(): ReactNode {
                   readOnly
                   type="checkbox"
                 />
-                <label htmlFor={`dz-dest-refus-${destinataire.nom}`}>
-                  {destinataire.nom}
-                </label>
+                <label htmlFor={`dz-dest-refus-${destinataire.nom}`}>{destinataire.nom}</label>
               </li>
             ))}
           </ul>
           <p className="dz-chrome">
-            Le refus est en rouge, le choix reste. Un message d’erreur ne doit
-            jamais être la seule information à l’écran.
+            Le refus est en rouge, le choix reste. Un message d’erreur ne doit jamais être la seule
+            information à l’écran.
           </p>
         </div>
         <div className="dz-etat">
@@ -947,8 +935,7 @@ function Destinataires(): ReactNode {
             Votre action est arrivée à toute la table.
           </p>
           <p className="dz-chrome">
-            Le succès s’affiche, puis disparaît tout seul. Rien à fermer, rien à
-            cliquer.
+            Le succès s’affiche, puis disparaît tout seul. Rien à fermer, rien à cliquer.
           </p>
         </div>
       </div>
@@ -993,8 +980,8 @@ function CarteOuverte(props: { readonly objet: Objet }): ReactNode {
         <p className="dz-chrome">La toile — surface de dessin</p>
         <div className="dz-trait" />
         <p className="dz-chrome">
-          Deux qui dessinent ici voient la même toile. Ce qui est écrit dessus est
-          à eux, pas à la table.
+          Deux qui dessinent ici voient la même toile. Ce qui est écrit dessus est à eux, pas à la
+          table.
         </p>
       </div>
     </div>
@@ -1009,11 +996,11 @@ function Carnet(): ReactNode {
     <section className="dz-section" id="carnet">
       <h2>§8 — Le carnet d’objets, et la carte annotable</h2>
       <p className="dz-lede">
-        Le carnet est la seule zone qui <strong>grandit</strong> : c’est là que le
-        glisser-déposer dépose les cartes. Le système de partage est global et
-        générique, et il ne vit pas dans ce composant — il vient de
-        <code> PartagePolicy</code>, qui est dans le contenu versionné. Un client
-        qui déciderait lui-même quoi partager casserait l’invariant 3.
+        Le carnet est la seule zone qui <strong>grandit</strong> : c’est là que le glisser-déposer
+        dépose les cartes. Le système de partage est global et générique, et il ne vit pas dans ce
+        composant — il vient de
+        <code> PartagePolicy</code>, qui est dans le contenu versionné. Un client qui déciderait
+        lui-même quoi partager casserait l’invariant 3.
       </p>
 
       <ul className="dz-carnet">
@@ -1072,22 +1059,21 @@ function Etats(): ReactNode {
     <section className="dz-section" id="etats">
       <h2>§9 — Les états</h2>
       <p className="dz-lede">
-        Un état vide non dessiné est un écran blanc sur une soirée de jeu. Les
-        trois règles qui valent plus que le tableau :
+        Un état vide non dessiné est un écran blanc sur une soirée de jeu. Les trois règles qui
+        valent plus que le tableau :
       </p>
       <ul className="dz-liste dz-note">
         <li>
-          <strong>Un brouillon n’est jamais perdu.</strong> Une erreur réseau, un
-          retour du serveur, un rechargement : le texte est dans le store, pas
-          dans le DOM.
+          <strong>Un brouillon n’est jamais perdu.</strong> Une erreur réseau, un retour du serveur,
+          un rechargement : le texte est dans le store, pas dans le DOM.
         </li>
         <li>
-          <strong>Désactivé n’est pas invisible.</strong> Un élément désactivé qui
-          disparaît est impossible à retrouver. L’opacité baisse, le texte reste.
+          <strong>Désactivé n’est pas invisible.</strong> Un élément désactivé qui disparaît est
+          impossible à retrouver. L’opacité baisse, le texte reste.
         </li>
         <li>
-          <strong>Un tiroir fermé annonce son contenu.</strong> Il porte son
-          compte, parce que c’est le seul chiffre d’un tiroir qui compte.
+          <strong>Un tiroir fermé annonce son contenu.</strong> Il porte son compte, parce que c’est
+          le seul chiffre d’un tiroir qui compte.
         </li>
       </ul>
 
@@ -1129,7 +1115,9 @@ function Etats(): ReactNode {
             readOnly
             value=""
           />
-          <p className="dz-chrome">Le champ garde sa place. Un champ qui disparaît est un champ perdu.</p>
+          <p className="dz-chrome">
+            Le champ garde sa place. Un champ qui disparaît est un champ perdu.
+          </p>
         </div>
         <div className="dz-etat">
           <h4>Avec un brouillon, focus</h4>
@@ -1145,8 +1133,7 @@ function Etats(): ReactNode {
             </Button>
           </div>
           <p className="dz-chrome">
-            Le focus est le seul filet qui passe 3:1 : c’est le seul qui dit
-            quelque chose.
+            Le focus est le seul filet qui passe 3:1 : c’est le seul qui dit quelque chose.
           </p>
         </div>
         <div className="dz-etat">
@@ -1174,8 +1161,8 @@ function Etats(): ReactNode {
               <div className="dz-fenetre__corps">
                 <p className="dz-bandeau">Chargement interrompu.</p>
                 <p className="dz-chrome">
-                  Le titre est déjà écrit, le bandeau est DANS la fenêtre, et la
-                  fenêtre reste. Le bouton × est toujours actif.
+                  Le titre est déjà écrit, le bandeau est DANS la fenêtre, et la fenêtre reste. Le
+                  bouton × est toujours actif.
                 </p>
               </div>
               <div className="dz-fenetre__tirer" />
@@ -1186,23 +1173,24 @@ function Etats(): ReactNode {
 
       <h3>Plusieurs fenêtres, ensemble</h3>
       <p className="dz-note">
-        Le carnet ouvert, la carte, et le livre trouvé dans une maison abandonnée
-        où l’on veut copier une note. <strong>Trois fenêtres, pas trois
-        écrans.</strong> C’est ce qui rend la scène jouable : on compare deux
-        objets côte à côte, on ne les relit pas de mémoire. Chacune se déplace
-        par sa poignée, chacune se redimensionne par son coin, et la dernière
-        ouverte vient devant — mais on voit qu’il y en a deux derrière.
+        Le carnet ouvert, la carte, et le livre trouvé dans une maison abandonnée où l’on veut
+        copier une note. <strong>Trois fenêtres, pas trois écrans.</strong> C’est ce qui rend la
+        scène jouable : on compare deux objets côte à côte, on ne les relit pas de mémoire. Chacune
+        se déplace par sa poignée, chacune se redimensionne par son coin, et la dernière ouverte
+        vient devant — mais on voit qu’il y en a deux derrière.
       </p>
       <p className="dz-note">
-        <strong>Le focus n’est pas piégé.</strong> Il va à la fenêtre ouverte, puis
-        il reste libre : on tabule vers le fil, on écrit, on revient. On ne peut
-        pas non plus cliquer « à travers » une fenêtre pour toucher ce
-        qu’elle couvre. C’est le compromis entre « plusieurs objets » et « on
-        sait toujours où on est ».
+        <strong>Le focus n’est pas piégé.</strong> Il va à la fenêtre ouverte, puis il reste libre :
+        on tabule vers le fil, on écrit, on revient. On ne peut pas non plus cliquer « à travers »
+        une fenêtre pour toucher ce qu’elle couvre. C’est le compromis entre « plusieurs objets » et
+        « on sait toujours où on est ».
       </p>
       <div className="dz-calque-demo">
         <div className="dz-voile" />
-        <div className="dz-fenetre dz-fenetre--derriere" style={{ left: '8%', top: '14%', width: '46%', height: '62%' }}>
+        <div
+          className="dz-fenetre dz-fenetre--derriere"
+          style={{ left: '8%', top: '14%', width: '46%', height: '62%' }}
+        >
           <div className="dz-fenetre__poignee">
             <p className="dz-fenetre__titre">Le carnet de Serys</p>
             <span className="dz-fenetre__nature">carnet</span>
@@ -1212,12 +1200,15 @@ function Etats(): ReactNode {
           </div>
           <div className="dz-fenetre__corps">
             <p className="dz-chrome">
-              « …et le marteau ne sert qu’à cela, à se » — la phrase
-              s’arrête là, et la suite est sur une autre page.
+              « …et le marteau ne sert qu’à cela, à se » — la phrase s’arrête là, et la suite est
+              sur une autre page.
             </p>
           </div>
         </div>
-        <div className="dz-fenetre dz-fenetre--derriere" style={{ left: '38%', top: '32%', width: '44%', height: '58%' }}>
+        <div
+          className="dz-fenetre dz-fenetre--derriere"
+          style={{ left: '38%', top: '32%', width: '44%', height: '58%' }}
+        >
           <div className="dz-fenetre__poignee">
             <p className="dz-fenetre__titre">Le livre de l’armoire</p>
             <span className="dz-fenetre__nature">livre</span>
@@ -1231,7 +1222,10 @@ function Etats(): ReactNode {
             </p>
           </div>
         </div>
-        <div className="dz-fenetre dz-fenetre--au-plan" style={{ left: '24%', top: '8%', width: '48%', height: '56%' }}>
+        <div
+          className="dz-fenetre dz-fenetre--au-plan"
+          style={{ left: '24%', top: '8%', width: '48%', height: '56%' }}
+        >
           <div className="dz-fenetre__poignee">
             <p className="dz-fenetre__titre">Marteau de Ravine</p>
             <span className="dz-fenetre__nature">outil</span>
@@ -1243,8 +1237,7 @@ function Etats(): ReactNode {
             <p className="dz-chrome">La fiche de l’objet, et sa toile dessous.</p>
             <div className="dz-trait" />
             <p className="dz-chrome">
-              Le carnet et le livre restent derrière, et restent lisibles par
-              leur bord.
+              Le carnet et le livre restent derrière, et restent lisibles par leur bord.
             </p>
           </div>
           <div className="dz-fenetre__tirer" />
@@ -1324,22 +1317,20 @@ export function DesignShowcase(): ReactNode {
         <p className="dz-surtitre">Feeders of Runeterra — vitrine d’interface</p>
         <h1>Le Freljord : peu de couleurs, beaucoup de contraste</h1>
         <p>
-          Le rendu de <code>docs/design/05-interface.md</code>. Cette page vit
-          dans le client, et non dans un dossier à côté, pour une raison précise :
-          une maquette hors du dépôt dérive, parce que rien ne la oblige à
-          compiler. Ici elle échoue si un jeton change de nom.
+          Le rendu de <code>docs/design/05-interface.md</code>. Cette page vit dans le client, et
+          non dans un dossier à côté, pour une raison précise : une maquette hors du dépôt dérive,
+          parce que rien ne la oblige à compiler. Ici elle échoue si un jeton change de nom.
         </p>
         <p>
-          Elle est <strong>hors session</strong> : une maquette qu’il faut connecter
-          pour être vue est une maquette qu’on ne regarde plus.
+          Elle est <strong>hors session</strong> : une maquette qu’il faut connecter pour être vue
+          est une maquette qu’on ne regarde plus.
         </p>
         <p className="dz-avertissement">
-          <strong>Ceci n’est pas le produit.</strong> Les colonnes, les tiroirs, la
-          carte annotable et la toile de dessin n’existent pas encore dans
-          <code> features/table/</code> : ce sont des dessins, et ils sont ici pour
-          être jugés avant d’être écrits. Les noms, les chiffres et les objets sont
-          écrits en dur dans <code>design-data.ts</code> et ne viennent d’aucune
-          requête.
+          <strong>Ceci n’est pas le produit.</strong> Les colonnes, les tiroirs, la carte annotable
+          et la toile de dessin n’existent pas encore dans
+          <code> features/table/</code> : ce sont des dessins, et ils sont ici pour être jugés avant
+          d’être écrits. Les noms, les chiffres et les objets sont écrits en dur dans{' '}
+          <code>design-data.ts</code> et ne viennent d’aucune requête.
         </p>
       </header>
 

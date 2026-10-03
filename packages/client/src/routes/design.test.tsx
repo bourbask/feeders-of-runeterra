@@ -24,12 +24,19 @@
  * de données. Un `ETATS_CAS` complet et une page qui n'en montre que la moitié
  * passeraient le premier et échoueraient ici.
  */
+import { render, screen } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
+import {
+  PAIRES_COMPOSANT,
+  PAIRES_TEXTE,
+  contraste,
+  couleur,
+  jetonsDe,
+} from '../styles/contraste.js';
 import type { Jeton } from './design-data.js';
 import {
   ECHELLES,
@@ -42,13 +49,6 @@ import {
   VARIANTES,
 } from './design-data.js';
 import { DesignShowcase } from './DesignShowcase.js';
-import {
-  PAIRES_COMPOSANT,
-  PAIRES_TEXTE,
-  contraste,
-  couleur,
-  jetonsDe,
-} from '../styles/contraste.js';
 
 const STYLES = join(dirname(fileURLToPath(import.meta.url)), '..', 'styles');
 const TOKENS_FILE = join(STYLES, 'tokens.css');
@@ -71,7 +71,19 @@ function ratio(mesure: number): string {
   return mesure.toFixed(2).replace('.', ',');
 }
 
-describe('la vitrine /design', () => {
+/**
+ * UN DÉLAI EXPLICITE, ET LA MESURE QUI LE JUSTIFIE.
+ *
+ * Ce fichier REND la vitrine entière à chaque cas — c'est le choix expliqué
+ * au-dessus, et c'est ce qui le rend lent. Mesuré : 2,7 s seul, 7,4 s quand
+ * `turbo run test` fait tourner onze suites en parallèle. Le défaut de Vitest
+ * est 5 s, donc la suite passait seule et tombait sous charge.
+ *
+ * LE DÉLAI N'EST PAS UN CORRECTIF DE CONFORT : rien ici n'attend, il n'y a ni
+ * minuterie ni `setTimeout` — c'est du calcul. Un test qui attendrait se
+ * corrigerait en supprimant l'attente, pas en élargissant le délai (#96).
+ */
+describe('la vitrine /design', { timeout: 30_000 }, () => {
   it('dit, dès la première ligne, qu’elle n’est pas le produit', () => {
     // Une maquette qui se fait passer pour le produit est pire qu'aucune
     // maquette : on la prend pour la chose, et on juge la chose au lieu du
@@ -223,7 +235,9 @@ describe('la vitrine /design', () => {
     render(<DesignShowcase />);
     // La toile apparaît dans les deux cartes ouvertes (partageable et non).
     expect(screen.getAllByText(/La toile — surface de dessin/u).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Ouvrir une carte, c’est ouvrir une surface de dessin/u).length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(/Ouvrir une carte, c’est ouvrir une surface de dessin/u).length,
+    ).toBeGreaterThan(0);
   });
 
   it('donne une règle de partage pour chaque nature d’objet', () => {

@@ -31,12 +31,12 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import {
-  PAIRES_COMPOSANT,
-  PAIRES_TEXTE,
   contraste,
   couleur,
   declarations,
   jetonsDe,
+  PAIRES_COMPOSANT,
+  PAIRES_TEXTE,
   resout,
 } from './contraste.js';
 
@@ -109,9 +109,19 @@ interface Infraction {
  */
 const INTERDITS: readonly Infraction[] = [
   { label: 'une couleur en dur — il faut un jeton de `tokens.css`', motif: /#[0-9a-fA-F]{3,8}\b/u },
-  { label: 'une couleur en dur — il faut un jeton de `tokens.css`', motif: /\b(?:rgba?|hsla?)\s*\(/u },
-  { label: 'une longueur en `px` — l’échelle est en `rem` (`--e-1` à `--e-12`)', motif: /\b\d+(?:\.\d+)?px\b/u },
-  { label: 'une primitive d’étage 1 — un composant référence l’étage 2 (`--p-` est réservé à `tokens.css`)', motif: /var\(\s*--p-/u },
+  {
+    label: 'une couleur en dur — il faut un jeton de `tokens.css`',
+    motif: /\b(?:rgba?|hsla?)\s*\(/u,
+  },
+  {
+    label: 'une longueur en `px` — l’échelle est en `rem` (`--e-1` à `--e-12`)',
+    motif: /\b\d+(?:\.\d+)?px\b/u,
+  },
+  {
+    label:
+      'une primitive d’étage 1 — un composant référence l’étage 2 (`--p-` est réservé à `tokens.css`)',
+    motif: /var\(\s*--p-/u,
+  },
 ];
 
 function infractions(texte: string): string[] {
@@ -198,15 +208,15 @@ describe('les jetons du client', () => {
   });
 
   it.each(PAIRES_TEXTE)('$devant sur $sur — $quoi passe le contraste AA', (paire) => {
-    expect(contraste(couleur(jetons, paire.devant), couleur(jetons, paire.sur))).toBeGreaterThanOrEqual(
-      paire.minimum,
-    );
+    expect(
+      contraste(couleur(jetons, paire.devant), couleur(jetons, paire.sur)),
+    ).toBeGreaterThanOrEqual(paire.minimum);
   });
 
   it.each(PAIRES_COMPOSANT)('$devant sur $sur — $quoi passe le contraste 1.4.11', (paire) => {
-    expect(contraste(couleur(jetons, paire.devant), couleur(jetons, paire.sur))).toBeGreaterThanOrEqual(
-      paire.minimum,
-    );
+    expect(
+      contraste(couleur(jetons, paire.devant), couleur(jetons, paire.sur)),
+    ).toBeGreaterThanOrEqual(paire.minimum);
   });
 
   it('`--trait` reste sous 3:1, et c’est assumé', () => {
@@ -300,7 +310,7 @@ describe('les jetons du client', () => {
     // « pas de plancher ».
     const valeurs = new Set<string>();
     for (const { chemin } of A_SCANNER) {
-      if (!chemin.endsWith(".css")) continue;
+      if (!chemin.endsWith('.css')) continue;
       for (const trouve of readFileSync(chemin, 'utf8').matchAll(/[\d.]+rem\b/gu)) {
         const valeur = trouve[0];
         if (valeur !== '0rem') valeurs.add(valeur);
