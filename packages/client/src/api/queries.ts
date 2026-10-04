@@ -17,6 +17,7 @@ import {
   zCampaignDetailResponse,
   zCampaignListResponse,
   zCampaignLogResponse,
+  zLogoutResponse,
   zMeResponse,
 } from '@for/contracts';
 import type { CampaignId } from '@for/engine';
@@ -37,6 +38,17 @@ export const fetchMe = async (deps: HttpDeps) =>
 
 export const fetchCampaigns = async (deps: HttpDeps) =>
   request(deps, { path: '/api/campaigns', schema: zCampaignListResponse });
+
+/**
+ * Sign out. A `POST`, so `request` carries the CSRF header on its own.
+ *
+ * THE SERVER DOES BOTH HALVES AND THE CLIENT NEITHER: it revokes the session
+ * row AND clears the cookie. The client holds no token to drop — it never had
+ * one — so the only thing left to do here is to forget what was cached under
+ * that identity, which is the caller's job.
+ */
+export const logout = async (deps: HttpDeps) =>
+  request(deps, { method: 'POST', path: '/api/auth/logout', schema: zLogoutResponse });
 
 export const fetchCampaign = async (deps: HttpDeps, id: CampaignId) =>
   request(deps, { path: `/api/campaigns/${id}`, schema: zCampaignDetailResponse });

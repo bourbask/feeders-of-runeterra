@@ -1,13 +1,15 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import type { MeResponse } from '@for/contracts';
 import type { CampaignId } from '@for/engine';
 
 import type { HttpDeps } from './api/http.js';
 import { HttpError } from './api/http.js';
-import { campaignLogQuery, meQuery } from './api/queries.js';
+import { campaignLogQuery, logout, meQuery } from './api/queries.js';
 import { clientEnv, websocketUrl } from './env.js';
+import { AppHeader } from './routes/AppHeader.js';
 import { CampaignList } from './routes/CampaignList.js';
 import { CharacterPicker } from './routes/CharacterPicker.js';
 import { Login } from './routes/Login.js';
@@ -106,6 +108,24 @@ export function App(props: { readonly http: HttpDeps }): ReactNode {
   const hash = useHash();
   const route = parseRoute(hash);
   const me = useQuery(meQuery(props.http));
+  const queryClient = useQueryClient();
+
+  /**
+   * SE DÉCONNECTER VIDE LE CACHE, ET REVIENT À LA RACINE.
+   *
+   * Le serveur révoque la session et efface le cookie ; il ne peut pas vider le
+   * cache de ce navigateur. Sans `clear()`, la liste des tables du joueur
+   * précédent resterait affichée jusqu'au prochain rechargement — et un écran
+   * qui montre les tables de quelqu'un d'autre après sa sortie est exactement
+   * ce que la révocation sert à empêcher.
+   */
+  const deconnexion = useMutation({
+    mutationFn: async () => logout(props.http),
+    onSettled: () => {
+      globalThis.location.hash = '';
+      queryClient.clear();
+    },
+  });
 
   if (me.isPending) {
     return <p className="fr-vide">Chargement…</p>;
@@ -119,13 +139,34 @@ export function App(props: { readonly http: HttpDeps }): ReactNode {
     return <p className="fr-erreur">{me.error.message}</p>;
   }
 
-  switch (route.nom) {
+  return (
+    <>
+      <AppHeader
+        joueur={me.data.player}
+        onDeconnexion={() => {
+          deconnexion.mutate();
+        }}
+        enCours={deconnexion.isPending}
+      />
+      <Ecran route={route} me={me.data} http={props.http} />
+    </>
+  );
+}
+
+function Ecran(props: {
+  readonly route: ReturnType<typeof parseRoute>;
+  readonly me: MeResponse;
+  readonly http: HttpDeps;
+}): ReactNode {
+  switch (props.route.nom) {
     case 'table':
-      return <TableScreen campaignId={route.campaignId} http={props.http} />;
+      return <TableScreen campaignId={props.route.campaignId} http={props.http} />;
     case 'personnage':
-      return <CharacterPicker campaignId={route.campaignId} personnages={me.data.characters} />;
+      return (
+        <CharacterPicker campaignId={props.route.campaignId} personnages={props.me.characters} />
+      );
     case 'campagnes':
-      return <CampaignList campagnes={me.data.campaigns} />;
+      return <CampaignList campagnes={props.me.campaigns} />;
     case 'inconnue':
       return <p className="fr-erreur">Cette page n’existe pas.</p>;
   }
