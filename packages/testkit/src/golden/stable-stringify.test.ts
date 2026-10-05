@@ -106,13 +106,13 @@ describe('stableStringify', () => {
 
   const étatDeTable = (
     vivres: number,
-    souffle: number,
+    momentum: number,
     couverts: readonly string[],
   ): ÉtatDeTable => ({
     character: 'ashe',
     gauges: new Map([
       ['vivres', vivres],
-      ['souffle', souffle],
+      ['momentum', momentum],
     ]),
     covered: new Set(couverts),
   });

@@ -920,7 +920,7 @@ Et le symétrique, qui est une exigence :
 | Le sélecteur de destinataire est toujours visible | ADR 0008, le composant le plus important |
 | `PartagePolicy` vit dans le contenu, pas dans le client | invariant 3 |
 | La toile de dessin est **une surface dans la carte**, pas une modale | sinon ce sont deux panneaux superposés |
-| Le vocabulaire est **élan**, jamais « souffle » | le mot du cahier des charges |
+| Le vocabulaire est **élan**, jamais « élan » | le mot du cahier des charges |
 | **`--trait` reste sous 3:1, c'est un choix** | 1.4.11 ne vise que ce qui *identifie* un composant ; un panneau est identifié par son titre, un anneau de focus ne peut l'être que par lui-même |
 | `--trait-fort` sert au **focus**, pas aux bordures de panneau | c'est le seul filet qui doit passer 3:1, donc c'est le seul qui doit dire quelque chose |
 

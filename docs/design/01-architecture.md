@@ -36,7 +36,7 @@ Scope npm : `@for/*` (prive, jamais publie ; `"private": true` partout).
 
 | Package | Chemin | Responsabilite | Deps runtime autorisees |
 |---|---|---|---|
-| `@for/engine` | `packages/engine` | Regles du jeu. Des, mouvements, jauges, souffle, progression, serments, horloges, reducteur d'evenements, invariants d'etat. **Pur.** | **aucune** |
+| `@for/engine` | `packages/engine` | Regles du jeu. Des, mouvements, jauges, élan, progression, serments, horloges, reducteur d'evenements, invariants d'etat. **Pur.** | **aucune** |
 | `@for/contracts` | `packages/contracts` | Schemas Zod + types deduits : etat, evenements, intentions, protocole WS, routes HTTP, schemas de contenu, schemas d'E/S IA. | `zod` uniquement |
 | `@for/content` | `packages/content` | Donnees de jeu versionnees (JSON) + registre typé + libelles francais. Aucun acces disque a l'execution. | `@for/contracts` |
 | `@for/testkit` | `packages/testkit` | RNG scriptes, constructeurs de fixtures, runner de corpus dores, assertions de domaine. | `@for/engine`, `@for/contracts` |
@@ -356,7 +356,7 @@ export interface ChallengeInput {
 }
 export interface ChallengeRoll {
   readonly actionDie: number;              // d6 brut
-  readonly momentumCancelled: boolean;     // souffle negatif == de d'action
+  readonly momentumCancelled: boolean;     // élan negatif == de d'action
   readonly rawScore: number;               // actionDie(+0 si annule) + attribute + bonus
   readonly score: number;                  // min(rawScore, 10), ou momentum si brule
   readonly burned: boolean;
@@ -814,7 +814,7 @@ Trois familles, jamais melangees :
    fermee (`'move_in_progress' | 'gauge_out_of_range' | 'unknown_move' | 'character_dead' | ...`).
    **Il n'y a pas de verrou de tour** : la table est libre, les ecritures sont serialisees par
    campagne (`write-queue.ts`). `move_in_progress` ne se declenche que si l'acteur a un jet en
-   attente de decision (fenetre de brulure du souffle).
+   attente de decision (fenetre de brulure du élan).
    Aucun texte humain dans le moteur.
 2. **`AppError` (serveur).** Classe unique, `packages/server/src/errors.ts` :
 
@@ -1052,7 +1052,7 @@ Toute proposition de nouveau message c2s qui transporte un resultat est refusee 
 | `move.reach_a_milestone` | `{ trackId }` | atteindre un jalon : marque des crans |
 | `move.fulfill_your_vow` | `{ trackId }` | jet de progression de resolution |
 | `move.forsake_your_vow` | `{ trackId, reason }` | renier un serment |
-| `momentum.burn` | `{ rollId }` | bruler le souffle sur un jet dont la fenetre est ouverte (`roll.action_resolved.burnWindow`) |
+| `momentum.burn` | `{ rollId }` | bruler le élan sur un jet dont la fenetre est ouverte (`roll.action_resolved.burnWindow`) |
 | `momentum.keep` | `{ rollId }` | ne PAS bruler : les des restent tels quels, et les effets de l'issue initiale s'appliquent. Le `rollId` est celui de la fenetre visee, pour qu'un clic perime soit refuse au lieu d'atterrir sur une autre fenetre |
 | `oracle.ask` | `{ question, likelihood }` | oracle oui/non pondere (d100, seuils du contenu) |
 | `oracle.draw` | `{ oracleId: OracleId }` | table evocatrice |
@@ -1108,7 +1108,7 @@ export const zTurnProof = z.object({
   roll: z.object({ eventSeq: z.number().int(), rngStream: z.string(), rngDrawIndex: z.number().int(),
                    action: z.number().int(), challenge: z.tuple([z.number().int(), z.number().int()]),
                    total: z.number().int(), outcome: z.string() }).nullable(),
-  revision: z.object({ eventSeq: z.number().int(), label: z.string().max(120) }).nullable(), // brulure du souffle
+  revision: z.object({ eventSeq: z.number().int(), label: z.string().max(120) }).nullable(), // brulure du élan
   effects: z.array(z.object({ eventSeq: z.number().int(), type: z.string(), label: z.string().max(120) })).max(32),
   price: z.object({ eventSeq: z.number().int(), entryId: z.string(), text: z.string().max(400),
                     value: z.number().int(), effectIndex: z.number().int().nullable() }).nullable(),
@@ -1191,7 +1191,7 @@ Aucune suite ne depend de l'ordre d'execution ni d'un etat global partage.
 
 | Package | Ce qu'on teste | Ce qu'on refuse |
 |---|---|---|
-| `engine` | 1) purete (§1.3) ; 2) chaque mouvement avec un `Rng` **scripte** (tableau de valeurs), tous les branchements de resultat ; 3) regles de souffle : annulation par souffle negatif, brulure, plafond a 10, bornes -6/+10 ; 4) progression : 12/8/4/2/1 crans, remplissage de cases, jet de progression ; 5) `reduce` : idempotence de rejeu, immutabilite, exhaustivite du `switch` sur `GameEvent` ; 6) corpus dores (§7.3). **Couverture exigee : 95 % lignes / 90 % branches, bloquant.** | tout mock ; toute dependance ; tout test lent |
+| `engine` | 1) purete (§1.3) ; 2) chaque mouvement avec un `Rng` **scripte** (tableau de valeurs), tous les branchements de resultat ; 3) regles de élan : annulation par élan negatif, brulure, plafond a 10, bornes -6/+10 ; 4) progression : 12/8/4/2/1 crans, remplissage de cases, jet de progression ; 5) `reduce` : idempotence de rejeu, immutabilite, exhaustivite du `switch` sur `GameEvent` ; 6) corpus dores (§7.3). **Couverture exigee : 95 % lignes / 90 % branches, bloquant.** | tout mock ; toute dependance ; tout test lent |
 | `contracts` | parse/refuse sur cas limites ; invariant 3 (aucun `c2s.*` porteur d'etat) ; exhaustivite des unions (chaque `GameEvent.type` du moteur a un schema) ; compatibilite ascendante : un evenement dore de version anterieure doit toujours parser | |
 | `content` | tout JSON valide contre son schema ; unicite des ids ; references croisees resolues (region -> champion, oracle -> table) ; index genere a jour ; les 20 fiches manuelles couvrent les champs obligatoires | |
 | `testkit` | ses propres helpers (le RNG scripte epuise -> erreur explicite ; le runner dore detecte une derive) | |
@@ -1227,7 +1227,7 @@ Trois corpus obligatoires en M0 :
 
 1. `engine/tests/golden/challenge-matrix.golden.json` — **pas** un produit cartesien complet :
    uniquement les combinaisons qui portent une decision, soit environ 300 lignes — bornes du
-   souffle (-6, -1, 0, +1, +2, +9, +10), egalite `|souffle| == de d'action`, franchissement du
+   élan (-6, -1, 0, +1, +2, +9, +10), egalite `|élan| == de d'action`, franchissement du
    plafond a 10, des de defi egaux, et les trois issues autour de chaque seuil. Oracle de
    reference des regles : qui modifie le calcul obtient une diff lisible. Un corpus genere
    « large » produirait une diff illisible, qui ne serait plus relue.

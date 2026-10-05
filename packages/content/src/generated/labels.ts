@@ -32,7 +32,7 @@ export const LABELS = {
     'personnage.fiche': 'Fiche de personnage',
     'personnage.marques': 'Marques',
     'personnage.serment': 'Serment',
-    'personnage.souffle': 'Souffle',
+    'personnage.elan': 'Élan',
     'progression.jalon': 'Jalon',
     'progression.rang': 'Rang',
     'table.pourquoi': 'Pourquoi ?',

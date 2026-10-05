@@ -42,7 +42,7 @@ describe('le bloc <etat>', () => {
       // (§4.7.2). Le prompt interdit au modèle d'en ÉCRIRE un, pas d'en lire.
       expect(parts.core).toContain('Ashe');
       expect(parts.core).toContain('vigueur 5');
-      expect(parts.core).toContain('souffle 7');
+      expect(parts.core).toContain('élan 7');
       // Pas de titre orphelin : aucune horloge, aucune section « Horloges ».
       expect(parts.core).not.toContain('Horloges');
       expect(parts.core).not.toContain('Serments');
@@ -265,7 +265,7 @@ describe('le vocabulaire du <fait>', () => {
     expect(sentences.filter((sentence) => sentence.trim().length === 0)).toEqual([]);
     expect(sentences[0]).toBe('vivres -1.');
     expect(sentences[1]).toBe('ame +2.');
-    expect(sentences[2]).toBe('souffle +1.');
+    expect(sentences[2]).toBe('élan +1.');
     expect(sentences[12]).toBe('Le froid gagne.');
   });
 });

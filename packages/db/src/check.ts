@@ -258,7 +258,7 @@ const BOUNDS = [
               OR vivres NOT BETWEEN 0 AND 5`,
   },
   {
-    label: 'souffle hors de -6..10',
+    label: 'élan hors de -6..10',
     sql: `SELECT campaign_id, id FROM characters WHERE momentum NOT BETWEEN -6 AND 10`,
   },
   {

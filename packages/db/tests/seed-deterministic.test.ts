@@ -235,10 +235,10 @@ describe('la campagne de démonstration', () => {
              AND json_extract(payload_json, '$.outcome') = 'echec'`,
         ),
         presage: one(`SELECT count(*) AS n FROM events WHERE type = 'roll.presage_drawn'`),
-        souffleBrule: one(
+        momentumBurned: one(
           `SELECT count(*) AS n FROM events WHERE type = 'character.momentum_burned'`,
         ),
-        souffleNegatifAnnule: one(
+        momentumNegatedCancelled: one(
           `SELECT count(*) AS n FROM events WHERE type = 'character.momentum_negated'`,
         ),
         plafonneADix: one(

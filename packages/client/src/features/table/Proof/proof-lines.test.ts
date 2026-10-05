@@ -20,13 +20,13 @@ describe('la preuve ne rend que ce que le serveur a envoyé', () => {
 
   it.each([
     ['move', 'Mouvement'],
-    ['revision', 'Souffle brûlé'],
+    ['revision', 'Élan brûlé'],
     ['price', 'Prix payé'],
     ['presage', 'Présage'],
     ['narration', 'Narration'],
   ])('sans « %s », la ligne « %s » n’apparaît pas', (champ, libelle) => {
     const complet = aTurnProof({
-      revision: { eventSeq: 414, label: 'Souffle brûlé : 6' },
+      revision: { eventSeq: 414, label: 'Élan brûlé : 6' },
       price: { eventSeq: 415, entryId: 'p-3', text: 'Un allié paie', value: 3, effectIndex: 0 },
       presage: { eventSeq: 416, entryId: 'o-1', text: 'Le vent tourne' },
     });

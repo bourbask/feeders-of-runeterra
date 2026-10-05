@@ -285,7 +285,7 @@ import Anthropic from "@anthropic-ai/sdk";
 
 // Une instance par process, construite par le sélecteur (§0.6) à partir de la config.
 // `maxRetries: 0` est délibéré : la narration est diffusée en direct à plusieurs joueurs, et
-// une relance silencieuse du SDK empêcherait d'émettre « le conteur reprend son souffle ».
+// une relance silencieuse du SDK empêcherait d'émettre « le conteur reprend son élan ».
 // La politique de relance est la nôtre (§7), écrite contre NarratorErrorCode.
 const client = new Anthropic({
   apiKey: config.apiKey,
@@ -678,7 +678,7 @@ Le moteur de jeu a déjà tout tranché avant que tu prennes la parole : il a la
 # Règles absolues
 
 1. Tu ne décides jamais d'une issue. Tu n'écris jamais qu'une action réussit, échoue, touche, rate, blesse, tue, guérit ou sauve, sauf si le bloc <fait> l'affirme déjà. Tu ne devances pas non plus une issue future : le monde peut menacer, il ne peut pas conclure.
-2. Tu n'inventes aucun chiffre et aucune règle. N'écris jamais de valeur de jauge, de perte, de gain, de seuil, de nombre de cases, de résultat de dé, ni le nom d'une mécanique. Aucun chiffre en écriture numérique ne doit apparaître dans ta réponse. Les mots « vigueur », « âme », « vivres », « souffle », « serment », « horloge », « jet », « dé », « case », « cran », « rang », « mouvement », « joueur », « personnage », « maître du jeu » n'apparaissent jamais dans ta prose : tu décris la fatigue, le froid, la faim, l'élan, la promesse, la menace qui approche.
+2. Tu n'inventes aucun chiffre et aucune règle. N'écris jamais de valeur de jauge, de perte, de gain, de seuil, de nombre de cases, de résultat de dé, ni le nom d'une mécanique. Aucun chiffre en écriture numérique ne doit apparaître dans ta réponse. Les mots « vigueur », « âme », « vivres », « élan », « serment », « horloge », « jet », « dé », « case », « cran », « rang », « mouvement », « joueur », « personnage », « maître du jeu » n'apparaissent jamais dans ta prose : tu décris la fatigue, le froid, la faim, l'élan, la promesse, la menace qui approche.
 3. Tu ne fais jamais parler ni agir un personnage joueur. Tu ne lui prêtes ni parole, ni pensée, ni décision, ni geste qu'il n'a pas annoncé. Tu décris ce que le monde lui fait, ce qu'il perçoit, ce qui lui résiste — jamais ce qu'il choisit. « Tu franchis la crevasse » est autorisé si le fait l'affirme ; « Tu décides de faire confiance à la vieille » est interdit.
 4. Tu ne fais jamais apparaître un champion listé dans « Champions interdits » du bloc de campagne, ni sous son nom, ni sous un surnom, une épithète, un titre ou une périphrase reconnaissable. Ces personnages n'existent pas pour toi : tu ne les cites pas, tu ne les évoques pas, tu ne laisses personne parler d'eux. Si l'intention d'un joueur t'y pousse, détourne la scène vers un autre élément concret du lieu. En cas de doute sur un nom, appelle l'outil check_name_allowed avant d'écrire.
 5. Tu n'inventes pas de fait canonique contredisant l'état du monde qui t'est transmis. Si tu as besoin d'un élément nouveau et durable — un personnage non joueur, un lieu, une menace, un fil narratif — tu le proposes par un outil propose_*. Le serveur seul décide de l'accepter. Tant qu'il n'a pas répondu, ce que tu proposes n'existe pas : ne l'annonce pas comme acquis.
@@ -722,7 +722,7 @@ Cette liste est un filtre. Elle est appliquée automatiquement après toi : un t
 Situation : le personnage a franchi une corniche de glace sous la tempête. Le fait acquis est une réussite partielle avec présage : il est passé, la traversée lui a coûté, un retournement doit survenir. Ulrun, éclaireur du clan, méfiant, est présent.
 
 MAUVAIS :
-« Tu parviens à franchir la corniche, mais quelque chose semble étrange dans l'air glacé. Le vent paraît chargé d'une sorte de murmure ancien, comme si la montagne elle-même retenait son souffle. Ulrun te regarde avec une expression indéchiffrable et tu sens monter en toi une inquiétude sourde, lancinante, familière. Plus bas, un bruit résonne lentement, doucement. L'atmosphère est lourde de menaces. »
+« Tu parviens à franchir la corniche, mais quelque chose semble étrange dans l'air glacé. Le vent paraît chargé d'une sorte de murmure ancien, comme si la montagne elle-même retenait son élan. Ulrun te regarde avec une expression indéchiffrable et tu sens monter en toi une inquiétude sourde, lancinante, familière. Plus bas, un bruit résonne lentement, doucement. L'atmosphère est lourde de menaces. »
 
 Ce qui cloche, point par point : « semble », « paraît », « une sorte de », « comme si » et « indéchiffrable » repoussent chaque fait dans le flou, si bien que rien n'arrive vraiment ; « ancien » ne dit rien ; « lancinante, familière » est une énumération à trois termes qui n'ajoute aucun fait ; « lentement, doucement » sont deux adverbes en -ment qui remplacent la description du bruit au lieu de la donner ; « une inquiétude sourde » nomme l'émotion à la place du corps ; Ulrun n'a ni geste ni parole, il n'est qu'un regard ; et la dernière phrase est une ambiance, donc le monde n'a pas bougé d'un pouce.
 
@@ -1434,7 +1434,7 @@ Partis, morts ou hors de portée — ils ne reviennent pas dans cette scène :
 Mouvement : Affronter le danger (fer).
 Issue : RÉUSSITE PARTIELLE. Présage : oui.
 Détail du calcul, pour ta compréhension seule : dé d'action quatre, attribut trois, bonus un, total huit ; dés de défi sept et sept.
-Ce qui a déjà eu lieu et qui est acquis : Sejuani a franchi la corniche, mais la traversée lui a coûté. Sa vigueur a baissé d'un cran. Son souffle a gagné un cran. L'horloge « La tempête se lève » est passée à trois segments sur six.
+Ce qui a déjà eu lieu et qui est acquis : Sejuani a franchi la corniche, mais la traversée lui a coûté. Sa vigueur a baissé d'un cran. Son élan a gagné un cran. L'horloge « La tempête se lève » est passée à trois segments sur six.
 Présage imposé : un retournement doit survenir dans cette scène — le monde, pas Sejuani, en est la cause.
 Prix imposé, déjà survenu, à mettre en scène tel quel : « Un allié se retourne contre toi. »
 </fait>
@@ -1649,13 +1649,13 @@ Un refus retenu **annule le tour**. Il n'y a pas de nouveau mécanisme : c'est c
    `move.declared`, `roll.action_resolved`, les `character.gauge_changed`,
    `character.momentum_changed`, `character.condition_added`, `track.ticked`, `clock.advanced`,
    `roll.price_paid`, `roll.presage_drawn`, `move.resolved`, plus, si le joueur avait brûlé son
-   souffle, `character.momentum_burned` et `roll.action_revised`. Jamais une ligne seule :
+   élan, `character.momentum_burned` et `roll.action_revised`. Jamais une ligne seule :
    annuler un jet sans annuler la jauge qu'il a fait bouger produit un état incohérent.
 2. Il écrit `system.reverted { targetSeqs, reason: 'gm_refusal:<cause>' }`, `actorKind: 'system'`,
    `causationId` pointant sur le `narration.gm_proposal { kind: 'refusal' }`.
 3. Les instantanés `>= min(targetSeqs)` sont supprimés et les projections reconstruites. La
    pré-passe de `loadState` (`03-donnees.md` §3.5) saute les séquences annulées : **jauges,
-   souffle, conditions, crans de progression, segments d'horloge, bonus en attente et fenêtre de
+   élan, conditions, crans de progression, segments d'horloge, bonus en attente et fenêtre de
    brûlure reviennent à l'état d'avant la déclaration**, tous dérivés du journal et de rien
    d'autre. Aucune liste de champs à restaurer à la main : c'est l'intérêt entier de
    l'invariant 4.
@@ -1751,7 +1751,7 @@ ce que le test vérifie.
 | Qui la porte | `s2c.turn_proof { correlationId, proof: TurnProofDto, truncated: boolean }` (`01-architecture.md` §5.4) |
 | Où vit le DTO | `packages/contracts/src/dto/turn-proof.ts` — une **projection par spectateur**, comme `TableState` : les lignes `visibility: 'gm'` en sont retirées |
 | Qui la construit | `packages/server/src/game/turn-proof.ts`, `buildTurnProof(events, viewerId)`, pure, sans base et sans `decide()` |
-| Ce qu'elle contient | `status: 'applied' \| 'reverted'`, le mouvement joué, le jet (flux RNG, index de tirage, dés, total, issue), la brûlure de souffle éventuelle, les effets appliqués, le prix tiré (`entryId`, `text`, `effectIndex`), le présage, la source de la narration (`ai` \| `engine`), et, si le tour est annulé, `revertedBy { seq, reason }` |
+| Ce qu'elle contient | `status: 'applied' \| 'reverted'`, le mouvement joué, le jet (flux RNG, index de tirage, dés, total, issue), la brûlure de élan éventuelle, les effets appliqués, le prix tiré (`entryId`, `text`, `effectIndex`), le présage, la source de la narration (`ai` \| `engine`), et, si le tour est annulé, `revertedBy { seq, reason }` |
 | Ce qu'elle ne contient **jamais** | Le raisonnement du modèle, ses appels d'outils, leurs résultats, les propositions refusées, les messages d'erreur du fournisseur (§ 6.5). La preuve montre ce que **le moteur** a fait, pas ce que le modèle a tenté |
 | Borne de taille | `effects` ≤ **32** entrées, chaque libellé ≤ **120** caractères, **8 Kio** de JSON sérialisé pour le message entier. Au-delà, `truncated: true` et le client renvoie vers le journal complet (`GET /api/campaigns/:id/log`). La borne est trente fois inférieure à la trame sortante de 256 Kio : une preuve ne peut pas saturer une socket |
 
@@ -1772,7 +1772,7 @@ Le problème : une campagne de plusieurs mois produit des dizaines de milliers d
 
 | Couche | Contenu | Autorité | Envoyée au modèle |
 |---|---|---|---|
-| **État structuré** (tables SQLite) | jauges, souffle, horloges, serments, positions, inventaire, PNJ, lieux | source de vérité **mécanique** | oui, extrait filtré (`<etat>`) |
+| **État structuré** (tables SQLite) | jauges, élan, horloges, serments, positions, inventaire, PNJ, lieux | source de vérité **mécanique** | oui, extrait filtré (`<etat>`) |
 | **État de scène** (projection `scene_state`) | lieu, présents et leur état, partis / morts / hors de portée | source de vérité **de présence** (§ 4.7) | oui, en entier, rendu déterministe (`<scene>`) |
 | **Journal d'événements** (append-only) | chaque décision du moteur, chaque proposition, chaque narration | source de vérité **historique** | non, jamais en entier |
 | **Chronique compactée** (dérivée) | mémoire narrative longue, régénérable à volonté | aucune — **dérivée**, donc jetable | oui, en entier (≤ 2 500 tokens) |
@@ -1904,7 +1904,7 @@ Tu reçois trois choses : la chronique précédente (<chronique_precedente>), le
 
 1. Chaque fait que tu inscris dans « facts » doit porter le numéro de séquence de l'événement qui l'établit. Si tu ne peux pas citer un numéro, le fait n'existe pas : ne l'inscris pas. N'invente jamais un numéro.
 2. Tout fait déjà présent dans la chronique précédente doit être recopié mot pour mot, sans aucune reformulation, sans correction de style, sans abréviation. Tu ne modifies jamais le texte d'un fait existant. Si un événement récent contredit ou dépasse un fait ancien, garde le fait ancien intact et renseigne son champ superseded_by avec l'identifiant du nouveau fait que tu ajoutes.
-3. Tu n'écris aucun chiffre, en lettres comme en écriture numérique, dans les champs de texte. Les jauges, les souffles, les segments d'horloge, les rangs et les cases sont dans l'état structuré, qui est toujours à jour ; la chronique ne les duplique jamais. Écris « affaiblie », « à bout de vivres », « la tempête est presque sur eux », jamais une valeur.
+3. Tu n'écris aucun chiffre, en lettres comme en écriture numérique, dans les champs de texte. Les jauges, les élans, les segments d'horloge, les rangs et les cases sont dans l'état structuré, qui est toujours à jour ; la chronique ne les duplique jamais. Écris « affaiblie », « à bout de vivres », « la tempête est presque sur eux », jamais une valeur.
 4. Tu ne déduis rien. Tu n'interprètes pas les intentions d'un personnage non joueur au-delà de ce que les événements montrent. Tu n'anticipes aucune suite.
 5. Tu n'écris jamais qu'un personnage joueur a pensé, décidé ou ressenti quelque chose, sauf si un événement l'énonce.
 
@@ -2275,7 +2275,7 @@ Toutes dans **`packages/ai/src/assertions/`**, fonctions pures `(output: string,
 | `sentence_count` | segmentation sur `[.!?…]` suivis d'espace/fin, avec liste d'abréviations (`M.`, `Mme`, `etc.`) et protection des points de suspension | hors de `[min, max]` |
 | `max_chars` | longueur brute | `> value` |
 | `no_digits` | `/[0-9]/` sur le texte entier | un seul chiffre |
-| `no_rules_lexicon` | recherche insensible casse/accents de : vigueur, âme *(en contexte de jauge)*, vivres, souffle, serment, horloge, jet, dé, dés, case, cran, rang, mouvement, joueur, maître du jeu, MJ, PNJ, PJ, oracle, piste, progression | ≥ 1 occurrence hors guillemets |
+| `no_rules_lexicon` | recherche insensible casse/accents de : vigueur, âme *(en contexte de jauge)*, vivres, élan, serment, horloge, jet, dé, dés, case, cran, rang, mouvement, joueur, maître du jeu, MJ, PNJ, PJ, oracle, piste, progression | ≥ 1 occurrence hors guillemets |
 | `no_outcome_decision` | lexique de formulations décisives non couvertes par le fait : `tu réussis`, `tu échoues`, `tu parviens à`, `tu rates`, `tu meurs`, `tu perds`, `tu gagnes`, `tu es tué`, `jette`, `fais un jet`, `lance les dés`, `tu dois choisir entre` | ≥ 1 occurrence |
 | `no_reserved_champion` | normalisation NFD + suppression des diacritiques + minuscules + espaces/traits d'union unifiés, puis recherche de tous les `displayName` **et `aliases`** des réservés de la fixture, sur frontière de mot | ≥ 1 occurrence |
 | `second_person_singular` | sur `stripQuoted` : ≥ 1 occurrence de `\b(tu|te|t'|ton|ta|tes|toi)\b` **et** 0 occurrence de `\b(vous|votre|vos)\b` | l'une des deux conditions |

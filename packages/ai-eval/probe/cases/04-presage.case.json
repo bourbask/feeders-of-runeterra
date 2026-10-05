@@ -51,7 +51,7 @@
       "Le Col des Hurleurs doit son nom au vent qui s'engouffre entre les deux parois : au plus fort de l'hiver, on n'entend plus l'homme qui marche devant."
     ],
     "etat": {
-      "core": "Personnages :\n- Braum : vigueur 4, âme 3, vivres 2, souffle 2\n- Sejuani : vigueur 4, âme 3, vivres 2, souffle 2\nHorloges :\n- La tempête se lève : 2/6\nSerments :\n- Rapporter la hache d'Avarosa (dangereux)",
+      "core": "Personnages :\n- Braum : vigueur 4, âme 3, vivres 2, élan 2\n- Sejuani : vigueur 4, âme 3, vivres 2, élan 2\nHorloges :\n- La tempête se lève : 2/6\nSerments :\n- Rapporter la hache d'Avarosa (dangereux)",
       "inventory_and_idle_clocks": "Atouts :\n- Braum : Bouclier de la porte\n- Sejuani : Œil de la battue"
     },
     "turns": [

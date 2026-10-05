@@ -446,7 +446,7 @@ CREATE TABLE characters (
   ame               INTEGER NOT NULL DEFAULT 5 CHECK (ame     BETWEEN 0 AND 5),
   vivres            INTEGER NOT NULL DEFAULT 5 CHECK (vivres  BETWEEN 0 AND 5),
 
-  -- Souffle (momentum) -6..+10, départ +2.
+  -- Élan (momentum) -6..+10, départ +2.
   momentum          INTEGER NOT NULL DEFAULT 2  CHECK (momentum BETWEEN -6 AND 10),
   momentum_max      INTEGER NOT NULL DEFAULT 10 CHECK (momentum_max BETWEEN 0 AND 10),
   momentum_reset    INTEGER NOT NULL DEFAULT 2  CHECK (momentum_reset BETWEEN 0 AND 2),
@@ -846,7 +846,7 @@ CREATE INDEX content_packs_version_idx ON content_packs (version, first_seen_at 
 | `intents.payload_json` | intention client | Union discriminée |
 | `content_packs.manifest_json` | manifeste | Lu en entier |
 
-**Ce qui n'est jamais du JSON** : attributs, jauges, souffle, crans de jauge de
+**Ce qui n'est jamais du JSON** : attributs, jauges, élan, crans de jauge de
 progression, statuts, identifiants de liaison, horodatages. Tout ce qui est borné,
 contraint ou requêté est une colonne.
 
@@ -1033,7 +1033,7 @@ C'est le cœur de l'invariant 1. Ces événements sont écrits **avant** tout ap
 | Type | Payload |
 |---|---|
 | `roll.action_resolved` | `{ rollId, characterId, moveId, attribute, attributeValue, actionDie, adds: {source,value}[], rawTotal, total, cappedAtTen: boolean, challengeDice: [number, number], outcome: 'franche'\|'partielle'\|'echec', isPresage: boolean, momentumBefore, momentumNegated: boolean, burnWindow: boolean, rngStream: 'action', rngDrawIndex }` |
-| `roll.action_revised` | `{ rollId, revisedFromSeq, total, outcome, isPresage }` — **seule** conséquence d'une brûlure de souffle sur un jet déjà écrit |
+| `roll.action_revised` | `{ rollId, revisedFromSeq, total, outcome, isPresage }` — **seule** conséquence d'une brûlure de élan sur un jet déjà écrit |
 | `roll.progress_resolved` | `{ rollId, trackId, ticks, filledBoxes, challengeDice: [number,number], outcome, isPresage }` |
 | `roll.oracle_resolved` | `{ rollId, tableId, tableVersion, dieSize, value, entryId, text, tags: string[], question?: string }` |
 | `roll.yes_no_resolved` | `{ rollId, question, likelihood: 'quasi-certain'\|'probable'\|'incertain'\|'peu-probable'\|'improbable', threshold, value, answer: 'oui'\|'non', isExtreme: boolean }` |
@@ -1041,7 +1041,7 @@ C'est le cœur de l'invariant 1. Ces événements sont écrits **avant** tout ap
 | `roll.presage_drawn` | `{ rollId, tableId, value, entryId, text, triggeredByRollSeq }` |
 | `roll.raw` | `{ rollId, label, dice: {sides, value}[], reason }` |
 
-**La brûlure du souffle est en deux temps** : la règle veut qu'on voie les dés avant de
+**La brûlure du élan est en deux temps** : la règle veut qu'on voie les dés avant de
 décider. `roll.action_resolved` porte `burnWindow: true` quand la brûlure est légale ;
 l'intention `momentum.burn { rollId }` produit alors `character.momentum_burned` **puis**
 `roll.action_revised`, et `move.resolved` n'applique les effets qu'après. Le journal étant
@@ -1063,7 +1063,7 @@ devenu réussite franche ne paie pas le prix de l'échec. Trois fermetures, et t
 explicite, seul le filet fermait la fenêtre. Le filet **reste** — un joueur qui ferme son
 onglet ne doit pas bloquer la table.
 
-**La révision ne tire rien.** Le score révisé est le souffle dépensé, lu contre les dés de défi
+**La révision ne tire rien.** Le score révisé est le élan dépensé, lu contre les dés de défi
 **déjà écrits**. Aucun tirage sur le flux `action`, donc aucun décalage d'index : les valeurs
 de dés déjà journalisées restent les mêmes (§3.6).
 
@@ -1413,7 +1413,7 @@ garde-fou anti-abus : `02-mj-ia.md` §4.8. Ce qui relève de ce document tient e
 
 1. **Rien de neuf n'est inventé.** Même retour en arrière que ci-dessus : suppression des
    instantanés `>= min(targetSeqs)`, reconstruction des projections, pré-passe de `loadState`.
-   Jauges, souffle, conditions, crans de progression, segments d'horloge, bonus en attente et
+   Jauges, élan, conditions, crans de progression, segments d'horloge, bonus en attente et
    fenêtre de brûlure reviennent à l'état d'avant la déclaration, **parce qu'ils sont tous
    dérivés du journal et de rien d'autre**. Aucune liste de champs à restaurer à la main :
    c'est l'intérêt entier de l'invariant 4.
@@ -2277,7 +2277,7 @@ On ne réécrit **jamais** le journal.
 
 - Format de payload : upcaster (§3.8) + bump de `payload_version` pour les **nouveaux**
   événements seulement.
-- Règle de jeu (ex. le souffle plafonne à +9 au lieu de +10) : la campagne est épinglée
+- Règle de jeu (ex. le élan plafonne à +9 au lieu de +10) : la campagne est épinglée
   sur `campaigns.rules_version`. Le moteur garde les variantes indexées par version ; une
   campagne existante ne change de règles que par un acte explicite du propriétaire, qui
   émet `system.rules_version_migrated` — donc l'histoire montre où le changement a pris
@@ -2559,7 +2559,7 @@ Contenu de `pnpm db:seed` :
 | Verrous | 3 champions `reserved_pc`, 6 `allowed_npc` (Olaf, Lissandra, Volibear, Udyr, Trundle, Gragas), le reste implicite |
 | Séances | 2 : une close (`ordinal: 1`, 180 événements) et une en cours (`ordinal: 2`, 68 événements) — 180 + 68 = 248, le total du journal ci-dessous |
 | Journal | **248 événements**, couvrant **au moins un exemplaire de chacun des 71 types** — c'est une assertion du seed, pas un vœu. Les quatre événements ajoutés sont des `scene.facts_updated` : une entrée en scène, une sortie de personnage non joueur, un décès reflété, et un changement de lieu |
-| Jets | au moins un de chaque : réussite franche, partielle, échec, présage, souffle brûlé, souffle négatif annulé, plafonnement à 10 |
+| Jets | au moins un de chaque : réussite franche, partielle, échec, présage, élan brûlé, élan négatif annulé, plafonnement à 10 |
 | Serments | 1 accompli (*dangereux*), 1 en cours (*redoutable*, 17 crans), 1 abandonné |
 | Horloges | 1 à 3/6 visible, 1 à 5/8 cachée du MJ |
 | Entités | 11 (4 PNJ, 3 lieux, 2 factions, 2 fils) |

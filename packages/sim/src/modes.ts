@@ -113,7 +113,7 @@ export function replayDatabase(file: string, onlyCampaign: string | null): ModeO
         }
         if (replayed.momentum !== row.momentum) {
           issues.push(
-            `${row.id} : souffle projeté ${String(row.momentum)}, rejoué ${String(replayed.momentum)}`,
+            `${row.id} : élan projeté ${String(row.momentum)}, rejoué ${String(replayed.momentum)}`,
           );
         }
         for (const gauge of ['vigueur', 'ame', 'vivres'] as const) {

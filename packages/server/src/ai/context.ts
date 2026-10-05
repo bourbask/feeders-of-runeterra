@@ -117,7 +117,7 @@ export function etatParts(state: CampaignState, content: ContentRegistry): EtatP
       (character) =>
         `- ${character.displayName} : vigueur ${String(character.gauges.vigueur)}, ` +
         `âme ${String(character.gauges.ame)}, vivres ${String(character.gauges.vivres)}, ` +
-        `souffle ${String(character.momentum)}`,
+        `élan ${String(character.momentum)}`,
     );
 
   const clocks = Object.values(state.clocks)
@@ -226,9 +226,9 @@ function effectSentence(effect: NarrationBriefDto['appliedEffects'][number]['eff
     case 'gauge':
       return `${effect.gauge} ${signed(effect.delta)}.`;
     case 'momentum':
-      return `souffle ${signed(effect.delta)}.`;
+      return `élan ${signed(effect.delta)}.`;
     case 'momentum_reset':
-      return 'souffle remis à son plancher.';
+      return 'élan remis à son plancher.';
     case 'condition_add':
       return `condition « ${effect.conditionId} » posée.`;
     case 'condition_remove':

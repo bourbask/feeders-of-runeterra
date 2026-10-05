@@ -22,7 +22,7 @@ describe('aCharacter', () => {
     expect(Object.keys(aCharacter().gauges).sort()).toStrictEqual(['ame', 'vigueur', 'vivres']);
   });
 
-  it('porte les bornes de souffle des règles', () => {
+  it('porte les bornes de élan des règles', () => {
     expect(aCharacter().momentumBounds).toStrictEqual({ min: -6, max: 10, reset: 2 });
   });
 

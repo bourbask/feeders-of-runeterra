@@ -401,8 +401,8 @@ describe('« Pourquoi ? » sur un tour en deux temps', () => {
         'character.momentum_changed',
       ]);
       expect(proof.effects.map((effect) => effect.label)).toEqual([
-        'souffle brûlé : 9, retombe à 2',
-        'souffle 2 → 3',
+        'élan brûlé : 9, retombe à 2',
+        'élan 2 → 3',
       ]);
       // Un présage tiré à la fermeture est dans le même groupe que les dés.
       expect(proof.presage?.text.length).toBeGreaterThan(0);
@@ -414,7 +414,7 @@ describe('« Pourquoi ? » sur un tour en deux temps', () => {
     }
   });
 
-  it('porte le prix quand le joueur garde son souffle', async () => {
+  it('porte le prix quand le joueur garde son élan', async () => {
     const table = aTable();
     try {
       const rollId = await aWindow(table);
