@@ -104,6 +104,23 @@ body {
   text-decoration: none;
 }
 
+/* La barre du haut : qui est connecté, et comment en sortir. Elle ne pose
+   aucune couleur en dur — elle lit les jetons, donc elle suivra le mode clair
+   quand celui-ci arrivera. */
+.fr-entete {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--trait);
+}
+
+.fr-entete__joueur {
+  color: var(--texte-discret);
+  font-size: 0.85rem;
+}
+
 .fr-bouton--discret {
   font-size: 0.8rem;
   color: var(--texte-discret);
