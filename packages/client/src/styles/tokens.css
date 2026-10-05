@@ -1,0 +1,177 @@
+/*
+ * Les jetons de `@for/client`. Le SEUL endroit du paquet où une valeur de
+ * couleur, d'espacement ou de taille est écrite en dur.
+ *
+ * `docs/design/05-interface.md` §1 pose les trois étages et la règle qui les
+ * rend utile : un composant référence l'étage 2 et l'étage 3, jamais l'étage 1.
+ * L'étage 1 n'existe que pour que deux rôles différents partagent une valeur
+ * sans la dupliquer. `styles/tokens.test.ts` fait respecter la règle, donc elle
+ * n'a pas besoin d'être cru sur parole.
+ *
+ * NOTHING ELSE HERE IS A RULE. Si une valeur manque, elle est ajoutée dans ce
+ * fichier avec la raison, ou elle est faite en CSS pur (`currentColor`,
+ * `inherit`). Ce n'est pas un catalogue à compléter plus tard.
+ */
+
+/* ---------------------------------------------------------------------------
+ * ÉTAGE 1 — primitives
+ *
+ * Des valeurs brutes, sans sens, jamais utilisées directement par un composant.
+ * Vingt-deux, c'est le budget : au-delà, « peu de couleurs » n'est plus vrai.
+ * ------------------------------------------------------------------------- */
+
+/* La rampe froide, en version CLAIRE — c'est le mode par défaut, et le sombre
+ * viendra après, si jamais il vient.
+ *
+ * Le fond est du PAPIER, pas du blanc : un `#ffffff` de page est la couleur la
+ * plus éblouissante qui soit, et un écran de lecture la affiche des heures. Le
+ * gris chaud `#fbf9f5` porte le texte gris-noir sans le faire vibrer, et il
+ * laisse `--fond-panneau` au blanc pur — donc le panneau se lit comme du papier
+ * posé SUR la page, et non comme une case grise creusée dedans. */
+:root {
+  --p-glace-1000: #f4f1ea;
+  --p-glace-900: #fbf9f5;
+  --p-glace-800: #ffffff;
+  --p-glace-700: #f0ece2;
+  --p-glace-600: #ddd6c7;
+  --p-glace-500: #6b6357;
+
+  /* Les gris. `--p-brume-100` est le texte courant et il est presque noir : en
+   * mode clair, un texte gris moyen sur fond clair est un texte qu'onaglutine. */
+  --p-brume-400: #8a7a5e;
+  --p-brume-300: #5c5348;
+  --p-brume-100: #221f1a;
+  --p-blanc-000: #ffffff;
+
+  /* L'azur est le seul accent, et il est SOMBRE : en mode clair, un accent
+   * clair sur fond clair disparaît. C'est la même teinte que dans le sombre,
+   * retournée : un lien doit avoir l'air d'un lien dans les deux modes. */
+  --p-azure-700: #1b3a4b;
+  --p-azure-500: #2a5f7d;
+  --p-azure-300: #3d7ea3;
+
+  --p-braise-600: #f7dcdc;
+  --p-braise-500: #a8323c;
+  --p-braise-300: #8c2029;
+
+  --p-ambre-500: #8a6d1f;
+  --p-ambre-300: #6d551a;
+
+  --p-verde-500: #2f5c3f;
+  --p-verde-300: #244a32;
+
+  --p-violet-500: #4a3a63;
+  --p-violet-300: #3a2d4d;
+}
+
+/* ---------------------------------------------------------------------------
+ * ÉTAGE 2 — sémantique
+ *
+ * Un rôle, un nom, en français. Ces sept noms existaient déjà dans `global.css`
+ * et sont conservés tels quels : les renommer coûterait plus qu'il ne
+ * rapporterait. Aucun ne porte sa valeur : c'est la règle de ce fichier, et
+ * `tokens.test.ts` la fait échouer si quelqu'un la contourne.
+ *
+ * LE CLAIR EST LE MODE PAR DÉFAUT. Les valeurs ci-dessous n'ont pas été
+ * choisies pour être joli : chacune a été mesurée, et les 21 paires qu'elle
+ * produit sont vérifiées à chaque `pnpm test`. Un jeton de ce niveau qui n'est
+ * vérifié par aucune paire est un jeton dont personne ne connaît le contraste
+ * réel.
+ * ------------------------------------------------------------------------- */
+:root {
+  --fond: var(--p-glace-900);
+  --fond-panneau: var(--p-glace-800);
+  --surface-haute: var(--p-glace-700);
+  --trait: var(--p-glace-600);
+  --trait-fort: var(--p-glace-500);
+
+  --texte: var(--p-brume-100);
+  --texte-discret: var(--p-brume-300);
+  --texte-inverse: var(--p-blanc-000);
+
+  --accent: var(--p-azure-500);
+  --accent-aplat: var(--p-azure-700);
+  --annule: var(--p-braise-300);
+  --annule-aplat: var(--p-braise-600);
+  --succes: var(--p-verde-300);
+  --vivres: var(--p-ambre-300);
+
+  /* Les trois jauges. `--annule` fait double emploi : la vigueur EST la seule
+   * couleur d'urgence de l'écran, il n'y en a pas besoin d'une deuxième.
+   * Un aplat ne porte que la TEINTE de la jauge ; la VALEUR est toujours écrite
+   * à côté, en texte. C'est la règle 2 appliquée à une jauge. */
+  --vigueur-aplat: var(--p-braise-500);
+  --ame-aplat: var(--p-brume-400);
+  --vivres-aplat: var(--p-ambre-500);
+
+  /* La portée d'un bloc du fil. Ce sont les SEULES couleurs de portée, et
+   * elles ne sont jamais seules : glyphe et indentation les redoublent
+   * (05-interface.md règle 2). */
+  --portee-publique: var(--p-azure-500);
+  --portee-restreinte: var(--p-violet-300);
+}
+
+/* ---------------------------------------------------------------------------
+ * ÉTAGE 3 — échelles
+ *
+ * Pas de pixel en dur dans un composant, jamais. `rem` partout, pour que le
+ * respect de la taille de texte du navigateur s'applique à toute l'interface.
+ * ------------------------------------------------------------------------- */
+:root {
+  --e-1: 0.25rem;
+  --e-2: 0.5rem;
+  --e-3: 0.75rem;
+  --e-4: 1rem;
+  --e-5: 1.25rem;
+  --e-6: 1.5rem;
+  --e-7: 2rem;
+  --e-8: 2.5rem;
+  --e-9: 3rem;
+  --e-10: 4rem;
+  --e-11: 5rem;
+  --e-12: 6rem;
+
+  /* La typographie narrative porte l'empattement, la chrome porte le linéaire,
+   * et le contrat est qu'un joueur sait laquelle des deux il lit (05 §3.1). */
+  --t-micro: 0.6875rem;
+  --t-petit: 0.8125rem;
+  --t-base: 1rem;
+  --t-lecture: 1.0625rem;
+  --t-titre: 1.375rem;
+  --t-ecran: 1.75rem;
+
+  --r-s: 3px;
+  --r-m: 6px;
+  --r-l: 10px;
+
+  /* Les filets. Un `1px` écrit en dur dans une feuille de style n'est pas une
+   * valeur, c'est un oubli : le jour où l'écran change d'échelle, le filet
+   * reste à 1px pendant que tout le reste grossit. */
+  --filet-fin: 1px;
+  --filet-large: 2px;
+
+  --z-panneau: 10;
+  --z-survol: 20;
+  --z-dialogue: 30;
+  --z-toile: 40;
+}
+
+/* Les largeurs et les paliers d'écran. Ils vivent ici parce qu'un composant ne
+ * doit pas décider à quelle taille un écran devient étroit. */
+:root {
+  --ecran-lecture: 68ch;
+  --ecran-large: 75rem;
+  --rail-gauche: 18rem;
+  --rail-droite: 24rem;
+  --seuil-tiroir-fiche: 56.25rem;
+  --seuil-tiroir-carnet: 43.75rem;
+  --seuil-tiroir-tout: 35rem;
+
+  /* La hauteur d'une VIGNETTE de la vitrine : le cadre dans lequel la table est
+     dessinée. Ce n'est pas une hauteur d'écran, c'est la taille d'une
+     maquette — et `--e-12` (6rem) ne convient pas : c'est une marge, pas une
+     boîte. Emprunter une marche de l'échelle d'espacement pour une dimension
+     structurelle, c'est exactement le genre de raccourci qui fait qu'un jour la
+     maquette déborde de son cadre et recouvre la section d'après. */
+  --vignette-hauteur: 34rem;
+}

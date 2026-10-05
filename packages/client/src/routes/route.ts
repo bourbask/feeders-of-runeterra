@@ -2,7 +2,7 @@
  * The router: a pure function from a hash to a route, and a hook around
  * `hashchange`.
  *
- * NO ROUTING LIBRARY IN M0. Four screens, three shapes of URL, and a hash that
+ * NO ROUTING LIBRARY IN M0. Five screens, three shapes of URL, and a hash that
  * needs no server rewrite rule — a router would be a dependency in the bundle
  * and a second place where a path is spelled. When the product grows a real
  * navigation, this file is what gets replaced, and nothing else.
@@ -12,6 +12,7 @@ export type Route =
   | { readonly nom: 'campagnes' }
   | { readonly nom: 'table'; readonly campaignId: string }
   | { readonly nom: 'personnage'; readonly campaignId: string }
+  | { readonly nom: 'design' }
   | { readonly nom: 'inconnue'; readonly hash: string };
 
 /** `#/campagnes/<id>` and `#/campagnes/<id>/personnage`; anything else is unknown. */
@@ -20,6 +21,12 @@ export function parseRoute(hash: string): Route {
   const morceaux = chemin.split('/').filter((morceau) => morceau !== '');
 
   if (morceaux.length === 0) return { nom: 'campagnes' };
+
+  // La vitrine est la seule page qui ne soit pas un produit, et elle est hors
+  // session : une maquette qu'il faut connecter pour être vue est une maquette
+  // qu'on ne regarde plus.
+  if (morceaux.length === 1 && morceaux[0] === 'design') return { nom: 'design' };
+
   if (morceaux[0] !== 'campagnes') return { nom: 'inconnue', hash };
 
   const campaignId = morceaux[1];
@@ -39,6 +46,8 @@ export function routeHref(route: Route): string {
       return `#/campagnes/${route.campaignId}`;
     case 'personnage':
       return `#/campagnes/${route.campaignId}/personnage`;
+    case 'design':
+      return '#/design';
     case 'inconnue':
       return route.hash;
   }
