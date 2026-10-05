@@ -179,6 +179,46 @@ describe('l’application', () => {
     expect(SocketMuette.ouvertes[0]?.startsWith('ws://')).toBe(true);
   });
 
+  /**
+   * CORRECTIONS 4 ET 5 : ce que la barre du haut porte sur une table.
+   *
+   * LE NOM DE L'AVENTURE a remplacé le titre « La table », qui ne nommait rien.
+   * LE BANDEAU TECHNIQUE a quitté l'espace de jeu et s'est posé à gauche du nom
+   * du joueur. Les deux sont dans la MÊME barre, et l'ordre de lecture est
+   * celui du DOM.
+   */
+  it('porte le nom de l’aventure et l’état de la liaison dans la barre du haut', async () => {
+    globalThis.location.hash = `#/campagnes/${CAMPAGNE}`;
+    afficher(depsRendant(ME));
+
+    const barre = await screen.findByRole('banner');
+    expect(barre.textContent).toContain('Le col de Rakelstake');
+    expect(barre.textContent).toContain('Liaison');
+    expect(barre.textContent).toContain('Théo');
+
+    // À GAUCHE DU NOM DU JOUEUR, et pas « quelque part dans la barre ». L'ordre
+    // de lecture est ce qui est demandé, donc c'est l'ordre qui est mesuré.
+    const technique = barre.querySelector('.fr-entete__technique');
+    const joueur = barre.querySelector('.fr-entete__joueur');
+    expect(technique).not.toBeNull();
+    expect(joueur).not.toBeNull();
+    expect(
+      (technique?.compareDocumentPosition(joueur as Node) ?? 0) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeGreaterThan(0);
+  });
+
+  it('ne met ni aventure ni technique dans la barre hors d’une table', async () => {
+    // L'AUTRE SENS. Sans lui, « la barre porte un nom d'aventure » serait vrai
+    // d'une barre qui en porterait un sur toutes les pages, y compris celle qui
+    // sert à choisir la table.
+    afficher(depsRendant(ME));
+
+    const barre = await screen.findByRole('banner');
+    expect(barre.textContent).toContain('Théo');
+    expect(barre.textContent).not.toContain('Liaison');
+    expect(barre.querySelector('.fr-entete__aventure')).toBeNull();
+  });
+
   it('ouvre le choix du champion sur sa route', async () => {
     globalThis.location.hash = `#/campagnes/${CAMPAGNE}/personnage`;
     afficher(depsRendant(ME));

@@ -47,6 +47,32 @@ import { journalLines } from '../ws/store.js';
  * besoin tout de suite ». On a narrow screen the right push-button comes FIRST
  * in reading order. Held by `screens.test.tsx`.
  *
+ * WHAT 5 OCTOBER MOVED, AND WHY EACH MOVE IS HERE AND NOT IN A STYLESHEET.
+ *
+ *   - THE FEED HAS A CEILING AND SCROLLS (correction 1). It used to push the
+ *     page down for ever and shove the composer off screen. The ceiling is
+ *     `--ecran-fil-hauteur`, and it applies ONLY to the `assise` shape: below
+ *     that width there is no room to spare, and the constraint drops. The width
+ *     is the one `largeur.ts` already computes — a media query would have been
+ *     a second source for a number `tokens.css` owns, and the §4.2 rule is that
+ *     these are SEUILS with a test, not media queries.
+ *   - THE TECHNICAL BANNER LEFT THE PLAYING AREA (correction 4). « Liaison …
+ *     journal n° 248 » is software talking about itself; it belongs in the top
+ *     bar, left of the player's name. `BarreTechnique` is exported for that,
+ *     and `App.tsx` hands it to `AppHeader` from INSIDE the store provider —
+ *     which is the only reason the header is rendered there for this route.
+ *   - « LA TABLE » IS NOT A TITLE ANY MORE (correction 5). The adventure's name
+ *     took its place in the bar. The panel keeps an accessible name and loses
+ *     its heading.
+ *   - THE COLUMNS TOUCH (correction 6). The free space is at the two ENDS of
+ *     the screen, never between the columns: `justify-content: center` on a
+ *     grid whose three tracks are bounded. §4.1's two elastic margin tracks are
+ *     what put the gap in the middle, and that is exactly what was wrong.
+ *   - THE PLAYING AREA IS A SURFACE (correction 7). `.fr-table__jeu`, darker
+ *     than the page, rounded, under the three columns. It is where the physical
+ *     inventory will live. The porteur doubts it: it is built plainly so it can
+ *     be judged, and what it costs in room is in the report.
+ *
  * THE DRAFT IS HELD HERE, NOT IN THE FIELD (§9, « un brouillon n'est jamais
  * perdu »). A frame from the server re-renders the feed underneath it and the
  * text stays. It is NOT in `ws/store.ts`: that store is a mirror of the server,
@@ -68,10 +94,31 @@ const ETAT_CONNEXION: Readonly<Record<string, string>> = {
   closed: 'coupée — reconnexion en cours',
 };
 
-export function EcranDeTable(props: { readonly largeur: Largeur }): ReactNode {
+/**
+ * The technical banner (correction 4): the link, the content version and the
+ * journal head. IT IS NOT GAME STATE AND IT IS NOT IN THE PLAYING AREA — it is
+ * the software saying how it is doing, so it goes in the top bar.
+ *
+ * It reads the table store, so it can only be rendered inside the provider.
+ * `App.tsx` renders the header for the table route from within it, for this.
+ */
+export function BarreTechnique(): ReactNode {
   const status = useTable((state) => state.status);
   const welcome = useTable((state) => state.welcome);
   const lastSeq = useTable((state) => state.lastSeq);
+
+  return (
+    <span className="fr-entete__technique">
+      Liaison : {ETAT_CONNEXION[status] ?? status}
+      {welcome === null
+        ? null
+        : ` · contenu ${welcome.contentVersion} · journal n° ${String(lastSeq)}`}
+    </span>
+  );
+}
+
+export function EcranDeTable(props: { readonly largeur: Largeur }): ReactNode {
+  const welcome = useTable((state) => state.welcome);
   const table = useTable((state) => state.table);
   const presence = useTable((state) => state.presence);
   const lines = useTable((state) => state.lines);
@@ -128,16 +175,6 @@ export function EcranDeTable(props: { readonly largeur: Largeur }): ReactNode {
 
   return (
     <main className="fr-table" data-largeur={props.largeur}>
-      <header className="fr-table__entete">
-        <h1 className="fr-table__titre">La table</h1>
-        <p className="fr-table__etat">
-          Liaison : {ETAT_CONNEXION[status] ?? status}
-          {welcome === null
-            ? null
-            : ` · contenu ${welcome.contentVersion} · journal n° ${String(lastSeq)}`}
-        </p>
-      </header>
-
       {/* Les jauges sortent du tiroir sur portable, et elles seules (§4.4). */}
       {props.largeur === 'portable' ? (
         <Jauges
@@ -177,93 +214,110 @@ export function EcranDeTable(props: { readonly largeur: Largeur }): ReactNode {
         </nav>
       ) : null}
 
-      <div className="fr-table__grille">
-        <div className="fr-table__cellule" data-colonne="gauche">
-          {fiche ? null : <section className="fr-rail fr-rail--gauche">{panneauFiche}</section>}
-        </div>
-
-        <div className="fr-table__cellule" data-colonne="centre">
-          {calques.tiroir === 'gauche' ? (
-            <Tiroir
-              cote="gauche"
-              id="fr-tiroir-gauche"
-              titre="Fiche"
-              onFermer={() => {
-                agir({ type: 'fermer-tiroir' });
-              }}
-            >
-              {panneauFiche}
-            </Tiroir>
-          ) : null}
-          {calques.tiroir === 'droite' ? (
-            <Tiroir
-              cote="droite"
-              id="fr-tiroir-droite"
-              titre="La table"
-              onFermer={() => {
-                agir({ type: 'fermer-tiroir' });
-              }}
-            >
-              {panneauCote}
-            </Tiroir>
-          ) : null}
-
-          <div className="fr-fil">
-            <Journal />
+      {/* LA SURFACE DE JEU (correction 7). Un aplat plus sombre que la page,
+          arrondi, sous les trois colonnes — l'emplacement futur de l'inventaire
+          physique. Le fond de page reste visible tout autour : c'est un cadre
+          posé sur la page, pas une seconde page. */}
+      <div className="fr-table__jeu">
+        <div className="fr-table__grille">
+          <div className="fr-table__cellule" data-colonne="gauche">
+            {fiche ? null : <section className="fr-rail fr-rail--gauche">{panneauFiche}</section>}
           </div>
 
-          <Compositeur
-            texte={composition.brouillon}
-            onTexte={(brouillon) => {
-              setComposition((etat) => ({ ...etat, brouillon }));
-            }}
-            portee={portee}
-            onPortee={(porteeChoisie) => {
-              setComposition((etat) => ({
-                ...etat,
-                porteeChoisie,
-                declassificationAcceptee: false,
-              }));
-              if (porteeChoisie === 'subset') {
-                agir({ type: 'ouvrir-calque', calque: { nom: 'destinataires' } });
-              }
-            }}
-            presents={presence}
-            choisis={composition.choisis}
-            onOuvrirListe={() => {
-              agir({ type: 'ouvrir-calque', calque: { nom: 'destinataires' } });
-            }}
-            porteeDuBloc={porteeDuBloc}
-            declassificationAcceptee={composition.declassificationAcceptee}
-            onAccepterDeclassification={(declassificationAcceptee) => {
-              setComposition((etat) => ({ ...etat, declassificationAcceptee }));
-            }}
-            erreur={lastRejection === null ? null : rejectionMessage(lastRejection.code)}
-          />
+          <div className="fr-table__cellule" data-colonne="centre">
+            {calques.tiroir === 'gauche' ? (
+              <Tiroir
+                cote="gauche"
+                id="fr-tiroir-gauche"
+                titre="Fiche"
+                onFermer={() => {
+                  agir({ type: 'fermer-tiroir' });
+                }}
+              >
+                {panneauFiche}
+              </Tiroir>
+            ) : null}
+            {calques.tiroir === 'droite' ? (
+              <Tiroir
+                cote="droite"
+                id="fr-tiroir-droite"
+                titre="La table"
+                onFermer={() => {
+                  agir({ type: 'fermer-tiroir' });
+                }}
+              >
+                {panneauCote}
+              </Tiroir>
+            ) : null}
 
-          {/* RÈGLE 8 : le calque naît ICI, dans la colonne du centre, et nulle
-              part ailleurs. Pas de portail : une modale sans parent n'a plus de
-              colonne, et la règle devient invérifiable. */}
-          {calques.calque?.nom === 'destinataires' ? (
-            <Modale
-              titre="Qui lit ce message"
-              onFermer={() => {
-                agir({ type: 'fermer-calque' });
-              }}
-            >
-              <ListeDestinataires
+            {/* LE FIL ET LA SAISIE DANS LA MÊME CARTE (correction 1). Le fil a
+              un plafond et défile sur lui-même ; la saisie est dessous, dans la
+              même carte, et ne quitte jamais l'écran. */}
+            <div className="fr-table__carte">
+              <div className="fr-fil">
+                <Journal />
+              </div>
+
+              <Compositeur
+                texte={composition.brouillon}
+                onTexte={(brouillon) => {
+                  setComposition((etat) => ({ ...etat, brouillon }));
+                }}
+                portee={portee}
+                onPortee={(porteeChoisie) => {
+                  setComposition((etat) => ({
+                    ...etat,
+                    porteeChoisie,
+                    declassificationAcceptee: false,
+                  }));
+                  if (porteeChoisie === 'subset') {
+                    agir({ type: 'ouvrir-calque', calque: { nom: 'destinataires' } });
+                  }
+                }}
                 presents={presence}
                 choisis={composition.choisis}
-                onChoisis={(choisis) => {
-                  setComposition((etat) => ({ ...etat, choisis }));
+                onOuvrirListe={() => {
+                  agir({ type: 'ouvrir-calque', calque: { nom: 'destinataires' } });
                 }}
+                porteeDuBloc={porteeDuBloc}
+                declassificationAcceptee={composition.declassificationAcceptee}
+                onAccepterDeclassification={(declassificationAcceptee) => {
+                  setComposition((etat) => ({ ...etat, declassificationAcceptee }));
+                }}
+                erreur={lastRejection === null ? null : rejectionMessage(lastRejection.code)}
+                table={table}
               />
-            </Modale>
-          ) : null}
-        </div>
+            </div>
 
-        <div className="fr-table__cellule" data-colonne="droite">
-          {cote ? null : <section className="fr-rail fr-rail--droite">{panneauCote}</section>}
+            {/* RÈGLE 8 : le calque naît ICI, dans la colonne du centre, et nulle
+              part ailleurs. Pas de portail : une modale sans parent n'a plus de
+              colonne, et la règle devient invérifiable. */}
+            {calques.calque?.nom === 'destinataires' ? (
+              <Modale
+                titre="Qui lit ce message"
+                onFermer={() => {
+                  agir({ type: 'fermer-calque' });
+                }}
+              >
+                <ListeDestinataires
+                  presents={presence}
+                  choisis={composition.choisis}
+                  onChoisis={(choisis) => {
+                    setComposition((etat) => ({ ...etat, choisis }));
+                  }}
+                  table={table}
+                />
+              </Modale>
+            ) : null}
+          </div>
+
+          <div className="fr-table__cellule" data-colonne="droite">
+            {cote ? null : (
+              <section className="fr-rail fr-rail--droite" aria-label="La table">
+                {panneauCote}
+              </section>
+            )}
+          </div>
         </div>
       </div>
 

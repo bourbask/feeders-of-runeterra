@@ -1,9 +1,10 @@
+import type { TableStateDto } from '@for/contracts';
 import { zSpeechSayIntent } from '@for/contracts';
 import type { EventScope } from '@for/engine';
 import type { ReactNode } from 'react';
 
 import type { PresenceMember } from '../../ws/store.js';
-import { Destinataire, avertissementDeclassification } from './Destinataire.js';
+import { Destinataire, LuPar, avertissementDeclassification } from './Destinataire.js';
 
 /**
  * Where a player writes, at the bottom of the centre column (05-interface.md
@@ -24,6 +25,11 @@ import { Destinataire, avertissementDeclassification } from './Destinataire.js';
  * qui n'explique pas ce qu'il va envoyer ». §9 forbids hiding it: « Désactivé
  * n'est pas invisible. » So it is rendered, disabled, with the reason beside
  * it — and it comes alive the day `onEnvoyer` is handed in.
+ *
+ * WHO WILL READ IT IS WRITTEN UNDER THE FIELD, BEFORE THE SEND (correction 8).
+ * « Lu par Kevin, Théo », with the group's mechanical key. That is
+ * `Destinataire`'s business, and this component only hands it the snapshot the
+ * names are joined from.
  *
  * THE DRAFT IS NOT IN THIS COMPONENT. It is held above (`TableRoom`), so a
  * frame from the server re-rendering the feed cannot take the text with it
@@ -46,6 +52,8 @@ export function Compositeur(props: {
   readonly onAccepterDeclassification: (accepte: boolean) => void;
   /** The last error the server sent, or `null`. Shown ABOVE the field (§9). */
   readonly erreur: string | null;
+  /** The snapshot, so « Lu par … » can name people instead of counting them. */
+  readonly table?: TableStateDto | null;
   /** Absent while the intent pipeline is not wired. The button then says so. */
   readonly onEnvoyer?: () => void;
 }): ReactNode {
@@ -70,6 +78,7 @@ export function Compositeur(props: {
         porteeDuBloc={props.porteeDuBloc}
         declassificationAcceptee={props.declassificationAcceptee}
         onAccepterDeclassification={props.onAccepterDeclassification}
+        table={props.table ?? null}
       />
 
       {/* AU-DESSUS du champ, et le brouillon reste (§9). */}
@@ -91,6 +100,16 @@ export function Compositeur(props: {
           }}
         />
       </label>
+
+      {/* SOUS LA SAISIE, à côté du bouton : « Lu par Kevin, Théo » (correction
+          8). Au-dessus du champ, elle serait lue avant qu'il y ait quoi que ce
+          soit à envoyer. */}
+      <LuPar
+        portee={props.portee}
+        presents={props.presents}
+        choisis={props.choisis}
+        table={props.table ?? null}
+      />
 
       <p className="fr-compositeur__pied">
         <button

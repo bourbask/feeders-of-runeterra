@@ -6,13 +6,19 @@
  * `tokens.test.ts` compte les `rem` littéraux des feuilles du paquet et refuse
  * la seizième — ce fichier n'en ajoute aucune.
  *
- * LA SEULE DÉCLARATION DE MISE EN PAGE DU DOCUMENT est `.fr-table__grille`, et
- * c'est celle du §4.1, recopiée telle quelle. Les trois planchers sont à
- * `0rem` : c'est tout le mécanisme. Une piste `fr` à plancher `auto` refuse de
- * descendre sous son contenu, donc la grille DÉBORDE au lieu de rétrécir. À
- * zéro, les deux pistes élastiques absorbent le manque et tombent ensemble,
- * dans la proportion 1 : 1,15 — « pas de carnet à droite pendant qu'une marge
- * reste vide à gauche ».
+ * LA SEULE DÉCLARATION DE MISE EN PAGE DU DOCUMENT est `.fr-table__grille`.
+ * Les trois planchers restent à `0rem` : c'est tout le mécanisme. Une piste à
+ * plancher `auto` refuse de descendre sous son contenu, donc la grille DÉBORDE
+ * au lieu de rétrécir ; à zéro, les trois absorbent le manque ensemble, et
+ * `tokens.test.ts` compare leur somme au seuil le plus étroit.
+ *
+ * CE QUE LE 5 OCTOBRE A CHANGÉ À LA GRILLE (correction 6). Le §4.1 faisait des
+ * deux pistes extérieures des MARGES ÉLASTIQUES qui portaient les rails : la
+ * place libre se retrouvait donc ENTRE les colonnes, et les colonnes
+ * flottaient. Les trois pistes sont maintenant bornées, et c'est
+ * `justify-content: center` qui place le reste — c'est-à-dire aux DEUX
+ * EXTRÉMITÉS de l'écran, et nulle part ailleurs. Les colonnes se touchent, à un
+ * `gap` près.
  */
 
 .fr-table {
@@ -22,34 +28,40 @@
   padding: var(--e-5);
 }
 
-.fr-table__entete {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--e-4);
-  flex-wrap: wrap;
+/* LA SURFACE DE JEU (correction 7). Plus sombre que la page, arrondie, sous les
+   trois colonnes — et le fond de page reste visible tout autour, parce que
+   c'est un cadre posé sur la page et non une seconde page. C'est l'emplacement
+   futur de l'inventaire physique. */
+.fr-table__jeu {
+  background: var(--fond-jeu);
+  border-radius: var(--r-l);
+  padding: var(--e-4);
 }
 
-.fr-table__titre {
-  font-size: var(--t-ecran);
-  margin: 0;
-}
-
-.fr-table__etat {
-  font-size: var(--t-petit);
-  color: var(--texte-discret);
-  margin: 0;
-}
-
-/* Les quatre colonnes, dont deux élastiques (§4.1). */
+/* Les trois colonnes, accolées, le reste aux deux extrémités (correction 6). */
 .fr-table__grille {
   display: grid;
   grid-template-columns:
-    [gauche] minmax(0rem, 1fr)
+    [gauche] minmax(0rem, var(--rail-gauche))
     [centre] minmax(0rem, var(--ecran-lecture))
-    [droite] minmax(0rem, 1.15fr);
+    [droite] minmax(0rem, var(--rail-droite));
   gap: var(--e-5);
+  justify-content: center;
   align-items: start;
+}
+
+/* LA CARTE DE LECTURE (correction 1) : le fil et la saisie ensemble, et la
+   saisie DESSOUS. Une saisie dans une autre carte serait une seconde surface à
+   suivre des yeux pendant qu'on lit. */
+.fr-table__carte {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+  background: var(--fond-panneau);
+  border: var(--filet-fin) solid var(--trait);
+  border-radius: var(--r-m);
+  padding: var(--e-3);
+  min-width: 0;
 }
 
 .fr-table__cellule {
@@ -77,6 +89,29 @@
 
 .fr-rail--droite {
   max-width: var(--rail-droite);
+}
+
+/* LE PLAFOND DES COLONNES LATÉRALES, LE MÊME QUE CELUI DU FIL, ET POUR LA MÊME
+   RAISON. Le fil a cessé de pousser la page (correction 1) ; une FICHE longue
+   le pouvait encore — elle n'avait aucune borne, elle rallongeait la surface de
+   jeu, et l'écran redevenait plus haut que l'écran. Donc la même borne, le même
+   jeton, le même palier : `[data-largeur='assise']`, parce qu'en dessous il n'y
+   a plus de place à économiser et que la fiche part de toute façon en tiroir
+   (§4.4).
+
+   ROGNÉ, PAS DÉFILANT, et ce n'est pas une nuance de style : « le SEUL élément
+   qui défile verticalement est le fil … tout le reste tient sur un écran, donc
+   il doit se comprimer, se casser, ou être ROGNÉ par le cadre » (le principe
+   que `tokens.test.ts` tient). Une seconde barre de défilement ici serait un
+   second endroit où chercher ce qu'on ne voit pas.
+
+   CE QUE ÇA COÛTE, DIT PLUTÔT QUE TU : une fiche plus haute que le plafond est
+   coupée en bas, et il n'y a pas aujourd'hui de « voir tout » à ce palier. Le
+   tiroir de la §4.4 est la réponse durable ; l'ouvrir à `assise` est un
+   arbitrage du porteur, pas une correction de recette. */
+.fr-table[data-largeur='assise'] .fr-rail {
+  max-height: var(--ecran-fil-hauteur);
+  overflow: hidden;
 }
 
 .fr-rail__titre {
@@ -188,14 +223,40 @@
   min-height: 0;
 }
 
-/* Les trois rails. L'INDENTATION est le deuxième canal du §5.2 ; le glyphe est
-   le troisième ; le libellé en texte est le premier, et c'est le seul qui ne
-   dépend d'aucune perception de la couleur. La teinte ci-dessous redouble, elle
-   n'informe pas. */
+/* LE PLAFOND DU FIL (correction 1), ET SEULEMENT À PLEINE LARGEUR.
+   `[data-largeur='assise']` plutôt qu'une `@media` : la forme de l'écran est
+   déjà une fonction de la largeur (`largeur.ts`), calculée à partir des seuils
+   de `tokens.css`, et `screens.test.tsx` compare les deux. Une media query
+   aurait réintroduit ici un troisième endroit où écrire la même largeur — et
+   c'est exactement ce que le §4.2 refuse. En dessous de ce palier la contrainte
+   tombe : il n'y a plus de place à économiser. */
+.fr-table[data-largeur='assise'] .fr-fil {
+  max-height: var(--ecran-fil-hauteur);
+}
+
+/* LES RAILS, ET CE QUE LE PUBLIC N'A PAS (correction 3). Un bloc public ne porte
+   NI rail, NI indentation, NI glyphe, NI bandeau : le public est le défaut, et
+   un défaut ne s'annonce pas. Un bloc restreint, lui, porte quatre canaux non
+   colorés — bandeau en toutes lettres, glyphe, indentation, et un trait PLEIN
+   pour le groupe contre POINTILLÉ pour le personnel (arbitrage B) — plus une
+   teinte, qui est la cinquième et la seule qu'un daltonien ne lit pas. */
 .fr-journal__ligne {
-  border-left: var(--filet-large) solid var(--trait);
-  padding: var(--e-2) 0 var(--e-2) var(--e-3);
+  padding: var(--e-2) 0;
   border-bottom: var(--filet-fin) solid var(--trait);
+}
+
+.fr-journal__ligne[data-trait='plein'],
+.fr-journal__ligne[data-trait='pointille'] {
+  padding-left: var(--e-3);
+  border-left-width: var(--filet-large);
+}
+
+.fr-journal__ligne[data-trait='plein'] {
+  border-left-style: solid;
+}
+
+.fr-journal__ligne[data-trait='pointille'] {
+  border-left-style: dashed;
 }
 
 .fr-journal__ligne[data-niveau='1'] {
@@ -206,13 +267,14 @@
   margin-left: var(--e-10);
 }
 
-.fr-journal__ligne[data-portee='table'] {
-  border-left-color: var(--portee-publique);
+/* Les TROIS teintes de portée (arbitrage A). Le public n'en a aucune : il n'a
+   pas de rail du tout. */
+.fr-journal__ligne[data-portee='subset'] {
+  border-left-color: var(--portee-restreinte);
 }
 
-.fr-journal__ligne[data-portee='subset'],
 .fr-journal__ligne[data-portee='private'] {
-  border-left-color: var(--portee-restreinte);
+  border-left-color: var(--portee-personnelle);
 }
 
 .fr-bloc__portee {
@@ -223,13 +285,120 @@
   color: var(--texte-discret);
 }
 
+.fr-bloc__portee[data-portee='subset'] {
+  color: var(--portee-restreinte);
+}
+
+.fr-bloc__portee[data-portee='private'] {
+  color: var(--portee-personnelle);
+}
+
 .fr-bloc__glyphe {
   margin-right: var(--e-1);
+}
+
+/* L'identifiant mécanique du groupe : lisible, et discret. Il n'est pas là pour
+   être joli, il est là pour qu'on puisse dire « le même groupe qu'au bloc
+   d'avant » sans avoir à recompter les noms. */
+.fr-bloc__cle,
+.fr-destinataire__cle {
+  font-variant-numeric: tabular-nums;
+  color: var(--texte-discret);
+}
+
+.fr-bloc__manque {
+  color: var(--texte-discret);
+  text-transform: none;
+}
+
+/* LA RUPTURE (correction 9) : un filet de part et d'autre d'un libellé court.
+   C'est l'événement qui CRÉE les rails ; sans lui ils apparaissent sans
+   explication. */
+.fr-journal__rupture {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  margin: var(--e-4) 0;
+  font-size: var(--t-micro);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texte-discret);
+}
+
+.fr-journal__rupture::before,
+.fr-journal__rupture::after {
+  content: '';
+  flex: 1;
+  border-top: var(--filet-fin) solid var(--trait);
+}
+
+/* LE BLOC PROMU (correction 10). La §7.2 prévient AVANT l'envoi ; ceci montre
+   APRÈS, dans le fil, et dit QUI a déclassifié : le joueur, pas le système. */
+.fr-journal__ligne--promu {
+  background: var(--surface-haute);
+  border-radius: var(--r-s);
+}
+
+.fr-journal__promu {
+  display: block;
+  font-size: var(--t-micro);
+  color: var(--texte-discret);
 }
 
 .fr-journal__texte {
   font-size: var(--t-lecture);
   line-height: 1.6;
+}
+
+/* LA PAROLE N'EST PAS LE RÉCIT (correction 12). L'italique est ce que l'`<em>`
+   a l'air d'être ; c'est l'ÉLÉMENT qui porte la distinction, parce qu'une voix
+   de synthèse lira `data-voix="recit"` et rien d'autre, et qu'une classe CSS ne
+   lui dirait rien. Le nom de qui parle reste en romain, juste au-dessus. */
+.fr-journal__parole {
+  font-style: italic;
+}
+
+.fr-journal__qui {
+  font-style: normal;
+}
+
+/* LE RAIL DE L'ORACLE (correction 13) : ni récit, ni parole. Sa teinte, et le
+   format « question — RÉPONSE ». */
+.fr-journal__oracle {
+  display: block;
+  color: var(--accent);
+}
+
+.fr-journal__oracle-question {
+  color: var(--texte-discret);
+}
+
+.fr-journal__oracle-reponse {
+  color: var(--accent);
+}
+
+/* SIGNALÉ, PAS TRANCHÉ : L'AZUR VEUT DIRE DEUX CHOSES DANS LA MÊME CARTE.
+   `--accent` et `--portee-publique` se résolvent sur la MÊME primitive. Dans le
+   fil, ce rail azur veut dire « oracle » ; dans le compositeur, douze lignes
+   plus bas et à l'écran juste en dessous, un filet azur veut dire « à toute la
+   table ». Et ce rail en donne un à un bloc PUBLIC, ce que l'arbitrage 3
+   interdit par ailleurs — le public n'a ni rail, ni indentation, ni glyphe.
+
+   DEUX ARBITRAGES DU PORTEUR SE CONTREDISENT, et c'est pour ça que cette règle
+   n'est pas touchée ici. Les sorties possibles, avec ce qu'elles coûtent :
+
+     1. l'oracle perd son rail et se distingue par ce qu'il a déjà — le format
+        « question — RÉPONSE », sa réponse en gras, `data-voix="oracle"`. Coût :
+        la correction 13 demandait « son rail » en toutes lettres ;
+     2. l'oracle garde son rail dans une teinte à lui. Coût : une SEPTIÈME
+        teinte, alors que le budget de six du §2.1 est déjà dépassé — c'est la
+        décision du porteur, pas celle d'une passe de correction ;
+     3. le public cesse d'être nu pour les blocs de voix. Coût : l'arbitrage 3.
+
+   Choisir au hasard entre trois arbitrages du porteur serait en casser deux. */
+.fr-journal__ligne--oracle {
+  border-left: var(--filet-large) solid var(--accent);
+  padding-left: var(--e-3);
 }
 
 /* ---------------------------------------------------- les jauges (§6) --- */
@@ -359,6 +528,22 @@
   padding: var(--e-1) var(--e-2);
 }
 
+/* LES TROIS TEINTES, AUSSI DANS LE SÉLECTEUR (arbitrage A) : les mêmes trois
+   couleurs qu'au fil, pour que la position qu'on choisit et le bloc qu'on
+   produit se ressemblent. Le filet est décoratif — c'est le libellé en toutes
+   lettres qui dit la position, et c'est lui qui est testé. */
+.fr-destinataire__position[data-portee='table'] {
+  border-color: var(--portee-publique);
+}
+
+.fr-destinataire__position[data-portee='subset'] {
+  border-color: var(--portee-restreinte);
+}
+
+.fr-destinataire__position[data-portee='private'] {
+  border-color: var(--portee-personnelle);
+}
+
 .fr-destinataire__avertissement {
   border: var(--filet-large) solid var(--annule);
   background: var(--annule-aplat);
@@ -368,9 +553,19 @@
 }
 
 .fr-destinataire__manque,
+.fr-presence__manque,
 .fr-fiche__manque {
   font-size: var(--t-micro);
   color: var(--texte-discret);
+}
+
+/* « Lu par Kevin, Théo » (correction 8). Sous la saisie, AVANT l'envoi : un
+   joueur doit toujours savoir qui lit, sans avoir à relire quel bouton est
+   allumé. */
+.fr-destinataire__lu {
+  font-size: var(--t-petit);
+  color: var(--texte);
+  margin: 0;
 }
 
 .fr-compositeur__champ {
@@ -445,4 +640,27 @@
   margin: 0;
   padding: 0;
   font-size: var(--t-petit);
+}
+
+/* ------------------------------------------- la barre du haut (§4, 4 et 5) --- */
+
+/* Le nom de l'aventure à gauche, le reste à droite. Le bandeau technique est
+   le premier des trois éléments de droite, donc « à gauche du nom du joueur »
+   est une propriété de l'ORDRE DU DOM — ce que le clavier et le lecteur
+   d'écran lisent — et pas d'un `order` de CSS. */
+.fr-entete__aventure {
+  font-size: var(--t-titre);
+  margin: 0;
+}
+
+.fr-entete__droite {
+  display: flex;
+  align-items: baseline;
+  gap: var(--e-3);
+  margin-left: auto;
+}
+
+.fr-entete__technique {
+  font-size: var(--t-petit);
+  color: var(--texte-discret);
 }

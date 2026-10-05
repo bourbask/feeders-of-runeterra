@@ -152,7 +152,14 @@ describe('la vitrine /design', { timeout: 30_000 }, () => {
     render(<DesignShowcase />);
 
     const paires = [...PAIRES_TEXTE, ...PAIRES_COMPOSANT];
-    expect(paires.length).toBeGreaterThan(0);
+    // LE GARDE-FOU QUI MANQUAIT. `toBeGreaterThan(0)` sur la CONCATÉNATION est
+    // satisfait par les six paires de composant : vider `PAIRES_TEXTE` laissait
+    // ce fichier vert et faisait disparaître dix-neuf cas ailleurs, sans un mot
+    // (mode 6). Les deux listes sont donc épinglées séparément, et le 15 vient
+    // du §12 de `05-interface.md` — « 15 paires texte/fond recalculées » — pas
+    // de la liste elle-même.
+    expect(PAIRES_TEXTE.length).toBeGreaterThanOrEqual(15);
+    expect(PAIRES_COMPOSANT.length).toBeGreaterThan(0);
 
     for (const paire of paires) {
       const mesure = contraste(couleur(jetons, paire.devant), couleur(jetons, paire.sur));
@@ -277,8 +284,22 @@ describe('la vitrine /design', { timeout: 30_000 }, () => {
     expect(PORTEES_ORDONNEES).toHaveLength(3);
     for (const vue of PORTEES_ORDONNEES) {
       expect(screen.getAllByText(vue.libelle).length).toBeGreaterThan(0);
+    }
+
+    // LE GLYPHE, SEULEMENT POUR CEUX QUI EN ONT UN, et c'est un garde-fou
+    // contre le mode 9 et pas une complaisance. Depuis la correction 3 le
+    // public n'a plus de glyphe : `getAllByText('')` passerait sur n'importe
+    // quelle page, parce que tout élément vide y répond. Un critère vrai du
+    // vide est un critère qui ne mesure rien. On exige donc le glyphe des deux
+    // portées marquées, et on exige en toutes lettres que celui du public soit
+    // absent.
+    const marquees = PORTEES_ORDONNEES.filter((vue) => vue.marque);
+    expect(marquees).toHaveLength(2);
+    for (const vue of marquees) {
+      expect(vue.glyphe).not.toBe('');
       expect(screen.getAllByText(vue.glyphe).length).toBeGreaterThan(0);
     }
+    expect(PORTEES_ORDONNEES.filter((vue) => !vue.marque).map((vue) => vue.glyphe)).toEqual(['']);
 
     // La jauge rendue est bien celle du produit : son marqueur de position, en
     // toutes lettres, est dans les DEUX vignettes — avec et sans teinte.

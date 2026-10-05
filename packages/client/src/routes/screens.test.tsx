@@ -249,6 +249,199 @@ describe('l’écran de table, étroit', () => {
   });
 });
 
+/**
+ * LA DISPOSITION DES MAQUETTES (corrections 1, 6 et 7).
+ *
+ * CE QUI SE MESURE ICI ET CE QUI NE SE MESURE PAS. jsdom ne fait aucune mise en
+ * page : personne ne peut lui demander si deux colonnes se touchent. Ce qui est
+ * vérifiable, et ce qui casse en vrai quand on se trompe, c'est la STRUCTURE —
+ * qui contient quoi, et dans quel ordre — plus le fait que la règle CSS qui
+ * plafonne le fil existe, vise la bonne forme d'écran, et cite un jeton qui
+ * existe. Le reste est un jugement à l'œil, et il est dit comme tel dans le
+ * compte rendu.
+ */
+describe('la disposition de l’écran de table', () => {
+  const TABLE_CSS = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), '..', 'styles', 'table.css'),
+    'utf8',
+  );
+
+  it('pose les trois colonnes DANS la surface de jeu, et pas à côté', () => {
+    // CORRECTION 7. La surface est sous les colonnes : si elle était leur
+    // voisine au lieu d'être leur parent, elle serait un rectangle vide
+    // au-dessus de l'écran, ce qui est très exactement à quoi ressemble ce
+    // défaut-là quand on l'écrit de travers.
+    const store = unStore();
+    rendreTable({ largeur: 'assise', store });
+    garnirLaTable(store);
+
+    const jeu = globalThis.document.querySelector('.fr-table__jeu');
+    expect(jeu).not.toBeNull();
+
+    const colonnes = [...(jeu?.querySelectorAll('[data-colonne]') ?? [])].map((cellule) =>
+      cellule.getAttribute('data-colonne'),
+    );
+    expect(colonnes).toEqual(['gauche', 'centre', 'droite']);
+
+    // Et aucune colonne n'est restée dehors : le compte dans la surface est le
+    // compte total. Sans cette moitié, une quatrième colonne orpheline
+    // passerait.
+    expect(globalThis.document.querySelectorAll('[data-colonne]')).toHaveLength(3);
+  });
+
+  it('ne titre plus la colonne de droite « La table », et la nomme quand même', () => {
+    // CORRECTION 5. Le titre visible disparaît ; le NOM ACCESSIBLE reste, parce
+    // qu'un panneau est identifié par son nom (§2.2) et qu'un lecteur d'écran
+    // ne lit pas une barre du haut pour savoir dans quel panneau il est.
+    const store = unStore();
+    rendreTable({ largeur: 'assise', store });
+    act(() => {
+      store.getState().receive(snapshotFrame(aTableStateDto({ seq: 412 }), 412, 4));
+    });
+
+    const droite = globalThis.document.querySelector('[data-colonne="droite"]');
+    expect(droite).not.toBeNull();
+    // La colonne EST peuplée : une interdiction vérifiée sur une colonne vide
+    // est vraie et ne prouve rien (sonde 94).
+    expect(droite?.textContent ?? '').toContain('Horloges');
+
+    const titres = [...(droite?.querySelectorAll('h1, h2, h3') ?? [])].map(
+      (titre) => titre.textContent,
+    );
+    expect(titres.length).toBeGreaterThan(0);
+    expect(titres).not.toContain('La table');
+
+    expect(droite?.querySelector('section')?.getAttribute('aria-label')).toBe('La table');
+  });
+
+  it('nomme les joueurs de la table, et dit ce qu’elle ne sait pas nommer', () => {
+    // LE DÉFAUT : le bandeau du fil écrivait « vous 2 — Kevin et Théo » pendant
+    // que ce panneau-ci affichait `0CHARACTER…00020CHARACTER…0003`, au même
+    // instant, sur le même écran. La jointure existait déjà dans
+    // `destinataires.ts` ; elle n'était pas appliquée ici.
+    //
+    // TROIS MEMBRES, dont un sans personnage : à deux noms trouvés sur deux, la
+    // moitié « et ce qu'elle ne sait pas nommer » ne serait mesurée par rien.
+    const kevin = anId('player', 1);
+    const theo = anId('player', 2);
+    const sansPersonnage = anId('player', 3);
+    const persoDeKevin = anId('character', 1);
+    const persoDeTheo = anId('character', 2);
+
+    const store = unStore();
+    rendreTable({ largeur: 'assise', store });
+    act(() => {
+      store.getState().receive(
+        snapshotFrame(
+          aTableStateDto({
+            seq: 412,
+            characters: [
+              aCharacter({ id: persoDeKevin, playerId: kevin, displayName: 'Kevin' }),
+              aCharacter({ id: persoDeTheo, playerId: theo, displayName: 'Théo' }),
+            ],
+          }),
+          412,
+          4,
+        ),
+      );
+      store.getState().receive(
+        presenceFrame([
+          { playerId: kevin, characterId: persoDeKevin },
+          { playerId: theo, characterId: persoDeTheo },
+          { playerId: sansPersonnage, characterId: null },
+        ]),
+      );
+    });
+
+    const liste = globalThis.document.querySelector('.fr-presence');
+    expect(liste).not.toBeNull();
+    const lus = [...(liste?.querySelectorAll('li') ?? [])].map((item) => item.textContent.trim());
+    // LE TABLEAU EXACT, et dans l'ordre de la présence : « contient Kevin »
+    // resterait vrai à côté d'un identifiant brut sur la ligne d'à côté.
+    expect(lus).toEqual(['Kevin', 'Théo', sansPersonnage]);
+
+    // Et ce qui manque est DIT, en toutes lettres, plutôt que masqué.
+    expect(globalThis.document.querySelector('.fr-presence__manque')?.textContent ?? '').toContain(
+      'identifiant',
+    );
+  });
+
+  it('ne dit rien de manquant quand tout le monde a un nom', () => {
+    // L'autre sens. Une phrase d'excuse affichée en permanence est une phrase
+    // que personne ne lit plus — et elle rendrait le test ci-dessus vert sur
+    // n'importe quelle table.
+    const kevin = anId('player', 1);
+    const persoDeKevin = anId('character', 1);
+
+    const store = unStore();
+    rendreTable({ largeur: 'assise', store });
+    act(() => {
+      store.getState().receive(
+        snapshotFrame(
+          aTableStateDto({
+            seq: 412,
+            characters: [aCharacter({ id: persoDeKevin, playerId: kevin, displayName: 'Kevin' })],
+          }),
+          412,
+          4,
+        ),
+      );
+      store.getState().receive(presenceFrame([{ playerId: kevin, characterId: persoDeKevin }]));
+    });
+
+    expect(
+      [...globalThis.document.querySelectorAll('.fr-presence li')].map((item) =>
+        item.textContent.trim(),
+      ),
+    ).toEqual(['Kevin']);
+    expect(globalThis.document.querySelector('.fr-presence__manque')).toBeNull();
+  });
+
+  it('met le fil et la saisie dans la MÊME carte, la saisie dessous', () => {
+    // CORRECTION 1. L'ordre est celui du DOM — donc celui du clavier et du
+    // lecteur d'écran — et pas un `order` de CSS qui les laisserait tous les
+    // deux là où ils étaient.
+    const store = unStore();
+    rendreTable({ largeur: 'assise', store });
+    garnirLaTable(store);
+
+    const carte = globalThis.document.querySelector('.fr-table__carte');
+    expect(carte).not.toBeNull();
+
+    const fil = carte?.querySelector('.fr-fil') ?? null;
+    const saisie = carte?.querySelector('.fr-compositeur') ?? null;
+    expect(fil).not.toBeNull();
+    expect(saisie).not.toBeNull();
+    // `compareDocumentPosition` dit « suit », pas « est quelque part » :
+    // intervertir les deux ferait tomber ce test.
+    expect(
+      (fil?.compareDocumentPosition(saisie as Node) ?? 0) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeGreaterThan(0);
+  });
+
+  it('plafonne le fil à pleine largeur, par un jeton qui existe', () => {
+    // DEUX CHEMINS. À gauche la règle, lue dans la feuille ; à droite le jeton,
+    // lu dans `tokens.css`. Une règle qui citerait un jeton inexistant ne lève
+    // rien du tout : la propriété retombe sur sa valeur initiale et le fil
+    // repousse la page comme avant.
+    const regle =
+      /\.fr-table\[data-largeur='assise'\]\s+\.fr-fil\s*\{[^}]*max-height:\s*var\((--[\w-]+)\)/u.exec(
+        TABLE_CSS,
+      );
+    expect(regle, 'le plafond du fil n’est plus dans `table.css`').not.toBeNull();
+
+    const chemin = join(dirname(fileURLToPath(import.meta.url)), '..', 'styles', 'tokens.css');
+    const jetonsDuFichier = jetonsDe(readFileSync(chemin, 'utf8'));
+    expect(jetonsDuFichier.has(regle?.[1] ?? '')).toBe(true);
+
+    // Et la contrainte NE VISE QUE `assise` : en dessous il n'y a plus de place
+    // à économiser, et un plafond y mangerait le peu qui reste.
+    for (const etroite of ['tiroir-fiche', 'tiroirs', 'portable']) {
+      expect(TABLE_CSS).not.toContain(`.fr-table[data-largeur='${etroite}'] .fr-fil`);
+    }
+  });
+});
+
 describe('le brouillon', () => {
   it('survit à une erreur réseau et au retour du serveur', async () => {
     const store = unStore();
@@ -278,6 +471,38 @@ describe('le brouillon', () => {
 });
 
 describe('l’écran rendu sans une seule couleur', () => {
+  /**
+   * LA SONDE QUI DÉCIDE. L'arbitrage A vient d'ajouter une TROISIÈME teinte de
+   * portée ; elle ne doit rien porter à elle seule. On arrache donc `class` et
+   * `style` de tout l'arbre — aucune feuille ne s'applique plus, pas une
+   * couleur ne subsiste — et on redemande à l'écran, pour chaque bloc, QUI LE
+   * LIT.
+   *
+   * CE QUI A CHANGÉ DEPUIS UI-01, et pourquoi la forme du test change avec.
+   * Le bloc public ne porte plus d'étiquette (correction 3). La propriété à
+   * tenir n'est donc plus « chaque bloc dit sa portée » mais « les trois
+   * portées restent DISCERNABLES sans couleur » — ce qui est ce que le §5.3
+   * protégeait, et ce que l'ancienne formulation atteignait par un moyen parmi
+   * d'autres. On relève donc le TRIPLET exact par bloc, et on exige trois
+   * valeurs distinctes.
+   */
+  function sansCouleurs(): readonly {
+    readonly libelle: string | undefined;
+    readonly niveau: string | null;
+    readonly trait: string | null;
+  }[] {
+    // `[data-niveau]` et non `.fr-journal__ligne` : dépouiller ARRACHE les
+    // classes, donc un sélecteur de classe ne trouverait plus rien et la boucle
+    // deviendrait vide — c'est-à-dire verte sur rien.
+    return [...globalThis.document.querySelectorAll('[data-niveau]')].map((bloc) => ({
+      libelle: ['à toute la table', 'à ce groupe', 'à toi seul'].find((mot) =>
+        bloc.textContent.includes(mot),
+      ),
+      niveau: bloc.getAttribute('data-niveau'),
+      trait: bloc.getAttribute('data-trait'),
+    }));
+  }
+
   it('dit toujours qui lit chaque message, et quelle jauge on regarde', () => {
     const store = unStore();
     rendreTable({ largeur: 'assise', store });
@@ -290,7 +515,7 @@ describe('l’écran rendu sans une seule couleur', () => {
     });
 
     // L'écran EST peuplé avant qu'on lui retire ses teintes : une interdiction
-    // vérifiée sur un écran vide est vraie et ne prouve rien (#94).
+    // vérifiée sur un écran vide est vraie et ne prouve rien (sonde 94).
     expect(globalThis.document.querySelectorAll('.fr-journal__ligne')).toHaveLength(3);
     expect(globalThis.document.querySelectorAll('[data-jauge]').length).toBeGreaterThan(0);
 
@@ -300,15 +525,20 @@ describe('l’écran rendu sans une seule couleur', () => {
     // page : le compositeur affiche lui aussi les trois libellés, donc une
     // assertion sur `body.textContent` reste verte quand le FIL perd les
     // siens. Sonde 21 : mesuré, la première version de ce test ne mordait pas.
-    // `[data-niveau]` et non `.fr-journal__ligne` : dépouiller les teintes
-    // ARRACHE les classes, donc un sélecteur de classe ne trouve plus rien et
-    // la boucle devient vide — c'est-à-dire verte sur rien.
-    const porteesDuFil = [...globalThis.document.querySelectorAll('[data-niveau]')].map((bloc) =>
-      ['à toute la table', 'à ce groupe', 'à toi seul'].find((libelle) =>
-        bloc.textContent.includes(libelle),
-      ),
-    );
-    expect(porteesDuFil).toEqual(['à toute la table', 'à ce groupe', 'à toi seul']);
+    //
+    // LE TABLEAU EXACT, et dans cet ordre. Le public est NU — c'est
+    // l'arbitrage, et c'est la ligne la plus facile à casser sans s'en rendre
+    // compte : lui remettre un bandeau ferait tomber ce test.
+    expect(sansCouleurs()).toEqual([
+      { libelle: undefined, niveau: '0', trait: 'aucun' },
+      { libelle: 'à ce groupe', niveau: '1', trait: 'plein' },
+      { libelle: 'à toi seul', niveau: '2', trait: 'pointille' },
+    ]);
+
+    // ET LA PROPRIÉTÉ ELLE-MÊME, écrite comme une propriété : trois portées,
+    // trois signatures DISTINCTES, sans une couleur. C'est ce qu'un joueur
+    // daltonien lit, et c'est tout ce qu'il a.
+    expect(new Set(sansCouleurs().map((bloc) => JSON.stringify(bloc))).size).toBe(3);
 
     // QUELLE JAUGE JE REGARDE : relevé jauge par jauge, pour la même raison.
     const nomsDesJauges = [...globalThis.document.querySelectorAll('[data-jauge]')].map((jauge) =>
@@ -318,6 +548,25 @@ describe('l’écran rendu sans une seule couleur', () => {
 
     // Et la valeur de chacune est écrite : un aplat sans chiffre est du décor.
     expect(globalThis.document.body.textContent).toMatch(/\d+ \/ \d+/u);
+  });
+
+  it('dit aussi, sans couleur, QUI sont les destinataires d’un groupe', () => {
+    // CORRECTION 8 sous la même sonde. « vous 2 » et l'identifiant mécanique du
+    // groupe sont du TEXTE : ils survivent au dépouillement, et c'est pour ça
+    // qu'ils ont été écrits comme du texte et non comme un attribut de style.
+    const store = unStore();
+    rendreTable({ largeur: 'assise', store });
+    garnirLaTable(store);
+
+    act(() => {
+      store.getState().receive(eventFrame(414, 6, uneProse(414, 'Katla t’attend.', 'subset')));
+    });
+    depouillerLesTeintes();
+
+    const bloc = globalThis.document.querySelector('[data-niveau="1"]');
+    expect(bloc).not.toBeNull();
+    expect(bloc?.textContent ?? '').toContain('vous 1');
+    expect(bloc?.textContent ?? '').toMatch(/\(g-[\da-z]{6}\)/u);
   });
 });
 

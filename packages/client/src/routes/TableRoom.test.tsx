@@ -3,9 +3,12 @@ import { act, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { StoreApi } from 'zustand/vanilla';
 
+import { render } from '@testing-library/react';
+
 import { aTableStateDto, presenceFrame, snapshotFrame, welcomeFrame } from '../test/frames.js';
-import { rendreTable, unStore } from '../test/table.js';
+import { envelopper, rendreTable, unStore } from '../test/table.js';
 import type { TableState } from '../ws/store.js';
+import { BarreTechnique } from './TableRoom.js';
 
 /**
  * L'écran de table, côté « ce que le serveur a dit ».
@@ -56,18 +59,51 @@ describe('la page « table » vide', () => {
     }
   });
 
-  it('annonce l’état de la liaison', () => {
-    expect(screen.getByText(/Liaison : en attente/u)).toBeDefined();
+  /**
+   * CORRECTION 4 : « Liaison : connectée · contenu … · journal n° 248 » n'a
+   * rien à faire dans l'espace de jeu. Il est remonté dans la barre du haut.
+   *
+   * LES DEUX SENS, parce qu'un seul ne prouverait rien. À gauche : l'écran de
+   * jeu n'en porte plus une trace — et l'écran EST peuplé quand on le lui
+   * demande, sinon l'interdiction serait vraie du vide (mode 9). À droite : la
+   * barre, elle, l'annonce bel et bien.
+   */
+  it('n’a plus un mot de technique dans l’espace de jeu', () => {
+    recevoir(welcomeFrame(248, 30), snapshotFrame(aTableStateDto({ seq: 248 }), 248, 30));
     act(() => {
       store.getState().setStatus('open');
+    });
+
+    // L'écran est bien peuplé : ce n'est pas une interdiction satisfaite par le vide.
+    expect(screen.getByText(FIXTURE_CHAMPION.displayName)).toBeDefined();
+
+    const jeu = globalThis.document.querySelector('.fr-table');
+    expect(jeu).not.toBeNull();
+    expect(jeu?.textContent ?? '').not.toContain('Liaison');
+    expect(jeu?.textContent ?? '').not.toContain('journal n°');
+    expect(jeu?.textContent ?? '').not.toContain('contenu 1.0.0');
+  });
+});
+
+describe('le bandeau technique de la barre du haut', () => {
+  it('annonce l’état de la liaison, et le suit', () => {
+    const propre = unStore();
+    render(envelopper(propre, <BarreTechnique />));
+    expect(screen.getByText(/Liaison : en attente/u)).toBeDefined();
+    act(() => {
+      propre.getState().setStatus('open');
     });
     expect(screen.getByText(/Liaison : connectée/u)).toBeDefined();
   });
 });
 
 describe('ce que le serveur envoie', () => {
-  it('l’accueil donne la version de contenu et la tête de journal', () => {
-    recevoir(welcomeFrame(248, 30));
+  it('l’accueil donne la version de contenu et la tête de journal, dans la barre', () => {
+    const propre = unStore();
+    render(envelopper(propre, <BarreTechnique />));
+    act(() => {
+      propre.getState().receive(welcomeFrame(248, 30));
+    });
     expect(screen.getByText(/contenu 1\.0\.0 · journal n° 248/u)).toBeDefined();
   });
 

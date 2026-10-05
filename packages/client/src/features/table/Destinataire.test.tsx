@@ -1,11 +1,15 @@
 import type { EventScope } from '@for/engine';
 import { EVENT_SCOPES } from '@for/engine';
 import { anId } from '@for/testkit';
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
+import { aCharacter } from '@for/testkit';
+
+import { aTableStateDto } from '../../test/frames.js';
 import type { PresenceMember } from '../../ws/store.js';
+import { Compositeur } from './Compositeur.js';
 import { Destinataire, ListeDestinataires, avertissementDeclassification } from './Destinataire.js';
 
 /**
@@ -26,23 +30,31 @@ const PRESENTS: readonly PresenceMember[] = [
   { playerId: anId('player', 2), characterId: null, online: false, typing: false },
 ];
 
+/** Un instantané où le personnage de PRESENTS[0] porte un nom affichable. */
+const INSTANTANE = aTableStateDto({
+  characters: [aCharacter({ id: anId('character', 1), displayName: 'Kevin' })],
+});
+
 function rendre(options: {
   readonly portee?: EventScope;
   readonly porteeDuBloc?: EventScope | null;
   readonly acceptee?: boolean;
   readonly onPortee?: (portee: EventScope) => void;
   readonly onOuvrirListe?: () => void;
+  readonly choisis?: readonly string[];
+  readonly table?: ReturnType<typeof aTableStateDto> | null;
 }): void {
   render(
     <Destinataire
       portee={options.portee ?? 'table'}
       onPortee={options.onPortee ?? (() => undefined)}
       presents={PRESENTS}
-      choisis={[]}
+      choisis={options.choisis ?? []}
       onOuvrirListe={options.onOuvrirListe ?? (() => undefined)}
       porteeDuBloc={options.porteeDuBloc ?? null}
       declassificationAcceptee={options.acceptee ?? false}
       onAccepterDeclassification={() => undefined}
+      table={options.table ?? null}
     />,
   );
 }
@@ -152,5 +164,84 @@ describe('la liste des destinataires', () => {
   it('dit ce qu’elle attend quand personne n’est là', () => {
     render(<ListeDestinataires presents={[]} choisis={[]} onChoisis={() => undefined} />);
     expect(screen.getByText(/il n’y a pas de groupe à viser/u)).toBeDefined();
+  });
+});
+
+/**
+ * CORRECTION 8 : « Et sous la saisie, avant d'envoyer : "Lu par Kevin, Théo".
+ * Un joueur doit TOUJOURS savoir qui lit. »
+ *
+ * TOUJOURS, donc pour les trois positions et pas seulement pour le groupe : une
+ * phrase qui n'apparaîtrait qu'en position 2 obligerait le joueur à déduire le
+ * reste de la couleur du bouton allumé, ce qui est exactement ce que le §5.3
+ * refuse.
+ */
+describe('« Lu par … », sous la saisie', () => {
+  function composer(portee: EventScope, choisis: readonly string[] = []): void {
+    // Rendu par le COMPOSITEUR, et pas par `Destinataire` seul : la correction
+    // 8 dit « sous la saisie », donc la position relative au champ FAIT PARTIE
+    // du critère et ne se mesure pas sur un composant isolé.
+    render(
+      <Compositeur
+        texte=""
+        onTexte={() => undefined}
+        portee={portee}
+        onPortee={() => undefined}
+        presents={PRESENTS}
+        choisis={choisis}
+        onOuvrirListe={() => undefined}
+        porteeDuBloc={null}
+        declassificationAcceptee={false}
+        onAccepterDeclassification={() => undefined}
+        erreur={null}
+        table={INSTANTANE}
+      />,
+    );
+  }
+
+  it('se lit SOUS le champ, et pas au-dessus', () => {
+    composer('table');
+    const champ = screen.getByRole('textbox');
+    const phrase = screen.getByText(/^Lu par/u);
+    // « suit », pas « existe » : remonter la phrase au-dessus du champ ferait
+    // tomber ce test, ce qu'une simple présence ne ferait pas.
+    expect(
+      champ.compareDocumentPosition(phrase) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeGreaterThan(0);
+  });
+
+  it('répond pour les trois positions, et jamais la même chose', () => {
+    const phrases: (string | null)[] = [];
+    for (const portee of ['table', 'private'] as const) {
+      composer(portee);
+      phrases.push(screen.getByText(/^Lu par/u).textContent);
+      cleanup();
+    }
+    expect(phrases).toEqual(['Lu par toute la table.', 'Lu par toi seul.']);
+  });
+
+  it('nomme les cochés, avec l’identifiant mécanique du groupe', () => {
+    composer('subset', [PRESENTS[0]!.playerId]);
+    const phrase = screen.getByText(/Lu par/u).textContent;
+    expect(phrase).toContain('Kevin');
+    expect(phrase).toMatch(/\(g-[\da-z]{6}\)/u);
+    // L'identifiant du joueur n'est PAS écrit dans la phrase : on lit un nom ou
+    // on lit qu'il manque, jamais une clé de base.
+    expect(phrase).not.toContain(PRESENTS[0]!.playerId);
+  });
+
+  it('dit ce qui manque plutôt que d’écrire un identifiant', () => {
+    // PRESENTS[1] n'a pas de personnage : son nom n'existe nulle part sur le
+    // fil, et la phrase le dit au lieu de le fabriquer.
+    composer('subset', [PRESENTS[0]!.playerId, PRESENTS[1]!.playerId]);
+    const phrase = screen.getByText(/Lu par/u).textContent;
+    expect(phrase).toContain('Kevin');
+    expect(phrase).toMatch(/le nom d’un destinataire manque/u);
+    expect(phrase).not.toContain(PRESENTS[1]!.playerId);
+  });
+
+  it('dit qu’un groupe vide n’a aucun lecteur, au lieu de se taire', () => {
+    composer('subset', []);
+    expect(screen.getByText(/ce message n’a aucun lecteur/u)).toBeDefined();
   });
 });

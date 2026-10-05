@@ -38,8 +38,16 @@
 import type { EventScope, GameEvent, GameEventType } from '@for/engine';
 import { GAME_EVENT_TYPES } from '@for/engine';
 
-/** What a line is, for the reader. `mecanique` is displayed by nothing. */
-export type JournalLineKind = 'scene' | 'conteur' | 'joueur' | 'systeme' | 'mecanique';
+/**
+ * What a line is, for the reader. `mecanique` is displayed by nothing.
+ *
+ * `oracle` IS NEITHER NARRATION NOR SPEECH (05-interface.md correction 13). It
+ * has its own kind rather than borrowing `conteur`, because the whole point of
+ * the decision is that it reads as a third thing — « question — RÉPONSE », in
+ * its own tint, in its own markup. A reading voice that speaks the narration
+ * must be able to leave it out, and it can only do that if the markup names it.
+ */
+export type JournalLineKind = 'scene' | 'conteur' | 'joueur' | 'systeme' | 'oracle' | 'mecanique';
 
 /** Why a line is struck, and by which journal entry. */
 export interface RevokedMark {
@@ -83,6 +91,12 @@ export const NARRATIVE_EVENT_TYPES = [
   'narration.gm_failed',
   'narration.player_message',
   'system.note',
+  // THE TWO ORACLES (correction 13). They are rolls AND they carry fiction:
+  // what reaches the feed is the question and the answer, and NOTHING else —
+  // `value`, `threshold`, `dieSize` and `likelihood` stay where every other
+  // mechanical number stays, behind « Pourquoi ? ».
+  'roll.oracle_resolved',
+  'roll.yes_no_resolved',
 ] as const satisfies readonly GameEventType[];
 
 export type NarrativeEventType = (typeof NARRATIVE_EVENT_TYPES)[number];
@@ -109,17 +123,35 @@ function proseOf(event: GameEvent): { text: string | null; kind: JournalLineKind
     return { text: event.payload.text, kind: 'joueur' };
   }
   if (event.type === 'system.note') return { text: event.payload.text, kind: 'systeme' };
+  // The oracle's ANSWER. `text` is the content entry, copied verbatim by the
+  // engine; the yes/no answer is a two-valued enum and is written as the word a
+  // table says out loud. Neither is a die, a total, an effect or a price.
+  if (event.type === 'roll.oracle_resolved') return { text: event.payload.text, kind: 'oracle' };
+  if (event.type === 'roll.yes_no_resolved') {
+    return { text: event.payload.answer === 'oui' ? 'OUI' : 'NON', kind: 'oracle' };
+  }
 
   // Everything else is mechanics. It belongs to « Pourquoi ? », and the line
   // keeps no room for it.
   return { text: null, kind: 'mecanique' };
 }
 
-/** Who said it, when the payload names someone. The conteur is not a speaker. */
+/**
+ * Who said it, when the payload names someone. The conteur is not a speaker.
+ *
+ * AN ORACLE'S « SPEAKER » IS ITS QUESTION, and that is not a pun on the field:
+ * the slot holds what is written BEFORE the dash in « question — RÉPONSE », and
+ * for a player that is a name while for an oracle it is a question. Putting the
+ * question here rather than concatenating it into `text` is what lets the
+ * markup keep the two apart — correction 12 asks the markup, not a class, to
+ * carry the distinction, and the same reasoning applies one line further.
+ */
 function speakerOf(event: GameEvent): string | null {
   if (event.type === 'narration.player_message') {
     return event.payload.characterId ?? event.subjectCharacterId;
   }
+  if (event.type === 'roll.oracle_resolved') return event.payload.question ?? null;
+  if (event.type === 'roll.yes_no_resolved') return event.payload.question;
   return null;
 }
 

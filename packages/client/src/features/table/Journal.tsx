@@ -1,40 +1,62 @@
+import type { TableStateDto } from '@for/contracts';
 import type { ReactNode } from 'react';
-import { useMemo } from 'react';
+import { Fragment, useMemo } from 'react';
 
 import { EmptyState } from '../../components/ui/EmptyState.js';
 import { useTable } from '../../ws/context.js';
 import type { JournalLine } from '../../ws/journal.js';
-import { isReadable } from '../../ws/journal.js';
+import type { PresenceMember } from '../../ws/store.js';
 import { journalLines } from '../../ws/store.js';
 import { ProofCommand } from './Proof/ProofCommand.js';
+import { groupeDe, nomDuPersonnage, phraseDesManquants, phraseDuGroupe } from './destinataires.js';
+import type { BlocDuFil } from './fil.js';
+import { composerLeFil } from './fil.js';
 import { porteeVue } from './portee.js';
 
 /**
- * The fiction feed, on its three rails (05-interface.md §5).
+ * The fiction feed, on its rails (05-interface.md §5, amended 5 October).
  *
- * WHAT IT SHOWS: prose. WHAT IT NEVER SHOWS: a die, a total, an effect name, a
- * price — those have no field on a `JournalLine` to begin with (`ws/journal.ts`)
- * and reach the screen only through « Pourquoi ? ».
+ * WHAT IT SHOWS: prose, and the oracle's question and answer. WHAT IT NEVER
+ * SHOWS: a die, a total, an effect name, a price — those have no field on a
+ * `JournalLine` to begin with (`ws/journal.ts`) and reach the screen only
+ * through « Pourquoi ? ».
  *
- * THREE INFORMATIONS, NEVER TWO (§5.2). Each block carries its scope on three
- * channels at once: the RAIL (and its colour), the INDENTATION, and the GLYPH —
- * plus the label, in letters, always. §5.3 says why that last one is not a
- * belt-and-braces: « si la portée ne se lit qu'à la teinte, il ne sait plus qui
- * lit son message, et il peut faire un incident qu'aucune annulation ne
- * répare ». The colour is the redundancy, not the information. Held by
- * `Journal.test.tsx` and by the colour-stripped render of `screens.test.tsx`.
+ * THE PUBLIC BLOCK IS BARE (correction 3). No rail, no indentation, no glyph,
+ * no band: « le public est le défaut, et un défaut ne s'annonce pas ». A
+ * restricted block, on the other hand, carries FIVE channels at once — the band
+ * in letters WITH THE NAMES of who reads it, the glyph, the indentation, a
+ * stroke that is solid for a group and dashed for a private block (arbitration
+ * B), and a colour. Four of the five survive having every colour torn off, and
+ * that is what `screens.test.tsx` measures.
  *
- * « POURQUOI ? » IS ON THE JETS, NOT ON EVERY LINE. §10: « Chaque jet est
- * consultable via "Pourquoi ?", replié par défaut ». M0-19 put one on every
- * line of prose, which made the command mean « this line exists » rather than
- * « dice were rolled here ». A turn that rolled nothing has no proof worth
- * folding, so it gets no button; a turn that rolled gets exactly ONE, on its
- * first readable line. `Journal.test.tsx` counts both.
+ * THE BAND IS WRITTEN ONCE PER RUN (correction 2), and the run is a scope AND a
+ * group: see `fil.ts`, which owns every rule about a block's neighbours.
+ *
+ * WHO READS IT, BY NAME (correction 8). The band says « vous 2 — Kevin et
+ * Théo ». The names are JOINED from presence and the snapshot, never minted,
+ * and the group carries a MECHANICAL KEY so that two different groups are never
+ * read as one. What is missing is written on screen, in words, beside the
+ * names: see `destinataires.ts`.
+ *
+ * AND WHO SPEAKS, BY NAME TOO. A line names its speaker by CHARACTER
+ * (`ws/journal.ts`), so the same join runs on `fr-journal__qui`: it was writing
+ * `0CHARACTER00000000000000002` above a band that said « Kevin et Théo », on the
+ * same screen, at the same moment. When the snapshot does not hold the
+ * character, the id stays rather than a minted name — the mirror joins, it
+ * does not invent.
+ *
+ * SPEECH IS NOT NARRATION, AND THE MARKUP SAYS SO (correction 12). A player's
+ * words are in a real `<em>`, the speaker's name in a plain `<span>`, and the
+ * block carries `data-voix`. The day a reading voice speaks the table, it reads
+ * `data-voix="recit"` and nothing else — players already talk on Discord. A CSS
+ * class would not survive that, so the distinction is not a class.
+ *
+ * « POURQUOI ? » IS DEFERRED (correction 11). The dice are set aside and
+ * attached to the block that FOLLOWS the roll, never to the roll's own turn as
+ * it happens. One per rolled turn, and none at all while nothing has followed.
  *
  * A CANCELLED LINE STAYS. It is struck, it carries its cause, and it keeps its
- * « Pourquoi ? » (02-mj-ia.md 4.8.6 (b)). Removing it would be lying about
- * what happened, and would leave the player with an unexplained round trip
- * they watched happen.
+ * « Pourquoi ? » (02-mj-ia.md 4.8.6 (b)).
  */
 
 const ETIQUETTES: Readonly<Record<JournalLine['kind'], string>> = {
@@ -42,49 +64,169 @@ const ETIQUETTES: Readonly<Record<JournalLine['kind'], string>> = {
   conteur: 'Le conteur',
   joueur: 'Un joueur',
   systeme: 'Note',
+  oracle: 'L’oracle',
   mecanique: '',
 };
 
-/**
- * The turns whose proof is worth opening: the ones that rolled.
- *
- * READ OVER ALL THE LINES, including the mechanical ones the feed drops — a
- * `roll.action_resolved` carries no prose, so it is invisible in the list the
- * reader sees and would be invisible to this count too if it ran after the
- * filter.
- */
-function toursAvecJet(lignes: readonly JournalLine[]): ReadonlySet<string> {
-  const tours = new Set<string>();
-  for (const ligne of lignes) {
-    if (ligne.hasRoll && ligne.correlationId !== null) tours.add(ligne.correlationId);
-  }
-  return tours;
-}
+/** What a reading voice would speak, and what it would skip. */
+const VOIX: Readonly<Record<JournalLine['kind'], 'recit' | 'parole' | 'oracle' | 'aucune'>> = {
+  scene: 'recit',
+  conteur: 'recit',
+  joueur: 'parole',
+  systeme: 'aucune',
+  oracle: 'oracle',
+  mecanique: 'aucune',
+};
 
 /** A line's identity in the feed: its journal number and its delivery number. */
 function cle(ligne: JournalLine): string {
   return `${String(ligne.seq)}:${String(ligne.deliverySeq)}`;
 }
 
-/** The band that names the recipients of a restricted block (§5.2). */
-function Bandeau(props: { readonly ligne: JournalLine }): ReactNode {
+/**
+ * The band that names who reads a restricted block (§5.2, correction 8).
+ *
+ * Rendered for a restricted scope only, and only on the block that opens the
+ * run. A public block gets nothing — `marque` is false and this returns `null`.
+ */
+function Bandeau(props: {
+  readonly ligne: JournalLine;
+  readonly presence: readonly PresenceMember[];
+  readonly table: TableStateDto | null;
+}): ReactNode {
   const vue = porteeVue(props.ligne.scope);
-  const combien = props.ligne.recipients?.length ?? 0;
+  if (!vue.marque) return null;
+
+  const groupe = groupeDe(props.ligne.recipients ?? [], props.presence, props.table);
+  const manquants = phraseDesManquants(groupe);
 
   return (
     <span className="fr-bloc__portee" data-portee={vue.scope}>
       <span className="fr-bloc__glyphe" aria-hidden="true">
         {vue.glyphe}
       </span>
-      {/* LE LIBELLÉ EST TOUJOURS LÀ, en texte, pour les trois portées. C'est le
-          seul canal qu'un joueur daltonien lit à coup sûr (§5.3). */}
+      {/* LE LIBELLÉ EST TOUJOURS LÀ, en texte, sur toute portée marquée. C'est
+          le seul canal qu'un joueur daltonien lit à coup sûr (§5.3). */}
       <span className="fr-bloc__libelle">{vue.libelle}</span>
-      {/* Le protocole porte des identifiants, pas des noms affichables : on
-          compte les destinataires plutôt que d'en inventer la liste. */}
-      {vue.scope === 'subset' && combien > 0 ? (
-        <span className="fr-bloc__compte"> · {combien} destinataire(s)</span>
+      {props.ligne.scope === 'subset' ? (
+        <>
+          <span className="fr-bloc__qui"> · {phraseDuGroupe(groupe)}</span>
+          {/* L'identifiant mécanique du groupe. Il ne décore pas : c'est lui qui
+              dit que deux bandeaux parlent du MÊME groupe, et il est écrit
+              plutôt que deviné. */}
+          <span className="fr-bloc__cle" title={groupe.membres.join(' ')}>
+            {' '}
+            ({groupe.cle})
+          </span>
+          {manquants === null ? null : <span className="fr-bloc__manque"> · {manquants}</span>}
+        </>
       ) : null}
     </span>
+  );
+}
+
+/** « le groupe s'est séparé » — the event that creates the rails (correction 9). */
+function Rupture(): ReactNode {
+  return (
+    <li className="fr-journal__rupture" data-rupture="true">
+      <span className="fr-journal__rupture-libelle">le groupe s’est séparé</span>
+    </li>
+  );
+}
+
+function Corps(props: { readonly ligne: JournalLine }): ReactNode {
+  const ligne = props.ligne;
+
+  if (ligne.kind === 'oracle') {
+    // « question — RÉPONSE ». Two elements, not one string: the question and
+    // the answer are different things and a voice must be able to tell them
+    // apart (correction 13).
+    return (
+      <span className="fr-journal__texte fr-journal__oracle">
+        {ligne.speaker === null ? null : (
+          <>
+            <span className="fr-journal__oracle-question">{ligne.speaker}</span>
+            <span aria-hidden="true"> — </span>
+          </>
+        )}
+        <b className="fr-journal__oracle-reponse">{ligne.text}</b>
+      </span>
+    );
+  }
+
+  // A PLAYER'S WORDS ARE IN AN `<em>`, the narration is not. The element is the
+  // distinction; the italic is only what the element looks like.
+  if (ligne.kind === 'joueur') {
+    return <em className="fr-journal__texte fr-journal__parole">{ligne.text}</em>;
+  }
+
+  return <span className="fr-journal__texte">{ligne.text}</span>;
+}
+
+/**
+ * The name above a block. A SPEAKER IS A CHARACTER, so it is joined against the
+ * snapshot; everything else wears its label.
+ *
+ * `kind === 'joueur'` is the guard and it is not decoration: an oracle's
+ * `speaker` holds its QUESTION, not an id, and running a character lookup on a
+ * question would be a join on the wrong column. The oracle does not come
+ * through here anyway — `Bloc` renders it by itself — and this keeps it true if
+ * that ever changes.
+ */
+function quiParle(ligne: JournalLine, table: TableStateDto | null): string {
+  if (ligne.kind !== 'joueur') return ligne.speaker ?? ETIQUETTES[ligne.kind];
+  if (ligne.speaker === null) return ETIQUETTES.joueur;
+  return nomDuPersonnage(ligne.speaker, table) ?? ligne.speaker;
+}
+
+function Bloc(props: {
+  readonly bloc: BlocDuFil;
+  readonly presence: readonly PresenceMember[];
+  readonly table: TableStateDto | null;
+}): ReactNode {
+  const { bloc } = props;
+  const ligne = bloc.ligne;
+  const vue = porteeVue(ligne.scope);
+
+  return (
+    <li
+      className={`fr-journal__ligne fr-journal__ligne--${ligne.kind}${
+        ligne.revoked === null ? '' : ' fr-journal__ligne--annulee'
+      }${bloc.promu ? ' fr-journal__ligne--promu' : ''}`}
+      data-portee={vue.scope}
+      data-niveau={String(vue.niveau)}
+      data-trait={vue.trait}
+      data-voix={VOIX[ligne.kind]}
+      {...(bloc.promu ? { 'data-promu': 'true' } : {})}
+      {...(ligne.revoked === null ? {} : { 'data-annulee': 'true' })}
+    >
+      {bloc.ouvreUneSuite ? (
+        <Bandeau ligne={ligne} presence={props.presence} table={props.table} />
+      ) : null}
+      {ligne.kind === 'oracle' ? null : (
+        <span className="fr-journal__qui">{quiParle(ligne, props.table)}</span>
+      )}
+      {ligne.revoked === null ? (
+        <Corps ligne={ligne} />
+      ) : (
+        <span className="fr-journal__texte">
+          <s>{ligne.text}</s>
+          <span className="fr-annule">
+            {' '}
+            — annulé : {ligne.revoked.reason} (journal n° {ligne.revoked.bySeq})
+          </span>
+        </span>
+      )}
+      {/* APRÈS l'envoi, dans le fil — l'avertissement du §7.2 est AVANT, dans le
+          compositeur. Les deux sont voulus, et celui-ci dit QUI a déclassifié. */}
+      {bloc.promu ? (
+        <span className="fr-journal__promu" data-promu="true">
+          Ce joueur a répondu en public à ce que lui seul avait reçu : il l’a rendu public, personne
+          d’autre.
+        </span>
+      ) : null}
+      {bloc.preuveDuTour === null ? null : <ProofCommand correlationId={bloc.preuveDuTour} />}
+    </li>
   );
 }
 
@@ -95,67 +237,30 @@ export function Journal(): ReactNode {
   const lines = useTable((state) => state.lines);
   const history = useTable((state) => state.history);
   const revocations = useTable((state) => state.revocations);
+  const presence = useTable((state) => state.presence);
+  const table = useTable((state) => state.table);
 
-  const toutes = useMemo(
-    () => journalLines({ lines, history, revocations }),
-    [lines, history, revocations],
+  // LA PRÉSENCE EST UNE ENTRÉE DU FIL, pas une décoration du rendu : c'est elle
+  // qui dit si celui qui parle était destinataire du bloc restreint au-dessus
+  // (`fil.ts`, correction 10). Elle est donc dans les dépendances — un fil
+  // calculé avant son arrivée doit se recalculer après.
+  const blocs = useMemo(
+    () => composerLeFil(journalLines({ lines, history, revocations }), presence),
+    [lines, history, revocations, presence],
   );
-  const avecJet = useMemo(() => toursAvecJet(toutes), [toutes]);
-  const lignes = useMemo(() => toutes.filter(isReadable), [toutes]);
 
-  // ONE button per turn, on its FIRST readable line. Walking the list once and
-  // remembering which turns have been served is what makes « exactly one »
-  // true even when a turn spans four blocks of prose.
-  const porteurs = useMemo(() => {
-    const servis = new Set<string>();
-    const cles = new Set<string>();
-    for (const ligne of lignes) {
-      const tour = ligne.correlationId;
-      if (tour === null || !avecJet.has(tour) || servis.has(tour)) continue;
-      servis.add(tour);
-      cles.add(cle(ligne));
-    }
-    return cles;
-  }, [lignes, avecJet]);
-
-  if (lignes.length === 0) {
+  if (blocs.length === 0) {
     return <EmptyState>La table est ouverte. Rien ne s’est encore passé.</EmptyState>;
   }
 
   return (
     <ol className="fr-journal">
-      {lignes.map((ligne) => {
-        const vue = porteeVue(ligne.scope);
-        const tour = ligne.correlationId;
-        const porteLeJet = tour !== null && porteurs.has(cle(ligne));
-
-        return (
-          <li
-            key={cle(ligne)}
-            className={`fr-journal__ligne fr-journal__ligne--${ligne.kind}${
-              ligne.revoked === null ? '' : ' fr-journal__ligne--annulee'
-            }`}
-            data-portee={vue.scope}
-            data-niveau={String(vue.niveau)}
-            {...(ligne.revoked === null ? {} : { 'data-annulee': 'true' })}
-          >
-            <Bandeau ligne={ligne} />
-            <span className="fr-journal__qui">{ligne.speaker ?? ETIQUETTES[ligne.kind]}</span>
-            {ligne.revoked === null ? (
-              <span className="fr-journal__texte">{ligne.text}</span>
-            ) : (
-              <span className="fr-journal__texte">
-                <s>{ligne.text}</s>
-                <span className="fr-annule">
-                  {' '}
-                  — annulé : {ligne.revoked.reason} (journal n° {ligne.revoked.bySeq})
-                </span>
-              </span>
-            )}
-            {tour !== null && porteLeJet ? <ProofCommand correlationId={tour} /> : null}
-          </li>
-        );
-      })}
+      {blocs.map((bloc) => (
+        <Fragment key={cle(bloc.ligne)}>
+          {bloc.rupture ? <Rupture /> : null}
+          <Bloc bloc={bloc} presence={presence} table={table} />
+        </Fragment>
+      ))}
     </ol>
   );
 }

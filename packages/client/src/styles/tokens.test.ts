@@ -207,6 +207,28 @@ describe('les jetons du client', () => {
     expect([...cites].filter((nom) => !jetons.has(nom)).sort()).toEqual([]);
   });
 
+  it('mesure au moins les 15 paires que le §12 promet', () => {
+    // MODE 6 : UNE LISTE QUI EST SA PROPRE SOURCE DE BOUCLE. Les deux `it.each`
+    // ci-dessous sont engendrés PAR `PAIRES_TEXTE` et `PAIRES_COMPOSANT` : vider
+    // l'une des deux ne fait pas rougir une ligne, elle fait DISPARAÎTRE les cas,
+    // et une suite sans cas est verte. Mesuré : `PAIRES_TEXTE` vidée, zéro échec,
+    // dix-neuf tests évaporés en silence.
+    //
+    // Le chiffre ne vient donc pas de la liste — il viendrait d'elle-même, et un
+    // chiffre comparé à lui-même ne prouve rien (§5 bis). Il vient du §12 de
+    // `docs/design/05-interface.md`, « Les 15 contrastes promis sont promis …
+    // 15 paires texte/fond recalculées, ≥ 4,5 chacune », et il est écrit ici en
+    // toutes lettres. `>=` et non `===` : la PR du 5 octobre en a ajouté quatre,
+    // et une promesse de plancher ne doit pas interdire d'en mesurer plus.
+    expect(PAIRES_TEXTE.length).toBeGreaterThanOrEqual(15);
+    // Et les paires de composant ne comblent pas le trou : ce sont deux
+    // promesses, deux minima (4,5 contre 3), et le §12 ne parle que des
+    // premières. Sans cette ligne, la liste des six suffirait à satisfaire un
+    // compte global.
+    expect(PAIRES_COMPOSANT.length).toBeGreaterThan(0);
+    expect(PAIRES_TEXTE.every((paire) => paire.minimum === 4.5)).toBe(true);
+  });
+
   it.each(PAIRES_TEXTE)('$devant sur $sur — $quoi passe le contraste AA', (paire) => {
     expect(
       contraste(couleur(jetons, paire.devant), couleur(jetons, paire.sur)),
@@ -373,37 +395,78 @@ describe('les jetons du client', () => {
     // Et RIEN ne défile horizontalement, nulle part : une information qu'on
     // doit faire glisser latéralement pour être lue est une information mal
     // posée, pas une information longue.
-    const verticaux = ['dz-cellule', 'dz-rail', 'dz-inventaire', 'dz-carnet', 'dz-liste'];
+    //
+    // CE QUE CE TEST REGARDAIT, ET CE QU'IL REGARDE MAINTENANT. Il tenait une
+    // liste de CANDIDATS — cinq classes `dz-*`, c'est-à-dire la vitrine — et ne
+    // disait rien de tout ce qui n'y figurait pas : le produit entier, dont
+    // `table.css`, pouvait se mettre à défiler sans qu'une ligne tombe. On
+    // relève donc l'INVERSE : la liste exacte des classes qui déclarent un
+    // défilement vertical, dans TOUTES les feuilles scannées, épinglée au
+    // tableau ci-dessous. Ajouter une barre quelque part la fait rougir ; en
+    // retirer une au fil aussi. Une liste de coupables vide pouvait être vraie
+    // d'un fichier vide ; un tableau exact ne peut pas l'être.
+    //
+    // Le raccourci `overflow` compte autant que `overflow-y` : `overflow: auto`
+    // défile verticalement, et ne pas le lire laissait passer la moitié des
+    // façons de l'écrire.
+    const DEFILEMENT_VERTICAL = /^\s*overflow(?:-y)?\s*:\s*(?:auto|scroll)/mu;
+    const qui: string[] = [];
     const coupables: string[] = [];
 
     for (const { nom, chemin } of A_SCANNER) {
       if (!chemin.endsWith('.css')) continue;
       const css = sansCommentaires(readFileSync(chemin, 'utf8'));
 
-      // 1. Le fil, et lui seul, peut avoir un défilement vertical.
       for (const bloc of css.matchAll(/\.([\w-]+)\s*\{([^}]*)\}/gu)) {
         const classe = bloc[1];
         const corps = bloc[2];
         if (classe === undefined || corps === undefined) continue;
-        if (!/overflow-y\s*:\s*(?:auto|scroll)/u.test(corps)) continue;
-        if (classe === 'dz-fil' || classe.startsWith('dz-fenetre')) continue;
-        if (verticaux.includes(classe)) {
-          coupables.push(`${nom} — .${classe} défile verticalement`);
-        }
-      }
 
-      // 2. Aucun défilement horizontal, nulle part.
-      for (const bloc of css.matchAll(/\.([\w-]+)\s*\{([^}]*)\}/gu)) {
-        const classe = bloc[1];
-        const corps = bloc[2];
-        if (classe === undefined || corps === undefined) continue;
+        // 1. Qui défile verticalement, où que ce soit.
+        if (DEFILEMENT_VERTICAL.test(corps)) qui.push(classe);
+
+        // 2. Aucun défilement horizontal, nulle part.
         if (/overflow-x\s*:\s*(?:auto|scroll)/u.test(corps)) {
           coupables.push(`${nom} — .${classe} défile latéralement`);
         }
       }
     }
 
+    // LE TABLEAU EXACT, et les trois lignes qui le composent :
+    //   - `fr-fil`  : le fil du PRODUIT. C'est lui, la règle.
+    //   - `dz-fil`  : le même fil, dessiné dans la vitrine `/design`.
+    //   - `dz-fenetre__corps` : le corps d'une fenêtre REDIMENSIONNABLE de la
+    //     vitrine, qu'on tire à la main pour comparer des maquettes. Ce n'est
+    //     pas un écran de jeu, et son cadre est l'objet même de la
+    //     démonstration.
+    expect([...new Set(qui)].sort()).toEqual(['dz-fenetre__corps', 'dz-fil', 'fr-fil']);
     expect(coupables).toEqual([]);
+  });
+
+  it('le fil ET les colonnes latérales ont un plafond, par le même jeton', () => {
+    // LE DÉFAUT QUE LE PLAFOND DU FIL NE COUVRAIT PAS. Le fil a cessé de
+    // pousser la page (correction 1) ; une FICHE longue le pouvait encore,
+    // parce que la borne ne visait que `.fr-fil`. Une colonne sans plafond
+    // rallonge la surface de jeu, et l'écran redevient plus haut que l'écran.
+    //
+    // On exige donc les DEUX règles, et le MÊME jeton dans les deux : deux
+    // plafonds différents pour deux colonnes côte à côte seraient deux
+    // décisions là où il n'y en a qu'une.
+    const css = sansCommentaires(readFileSync(join(STYLES, 'table.css'), 'utf8'));
+    const plafonds = [...css.matchAll(/([^{}]+)\{([^}]*max-height[^}]*)\}/gu)].map((bloc) => ({
+      selecteur: (bloc[1] ?? '').trim(),
+      jeton: /max-height\s*:\s*var\((--[\w-]+)\)/u.exec(bloc[2] ?? '')?.[1] ?? null,
+    }));
+
+    const cibles = plafonds.map((plafond) => plafond.selecteur).sort();
+    expect(cibles).toEqual([
+      ".fr-table[data-largeur='assise'] .fr-fil",
+      ".fr-table[data-largeur='assise'] .fr-rail",
+    ]);
+
+    // Le même jeton pour les deux, et il existe vraiment dans `tokens.css`.
+    expect([...new Set(plafonds.map((plafond) => plafond.jeton))]).toEqual(['--ecran-fil-hauteur']);
+    expect(jetons.has('--ecran-fil-hauteur')).toBe(true);
   });
 
   it('la hauteur d’une vignette vient d’un jeton nommé, pas d’une marche', () => {

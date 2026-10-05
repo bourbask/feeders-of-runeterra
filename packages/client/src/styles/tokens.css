@@ -81,6 +81,14 @@
 :root {
   --fond: var(--p-glace-900);
   --fond-panneau: var(--p-glace-800);
+
+  /* LA SURFACE DE JEU. Un aplat posé sous les colonnes, plus sombre que la
+   * page, qui dit « ici on joue » et qui tiendra l'inventaire physique. Elle
+   * emprunte la primitive de vignette — « jamais en fond de PAGE » : ce n'est
+   * pas la page, c'est un cadre posé dessus, et le fond de page reste visible
+   * tout autour. L'écart avec `--fond` est de 1,07 en mode clair : discret,
+   * mesuré, et c'est ce que le porteur a demandé à pouvoir juger à l'œil. */
+  --fond-jeu: var(--p-glace-1000);
   --surface-haute: var(--p-glace-700);
   --trait: var(--p-glace-600);
   --trait-fort: var(--p-glace-500);
@@ -104,11 +112,18 @@
   --ame-aplat: var(--p-brume-400);
   --vivres-aplat: var(--p-ambre-500);
 
-  /* La portée d'un bloc du fil. Ce sont les SEULES couleurs de portée, et
-   * elles ne sont jamais seules : glyphe et indentation les redoublent
-   * (05-interface.md règle 2). */
+  /* La portée d'un bloc du fil. TROIS teintes depuis l'arbitrage du 5 octobre,
+   * et non deux : le groupe et le personnel ne partagent plus la leur. Elles ne
+   * sont jamais seules — glyphe, indentation, trait plein ou pointillé et
+   * libellé en toutes lettres les redoublent (05-interface.md règle 2), et le
+   * rendu sans couleur de `screens.test.tsx` le prouve en les arrachant toutes.
+   *
+   * `--portee-personnelle` partage sa primitive avec `--annule` : c'est
+   * exactement ce que l'étage 1 sert à faire (§1.1), deux rôles sur une valeur
+   * plutôt qu'une vingt-troisième teinte au budget. */
   --portee-publique: var(--p-azure-500);
   --portee-restreinte: var(--p-violet-300);
+  --portee-personnelle: var(--p-braise-300);
 }
 
 /* ---------------------------------------------------------------------------
@@ -174,4 +189,12 @@
      structurelle, c'est exactement le genre de raccourci qui fait qu'un jour la
      maquette déborde de son cadre et recouvre la section d'après. */
   --vignette-hauteur: 34rem;
+
+  /* LA HAUTEUR MAXIMALE DU FIL. Le fil est le seul contenu borné par le temps
+     et non par la place : sans plafond il pousse la page sans fin et chasse la
+     saisie hors de l'écran. `min()` prend la plus petite des deux — une part de
+     la fenêtre, et un plafond absolu pour qu'un écran 4K ne donne pas une
+     colonne de texte haute d'un mètre. Ce n'est pas une marche de l'échelle
+     d'espacement : c'est un CADRE, donc elle a un nom (`tokens.test.ts`). */
+  --ecran-fil-hauteur: min(58vh, 620px);
 }

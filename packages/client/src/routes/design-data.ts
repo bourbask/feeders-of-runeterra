@@ -54,6 +54,7 @@ export const PRIMITIVES: readonly Jeton[] = [
 export const SEMANTIQUE: readonly Jeton[] = [
   { nom: '--fond', role: 'fond de page' },
   { nom: '--fond-panneau', role: 'fond de panneau' },
+  { nom: '--fond-jeu', role: 'la surface de jeu, sous les colonnes' },
   { nom: '--surface-haute', role: 'panneau posé sur panneau, survol' },
   { nom: '--trait', role: 'bordure de panneau — décoratif, sous 3:1 assumé' },
   { nom: '--trait-fort', role: 'anneau de focus' },
@@ -71,6 +72,7 @@ export const SEMANTIQUE: readonly Jeton[] = [
   { nom: '--vivres-aplat', role: 'remplissage de la jauge des vivres' },
   { nom: '--portee-publique', role: 'rail actif d’un bloc visible par toute la table' },
   { nom: '--portee-restreinte', role: 'rail actif d’un bloc visible par un sous-ensemble' },
+  { nom: '--portee-personnelle', role: 'rail actif d’un bloc visible par toi seul' },
 ];
 
 export const ECHELLES: readonly Jeton[] = [
@@ -109,6 +111,7 @@ export const ECHELLES: readonly Jeton[] = [
   { nom: '--seuil-tiroir-carnet', role: '43,75rem — en dessous, le carnet part en tiroir' },
   { nom: '--seuil-tiroir-tout', role: '35rem — en dessous, plus aucune colonne latérale' },
   { nom: '--vignette-hauteur', role: '34rem — la hauteur d’une maquette dans la vitrine' },
+  { nom: '--ecran-fil-hauteur', role: 'min(58vh, 620px) — le plafond du fil, à pleine largeur' },
 ];
 
 /** L'ordre de sacrifice du §4.2. Cinq rangs, et un seul est un point de rupture

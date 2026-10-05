@@ -1,7 +1,9 @@
+import type { TableStateDto } from '@for/contracts';
 import type { EventScope } from '@for/engine';
 import type { ReactNode } from 'react';
 
 import type { PresenceMember } from '../../ws/store.js';
+import { enumerer, groupeDe, phraseDesManquants } from './destinataires.js';
 import { PORTEES_ORDONNEES, porteeVue } from './portee.js';
 
 /**
@@ -28,12 +30,25 @@ import { PORTEES_ORDONNEES, porteeVue } from './portee.js';
  * `Destinataire.test.tsx` asserts the absence by counting the text inputs in
  * the rendered list.
  *
+ * YOU ALWAYS KNOW WHO WILL READ IT, BEFORE YOU SEND (correction 8). Under the
+ * three positions, in letters: « Lu par Kevin, Théo ». Not a count, names — and
+ * the group's MECHANICAL KEY beside them, so that « this group » means the same
+ * group it meant two blocks ago in the feed (`destinataires.ts`).
+ *
  * WHAT THE PROTOCOL DOES NOT GIVE, AND WHAT THIS DOES ABOUT IT.
  * `s2c.presence` carries `playerId` and `characterId`, and NO display name
- * (`contracts/src/ws/s2c.ts`). A list of twenty-six-character ids is a list
- * nobody ticks correctly. This component shows what it has and says so in
- * place; it does NOT mint a name. Widening the contract is the server's call,
- * not the mirror's (invariant 3). Reported, not worked around.
+ * (`contracts/src/ws/s2c.ts`). A name is therefore JOINED — presence gives the
+ * character, the snapshot gives its `displayName` — and a recipient the join
+ * misses has NO name, which this component writes out instead of printing an
+ * id inside a sentence. It does NOT mint one. Widening the contract is the
+ * server's call, not the mirror's (invariant 3), and the group's own durable
+ * identity is issue 116. Reported, not worked around.
+ *
+ * NO `#` BEFORE THAT NUMBER, AND IT IS NOT A TYPO. `tokens.test.ts` forbids a
+ * hard-coded colour by matching `#` followed by three to eight hex digits, in
+ * the RAW file — comments included. Three digits after a hash is three hex
+ * digits, so the issue number is written without one. The guard is
+ * right to be blunt and the cost of obeying it is one character.
  */
 
 /**
@@ -66,6 +81,8 @@ export function ListeDestinataires(props: {
   readonly presents: readonly PresenceMember[];
   readonly choisis: readonly string[];
   readonly onChoisis: (choisis: readonly string[]) => void;
+  /** The snapshot, where a character's `displayName` lives. */
+  readonly table?: TableStateDto | null;
 }): ReactNode {
   if (props.presents.length === 0) {
     return (
@@ -90,7 +107,9 @@ export function ListeDestinataires(props: {
                   );
                 }}
               />{' '}
-              {membre.characterId ?? membre.playerId}
+              {groupeDe([membre.playerId], props.presents, props.table ?? null).noms[0] ??
+                membre.characterId ??
+                membre.playerId}
             </label>
           </li>
         ))}
@@ -117,6 +136,8 @@ export function Destinataire(props: {
   /** The player has read the warning and still wants to send. */
   readonly declassificationAcceptee: boolean;
   readonly onAccepterDeclassification: (accepte: boolean) => void;
+  /** The snapshot, where a character's `displayName` lives. */
+  readonly table?: TableStateDto | null;
 }): ReactNode {
   const avertissement = avertissementDeclassification(props.porteeDuBloc, props.portee);
 
@@ -179,5 +200,54 @@ export function Destinataire(props: {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * « Lu par … », UNDER THE FIELD and before the send (correction 8).
+ *
+ * Under the FIELD and not under the three positions, which is where it first
+ * landed and where it was wrong: the sentence answers « qui va lire ce que je
+ * viens d'écrire », so it belongs beside the send button, at the moment one
+ * reaches for it — not above, where it is read before there is anything to
+ * send. `Compositeur` places it; this file only knows how to word it.
+ *
+ * THE THREE SCOPES ANSWER THE SAME QUESTION. A player must never have to
+ * deduce who reads him from which radio is lit: the sentence is written for
+ * all three, and for a group it carries the names AND the mechanical key.
+ */
+export function LuPar(props: {
+  readonly portee: EventScope;
+  readonly presents: readonly PresenceMember[];
+  readonly choisis: readonly string[];
+  readonly table: TableStateDto | null;
+}): ReactNode {
+  if (props.portee === 'table') {
+    return <p className="fr-destinataire__lu">Lu par toute la table.</p>;
+  }
+  if (props.portee === 'private') {
+    return <p className="fr-destinataire__lu">Lu par toi seul.</p>;
+  }
+
+  if (props.choisis.length === 0) {
+    return (
+      <p className="fr-destinataire__lu">Personne n’est coché : ce message n’a aucun lecteur.</p>
+    );
+  }
+
+  const groupe = groupeDe(props.choisis, props.presents, props.table);
+  const manquants = phraseDesManquants(groupe);
+
+  return (
+    <p className="fr-destinataire__lu">
+      {groupe.noms.length === 0 ? 'Lu par ' : `Lu par ${enumerer(groupe.noms)}`}
+      {groupe.noms.length === 0 ? (
+        <span>{String(groupe.membres.length)} joueur(s)</span>
+      ) : null}{' '}
+      <span className="fr-destinataire__cle" title={groupe.membres.join(' ')}>
+        ({groupe.cle})
+      </span>
+      {manquants === null ? null : <span className="fr-destinataire__manque"> · {manquants}</span>}
+    </p>
   );
 }
