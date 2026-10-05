@@ -15,7 +15,7 @@ import { CharacterPicker } from './routes/CharacterPicker.js';
 import { DesignShowcase } from './routes/DesignShowcase.js';
 import { Login } from './routes/Login.js';
 import { TableRoom } from './routes/TableRoom.js';
-import { parseRoute } from './routes/route.js';
+import { parseRoute, type Route } from './routes/route.js';
 import { TableStoreProvider } from './ws/context.js';
 import type { SocketHandle } from './ws/socket.js';
 import { connect, openBrowserSocket } from './ws/socket.js';
@@ -161,8 +161,21 @@ export function App(props: { readonly http: HttpDeps }): ReactNode {
   );
 }
 
+/**
+ * LE TYPE DE `route` EXCLUT `design`, ET CE N'EST PAS UN DÉTAIL.
+ *
+ * `App` traite `design` AVANT le portillon de session et rend la main. Tant que
+ * le `switch` vivait dans `App`, TypeScript le savait et refusait un `case
+ * 'design'` devenu inatteignable. Sorti dans ce composant, il ne le sait plus :
+ * `design` redevient un cas possible, et un `switch` qui ne le couvre pas ne
+ * rend rien — `TS7030`, mesuré sur `develop` le 5 octobre.
+ *
+ * L'exclure ICI rend les deux intentions compatibles : aucun `case 'design'` à
+ * écrire, et un nom ajouté à `Route` sans être traité fait toujours échouer la
+ * compilation. C'est le mécanisme que la PR 104 voulait, préservé.
+ */
 function Ecran(props: {
-  readonly route: ReturnType<typeof parseRoute>;
+  readonly route: Exclude<Route, { readonly nom: 'design' }>;
   readonly me: MeResponse;
   readonly http: HttpDeps;
 }): ReactNode {
@@ -174,7 +187,7 @@ function Ecran(props: {
         <CharacterPicker campaignId={props.route.campaignId} personnages={props.me.characters} />
       );
     case 'campagnes':
-      return <CampaignList campagnes={me.data.campaigns} />;
+      return <CampaignList campagnes={props.me.campaigns} />;
     // Pas de `case 'design'` : le retour plus haut a déjà narrowed le type, et
     // TS le refuse ici. C'est le mécanisme qu'on veut — un nom ajouté à `Route`
     // sans être traité fait échouer la compilation, qu'on l'ait oublié avant ou

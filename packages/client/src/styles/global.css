@@ -113,7 +113,7 @@ body {
   justify-content: flex-end;
   gap: 0.75rem;
   padding: 0.5rem 1rem;
-  border-bottom: 1px solid var(--trait);
+  border-bottom: var(--filet-fin) solid var(--trait);
 }
 
 .fr-entete__joueur {
