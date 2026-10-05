@@ -1,0 +1,1087 @@
+/*
+ * La vitrine `/design`. Le CSS de la maquette, dans le produit.
+ *
+ * Pourquoi la maquette n'est pas dans `docs/` : une maquette en HTML/CSS rangée
+ * dans un dossier dérive du produit dès qu'on ne la regarde plus, parce que rien
+ * ne la oblige à compiler. Ici, elle échoue si un jeton change de nom, et elle
+ * montre les mêmes composants que la table.
+ *
+ * CE FICHIER EST UN MODÈLE, PAS LE PRODUIT. Il montre des états, des colonnes
+ * et des calques qui n'existent pas encore dans `features/table/`. Il ne les
+ * annonce pas : il les dessine pour qu'on puisse les juger avant de les écrire.
+ *
+ * AUCUNE VALEUR EN DUR ICI NI AILLEURS. `tokens.test.ts` lit ce fichier comme il
+ * lit les autres : il refuse toute couleur écrite, toute longueur en pixel, et
+ * toute référence directe à une primitive d'étage 1. Ce qui n'est pas dans
+ * `tokens.css` n'a pas le droit d'apparaître.
+ */
+
+/* ------------------------------------------------------------------ page --- */
+
+.dz {
+  max-width: var(--ecran-large);
+  margin: 0 auto;
+  padding: var(--e-6) var(--e-5) var(--e-12);
+}
+
+.dz-entete {
+  border-bottom: var(--filet-large) solid var(--accent);
+  padding-bottom: var(--e-5);
+  margin-bottom: var(--e-8);
+}
+
+.dz-entete h1 {
+  font-family: 'Iowan Old Style', Georgia, serif;
+  font-size: var(--t-ecran);
+  line-height: 1.2;
+  margin: 0 0 var(--e-2);
+}
+
+.dz-entete p {
+  margin: 0 0 var(--e-2);
+  color: var(--texte-discret);
+  max-width: var(--ecran-lecture);
+}
+
+.dz-surtitre {
+  font-size: var(--t-micro);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texte-discret);
+  margin: 0 0 var(--e-2);
+}
+
+.dz-avertissement {
+  background: var(--annule-aplat);
+  border-left: var(--filet-large) solid var(--annule);
+  padding: var(--e-3) var(--e-4);
+  border-radius: var(--r-s);
+  max-width: var(--ecran-lecture);
+  margin: var(--e-5) 0 0;
+}
+
+.dz-section {
+  margin-bottom: var(--e-10);
+}
+
+.dz-section > h2 {
+  font-family: 'Iowan Old Style', Georgia, serif;
+  font-size: var(--t-titre);
+  margin: 0 0 var(--e-2);
+  padding-bottom: var(--e-2);
+  border-bottom: var(--filet-fin) solid var(--trait);
+}
+
+.dz-section > h3 {
+  font-size: var(--t-petit);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--texte-discret);
+  margin: var(--e-7) 0 var(--e-3);
+}
+
+.dz-lede,
+.dz-note {
+  color: var(--texte-discret);
+  max-width: var(--ecran-lecture);
+  margin: 0 0 var(--e-4);
+  font-size: 0.9rem;
+}
+
+.dz-lede {
+  color: var(--texte);
+  font-size: 1rem;
+}
+
+/* ----------------------------------------------------------- les jetons --- */
+
+.dz-jetons {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: var(--e-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dz-jeton {
+  background: var(--fond-panneau);
+  border: var(--filet-fin) solid var(--trait);
+  border-radius: var(--r-m);
+  overflow: hidden;
+}
+
+.dz-jeton__teinte {
+  height: var(--e-7);
+  /* La teinte est posée par l'élément, en `style`, avec un jeton : le composant
+     ne décide pas d'une couleur, il en choisit une. */
+}
+
+.dz-jeton__corps {
+  padding: var(--e-3);
+}
+
+.dz-jeton__nom {
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+  font-size: var(--t-petit);
+  color: var(--texte);
+  margin: 0 0 var(--e-1);
+}
+
+.dz-jeton__valeur {
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+  font-size: var(--t-micro);
+  color: var(--texte-discret);
+  margin: 0;
+}
+
+/* Une pastille de texte : la seule façon de vérifier un contraste, c'est de
+   voir le texte. Un carré de couleur ne prouve rien sur la lisibilité. */
+.dz-pastille-texte {
+  display: inline-block;
+  padding: var(--e-2) var(--e-3);
+  border-radius: var(--r-s);
+  background: var(--fond);
+  border: var(--filet-fin) solid var(--trait);
+  margin: 0 var(--e-2) var(--e-2) 0;
+}
+
+.dz-paires {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+/* ------------------------------------------------------ le tableau (§4) --- */
+
+.dz-largeur {
+  margin-bottom: var(--e-8);
+}
+
+.dz-largeur > figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-3);
+  align-items: baseline;
+  font-size: var(--t-petit);
+  color: var(--texte-discret);
+  margin-bottom: var(--e-2);
+}
+
+.dz-largeur > figcaption strong {
+  color: var(--texte);
+  font-size: var(--t-base);
+}
+
+/* La vignette : le cadre dans lequel la table est dessinée. Elle borne la
+   HAUTEUR, parce que le ruban central se réfère à `100%` — sans hauteur ici,
+   « le fil occupe le reste » n'a pas de reste, et le compositeur repart en
+   pied de pile.
+
+   `overflow: hidden` n'est pas là pour masquer un débordement : c'est la
+   VACHER, la garde-fou. Le tableau est un ruban à hauteur fixe ; si son
+   contenu dépasse, il est tronqué dans le cadre au lieu de recouvrir la
+   section qui suit. Un cadre qui laisse déborder est le bug le plus laid
+   possible dans une page de documentation, parce qu'il rend tout le reste
+   illisible sans qu'aucune erreur n'apparaisse. */
+.dz-vignette {
+  border: var(--filet-fin) solid var(--trait);
+  border-radius: var(--r-m);
+  background: var(--fond);
+  padding: var(--e-2);
+  height: var(--vignette-hauteur);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* La déclaration de mise en page du §4.1, à l'identique. Trois pistes, dont
+   deux élastiques, tous les planchers à `0rem`. */
+.dz-table {
+  display: grid;
+  grid-template-columns:
+    [gauche] minmax(0rem, 1fr)
+    [centre] minmax(0rem, var(--ecran-lecture))
+    [droite] minmax(0rem, 1.15fr);
+  gap: var(--e-5);
+  font-size: 0.8rem;
+  /* La grille REMPLIT la vignette, et ses cellules aussi. Sans ça, le ruban
+     central n'a pas de hauteur et le compositeur n'est ancré à rien.
+     `min-width: 0` empêche la grille de s'élargir sous le contenu de ses
+     cellules — c'est ce qui produit un défilement horizontal quand un nom
+     d'objet est plus long que sa colonne. */
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+}
+
+/* Une colonne latérale : UNE colonne, qui porte deux choses empilées — ce qui
+   vous concerne (la fiche) et ce que vous portez (l'inventaire). Ce n'est pas
+   une marge autour d'un panneau : c'est une colonne, et elle se lit de haut en
+   bas comme la colonne centrale.
+ *
+ * Elle prend EXACTEMENT la hauteur de la vignette, ni plus ni moins, et elle ne
+   défile pas.
+ *
+ * `min-height: 0` suffit, et c'est tout ce qu'il faut : il autorise la cellule
+ * à descendre sous la hauteur de son contenu, ce qui empêche la grille de
+ * grandir — sans quoi le ruban central perd sa hauteur et son compositeur
+ * repart en pied de pile.
+ *
+ * Pas de `overflow`. Une barre de défilement par colonne est un défaut, pas une
+ * fonctionnalité : la fiche et l'inventaire sont courts, et quand ils ne le
+ * sont pas, la colonne doit se comprimer ou le cadre rogner — jamais faire
+ * défiler une information qui tient sur un écran. Le SEUL élément qui défile
+ * dans toute la maquette est le fil, parce que c'est le seul qui soit borné par
+ * le temps et pas par la place. */
+.dz-cellule {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Le rail. Il REMPLIT sa colonne, et ne déborde jamais : `min-width: 0` est ce
+   qui l'autorise à rétrécir sous la largeur de son contenu. Sans lui, une
+   longue liste d'atouts déborde et crée un défilement horizontal — le défaut
+ * exact qu'on veut éviter. `width: 100%` plutôt qu'une largeur fixe : la
+   colonne décide, le rail occupe. */
+.dz-rail {
+  flex: 0 0 auto;
+  width: 100%;
+  background: var(--fond-panneau);
+  border: var(--filet-fin) solid var(--trait);
+  border-radius: var(--r-m);
+  padding: var(--e-3);
+  min-width: 0;
+}
+
+/* Les deux colonnes n'ont pas la même largeur : la droite porte la table ET
+   l'inventaire partagé, donc elle est plus large.
+
+   Ce sont des `max-width`, pas des `width`. La différence est tout le défaut
+   que tu as signalé : une largeur FIXE force la colonne à s'étendre au-delà de
+   ce que la grille lui donne, et la grille déborde. Un `max-width` dit « pas
+   plus large que ça » et laisse la colonne se loger dans la place disponible —
+   donc la colonne prend bien la hauteur et la largeur de l'écran, sans
+   jamais faire défiler. */
+.dz-rail--gauche {
+  max-width: var(--rail-gauche);
+}
+
+.dz-rail--droite {
+  max-width: var(--rail-droite);
+}
+
+/* L'inventaire. Il est DANS la colonne latérale, sous la fiche — pas dans une
+   bande étroite entre le panneau et le bord de l'écran. Une bande de trois
+   centimètres ne peut pas porter une carte, un nom, ni une quantité : elle
+   force à rétrécir, et elle fait de l'inventaire une décoration. */
+.dz-inventaire {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  background: var(--fond-panneau);
+  border: var(--filet-fin) solid var(--trait);
+  border-radius: var(--r-m);
+  padding: var(--e-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+  /* Le contenu long se BRISE au lieu d'élargir la colonne. `overflow-wrap`
+     plutôt que `word-break` : « Le Cœur de Freljord » doit pouvoir couper
+     après un espace, pas au milieu d'un mot. */
+  overflow-wrap: break-word;
+}
+
+/* La colonne centrale. C'est un RUBAN, pas une pile : le fil prend toute la
+   hauteur qui reste et SEUL scrolle, le compositeur est ancré en bas et ne bouge
+   jamais. C'est ce que la colonne doit faire — un ruban qui défile, pas une
+   pile où le champ descend avec le texte. */
+.dz-centre {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+  min-height: 0;
+  max-height: 100%;
+}
+
+.dz-centre__titre {
+  font-size: var(--t-micro);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texte-discret);
+  text-align: center;
+  flex: 0 0 auto;
+}
+
+.dz-titre-rail {
+  font-size: var(--t-micro);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texte-discret);
+  margin: 0 0 var(--e-2);
+}
+
+.dz-liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.8rem;
+}
+
+.dz-liste > li {
+  padding: var(--e-1) 0;
+  border-bottom: var(--filet-fin) solid var(--trait);
+}
+
+.dz-liste > li:last-child {
+  border-bottom: none;
+}
+
+.dz-compteur {
+  float: right;
+  color: var(--texte-discret);
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+}
+
+/* La présence. Un joueur en ligne et un joueur parti ne se distinguent pas par
+   la couleur seule : le libellé le dit (« en ligne », « parti depuis 4 min »),
+   la pastille ne fait que confirmer. */
+.dz-presence__pastille {
+  display: inline-block;
+  width: var(--e-2);
+  height: var(--e-2);
+  border-radius: 50%;
+  background: var(--trait-fort);
+  vertical-align: middle;
+  margin-right: var(--e-1);
+}
+
+.dz-presence__pastille--en-ligne {
+  background: var(--succes);
+}
+
+/* Les cinq paliers du §4.2. Ils ne sont pas des media queries : ce sont des
+   arrangements du MÊME composant, et c'est ce que la maquette montre. */
+.dz-table--tiroir-gauche {
+  grid-template-columns: [tiroir] minmax(0rem, var(--rail-droite)) [centre] minmax(0rem, 1fr);
+}
+
+.dz-table--tiroir-droit {
+  grid-template-columns: [centre] minmax(0rem, 1fr) [tiroir] minmax(0rem, var(--rail-gauche));
+}
+
+.dz-table--portable {
+  grid-template-columns: minmax(0rem, 1fr);
+}
+
+/* Le bandeau des trois jauges, en haut, sur portable. C'est la seule chose qui
+   sort du tiroir : les trois jauges doivent être lisibles sans rien ouvrir. */
+.dz-bandeau-jauges {
+  display: flex;
+  gap: var(--e-3);
+  align-items: center;
+  background: var(--fond-panneau);
+  border: var(--filet-fin) solid var(--trait);
+  border-radius: var(--r-m);
+  padding: var(--e-2) var(--e-3);
+  margin-bottom: var(--e-3);
+}
+
+.dz-bouton-tiroir {
+  font: inherit;
+  font-size: var(--t-petit);
+  display: flex;
+  align-items: center;
+  gap: var(--e-2);
+  width: 100%;
+  background: var(--fond-panneau);
+  border: var(--filet-fin) solid var(--accent);
+  border-radius: var(--r-s);
+  color: var(--texte);
+  padding: var(--e-2) var(--e-3);
+  cursor: pointer;
+  text-align: left;
+}
+
+.dz-bouton-tiroir[aria-expanded='true'] {
+  background: var(--accent-aplat);
+}
+
+.dz-glyphes {
+  display: flex;
+  gap: var(--e-2);
+  margin-left: auto;
+  color: var(--texte-discret);
+}
+
+.dz-rangee-tiroirs {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--e-3);
+  margin-bottom: var(--e-3);
+}
+
+/* ---------------------------------------------------------- le fil (§5) --- */
+
+/* Le fil. C'est la SEULE chose de la colonne qui scrolle : `flex: 1 1 0` le
+   force à occuper la hauteur restante, `min-height: 0` l'autorise à descendre
+   en dessous de son contenu (sans ça un navigateur refuse de faire défiler un
+   enfant flexible), et `overflow-y` fait le reste. */
+.dz-fil {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.dz-bloc {
+  border-left: var(--filet-large) solid var(--portee-publique);
+  padding: var(--e-2) 0 var(--e-2) var(--e-3);
+  min-width: 0;
+}
+
+.dz-bloc--restreinte {
+  border-left-color: var(--portee-restreinte);
+}
+
+.dz-bloc--erreur {
+  border-left-color: var(--annule);
+}
+
+.dz-bloc__qui {
+  display: flex;
+  gap: var(--e-2);
+  align-items: baseline;
+  font-size: var(--t-micro);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--texte-discret);
+  margin-bottom: var(--e-1);
+}
+
+.dz-portee {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-1);
+  /* La couleur ne porte jamais seule la portée : glyphe + libellé la doublent
+     toujours (règle 2). */
+  color: var(--portee-publique);
+}
+
+.dz-portee--restreinte {
+  color: var(--portee-restreinte);
+}
+
+.dz-texte-narration {
+  font-family: 'Iowan Old Style', Georgia, serif;
+  font-size: var(--t-lecture);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.dz-chrome {
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  font-size: 0.8rem;
+  color: var(--texte-discret);
+  margin: var(--e-1) 0 0;
+}
+
+.dz-bandeau {
+  background: var(--annule-aplat);
+  border-radius: var(--r-s);
+  padding: var(--e-2) var(--e-3);
+  color: var(--annule);
+  font-size: 0.8rem;
+}
+
+.dz-bandeau--succes {
+  background: var(--accent-aplat);
+  color: var(--succes);
+}
+
+/* -------------------------------------------------------- les jauges (§6) --- */
+
+.dz-jauge {
+  margin-bottom: var(--e-3);
+}
+
+.dz-jauge__ligne {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: var(--t-petit);
+  margin-bottom: var(--e-1);
+}
+
+.dz-jauge__valeur {
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+  color: var(--texte);
+}
+
+.dz-jauge__valeur--vide {
+  color: var(--texte-discret);
+}
+
+/* Des pastilles, pas une barre. La jauge est une POSITION : « il en reste
+   quatorze sur vingt » se lit sur une suite de marques, pas sur une longueur
+   de rectangle à comparer à une autre. */
+.dz-jauge__tube {
+  display: flex;
+  gap: var(--e-1);
+  height: var(--e-3);
+}
+
+.dz-jauge__pastille {
+  flex: 1 1 0;
+  background: var(--trait);
+  border-radius: var(--e-1);
+}
+
+/* Une teinte par jauge, en aplat. La valeur est écrite à côté, en texte : un
+   aplat sans nombre est une forme décorative, et c'est la règle 2 appliquée à
+   une jauge. */
+.dz-jauge--vigueur .dz-jauge__pastille--pleine {
+  background: var(--vigueur-aplat);
+}
+
+.dz-jauge--ame .dz-jauge__pastille--pleine {
+  background: var(--ame-aplat);
+}
+
+.dz-jauge--vivres .dz-jauge__pastille--pleine {
+  background: var(--vivres-aplat);
+}
+
+/* Sans couleur, il ne reste que la FORME et le NOMBRE — et c'est la démonstration
+   qui compte : ce qui survit à la suppression de la teinte est exactement ce
+   qu'on peut afford de perdre. */
+.dz-jauge--sans-couleur .dz-jauge__pastille--pleine,
+.dz-jauge--sans-couleur .dz-jauge__pastille {
+  background: var(--texte-discret);
+}
+
+.dz-jauge--inactive {
+  opacity: 0.5;
+}
+
+.dz-jauge--inactive .dz-jauge__valeur {
+  color: var(--texte);
+}
+
+.dz-squelette {
+  background: var(--trait);
+  border-radius: var(--r-s);
+  height: var(--e-3);
+}
+
+.dz-jauge--erreur .dz-jauge__tube {
+  border: var(--filet-fin) solid var(--annule);
+  border-radius: var(--e-1);
+  padding: var(--e-1);
+}
+
+/* ----------------------------------------------------- le carnet (§8) --- */
+
+.dz-carnet {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-2);
+}
+
+/* Une carte d'objet. Elle occupe la largeur DISPONIBLE de sa colonne, et rien
+   de plus : pas de `min-width` en dur, parce que deux cartes fixées côte à côte
+   dans un rail ne tiennent pas, et qu'alors la colonne s'élargit et crée un
+   défilement horizontal. `min-width: 0` autorise le nom à se réduire ;
+   `overflow-wrap` l'autorise à se couper. */
+.dz-carte {
+  background: var(--fond-panneau);
+  border: var(--filet-fin) solid var(--trait);
+  border-radius: var(--r-s);
+  padding: var(--e-2) var(--e-3);
+  font-size: var(--t-petit);
+  min-width: 0;
+  overflow-wrap: break-word;
+  cursor: grab;
+}
+
+.dz-carte--survol {
+  background: var(--surface-haute);
+}
+
+.dz-carte--inactive {
+  opacity: 0.5;
+}
+
+.dz-carte__nature {
+  display: block;
+  font-size: var(--t-micro);
+  color: var(--texte-discret);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.dz-carte__nom {
+  display: block;
+  color: var(--texte);
+}
+
+.dz-carte__partage {
+  display: block;
+  font-size: var(--t-micro);
+  margin-top: var(--e-1);
+  color: var(--texte-discret);
+}
+
+.dz-carte__partage--non {
+  color: var(--annule);
+}
+
+/* La quantité, à droite du nom. Un consommable se compte, un outil se possède :
+ * d'où le `1` qui ne s'affiche pas. C'est en texte, jamais en pastilles. */
+.dz-carte__quantite {
+  float: right;
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+  font-size: var(--t-micro);
+  color: var(--texte-discret);
+  margin-left: var(--e-2);
+}
+
+/* Une horloge : une menace nommee, et des segments qui se remplissent. Le
+   dernier segment plein est celui qui declenche - il est traite comme une
+   marche a gravir, pas comme une pastille de plus. */
+.dz-horloge {
+  margin-bottom: var(--e-3);
+}
+
+.dz-horloge__nom {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--e-2);
+  font-size: var(--t-petit);
+  color: var(--texte);
+  margin: 0 0 var(--e-1);
+}
+
+.dz-horloge__compte {
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+  font-size: var(--t-micro);
+  color: var(--texte-discret);
+  white-space: nowrap;
+}
+
+.dz-horloge__segments {
+  display: flex;
+  gap: var(--e-1);
+  height: var(--e-3);
+}
+
+.dz-horloge__segment {
+  flex: 1 1 0;
+  background: var(--trait);
+  border-radius: var(--e-1);
+}
+
+.dz-horloge__segment--plein {
+  background: var(--vigueur-aplat);
+}
+/* La carte ouverte, et sa toile. La toile est une SURFACE DANS LA carte : pas un
+   second panneau, pas de cadre, pas d'en-tête, pas de bouton de fermeture. C'est
+   la seule superposition que ce produit s'autorise (règle 7). */
+.dz-carte-ouverte {
+  background: var(--fond-panneau);
+  border: var(--filet-large) solid var(--accent);
+  border-radius: var(--r-l);
+  padding: var(--e-4);
+  max-width: var(--ecran-lecture);
+  display: grid;
+  grid-template-columns: minmax(0rem, 1fr) minmax(0rem, 1.4fr);
+  gap: var(--e-5);
+}
+
+.dz-carte-ouverte h4 {
+  margin: 0 0 var(--e-2);
+  font-size: var(--t-base);
+}
+
+/* La toile. C'est une zone à contenu libre — on y dessine, donc elle a besoin
+   d'une vraie surface, pas d'une marge empruntée à l'échelle. C'est
+   volontairement la plus grande des deux : une toile de 6cm ne sert à rien. */
+.dz-toile {
+  border: var(--filet-fin) solid var(--trait);
+  border-radius: var(--r-s);
+  background: var(--fond);
+  min-height: var(--vignette-hauteur);
+  padding: var(--e-3);
+  font-size: var(--t-petit);
+  color: var(--texte-discret);
+}
+
+/* La grille de points de la toile. En CSS pur : pas de canvas, pas de
+   bibliothèque, pas de fichier image. Le pas est `--e-4`, le point est un
+   filet. */
+.dz-toile--grille {
+  background-image: radial-gradient(var(--trait) var(--filet-fin), transparent var(--filet-fin));
+  background-size: var(--e-4) var(--e-4);
+}
+
+.dz-trait {
+  border: var(--filet-fin) dashed var(--accent);
+  border-radius: var(--e-1);
+  margin: var(--e-3) 0;
+  height: var(--e-5);
+}
+
+.dz-partage-liste {
+  list-style: none;
+  margin: var(--e-3) 0 0;
+  padding: 0;
+  font-size: var(--t-petit);
+}
+
+.dz-partage-liste > li {
+  display: flex;
+  gap: var(--e-2);
+  align-items: baseline;
+  padding: var(--e-1) 0;
+  border-bottom: var(--filet-fin) solid var(--trait);
+}
+
+.dz-partage-liste > li:last-child {
+  border-bottom: none;
+}
+
+.dz-nature {
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+  color: var(--texte-discret);
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------ fenêtres de contexte (§4.5) --- */
+
+/* Le principlede ces fenêtres, et c'est un choix de JEU :
+ *
+ * 1. ELLES VIVENT ENSEMBLE. Carnet ouvert + carte + le livre trouvé dans la
+ *    maison, où l'on veut copier une note : trois fenêtres, pas trois écrans
+ *    successifs. C'est ce qui rend la scène jouable — on compare deux objets
+ *    côte à côte, on ne les relit pas de mémoire.
+ * 2. ELLES NE PIÈGENT PAS LE FOCUS. Une modale qui enferme le clavier oblige à
+ *    écrire dans la fenêtre, ce qui interdit de lire le fil pendant qu'on écrit
+ *    une note. Ici le focus va à la fenêtre ouverte et RESTE LIBRE : on tabule
+ *    vers le fil, on écrit, on revient. La seule chose qui ne se fait pas, c'est
+ *    cliquer « à travers » une fenêtre pour toucher ce qu'elle couvre.
+ * 3. ELLES SONT DÉPLAÇABLES. Une poignée en haut, un glissement. Deux fenêtres ne
+ *    se superposent jamais complètement : celle qu'on ouvre au premier plan vient
+ *    devant, et l'on voit qu'il y en a une autre en dessous.
+ */
+
+/* Le calque qui accueille les fenêtres. Il ne bloque pas : le fil reste
+   lisible et cliquable autour. Même hauteur que la vignette, pour que les deux
+   maquettes se comparent d'un regard — et `overflow: hidden` en garde-fou, au
+   cas où une fenêtre serait posée trop bas. */
+.dz-calque-demo {
+  position: relative;
+  border: var(--filet-fin) solid var(--trait);
+  border-radius: var(--r-m);
+  background: var(--fond);
+  padding: var(--e-4);
+  height: var(--vignette-hauteur);
+  overflow: hidden;
+}
+
+/* Le voile. `pointer-events: none` : on voit qu'il y a une fenêtre ouverte, on
+   n'est pas forcé de la fermer pour lire le fil. */
+.dz-voile {
+  position: absolute;
+  inset: 0;
+  background: var(--annule-aplat);
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+/* La fenêtre. Absolument positionnée dans le calque, donc déplaçable, et
+   redimensionnable par le coin en bas à droite. */
+.dz-fenetre {
+  position: absolute;
+  background: var(--fond-panneau);
+  border: var(--filet-large) solid var(--trait);
+  border-radius: var(--r-l);
+  box-shadow: var(--e-3) var(--e-3) var(--e-4) var(--trait);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.dz-fenetre--au-plan {
+  border-color: var(--accent);
+  z-index: var(--z-dialogue);
+}
+
+.dz-fenetre--derriere {
+  z-index: var(--z-panneau);
+}
+
+/* La poignée. Toute la barre est la poignée : c'est plus grand qu'un trait de
+   six pixels, et on ne rate pas le glissement. */
+.dz-fenetre__poignee {
+  display: flex;
+  align-items: center;
+  gap: var(--e-2);
+  padding: var(--e-2) var(--e-3);
+  border-bottom: var(--filet-fin) solid var(--trait);
+  cursor: grab;
+  border-radius: var(--r-l) var(--r-l) 0 0;
+  flex: 0 0 auto;
+  user-select: none;
+}
+
+.dz-fenetre__titre {
+  font-size: var(--t-petit);
+  color: var(--texte);
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Le titre de la fenêtre porte l'OBJET, pas une catégorie : « Le carnet de
+   Serys » et non « Modale ». On sait ce qu'on regarde sans le deviner. */
+.dz-fenetre__nature {
+  margin-left: auto;
+  font-size: var(--t-micro);
+  color: var(--texte-discret);
+  white-space: nowrap;
+}
+
+.dz-fenetre__fermer {
+  font: inherit;
+  font-size: var(--t-base);
+  line-height: 1;
+  background: transparent;
+  border: var(--filet-fin) solid var(--trait);
+  border-radius: var(--r-s);
+  color: var(--texte-discret);
+  padding: var(--e-1) var(--e-2);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.dz-fenetre__fermer:hover {
+  color: var(--texte);
+  border-color: var(--trait-fort);
+}
+
+.dz-fenetre__corps {
+  padding: var(--e-3);
+  overflow: auto;
+  min-height: 0;
+  font-size: 0.9rem;
+}
+
+/* La poignée de redimensionnement, en bas à droite. */
+.dz-fenetre__tirer {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: var(--e-5);
+  height: var(--e-5);
+  cursor: nwse-resize;
+  border-left: var(--filet-fin) solid var(--trait);
+  border-top: var(--filet-fin) solid var(--trait);
+  border-radius: 0 0 var(--r-l) 0;
+}
+
+/* Un tiroir ne recouvre rien : il prend la place d'une colonne qui n'a plus de
+   place. Ici on le dessine à l'intérieur de la cellule qu'il remplace, avec son
+   bord intérieur visible, pour qu'on ne le confonde pas avec une modale. */
+.dz-tiroir {
+  background: var(--fond-panneau);
+  border: var(--filet-large) solid var(--accent);
+  border-radius: var(--r-m);
+  padding: var(--e-3);
+  min-width: 0;
+}
+
+.dz-tiroir--gauche {
+  border-left: none;
+  border-radius: 0 var(--r-m) var(--r-m) 0;
+}
+
+.dz-tiroir--droit {
+  border-right: none;
+  border-radius: var(--r-m) 0 0 var(--r-m);
+}
+
+.dz-tiroir--bas {
+  border-bottom: none;
+  border-radius: var(--r-m) var(--r-m) 0 0;
+  margin-top: auto;
+}
+
+/* -------------------------------------------------------------- états --- */
+
+.dz-etats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--e-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dz-etat {
+  background: var(--fond-panneau);
+  border: var(--filet-fin) solid var(--trait);
+  border-radius: var(--r-m);
+  padding: var(--e-3);
+  font-size: var(--t-petit);
+}
+
+.dz-etat > h4 {
+  margin: 0 0 var(--e-2);
+  font-size: var(--t-petit);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--texte-discret);
+}
+
+.dz-etat > p {
+  margin: 0 0 var(--e-2);
+}
+
+.dz-etat > p:last-child {
+  margin-bottom: 0;
+}
+
+.dz-etat .fr-bouton {
+  font-size: var(--t-petit);
+  padding: var(--e-1) var(--e-2);
+}
+
+/* Le champ de saisie du compositeur. Ancré en bas, il ne se comprime JAMAIS :
+   `flex: 0 0 auto` dit au navigateur de ne pas le réduire si le fil grandit. */
+.dz-champ {
+  font: inherit;
+  font-size: 0.9rem;
+  background: var(--fond);
+  color: var(--texte);
+  border: var(--filet-fin) solid var(--trait);
+  border-radius: var(--r-s);
+  padding: var(--e-2) var(--e-3);
+  width: 100%;
+  resize: vertical;
+  flex: 0 0 auto;
+}
+
+.dz-champ:focus-visible {
+  outline: var(--filet-fin) solid var(--trait-fort);
+  outline-offset: var(--e-1);
+}
+
+.dz-champ:disabled {
+  opacity: 0.5;
+}
+
+.dz-champ--vide {
+  color: var(--texte-discret);
+  font-style: italic;
+}
+
+/* Le focus. `--trait-fort` est le seul filet qui doit passer 3:1, parce que
+   c'est le seul qui DIT quelque chose (05 §2.2). */
+.dz-focus {
+  border-color: var(--trait-fort);
+  box-shadow: 0 0 0 var(--e-1) var(--trait-fort);
+}
+
+.dz-check {
+  display: flex;
+  gap: var(--e-2);
+  align-items: baseline;
+  font-size: var(--t-petit);
+  padding: var(--e-1) 0;
+}
+
+/* Un texte refusé, dans un panneau : pas un bandeau, pas un calque. Le refus
+   est une information de plus, jamais la seule — et jamais un calque au-dessus
+   d'un autre. */
+.dz-annule {
+  color: var(--annule);
+}
+
+/* ------------------------------------------------------------- tables --- */
+
+.dz-tableau {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--t-petit);
+  margin-bottom: var(--e-4);
+}
+
+.dz-tableau th,
+.dz-tableau td {
+  text-align: left;
+  padding: var(--e-2) var(--e-3);
+  border-bottom: var(--filet-fin) solid var(--trait);
+  vertical-align: top;
+}
+
+.dz-tableau th {
+  color: var(--texte-discret);
+  font-size: var(--t-micro);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 400;
+}
+
+.dz-oui {
+  color: var(--succes);
+}
+
+.dz-non {
+  color: var(--annule);
+}
+
+.dz-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-2);
+  margin-bottom: var(--e-6);
+  padding-bottom: var(--e-3);
+  border-bottom: var(--filet-fin) solid var(--trait);
+}
+
+.dz-navigation a {
+  font-size: var(--t-petit);
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: var(--filet-fin) solid transparent;
+}
+
+.dz-navigation a:hover {
+  border-bottom-color: var(--accent);
+}

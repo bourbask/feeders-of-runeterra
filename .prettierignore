@@ -15,3 +15,9 @@ pnpm-lock.yaml
 # Prettier réindente `meta/*.json` ; le générateur les réécrit ensuite à sa
 # façon, et `format:check` devient rouge après chaque `pnpm db:generate`.
 packages/db/migrations/
+
+# CONTEXTE.md : Prettier n'est pas idempotent dessus, et le dit lui-même —
+# `prettier --debug-check` répond « prettier(input) !== prettier(prettier(input)) ».
+# `format:check` resterait donc rouge quoi qu'on écrive. C'est un compte rendu
+# de conception, pas de la source : il est relu, jamais reformaté.
+CONTEXTE.md

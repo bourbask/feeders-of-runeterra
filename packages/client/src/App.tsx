@@ -10,6 +10,7 @@ import { campaignLogQuery, meQuery } from './api/queries.js';
 import { clientEnv, websocketUrl } from './env.js';
 import { CampaignList } from './routes/CampaignList.js';
 import { CharacterPicker } from './routes/CharacterPicker.js';
+import { DesignShowcase } from './routes/DesignShowcase.js';
 import { Login } from './routes/Login.js';
 import { TableRoom } from './routes/TableRoom.js';
 import { parseRoute } from './routes/route.js';
@@ -107,6 +108,13 @@ export function App(props: { readonly http: HttpDeps }): ReactNode {
   const route = parseRoute(hash);
   const me = useQuery(meQuery(props.http));
 
+  // La vitrine passe AVANT le portillon de session. `useQuery` reste appelé, donc
+  // les hooks restent dans le même ordre, mais rien n'attend : une maquette qu'il
+  // faut connecter pour être vue est une maquette qu'on ne regarde plus.
+  if (route.nom === 'design') {
+    return <DesignShowcase />;
+  }
+
   if (me.isPending) {
     return <p className="fr-vide">Chargement…</p>;
   }
@@ -126,6 +134,10 @@ export function App(props: { readonly http: HttpDeps }): ReactNode {
       return <CharacterPicker campaignId={route.campaignId} personnages={me.data.characters} />;
     case 'campagnes':
       return <CampaignList campagnes={me.data.campaigns} />;
+    // Pas de `case 'design'` : le retour plus haut a déjà narrowed le type, et
+    // TS le refuse ici. C'est le mécanisme qu'on veut — un nom ajouté à `Route`
+    // sans être traité fait échouer la compilation, qu'on l'ait oublié avant ou
+    // après le portillon.
     case 'inconnue':
       return <p className="fr-erreur">Cette page n’existe pas.</p>;
   }
