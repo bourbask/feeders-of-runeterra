@@ -45,7 +45,7 @@ La brûlure, question par question :
 | **Ce que ça fait** | ton élan **remplace** ton score, il ne s'y ajoute pas. |
 | **Ce que ça change** | l'issue elle-même : élan 8 contre des dés de défi de 6 et 7, un **échec** devient une **réussite franche**. |
 | **Ce qui s'applique alors** | les conséquences de la **nouvelle** issue. Le prix de l'échec n'est jamais payé. |
-| **Ce que ça coûte** | le élan retombe à **+2**. Il était à 8 : tu viens de dépenser plusieurs tours d'élan. |
+| **Ce que ça coûte** | l'élan retombe à **+2**. Il était à 8 : tu viens de dépenser plusieurs tours d'élan. |
 | **Quand c'est refusé** | si ton élan ne **dépasse** pas ton score — il n'y aurait rien à gagner — ou s'il est négatif. |
 
 Tant que tu n'as pas répondu, **le tour n'est pas fini** : le mouvement a lancé ses dés, il n'a
@@ -53,7 +53,7 @@ appliqué aucune conséquence. Trois réponses ferment la fenêtre, et rien d'au
 
 | La réponse | Ce qui arrive |
 |---|---|
-| **Je brûle** | le élan remplace le score, l'issue est révisée, et ce sont ses conséquences qui s'appliquent. |
+| **Je brûle** | l'élan remplace le score, l'issue est révisée, et ce sont ses conséquences qui s'appliquent. |
 | **Je garde** | les dés restent tels quels, et les conséquences de l'issue d'origine s'appliquent. |
 | **Tu fais autre chose** | le filet de sécurité : ton action suivante ferme la fenêtre comme un « je garde ». Un onglet fermé ne laisse pas un tour en suspens. |
 

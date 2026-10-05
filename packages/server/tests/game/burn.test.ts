@@ -1,5 +1,5 @@
 /**
- * LA BRÛLURE DU ÉLAN EN DEUX TEMPS, côté serveur.
+ * LA BRÛLURE DE L’ÉLAN EN DEUX TEMPS, côté serveur.
  *
  * Le moteur en livre la mécanique (M0-34). Ce qui se mesure ici est la part du
  * serveur, et elle tient en quatre promesses :
@@ -200,7 +200,7 @@ describe('le second temps : la brûlure réécrit l’issue', () => {
       // LE PRIX DE L'ÉCHEC N'EST JAMAIS PAYÉ.
       expect(journal(table.connection).map((row) => row.type)).not.toContain('roll.price_paid');
 
-      // LE ÉLAN EST DÉPENSÉ AVANT L'EFFET DE L'ISSUE RÉVISÉE : retombe à 2,
+      // L’ÉLAN EST DÉPENSÉ AVANT L'EFFET DE L'ISSUE RÉVISÉE : retombe à 2,
       // puis +1 de la réussite franche.
       const state = loadReplay(table.connection, CAMPAIGN_ID).state;
       expect(state.characters[CHARACTER_ID]?.momentum).toBe(3);
@@ -324,7 +324,7 @@ describe('les deux refus, qui ne sont pas le même refus', () => {
         'narration.player_message',
         'narration.gm_message',
       ]);
-      // Le élan n'a pas été dépensé : `momentum.keep` ne coûte rien.
+      // L’élan n'a pas été dépensé : `momentum.keep` ne coûte rien.
       const state = loadReplay(table.connection, CAMPAIGN_ID).state;
       expect(state.characters[CHARACTER_ID]?.momentum).toBe(9);
     } finally {
@@ -465,7 +465,7 @@ describe('les deux refus, qui ne sont pas le même refus', () => {
  * libre et non un cas limite.
  *
  * `ARCHITECTURE.md` §4.4 : « Ordre du tour : aucun. » La fenêtre s'ouvre dès
- * que le élan dépasse le score, donc deux joueurs l'ont ouverte ensemble à
+ * que l’élan dépasse le score, donc deux joueurs l'ont ouverte ensemble à
  * la première occasion venue. Chercher « la dernière fenêtre du journal »
  * faisait alors répondre le jet de B à la place de celui de A : les DEUX
  * fermetures de A refusées `no_burn_window`, son `move.resolved` jamais écrit,
@@ -544,7 +544,7 @@ describe('deux fenêtres ouvertes à la fois', () => {
       expect(openBurnWindows(table.deps, CAMPAIGN_ID, after)).toEqual([]);
 
       // ET CHACUN A EU SON ISSUE À LUI. A a brûlé : l'échec est devenu une
-      // réussite franche, l'âme reste à 5 et le élan retombe. B a gardé :
+      // réussite franche, l'âme reste à 5 et l’élan retombe. B a gardé :
       // il prend les dégâts de l'échec et n'a rien dépensé.
       const state = loadReplay(table.connection, CAMPAIGN_ID).state;
       expect(state.characters[CHARACTER_ID]?.gauges.ame).toBe(5);

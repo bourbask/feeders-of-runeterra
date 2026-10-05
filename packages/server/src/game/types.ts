@@ -74,7 +74,7 @@ export interface SubmitIntentResult {
    * ADDED BY M0-24, and additively: a `RuleViolation` is NOT an `AppError`.
    * 01-architecture.md section 3.3 keeps the two families apart and
    * `@for/contracts/errors.ts` says in capitals that no error code is a rule
-   * outcome, so "tu n'as pas assez de élan" cannot travel as a server
+   * outcome, so "tu n'as pas assez d’élan" cannot travel as a server
    * error. `accepted: false` is the field that was already here for this case;
    * this is the code that goes with it, and `s2c.rejected` carries either
    * family through `zRejectionCode`.

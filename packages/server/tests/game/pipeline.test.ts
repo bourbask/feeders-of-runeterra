@@ -58,7 +58,7 @@ describe('le chemin d’une intention', () => {
       ]);
       expect(outcome.events.map((event) => event.seq)).toEqual([7, 8, 9, 10]);
 
-      // LES PROJECTIONS. Le élan de la réussite franche est en base, pas
+      // LES PROJECTIONS. L’élan de la réussite franche est en base, pas
       // seulement dans l'état rejoué : la ligne lue ici vient de `characters`.
       const row = table.connection
         .prepare(`SELECT momentum FROM characters WHERE id = ?`)

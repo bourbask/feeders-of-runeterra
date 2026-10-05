@@ -59,7 +59,7 @@ est dans `docs/runbook/verification-m0.md`.
 
 ## Documentation
 
-- `docs/GLOSSAIRE.md` — **commence ici si un mot t'arrête.** Les jauges, le Élan, les serments, mais aussi `c2s.intent`, « miroir », « garde-fou », « corpus doré ». Écrit pour être lu sans connaître le code.
+- `docs/GLOSSAIRE.md` — **commence ici si un mot t'arrête.** Les jauges, l’Élan, les serments, mais aussi `c2s.intent`, « miroir », « garde-fou », « corpus doré ». Écrit pour être lu sans connaître le code.
 
 - `docs/ARCHITECTURE.md` — le document de référence, à lire en premier
 - `docs/design/` — les spécifications de détail
