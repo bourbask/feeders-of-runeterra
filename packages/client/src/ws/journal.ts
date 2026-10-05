@@ -17,9 +17,26 @@
  * THE CLIENT FILTERS NOTHING FOR CONFIDENTIALITY. What arrives has already
  * been judged by the server (ADR 0008): every event it received is one it was
  * entitled to. Sorting prose from mechanics here is presentation, not privacy.
+ *
+ * WHAT UI-01 ADDED, AND WHY IT IS NOT A CRACK IN THE SHAPE. Three fields, none
+ * of which can hold a die, a total, an effect or a price:
+ *
+ *   - `scope` and `recipients` are READ BACK off the envelope the server wrote
+ *     (ADR 0008). The feed needs them to draw the rail of 05-interface.md §5.2,
+ *     and reading them is not filtering: the server already decided who got
+ *     this entry. `recipients` is a list of player ids and never a count of
+ *     anything in the fiction.
+ *   - `hasRoll` says « this entry IS a roll », nothing about its outcome. It is
+ *     what brings « Pourquoi ? » back onto the JETS (05-interface.md §10) after
+ *     M0-19 put it on every line of prose. The dice stay where they were: in
+ *     `s2c.turn_proof`, behind the folded panel.
+ *
+ * `journal.test.ts` still spells the field list out in full letters, so a
+ * fourth field cannot be slipped in beside these three.
  */
 
-import type { GameEvent, GameEventType } from '@for/engine';
+import type { EventScope, GameEvent, GameEventType } from '@for/engine';
+import { GAME_EVENT_TYPES } from '@for/engine';
 
 /** What a line is, for the reader. `mecanique` is displayed by nothing. */
 export type JournalLineKind = 'scene' | 'conteur' | 'joueur' | 'systeme' | 'mecanique';
@@ -46,6 +63,12 @@ export interface JournalLine {
   readonly speaker: string | null;
   /** `null` while the turn holds; set when a `system.reverted` names it. */
   readonly revoked: RevokedMark | null;
+  /** Who this entry was addressed to (ADR 0008). Drawn as the rail, §5.2. */
+  readonly scope: EventScope;
+  /** Player ids, when the scope names some. `null` at table scope. */
+  readonly recipients: readonly string[] | null;
+  /** This entry IS a roll. Says nothing about its outcome. */
+  readonly hasRoll: boolean;
 }
 
 /**
@@ -100,6 +123,22 @@ function speakerOf(event: GameEvent): string | null {
   return null;
 }
 
+/**
+ * The event types that ARE a roll.
+ *
+ * DERIVED FROM THE ENGINE'S OWN CATALOGUE, not retyped beside it: a list
+ * written here would be a second place to forget `roll.presage_drawn`, and
+ * nothing would say so. `journal.test.ts` holds the other end — it spells the
+ * eight names out in full letters and compares them to what this derivation
+ * finds, so a roll type renamed WITHOUT the prefix turns that test red instead
+ * of silently dropping its « Pourquoi ? ».
+ */
+export const ROLL_EVENT_TYPES: readonly GameEventType[] = GAME_EVENT_TYPES.filter((type) =>
+  type.startsWith('roll.'),
+);
+
+const ROLLS = new Set<string>(ROLL_EVENT_TYPES);
+
 /** One received event, turned into one line. Pure, and total over the 71 types. */
 export function lineOfEvent(event: GameEvent, deliverySeq: number): JournalLine {
   const { text, kind } = proseOf(event);
@@ -111,6 +150,9 @@ export function lineOfEvent(event: GameEvent, deliverySeq: number): JournalLine 
     text,
     speaker: speakerOf(event),
     revoked: null,
+    scope: event.scope,
+    recipients: event.recipients,
+    hasRoll: ROLLS.has(event.type),
   };
 }
 

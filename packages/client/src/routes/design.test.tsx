@@ -30,6 +30,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
+import { PORTEES_ORDONNEES } from '../features/table/portee.js';
 import {
   PAIRES_COMPOSANT,
   PAIRES_TEXTE,
@@ -78,6 +79,13 @@ function ratio(mesure: number): string {
  * au-dessus, et c'est ce qui le rend lent. Mesuré : 2,7 s seul, 7,4 s quand
  * `turbo run test` fait tourner onze suites en parallèle. Le défaut de Vitest
  * est 5 s, donc la suite passait seule et tombait sous charge.
+ *
+ * REMESURÉ EN UI-01, parce que la page a gagné une section (§4–§7 au naturel,
+ * les composants du produit importés tels quels) : 13,0 s seule et 14,5 s sous
+ * la même charge pour le fichier entier, le cas le plus lent passant de 2,8 s à
+ * 4,9 s. Le délai est PAR CAS, donc la marge reste d'un facteur six — il n'est
+ * pas touché. Le nombre ci-dessous ne bougera que quand une mesure, et non une
+ * intuition, le demandera.
  *
  * LE DÉLAI N'EST PAS UN CORRECTIF DE CONFORT : rien ici n'attend, il n'y a ni
  * minuterie ni `setTimeout` — c'est du calcul. Un test qui attendrait se
@@ -256,6 +264,29 @@ describe('la vitrine /design', { timeout: 30_000 }, () => {
       expect(screen.getByText(`Règle ${String(regle.numero)}`)).toBeDefined();
       expect(screen.getByText(regle.texte)).toBeDefined();
     }
+  });
+
+  it('importe les composants du produit, et pas seulement leur dessin', () => {
+    // §0.2 : « la maquette vit dans le code ». Depuis UI-01 une partie de la
+    // page EST le produit — `Jauge.tsx`, `Elan.tsx`, `Destinataire.tsx`,
+    // `portee.ts`. Ce test tient cette partie-là : la source de la boucle est
+    // la liste du produit, donc la vider ferait tomber le test au lieu de
+    // rendre la page silencieusement incomplète.
+    render(<DesignShowcase />);
+
+    expect(PORTEES_ORDONNEES).toHaveLength(3);
+    for (const vue of PORTEES_ORDONNEES) {
+      expect(screen.getAllByText(vue.libelle).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(vue.glyphe).length).toBeGreaterThan(0);
+    }
+
+    // La jauge rendue est bien celle du produit : son marqueur de position, en
+    // toutes lettres, est dans les DEUX vignettes — avec et sans teinte.
+    expect(screen.getAllByText('modifiée ce tour')).toHaveLength(2);
+
+    // Et l'avertissement de déclassification est montré dans l'état où un
+    // joueur le rencontre, pas décrit en prose.
+    expect(screen.getByRole('alert').textContent).toContain('Tu réponds en public');
   });
 
   it('ne montre aucun joueur réel : les noms sont écrits en dur', () => {

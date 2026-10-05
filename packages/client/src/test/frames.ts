@@ -136,3 +136,16 @@ export function aTurnProof(overrides: Partial<TurnProofDto> = {}): TurnProofDto 
   };
   return { ...base, ...overrides };
 }
+
+/** `s2c.rejected` — what the server refused, and under which code. */
+export function rejectedFrame(rejection: {
+  readonly intentId: string;
+  readonly code: string;
+  readonly message?: string;
+}): unknown {
+  return frame('s2c.rejected', {
+    intentId: rejection.intentId,
+    code: rejection.code,
+    message: rejection.message ?? 'refusé par le serveur',
+  });
+}

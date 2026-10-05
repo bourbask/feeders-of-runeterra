@@ -1085,3 +1085,19 @@
 .dz-navigation a:hover {
   border-bottom-color: var(--accent);
 }
+
+/* LA DÉMONSTRATION DU §5.3 ET DU §6, en une classe : toute teinte qui porte
+   une information est remplacée par un gris. Ce qui reste lisible est ce qui
+   n'avait pas besoin de la couleur ; ce qui disparaît était porté par elle
+   seule. Aucune valeur en dur — les gris sont des jetons d'étage 2. */
+.dz-sans-couleur {
+  --vigueur-aplat: var(--texte-discret);
+  --ame-aplat: var(--texte-discret);
+  --vivres-aplat: var(--texte-discret);
+  --portee-publique: var(--trait);
+  --portee-restreinte: var(--trait);
+  --accent: var(--texte-discret);
+  --annule: var(--texte-discret);
+  --succes: var(--texte-discret);
+  --vivres: var(--texte-discret);
+}
