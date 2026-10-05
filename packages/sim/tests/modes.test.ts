@@ -73,7 +73,7 @@ describe('`replay --db`', () => {
 
       const outcome = replayDatabase(file, null);
       expect(outcome.ok).toBe(false);
-      expect(outcome.text).toContain('souffle projeté');
+      expect(outcome.text).toContain('élan projeté');
     } finally {
       clean();
     }

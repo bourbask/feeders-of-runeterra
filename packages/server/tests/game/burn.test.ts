@@ -1,5 +1,5 @@
 /**
- * LA BRÛLURE DU SOUFFLE EN DEUX TEMPS, côté serveur.
+ * LA BRÛLURE DU ÉLAN EN DEUX TEMPS, côté serveur.
  *
  * Le moteur en livre la mécanique (M0-34). Ce qui se mesure ici est la part du
  * serveur, et elle tient en quatre promesses :
@@ -52,7 +52,7 @@ import type { Table } from './support.test.js';
 
 /**
  * Dé d'action 1, attribut `vif` à 1 : score 2, contre des dés de défi 3 et 4.
- * Échec. Souffle 9 > 2 : la fenêtre s'ouvre. Brûlé, le score devient 9, qui
+ * Échec. Élan 9 > 2 : la fenêtre s'ouvre. Brûlé, le score devient 9, qui
  * bat 3 et 4 : réussite FRANCHE. Un échec devenu réussite franche, ce qui est
  * exactement la mécanique que la spec décrit et que le code ne faisait pas.
  */
@@ -200,7 +200,7 @@ describe('le second temps : la brûlure réécrit l’issue', () => {
       // LE PRIX DE L'ÉCHEC N'EST JAMAIS PAYÉ.
       expect(journal(table.connection).map((row) => row.type)).not.toContain('roll.price_paid');
 
-      // LE SOUFFLE EST DÉPENSÉ AVANT L'EFFET DE L'ISSUE RÉVISÉE : retombe à 2,
+      // LE ÉLAN EST DÉPENSÉ AVANT L'EFFET DE L'ISSUE RÉVISÉE : retombe à 2,
       // puis +1 de la réussite franche.
       const state = loadReplay(table.connection, CAMPAIGN_ID).state;
       expect(state.characters[CHARACTER_ID]?.momentum).toBe(3);
@@ -324,7 +324,7 @@ describe('les deux refus, qui ne sont pas le même refus', () => {
         'narration.player_message',
         'narration.gm_message',
       ]);
-      // Le souffle n'a pas été dépensé : `momentum.keep` ne coûte rien.
+      // Le élan n'a pas été dépensé : `momentum.keep` ne coûte rien.
       const state = loadReplay(table.connection, CAMPAIGN_ID).state;
       expect(state.characters[CHARACTER_ID]?.momentum).toBe(9);
     } finally {
@@ -465,7 +465,7 @@ describe('les deux refus, qui ne sont pas le même refus', () => {
  * libre et non un cas limite.
  *
  * `ARCHITECTURE.md` §4.4 : « Ordre du tour : aucun. » La fenêtre s'ouvre dès
- * que le souffle dépasse le score, donc deux joueurs l'ont ouverte ensemble à
+ * que le élan dépasse le score, donc deux joueurs l'ont ouverte ensemble à
  * la première occasion venue. Chercher « la dernière fenêtre du journal »
  * faisait alors répondre le jet de B à la place de celui de A : les DEUX
  * fermetures de A refusées `no_burn_window`, son `move.resolved` jamais écrit,
@@ -544,7 +544,7 @@ describe('deux fenêtres ouvertes à la fois', () => {
       expect(openBurnWindows(table.deps, CAMPAIGN_ID, after)).toEqual([]);
 
       // ET CHACUN A EU SON ISSUE À LUI. A a brûlé : l'échec est devenu une
-      // réussite franche, l'âme reste à 5 et le souffle retombe. B a gardé :
+      // réussite franche, l'âme reste à 5 et le élan retombe. B a gardé :
       // il prend les dégâts de l'échec et n'a rien dépensé.
       const state = loadReplay(table.connection, CAMPAIGN_ID).state;
       expect(state.characters[CHARACTER_ID]?.gauges.ame).toBe(5);
@@ -659,7 +659,7 @@ describe('la scène se ferme entre les dés et la décision', () => {
         presentCharacterIds: [CHARACTER_ID],
       });
 
-      // `fer` vaut 2, dé d'action 1 : score 3 contre 4 et 5, échec. Souffle 9
+      // `fer` vaut 2, dé d'action 1 : score 3 contre 4 et 5, échec. Élan 9
       // au-dessus de 3 : la fenêtre s'ouvre.
       table.rng.script('action', [1, 4, 5]);
       const opened = await runIntent(table.deps, {

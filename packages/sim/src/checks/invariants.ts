@@ -71,7 +71,7 @@ export function stateIssues(state: CampaignState): readonly string[] {
     const bounds = character.momentumBounds;
     if (character.momentum < bounds.min || character.momentum > bounds.max) {
       issues.push(
-        `${character.id}.souffle = ${String(character.momentum)}, hors de ses propres bornes ` +
+        `${character.id}.élan = ${String(character.momentum)}, hors de ses propres bornes ` +
           `[${String(bounds.min)}, ${String(bounds.max)}]`,
       );
     }

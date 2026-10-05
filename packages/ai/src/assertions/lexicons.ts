@@ -23,11 +23,22 @@
  * comment, and the pull request, where it is reported rather than worked
  * around.
  */
+/**
+ * LES DEUX MOTS ONT ÉCHANGÉ LEURS RÔLES, et c'est voulu.
+ *
+ * « élan » est le terme de règle depuis le renommage : c'est lui que le
+ * conteur ne doit jamais prononcer. « souffle » a quitté cette liste le même
+ * jour — ce n'est plus un mot de mécanique, c'est un mot de chair, et le
+ * prompt le recommande désormais comme substitut à ce qu'il interdit.
+ *
+ * Tenu par les corpus de l'éval : une prose qui dit « élan » tombe sur
+ * `no_rules_lexicon`, une prose qui dit « souffle » passe.
+ */
 export const RULES_LEXICON = [
   'vigueur',
   'âme',
   'vivres',
-  'souffle',
+  'élan',
   'serment',
   'horloge',
   'jet',

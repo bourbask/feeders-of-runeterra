@@ -54,7 +54,7 @@
 | 4 | Les dés, le protocole réseau, les schémas de contenu, les fixtures, le schéma de base | M0-07 · M0-08 · M0-09 · M0-10 · M0-11 |
 | 5 | Les mouvements et le journal rejouable, le chargeur de contenu, l'accès base, les schémas IA | M0-12 · M0-13 · M0-14 · M0-15 |
 | 6 | Le contenu de jeu **et les fiches de champion**, la reconstruction de base, les prompts du conteur, la page table, le serveur | M0-16 · M0-17 · M0-18 · M0-19 · M0-20 |
-| 7 | Le contexte IA, l'authentification Discord, l'orchestration, le WebSocket, **la sonde de fumée d'un fournisseur gratuit**, **et la brûlure du souffle en deux temps** | M0-22 · M0-23 · **M0-34** (avant M0-24) · M0-24 · M0-25 · **M0-32** (à démarrer en premier) |
+| 7 | Le contexte IA, l'authentification Discord, l'orchestration, le WebSocket, **la sonde de fumée d'un fournisseur gratuit**, **et la brûlure du élan en deux temps** | M0-22 · M0-23 · **M0-34** (avant M0-24) · M0-24 · M0-25 · **M0-32** (à démarrer en premier) |
 | 8 | La campagne de démonstration, le harnais d'éval, le simulateur, les travailleurs IA, **et la mesure complète d'un fournisseur gratuit** | **M0-31** (à démarrer en premier) · M0-26 · M0-27 · M0-28 · M0-29 |
 | 9 | L'assemblage : le parcours de bout en bout qui prouve que le socle tient | M0-30 |
 
@@ -406,24 +406,24 @@ règle **visible en diff** au lieu de silencieuse.
 
 ## Vague 4 — Dés, protocole, contenu, fixtures, base
 
-### M0-07 · Moteur : dés, jauges, souffle, progression
+### M0-07 · Moteur : dés, jauges, élan, progression
 **Taille** : grosse · **Dépend de** : M0-02, M0-06 · **Parallélisable** : oui
 
 **À quoi ça sert.** Le calcul des règles prototypées : le jet de défi (1d6 + attribut contre
-2d10), le souffle et sa brûlure, les jauges 0-5, les crans de progression par rang. Le corpus
+2d10), le élan et sa brûlure, les jauges 0-5, les crans de progression par rang. Le corpus
 doré associé est l'oracle de référence du projet : si quelqu'un modifie une constante de règle,
 la diff doit rester lisible.
 
 **Livrables**
 - `src/dice/{challenge,progress,oracle,price,presage}.ts` aux signatures exactes de
   `01-architecture.md` §2.3.
-- `src/momentum.ts` (brûlure, annulation par souffle négatif, bornes −6/+10, retour à +2),
+- `src/momentum.ts` (brûlure, annulation par élan négatif, bornes −6/+10, retour à +2),
   `src/gauges.ts` (delta borné, seuils), `src/progress-track.ts` (12/8/4/2/1 crans, 10 cases,
   40 crans).
 - Tests colocalisés pour chaque fichier, et
   `tests/golden/{challenge-matrix,momentum-rules,progress-rolls}.golden.json` — la matrice de
   défi ne contient **que les combinaisons porteuses d'une décision** (≈ 300 lignes) : bornes du
-  souffle, égalité `|souffle| == dé d'action`, franchissement du plafond à 10, dés de défi
+  élan, égalité `|élan| == dé d'action`, franchissement du plafond à 10, dés de défi
   égaux, les trois issues autour de chaque seuil.
 
 **Critères d'acceptation**
@@ -690,7 +690,7 @@ le type : ajouter un événement sans le traiter dans le réducteur **ne compile
   (le même PNJ absent) et vérifie que `state.scene.absent` le contient une seule fois, que
   `state.scene.present` ne le contient plus, et que les deux listes sont triées par `ref.id`.
 - Un test vérifie qu'un `system.reverted` portant sur le groupe d'un tour restaure **exactement**
-  l'état d'avant la déclaration : jauges, souffle, conditions, crans de progression, segments
+  l'état d'avant la déclaration : jauges, élan, conditions, crans de progression, segments
   d'horloge et fenêtre de brûlure (comparaison de hash d'état).
 - `tests/ai-cannot-mutate.test.ts` : tout événement de jauge portant `actorKind: 'gm_ai'` est
   rejeté.
@@ -1371,12 +1371,12 @@ transaction — demander à l'IA d'habiller le fait déjà acquis.
 - Une intention invalide renvoie un `Result` en erreur, jamais une exception, et la réponse
   porte un code de l'union fermée.
 - Un test annule un tour complet par `revertTurn` et vérifie que le hash d'état est **égal** à
-  celui d'avant la déclaration — jauges, souffle, conditions, crans de progression, segments
+  celui d'avant la déclaration — jauges, élan, conditions, crans de progression, segments
   d'horloge et fenêtre de brûlure comprises — tandis que `events` a **grandi** d'une ligne
   `system.reverted` et que le `rng_draw_index` du flux `action` n'a pas reculé.
 - Un test vérifie qu'annuler un `roll.action_resolved` **sans** son `character.gauge_changed`
   est impossible : `revertTurn` ne prend pas de liste de `seq`, seulement un `correlation_id`.
-- Un test vérifie la fenêtre de brûlure du souffle en deux temps : `roll.action_resolved
+- Un test vérifie la fenêtre de brûlure du élan en deux temps : `roll.action_resolved
   { burnWindow: true }` → `momentum.burn` → `character.momentum_burned` + `roll.action_revised`,
   sans jamais réécrire le premier jet.
 - **La table est libre, donc DEUX fenêtres ouvertes à la fois sont l'état normal** et non un cas
@@ -1610,7 +1610,7 @@ M0-23, M0-24 et M0-25 dans `packages/server`.)*
 **Taille** : moyenne · **Dépend de** : M0-13 · **Parallélisable** : oui
 · **À démarrer AVANT M0-24 dans la vague 7**
 
-**À quoi ça sert.** Faire que brûler son souffle serve à quelque chose. `03-donnees.md` §3.4 et
+**À quoi ça sert.** Faire que brûler son élan serve à quelque chose. `03-donnees.md` §3.4 et
 `ARCHITECTURE.md` §4.4 écrivent la brûlure en deux temps depuis le début ; `decide()` appliquait
 les effets **immédiatement**, au moment où il écrivait `roll.action_resolved`. Mesuré en recette
 de M0-13 : le joueur vidait la ressource la plus rare du jeu et prenait les dégâts quand même —
@@ -1627,16 +1627,16 @@ et **la spec fait foi**.
 - `packages/engine/src/types/intents.ts` : l'intention `momentum.keep { rollId }`, dans le type
   **et** dans le tuple `INTENT_TYPES` que gardent `satisfies` + `AssertNever`.
 - `packages/contracts/src/intents/index.ts` : `zMomentumKeepIntent`, membre de `zIntent`.
-- `docs/GLOSSAIRE.md` : l'entrée **Souffle** réécrite — quand, pourquoi, ce que ça coûte.
+- `docs/GLOSSAIRE.md` : l'entrée **Élan** réécrite — quand, pourquoi, ce que ça coûte.
 - Les trois specs remises d'accord avec le code : `ARCHITECTURE.md` §4.4,
   `docs/design/03-donnees.md` §3.4, `docs/design/01-architecture.md` §5.3.
 
 **Critères d'acceptation**
 - Un jet qui ouvre la fenêtre écrit **exactement** `move.declared` puis `roll.action_resolved`,
   et rien d'autre : ni `roll.price_paid`, ni `move.resolved`.
-- `momentum.burn` sur un échec que le souffle transforme en réussite franche applique les effets
+- `momentum.burn` sur un échec que le élan transforme en réussite franche applique les effets
   de la **réussite franche** ; le prix de l'échec n'est jamais tiré.
-- `momentum.keep` applique les effets de l'issue initiale et ne dépense **aucun** souffle.
+- `momentum.keep` applique les effets de l'issue initiale et ne dépense **aucun** élan.
 - Le premier jet n'est jamais réécrit : `roll.action_revised.revisedFromSeq` pointe dessus, et
   `move.resolved.rollSeq` pointe sur le **jet**, pas sur la révision.
 - **La révision ne tire rien** : tous les flux du contexte de fermeture sont scriptés **vides**
@@ -1701,7 +1701,7 @@ qu'on le voie.
 **Livrables**
 - `src/seed/demo.ts` : 4 joueurs, 1 campagne, 3 personnages, 2 séances, **248 événements
   couvrant au moins une fois chacun des 71 types**, les jets remarquables (franche, partielle,
-  échec, présage, souffle brûlé, souffle négatif annulé, plafonnement à 10), 3 serments,
+  échec, présage, élan brûlé, élan négatif annulé, plafonnement à 10), 3 serments,
   2 horloges, 11 entités, 3 versions de chronique écrites à la main, 2 instantanés,
   1 annulation, et le mode `--minimal` (fin de la première scène).
 - `DEMO_SEED` (graine, epoch, fabrique d'ULID monotone), garde anti-production.
@@ -2159,7 +2159,7 @@ sans propriétaire — ils arrivent ici pour ne pas être redécouverts) :
 | M0-04 | Image Docker, déploiement, sauvegardes | 2 | moyenne | M0-01 |
 | M0-05 | Contrats : état, événements, intentions | 3 | grosse | M0-02 |
 | M0-06 | Boîte à outils de test déterministe | 3 | moyenne | M0-02 |
-| M0-07 | Moteur : dés, jauges, souffle, progression | 4 | grosse | M0-02, M0-06 |
+| M0-07 | Moteur : dés, jauges, élan, progression | 4 | grosse | M0-02, M0-06 |
 | M0-08 | Contrats : WebSocket et HTTP | 4 | moyenne | M0-05 |
 | M0-09 | Contrats : schémas du contenu | 4 | moyenne | M0-05 |
 | M0-10 | Fixtures et assertions de domaine | 4 | moyenne | M0-05, M0-06 |

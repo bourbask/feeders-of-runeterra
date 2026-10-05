@@ -20,7 +20,7 @@ Trois compteurs par personnage, de **0 à 5**. Pas de points de vie.
 Une jauge ne bouge que parce qu'un mouvement l'a coûté. Le moteur l'applique avant que le
 conteur écrive.
 
-### Souffle
+### Élan
 
 Une quatrième valeur, de **−6 à +10**, départ à **+2**. L'élan : ce que ton personnage a
 accumulé de vitesse, de confiance et de chance.
@@ -42,18 +42,18 @@ La brûlure, question par question :
 | Question | Réponse |
 |---|---|
 | **Quand ?** | **après** le lancer. Les dés sont sur la table, tu les lis, **puis** tu décides. |
-| **Ce que ça fait** | ton souffle **remplace** ton score, il ne s'y ajoute pas. |
-| **Ce que ça change** | l'issue elle-même : souffle 8 contre des dés de défi de 6 et 7, un **échec** devient une **réussite franche**. |
+| **Ce que ça fait** | ton élan **remplace** ton score, il ne s'y ajoute pas. |
+| **Ce que ça change** | l'issue elle-même : élan 8 contre des dés de défi de 6 et 7, un **échec** devient une **réussite franche**. |
 | **Ce qui s'applique alors** | les conséquences de la **nouvelle** issue. Le prix de l'échec n'est jamais payé. |
-| **Ce que ça coûte** | le souffle retombe à **+2**. Il était à 8 : tu viens de dépenser plusieurs tours d'élan. |
-| **Quand c'est refusé** | si ton souffle ne **dépasse** pas ton score — il n'y aurait rien à gagner — ou s'il est négatif. |
+| **Ce que ça coûte** | le élan retombe à **+2**. Il était à 8 : tu viens de dépenser plusieurs tours d'élan. |
+| **Quand c'est refusé** | si ton élan ne **dépasse** pas ton score — il n'y aurait rien à gagner — ou s'il est négatif. |
 
 Tant que tu n'as pas répondu, **le tour n'est pas fini** : le mouvement a lancé ses dés, il n'a
 appliqué aucune conséquence. Trois réponses ferment la fenêtre, et rien d'autre.
 
 | La réponse | Ce qui arrive |
 |---|---|
-| **Je brûle** | le souffle remplace le score, l'issue est révisée, et ce sont ses conséquences qui s'appliquent. |
+| **Je brûle** | le élan remplace le score, l'issue est révisée, et ce sont ses conséquences qui s'appliquent. |
 | **Je garde** | les dés restent tels quels, et les conséquences de l'issue d'origine s'appliquent. |
 | **Tu fais autre chose** | le filet de sécurité : ton action suivante ferme la fenêtre comme un « je garde ». Un onglet fermé ne laisse pas un tour en suspens. |
 
@@ -62,7 +62,7 @@ commande « Pourquoi ? » montre les deux.
 
 | Autre usage | Effet |
 |---|---|
-| **Souffle négatif** | si ton dé d'action égale sa valeur absolue, ce dé est annulé — il compte pour zéro, il n'est pas relancé. |
+| **Élan négatif** | si ton dé d'action égale sa valeur absolue, ce dé est annulé — il compte pour zéro, il n'est pas relancé. |
 
 ### Attributs
 

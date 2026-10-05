@@ -4,7 +4,7 @@
  * `03-donnees.md` §3.7 promet deux choses en même temps, et c'est leur
  * combinaison qui se mesure ici :
  *
- *   - jauges, souffle, conditions, crans, segments ET FENÊTRE DE BRÛLURE
+ *   - jauges, élan, conditions, crans, segments ET FENÊTRE DE BRÛLURE
  *     reviennent à l'état d'avant la déclaration, « parce qu'ils sont tous
  *     dérivés du journal et de rien d'autre » ;
  *   - le journal a GRANDI d'une ligne, et l'index de tirage du flux `action`
@@ -28,7 +28,7 @@ import type { CampaignState } from '@for/engine';
  * Le hash de l'ÉTAT DE JEU, `seq` et `rng` exclus — et l'exclusion est le
  * sujet, pas une commodité.
  *
- * Le critère demande que jauges, souffle, conditions, crans et segments
+ * Le critère demande que jauges, élan, conditions, crans et segments
  * reviennent ; il demande dans la même phrase que l'index de tirage NE recule
  * pas et que le journal ait grandi. Un hash qui porterait sur `seq` et sur
  * `rng.draws` ne pourrait donc jamais être égal, et le critère serait faux par

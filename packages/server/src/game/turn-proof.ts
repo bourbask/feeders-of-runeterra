@@ -116,11 +116,11 @@ function effectLabel(event: GameEvent): string {
   }
   if (event.type === 'character.momentum_changed') {
     const { from, to } = event.payload;
-    return `souffle ${String(from)} → ${String(to)}`;
+    return `élan ${String(from)} → ${String(to)}`;
   }
   if (event.type === 'character.momentum_burned') {
     const { spent, resetTo } = event.payload;
-    return `souffle brûlé : ${String(spent)}, retombe à ${String(resetTo)}`;
+    return `élan brûlé : ${String(spent)}, retombe à ${String(resetTo)}`;
   }
   if (event.type === 'character.condition_added') return `marque : ${event.payload.label}`;
   if (event.type === 'character.condition_removed') {
@@ -259,7 +259,7 @@ export function buildTurnProof(
         : {
             eventSeq: revised.seq,
             label: label(
-              `souffle ${String(revised.payload.total)} → ${revised.payload.outcome}` +
+              `élan ${String(revised.payload.total)} → ${revised.payload.outcome}` +
                 ` (jet ${String(revised.payload.revisedFromSeq)})`,
             ),
           },

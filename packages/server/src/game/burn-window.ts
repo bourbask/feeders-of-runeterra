@@ -27,7 +27,7 @@
  * ── WHY THERE IS NO TABLE, AND WHY THAT IS THE STRONGER ANSWER ───────────
  * Invariant 4: every bit of game state replays from an append-only journal.
  * 03-donnees.md section 3.7, point 1 spells out the consequence for this very
- * object — "jauges, souffle, conditions, crans de progression, segments
+ * object — "jauges, élan, conditions, crans de progression, segments
  * d'horloge, bonus en attente ET FENETRE DE BRULURE reviennent a l'etat
  * d'avant la declaration, PARCE QU'ILS SONT TOUS DERIVES DU JOURNAL ET DE RIEN
  * D'AUTRE. Aucune liste de champs a restaurer a la main." A row in a table

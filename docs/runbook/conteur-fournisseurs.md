@@ -172,7 +172,7 @@ Les extraits fautifs, tels que la sonde les cite :
 
 | Règle | Ce qui tombe |
 | --- | --- |
-| `no_rules_lexicon` | « souffle », « vivres » — le modèle recopie le vocabulaire de l'`<etat>` qu'on lui donne à lire |
+| `no_rules_lexicon` | « élan », « vivres » — le modèle recopie le vocabulaire de l'`<etat>` qu'on lui donne à lire |
 | `no_outcome_decision` | « tu perds », « tu parviens à » |
 | `no_reserved_champion` | **« L'Archère de Givre »**, alias d'`ashe`, écrit par `llama3.2:3b` sur un cas où le joueur l'avait nommé dans son intention |
 | `price_respected` | « aucun mot-clé de l'entrée : froid, morsure, gel » |

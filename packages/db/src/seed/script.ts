@@ -1098,7 +1098,7 @@ function sceneFour(stage: DemoStage, vows: Record<string, TrackId>): SceneId {
     director.play(
       characterOf(stage, 'udyr'),
       { type: 'move.face_danger', attribute: 'fer', description },
-      'Udyr monte avec un souffle négatif',
+      'Udyr monte avec un élan négatif',
     );
   }
 
@@ -1119,7 +1119,7 @@ function sceneFour(stage: DemoStage, vows: Record<string, TrackId>): SceneId {
         characterId: characterOf(stage, 'udyr'),
         fromSheetRef: 'champion_sheets:udyr',
         toSheetRef: 'champion_sheets:udyr@repare',
-        reason: 'fiche forgée réparée, souffle de départ remis à zéro',
+        reason: 'fiche forgée réparée, élan de départ remis à zéro',
       },
       { actorKind: 'system', subjectCharacterId: characterOf(stage, 'udyr') },
     ),
@@ -1502,7 +1502,7 @@ function sessionTwoPlay(
   director.play(
     characterOf(stage, 'ashe'),
     { type: 'momentum.burn', rollId: window.roll.rollId },
-    'Ashe brûle son souffle sur le jet qu’elle vient de voir',
+    'Ashe brûle son élan sur le jet qu’elle vient de voir',
   );
 
   director.write([

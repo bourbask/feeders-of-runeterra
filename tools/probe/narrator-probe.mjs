@@ -59,7 +59,7 @@ const TOURS = [
   {
     nom: 'réussite franche',
     contexte: `PERSONNAGE JOUÉ : Sejuani (Griffe d'Hiver).
-ÉTAT : Vigueur 4/5, Âme 5/5, Vivres 3/5, Souffle +2.
+ÉTAT : Vigueur 4/5, Âme 5/5, Vivres 3/5, Élan +2.
 
 ════ FAITS ÉTABLIS ════
 Lieu : un col battu par la tempête
@@ -70,12 +70,12 @@ Partis ou morts : personne`,
 MOUVEMENT : Sonder une âme
 RÉSULTAT DES DÉS : RÉUSSITE FRANCHE
 CONSIGNE : L'interlocuteur cède, coopère ou s'ouvre. Fais-le parler en une ou deux répliques.
-CONSÉQUENCES DÉJÀ APPLIQUÉES : +1 Souffle`,
+CONSÉQUENCES DÉJÀ APPLIQUÉES : +1 Élan`,
   },
   {
     nom: 'réussite partielle avec coût',
     contexte: `PERSONNAGE JOUÉ : Braum (Colline-du-Sud).
-ÉTAT : Vigueur 3/5, Âme 4/5, Vivres 2/5, Souffle 0.
+ÉTAT : Vigueur 3/5, Âme 4/5, Vivres 2/5, Élan 0.
 
 ════ FAITS ÉTABLIS ════
 Lieu : un pont de glace naturel au-dessus d'une crevasse
@@ -91,7 +91,7 @@ CONSÉQUENCES DÉJÀ APPLIQUÉES : -1 Vigueur`,
   {
     nom: 'échec avec prix imposé',
     contexte: `PERSONNAGE JOUÉ : Ashe (Avarosan).
-ÉTAT : Vigueur 2/5, Âme 3/5, Vivres 1/5, Souffle -1.
+ÉTAT : Vigueur 2/5, Âme 3/5, Vivres 1/5, Élan -1.
 
 ════ FAITS ÉTABLIS ════
 Lieu : une hutte de chasseurs abandonnée
@@ -106,7 +106,7 @@ LE PRIX À PAYER, imposé par la table — intègre-le tel quel : Le temps joue 
   {
     nom: 'présage',
     contexte: `PERSONNAGE JOUÉ : Tryndamere (sans tribu).
-ÉTAT : Vigueur 1/5, Âme 2/5, Vivres 2/5, Souffle +4.
+ÉTAT : Vigueur 1/5, Âme 2/5, Vivres 2/5, Élan +4.
 
 ════ FAITS ÉTABLIS ════
 Lieu : un cercle de pierres runiques, la nuit
@@ -122,7 +122,7 @@ PRÉSAGE — ajoute en plus ce retournement : un second danger surgit d'une autr
   {
     nom: 'action impossible (doit poser refus=true)',
     contexte: `PERSONNAGE JOUÉ : Sejuani (Griffe d'Hiver).
-ÉTAT : Vigueur 4/5, Âme 4/5, Vivres 3/5, Souffle +1.
+ÉTAT : Vigueur 4/5, Âme 4/5, Vivres 3/5, Élan +1.
 
 ════ FAITS ÉTABLIS ════
 Lieu : une forêt de pins givrés

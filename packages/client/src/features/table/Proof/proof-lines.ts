@@ -60,7 +60,7 @@ export function proofLines(proof: TurnProofDto): ProofLine[] {
 
   if (proof.revision !== null) {
     lignes.push({
-      libelle: 'Souffle brûlé',
+      libelle: 'Élan brûlé',
       valeur: proof.revision.label,
       eventSeq: proof.revision.eventSeq,
     });
