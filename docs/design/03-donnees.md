@@ -1033,7 +1033,7 @@ C'est le cœur de l'invariant 1. Ces événements sont écrits **avant** tout ap
 | Type | Payload |
 |---|---|
 | `roll.action_resolved` | `{ rollId, characterId, moveId, attribute, attributeValue, actionDie, adds: {source,value}[], rawTotal, total, cappedAtTen: boolean, challengeDice: [number, number], outcome: 'franche'\|'partielle'\|'echec', isPresage: boolean, momentumBefore, momentumNegated: boolean, burnWindow: boolean, rngStream: 'action', rngDrawIndex }` |
-| `roll.action_revised` | `{ rollId, revisedFromSeq, total, outcome, isPresage }` — **seule** conséquence d'une brûlure de élan sur un jet déjà écrit |
+| `roll.action_revised` | `{ rollId, revisedFromSeq, total, outcome, isPresage }` — **seule** conséquence d'une brûlure d'élan sur un jet déjà écrit |
 | `roll.progress_resolved` | `{ rollId, trackId, ticks, filledBoxes, challengeDice: [number,number], outcome, isPresage }` |
 | `roll.oracle_resolved` | `{ rollId, tableId, tableVersion, dieSize, value, entryId, text, tags: string[], question?: string }` |
 | `roll.yes_no_resolved` | `{ rollId, question, likelihood: 'quasi-certain'\|'probable'\|'incertain'\|'peu-probable'\|'improbable', threshold, value, answer: 'oui'\|'non', isExtreme: boolean }` |
@@ -1041,7 +1041,7 @@ C'est le cœur de l'invariant 1. Ces événements sont écrits **avant** tout ap
 | `roll.presage_drawn` | `{ rollId, tableId, value, entryId, text, triggeredByRollSeq }` |
 | `roll.raw` | `{ rollId, label, dice: {sides, value}[], reason }` |
 
-**La brûlure du élan est en deux temps** : la règle veut qu'on voie les dés avant de
+**La brûlure de l'élan est en deux temps** : la règle veut qu'on voie les dés avant de
 décider. `roll.action_resolved` porte `burnWindow: true` quand la brûlure est légale ;
 l'intention `momentum.burn { rollId }` produit alors `character.momentum_burned` **puis**
 `roll.action_revised`, et `move.resolved` n'applique les effets qu'après. Le journal étant
@@ -1063,7 +1063,7 @@ devenu réussite franche ne paie pas le prix de l'échec. Trois fermetures, et t
 explicite, seul le filet fermait la fenêtre. Le filet **reste** — un joueur qui ferme son
 onglet ne doit pas bloquer la table.
 
-**La révision ne tire rien.** Le score révisé est le élan dépensé, lu contre les dés de défi
+**La révision ne tire rien.** Le score révisé est l'élan dépensé, lu contre les dés de défi
 **déjà écrits**. Aucun tirage sur le flux `action`, donc aucun décalage d'index : les valeurs
 de dés déjà journalisées restent les mêmes (§3.6).
 
@@ -2277,7 +2277,7 @@ On ne réécrit **jamais** le journal.
 
 - Format de payload : upcaster (§3.8) + bump de `payload_version` pour les **nouveaux**
   événements seulement.
-- Règle de jeu (ex. le élan plafonne à +9 au lieu de +10) : la campagne est épinglée
+- Règle de jeu (ex. l'élan plafonne à +9 au lieu de +10) : la campagne est épinglée
   sur `campaigns.rules_version`. Le moteur garde les variantes indexées par version ; une
   campagne existante ne change de règles que par un acte explicite du propriétaire, qui
   émet `system.rules_version_migrated` — donc l'histoire montre où le changement a pris

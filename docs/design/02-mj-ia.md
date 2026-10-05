@@ -1751,7 +1751,7 @@ ce que le test vérifie.
 | Qui la porte | `s2c.turn_proof { correlationId, proof: TurnProofDto, truncated: boolean }` (`01-architecture.md` §5.4) |
 | Où vit le DTO | `packages/contracts/src/dto/turn-proof.ts` — une **projection par spectateur**, comme `TableState` : les lignes `visibility: 'gm'` en sont retirées |
 | Qui la construit | `packages/server/src/game/turn-proof.ts`, `buildTurnProof(events, viewerId)`, pure, sans base et sans `decide()` |
-| Ce qu'elle contient | `status: 'applied' \| 'reverted'`, le mouvement joué, le jet (flux RNG, index de tirage, dés, total, issue), la brûlure de élan éventuelle, les effets appliqués, le prix tiré (`entryId`, `text`, `effectIndex`), le présage, la source de la narration (`ai` \| `engine`), et, si le tour est annulé, `revertedBy { seq, reason }` |
+| Ce qu'elle contient | `status: 'applied' \| 'reverted'`, le mouvement joué, le jet (flux RNG, index de tirage, dés, total, issue), la brûlure d'élan éventuelle, les effets appliqués, le prix tiré (`entryId`, `text`, `effectIndex`), le présage, la source de la narration (`ai` \| `engine`), et, si le tour est annulé, `revertedBy { seq, reason }` |
 | Ce qu'elle ne contient **jamais** | Le raisonnement du modèle, ses appels d'outils, leurs résultats, les propositions refusées, les messages d'erreur du fournisseur (§ 6.5). La preuve montre ce que **le moteur** a fait, pas ce que le modèle a tenté |
 | Borne de taille | `effects` ≤ **32** entrées, chaque libellé ≤ **120** caractères, **8 Kio** de JSON sérialisé pour le message entier. Au-delà, `truncated: true` et le client renvoie vers le journal complet (`GET /api/campaigns/:id/log`). La borne est trente fois inférieure à la trame sortante de 256 Kio : une preuve ne peut pas saturer une socket |
 

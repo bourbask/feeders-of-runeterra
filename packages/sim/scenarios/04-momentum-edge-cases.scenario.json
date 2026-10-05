@@ -57,7 +57,7 @@
     {
       "kind": "keep",
       "player": "PYRA",
-      "note": "GARDER : les consequences sont celles de l'issue INITIALE — l'echec, donc le prix tire par le moteur et la condition qu'il pose. Le élan ne bouge pas.",
+      "note": "GARDER : les consequences sont celles de l'issue INITIALE — l'echec, donc le prix tire par le moteur et la condition qu'il pose. L'élan ne bouge pas.",
       "expect": {
         "accepted": true,
         "events": [
@@ -101,7 +101,7 @@
     {
       "kind": "burn",
       "player": "PYRA",
-      "note": "BRULER : les consequences sont celles de l'issue REVISEE — une franche, donc AUCUN prix et AUCUNE condition, la ou garder en aurait coute un. Le élan retombe au reset (2) puis gagne 1.",
+      "note": "BRULER : les consequences sont celles de l'issue REVISEE — une franche, donc AUCUN prix et AUCUNE condition, la ou garder en aurait coute un. L'élan retombe au reset (2) puis gagne 1.",
       "expect": {
         "accepted": true,
         "events": [

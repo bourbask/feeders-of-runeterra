@@ -54,7 +54,7 @@
 | 4 | Les dés, le protocole réseau, les schémas de contenu, les fixtures, le schéma de base | M0-07 · M0-08 · M0-09 · M0-10 · M0-11 |
 | 5 | Les mouvements et le journal rejouable, le chargeur de contenu, l'accès base, les schémas IA | M0-12 · M0-13 · M0-14 · M0-15 |
 | 6 | Le contenu de jeu **et les fiches de champion**, la reconstruction de base, les prompts du conteur, la page table, le serveur | M0-16 · M0-17 · M0-18 · M0-19 · M0-20 |
-| 7 | Le contexte IA, l'authentification Discord, l'orchestration, le WebSocket, **la sonde de fumée d'un fournisseur gratuit**, **et la brûlure du élan en deux temps** | M0-22 · M0-23 · **M0-34** (avant M0-24) · M0-24 · M0-25 · **M0-32** (à démarrer en premier) |
+| 7 | Le contexte IA, l'authentification Discord, l'orchestration, le WebSocket, **la sonde de fumée d'un fournisseur gratuit**, **et la brûlure de l'élan en deux temps** | M0-22 · M0-23 · **M0-34** (avant M0-24) · M0-24 · M0-25 · **M0-32** (à démarrer en premier) |
 | 8 | La campagne de démonstration, le harnais d'éval, le simulateur, les travailleurs IA, **et la mesure complète d'un fournisseur gratuit** | **M0-31** (à démarrer en premier) · M0-26 · M0-27 · M0-28 · M0-29 |
 | 9 | L'assemblage : le parcours de bout en bout qui prouve que le socle tient | M0-30 |
 
@@ -410,7 +410,7 @@ règle **visible en diff** au lieu de silencieuse.
 **Taille** : grosse · **Dépend de** : M0-02, M0-06 · **Parallélisable** : oui
 
 **À quoi ça sert.** Le calcul des règles prototypées : le jet de défi (1d6 + attribut contre
-2d10), le élan et sa brûlure, les jauges 0-5, les crans de progression par rang. Le corpus
+2d10), l'élan et sa brûlure, les jauges 0-5, les crans de progression par rang. Le corpus
 doré associé est l'oracle de référence du projet : si quelqu'un modifie une constante de règle,
 la diff doit rester lisible.
 
@@ -1376,7 +1376,7 @@ transaction — demander à l'IA d'habiller le fait déjà acquis.
   `system.reverted` et que le `rng_draw_index` du flux `action` n'a pas reculé.
 - Un test vérifie qu'annuler un `roll.action_resolved` **sans** son `character.gauge_changed`
   est impossible : `revertTurn` ne prend pas de liste de `seq`, seulement un `correlation_id`.
-- Un test vérifie la fenêtre de brûlure du élan en deux temps : `roll.action_resolved
+- Un test vérifie la fenêtre de brûlure de l'élan en deux temps : `roll.action_resolved
   { burnWindow: true }` → `momentum.burn` → `character.momentum_burned` + `roll.action_revised`,
   sans jamais réécrire le premier jet.
 - **La table est libre, donc DEUX fenêtres ouvertes à la fois sont l'état normal** et non un cas
@@ -1634,7 +1634,7 @@ et **la spec fait foi**.
 **Critères d'acceptation**
 - Un jet qui ouvre la fenêtre écrit **exactement** `move.declared` puis `roll.action_resolved`,
   et rien d'autre : ni `roll.price_paid`, ni `move.resolved`.
-- `momentum.burn` sur un échec que le élan transforme en réussite franche applique les effets
+- `momentum.burn` sur un échec que l'élan transforme en réussite franche applique les effets
   de la **réussite franche** ; le prix de l'échec n'est jamais tiré.
 - `momentum.keep` applique les effets de l'issue initiale et ne dépense **aucun** élan.
 - Le premier jet n'est jamais réécrit : `roll.action_revised.revisedFromSeq` pointe dessus, et

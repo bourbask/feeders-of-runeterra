@@ -42,7 +42,7 @@ export const RULE_VIOLATION_MESSAGES: Readonly<Record<string, string>> = {
   champion_locked: 'Ce champion est déjà pris par un autre joueur de la table.',
   track_already_resolved: 'Cette piste est déjà résolue.',
   track_wrong_kind: 'Cette piste n’est pas du bon type pour ce mouvement.',
-  no_burn_window: 'La fenêtre de brûlure du élan est fermée.',
+  no_burn_window: 'La fenêtre de brûlure de l’élan est fermée.',
   momentum_too_low: 'Ton élan est trop faible pour être brûlé.',
   insufficient_xp: 'Tu n’as pas assez d’expérience.',
   no_active_scene: 'Aucune scène n’est ouverte.',
