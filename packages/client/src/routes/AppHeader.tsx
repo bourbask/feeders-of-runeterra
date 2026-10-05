@@ -25,6 +25,17 @@ import type { ReactNode } from 'react';
  *
  * ELLE MONTRE UN NOM, PAS UN IDENTIFIANT. `player.displayName` est déjà résolu
  * par le serveur — le nom global Discord quand il existe, le pseudo sinon.
+ *
+ * CE QUE DISAIT ICI L'ANCIEN COMMENTAIRE, ET CE QU'IL DIT MAINTENANT. Il
+ * signalait que le panneau « À la table », lui, affichait encore un identifiant
+ * brut, faute de nom sur `s2c.presence`. Le constat de contrat reste vrai —
+ * `s2c.presence` ne porte toujours aucun nom — mais la conclusion ne l'est
+ * plus : le panneau JOINT désormais présence → `characterId` → `displayName` de
+ * l'instantané (`features/table/destinataires.ts`), comme le bandeau du fil et
+ * le compositeur. Ce qui reste sans nom, c'est un joueur sans personnage dans
+ * l'instantané, et l'écran l'écrit en toutes lettres au lieu de le masquer.
+ * Un nom porté par l'enveloppe reste l'affaire du serveur (invariant 3) :
+ * issue 116.
  */
 export function AppHeader(props: {
   readonly joueur: PlayerProfile;

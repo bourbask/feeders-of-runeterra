@@ -152,7 +152,14 @@ describe('la vitrine /design', { timeout: 30_000 }, () => {
     render(<DesignShowcase />);
 
     const paires = [...PAIRES_TEXTE, ...PAIRES_COMPOSANT];
-    expect(paires.length).toBeGreaterThan(0);
+    // LE GARDE-FOU QUI MANQUAIT. `toBeGreaterThan(0)` sur la CONCATÉNATION est
+    // satisfait par les six paires de composant : vider `PAIRES_TEXTE` laissait
+    // ce fichier vert et faisait disparaître dix-neuf cas ailleurs, sans un mot
+    // (mode 6). Les deux listes sont donc épinglées séparément, et le 15 vient
+    // du §12 de `05-interface.md` — « 15 paires texte/fond recalculées » — pas
+    // de la liste elle-même.
+    expect(PAIRES_TEXTE.length).toBeGreaterThanOrEqual(15);
+    expect(PAIRES_COMPOSANT.length).toBeGreaterThan(0);
 
     for (const paire of paires) {
       const mesure = contraste(couleur(jetons, paire.devant), couleur(jetons, paire.sur));

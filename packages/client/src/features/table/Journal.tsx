@@ -8,7 +8,7 @@ import type { JournalLine } from '../../ws/journal.js';
 import type { PresenceMember } from '../../ws/store.js';
 import { journalLines } from '../../ws/store.js';
 import { ProofCommand } from './Proof/ProofCommand.js';
-import { groupeDe, phraseDesManquants, phraseDuGroupe } from './destinataires.js';
+import { groupeDe, nomDuPersonnage, phraseDesManquants, phraseDuGroupe } from './destinataires.js';
 import type { BlocDuFil } from './fil.js';
 import { composerLeFil } from './fil.js';
 import { porteeVue } from './portee.js';
@@ -37,6 +37,13 @@ import { porteeVue } from './portee.js';
  * and the group carries a MECHANICAL KEY so that two different groups are never
  * read as one. What is missing is written on screen, in words, beside the
  * names: see `destinataires.ts`.
+ *
+ * AND WHO SPEAKS, BY NAME TOO. A line names its speaker by CHARACTER
+ * (`ws/journal.ts`), so the same join runs on `fr-journal__qui`: it was writing
+ * `0CHARACTER00000000000000002` above a band that said « Kevin et Théo », on the
+ * same screen, at the same moment. When the snapshot does not hold the
+ * character, the id stays rather than a minted name — the mirror joins, it
+ * does not invent.
  *
  * SPEECH IS NOT NARRATION, AND THE MARKUP SAYS SO (correction 12). A player's
  * words are in a real `<em>`, the speaker's name in a plain `<span>`, and the
@@ -156,6 +163,22 @@ function Corps(props: { readonly ligne: JournalLine }): ReactNode {
   return <span className="fr-journal__texte">{ligne.text}</span>;
 }
 
+/**
+ * The name above a block. A SPEAKER IS A CHARACTER, so it is joined against the
+ * snapshot; everything else wears its label.
+ *
+ * `kind === 'joueur'` is the guard and it is not decoration: an oracle's
+ * `speaker` holds its QUESTION, not an id, and running a character lookup on a
+ * question would be a join on the wrong column. The oracle does not come
+ * through here anyway — `Bloc` renders it by itself — and this keeps it true if
+ * that ever changes.
+ */
+function quiParle(ligne: JournalLine, table: TableStateDto | null): string {
+  if (ligne.kind !== 'joueur') return ligne.speaker ?? ETIQUETTES[ligne.kind];
+  if (ligne.speaker === null) return ETIQUETTES.joueur;
+  return nomDuPersonnage(ligne.speaker, table) ?? ligne.speaker;
+}
+
 function Bloc(props: {
   readonly bloc: BlocDuFil;
   readonly presence: readonly PresenceMember[];
@@ -181,7 +204,7 @@ function Bloc(props: {
         <Bandeau ligne={ligne} presence={props.presence} table={props.table} />
       ) : null}
       {ligne.kind === 'oracle' ? null : (
-        <span className="fr-journal__qui">{ligne.speaker ?? ETIQUETTES[ligne.kind]}</span>
+        <span className="fr-journal__qui">{quiParle(ligne, props.table)}</span>
       )}
       {ligne.revoked === null ? (
         <Corps ligne={ligne} />
@@ -217,9 +240,13 @@ export function Journal(): ReactNode {
   const presence = useTable((state) => state.presence);
   const table = useTable((state) => state.table);
 
+  // LA PRÉSENCE EST UNE ENTRÉE DU FIL, pas une décoration du rendu : c'est elle
+  // qui dit si celui qui parle était destinataire du bloc restreint au-dessus
+  // (`fil.ts`, correction 10). Elle est donc dans les dépendances — un fil
+  // calculé avant son arrivée doit se recalculer après.
   const blocs = useMemo(
-    () => composerLeFil(journalLines({ lines, history, revocations })),
-    [lines, history, revocations],
+    () => composerLeFil(journalLines({ lines, history, revocations }), presence),
+    [lines, history, revocations, presence],
   );
 
   if (blocs.length === 0) {

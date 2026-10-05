@@ -71,6 +71,49 @@ export function cleDeGroupe(membres: readonly string[]): string {
   return `g-${digest(tries.join('\u001f'))}`;
 }
 
+/**
+ * The display name of a CHARACTER, read off the snapshot. `null` when there is
+ * no character, or when the snapshot has not arrived yet.
+ *
+ * THE SNAPSHOT NAMES EVERYONE, and that is not an assumption:
+ * `contracts/src/dto/table-state.ts` says it in full letters — « `characters`
+ * is NOT filtered: every player at the table sees everyone's sheet ». So this
+ * join works for every character at the table, not only for mine.
+ *
+ * Held by `destinataires.test.ts` « nomme un personnage de l'instantané, et
+ * rend null quand il n'y est pas ».
+ */
+export function nomDuPersonnage(
+  characterId: string | null,
+  table: TableStateDto | null,
+): string | null {
+  if (characterId === null) return null;
+  const personnage = table?.characters.find((candidat) => candidat.id === characterId) ?? null;
+  return personnage?.displayName ?? null;
+}
+
+/**
+ * The player behind a character, as presence joins the two. `null` when nobody
+ * present holds that character.
+ *
+ * THE OTHER DIRECTION OF THE SAME JOIN, and the feed needs it: a journal line
+ * names its speaker by CHARACTER (`ws/journal.ts`), while an envelope names its
+ * recipients by PLAYER (ADR 0008). Deciding whether the person who just spoke
+ * is one of the people the previous block was addressed to is therefore a join,
+ * and it is this one. `fil.ts` is its only caller today.
+ *
+ * Held by `destinataires.test.ts` « retrouve le joueur derrière un personnage,
+ * et personne quand la présence ne le porte pas ».
+ */
+export function joueurDuPersonnage(
+  characterId: string | null,
+  presence: readonly PresenceMember[],
+): string | null {
+  if (characterId === null) return null;
+  const membre = presence.find((present) => present.characterId === characterId);
+  return membre?.playerId ?? null;
+}
+
 /** The display name of a player, or `null` when the wire carries none. */
 function nomDuJoueur(
   playerId: string,
@@ -78,10 +121,7 @@ function nomDuJoueur(
   table: TableStateDto | null,
 ): string | null {
   const membre = presence.find((present) => present.playerId === playerId);
-  const characterId = membre?.characterId ?? null;
-  if (characterId === null) return null;
-  const personnage = table?.characters.find((candidat) => candidat.id === characterId) ?? null;
-  return personnage?.displayName ?? null;
+  return nomDuPersonnage(membre?.characterId ?? null, table);
 }
 
 /** The group a list of recipients makes: its key, its names, and what is missing. */

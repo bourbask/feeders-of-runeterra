@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 
 import { EmptyState } from '../../components/ui/EmptyState.js';
 import type { PresenceMember } from '../../ws/store.js';
+import { nomDuPersonnage } from './destinataires.js';
 
 /**
  * The right column (05-interface.md §4.3): the table, then the notebook, then
@@ -17,8 +18,18 @@ import type { PresenceMember } from '../../ws/store.js';
  * Writing the cards now would cost a panel to demolish; writing nothing at all
  * would let a later M1 layout decision make the column impossible.
  *
- * `characterId ?? playerId` AND NOT A NAME. `s2c.presence` carries no display
- * name (`contracts/src/ws/s2c.ts`). A mirror does not mint one.
+ * THE NAMES ARE JOINED, AND WHAT IS NOT JOINED IS SAID. `s2c.presence` carries
+ * `playerId` and `characterId` and no display name
+ * (`contracts/src/ws/s2c.ts`), so this panel does what the band in the feed and
+ * the composer already do: it looks the character up in the snapshot and reads
+ * its `displayName` (`destinataires.ts`). It MINTS nothing — a member the join
+ * misses keeps his raw identifier, and a line under the list says why, in
+ * words. The alternative was what this panel used to do: print
+ * `0CHARACTER00000000000000002` beside a band that said « Kevin et Théo », on
+ * the same screen, at the same instant.
+ *
+ * Held by `screens.test.tsx` « nomme les joueurs de la table, et dit ce qu'elle
+ * ne sait pas nommer ».
  */
 export function LaTable(props: {
   readonly presence: readonly PresenceMember[];
@@ -26,6 +37,11 @@ export function LaTable(props: {
 }): ReactNode {
   const horloges = props.etat?.clocks ?? [];
   const pistes = props.etat?.tracks ?? [];
+  const membres = props.presence.map((membre) => ({
+    membre,
+    nom: nomDuPersonnage(membre.characterId, props.etat),
+  }));
+  const sansNom = membres.filter((entree) => entree.nom === null).length;
 
   return (
     <div className="fr-cote">
@@ -38,19 +54,30 @@ export function LaTable(props: {
       {props.presence.length === 0 ? (
         <EmptyState>Personne d’autre n’est connecté.</EmptyState>
       ) : (
-        <ul className="fr-presence">
-          {props.presence.map((membre) => (
-            <li key={membre.playerId} className="fr-presence__membre">
-              <span
-                className={
-                  membre.online ? 'fr-presence__pastille--en-ligne' : 'fr-presence__pastille'
-                }
-              />
-              {membre.characterId ?? membre.playerId}
-              {membre.typing ? <em className="fr-presence__ecrit"> écrit…</em> : null}
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="fr-presence">
+            {membres.map(({ membre, nom }) => (
+              <li key={membre.playerId} className="fr-presence__membre">
+                <span
+                  className={
+                    membre.online ? 'fr-presence__pastille--en-ligne' : 'fr-presence__pastille'
+                  }
+                />
+                {nom ?? membre.characterId ?? membre.playerId}
+                {membre.typing ? <em className="fr-presence__ecrit"> écrit…</em> : null}
+              </li>
+            ))}
+          </ul>
+          {/* Signalé, pas contourné, et SEULEMENT quand c'est vrai : une phrase
+              qui s'affiche toujours ne dit plus rien. */}
+          {sansNom === 0 ? null : (
+            <p className="fr-presence__manque">
+              {sansNom === 1
+                ? 'Un joueur est listé par son identifiant : il n’a pas encore de personnage dans l’instantané.'
+                : `${String(sansNom)} joueurs sont listés par leur identifiant : ils n’ont pas encore de personnage dans l’instantané.`}
+            </p>
+          )}
+        </>
       )}
 
       <h3 className="fr-cote__sous-titre">Horloges</h3>

@@ -314,6 +314,89 @@ describe('la disposition de l’écran de table', () => {
     expect(droite?.querySelector('section')?.getAttribute('aria-label')).toBe('La table');
   });
 
+  it('nomme les joueurs de la table, et dit ce qu’elle ne sait pas nommer', () => {
+    // LE DÉFAUT : le bandeau du fil écrivait « vous 2 — Kevin et Théo » pendant
+    // que ce panneau-ci affichait `0CHARACTER…00020CHARACTER…0003`, au même
+    // instant, sur le même écran. La jointure existait déjà dans
+    // `destinataires.ts` ; elle n'était pas appliquée ici.
+    //
+    // TROIS MEMBRES, dont un sans personnage : à deux noms trouvés sur deux, la
+    // moitié « et ce qu'elle ne sait pas nommer » ne serait mesurée par rien.
+    const kevin = anId('player', 1);
+    const theo = anId('player', 2);
+    const sansPersonnage = anId('player', 3);
+    const persoDeKevin = anId('character', 1);
+    const persoDeTheo = anId('character', 2);
+
+    const store = unStore();
+    rendreTable({ largeur: 'assise', store });
+    act(() => {
+      store.getState().receive(
+        snapshotFrame(
+          aTableStateDto({
+            seq: 412,
+            characters: [
+              aCharacter({ id: persoDeKevin, playerId: kevin, displayName: 'Kevin' }),
+              aCharacter({ id: persoDeTheo, playerId: theo, displayName: 'Théo' }),
+            ],
+          }),
+          412,
+          4,
+        ),
+      );
+      store.getState().receive(
+        presenceFrame([
+          { playerId: kevin, characterId: persoDeKevin },
+          { playerId: theo, characterId: persoDeTheo },
+          { playerId: sansPersonnage, characterId: null },
+        ]),
+      );
+    });
+
+    const liste = globalThis.document.querySelector('.fr-presence');
+    expect(liste).not.toBeNull();
+    const lus = [...(liste?.querySelectorAll('li') ?? [])].map((item) => item.textContent.trim());
+    // LE TABLEAU EXACT, et dans l'ordre de la présence : « contient Kevin »
+    // resterait vrai à côté d'un identifiant brut sur la ligne d'à côté.
+    expect(lus).toEqual(['Kevin', 'Théo', sansPersonnage]);
+
+    // Et ce qui manque est DIT, en toutes lettres, plutôt que masqué.
+    expect(globalThis.document.querySelector('.fr-presence__manque')?.textContent ?? '').toContain(
+      'identifiant',
+    );
+  });
+
+  it('ne dit rien de manquant quand tout le monde a un nom', () => {
+    // L'autre sens. Une phrase d'excuse affichée en permanence est une phrase
+    // que personne ne lit plus — et elle rendrait le test ci-dessus vert sur
+    // n'importe quelle table.
+    const kevin = anId('player', 1);
+    const persoDeKevin = anId('character', 1);
+
+    const store = unStore();
+    rendreTable({ largeur: 'assise', store });
+    act(() => {
+      store.getState().receive(
+        snapshotFrame(
+          aTableStateDto({
+            seq: 412,
+            characters: [aCharacter({ id: persoDeKevin, playerId: kevin, displayName: 'Kevin' })],
+          }),
+          412,
+          4,
+        ),
+      );
+      store.getState().receive(presenceFrame([{ playerId: kevin, characterId: persoDeKevin }]));
+    });
+
+    expect(
+      [...globalThis.document.querySelectorAll('.fr-presence li')].map((item) =>
+        item.textContent.trim(),
+      ),
+    ).toEqual(['Kevin']);
+    expect(globalThis.document.querySelector('.fr-presence__manque')).toBeNull();
+  });
+
   it('met le fil et la saisie dans la MÊME carte, la saisie dessous', () => {
     // CORRECTION 1. L'ordre est celui du DOM — donc celui du clavier et du
     // lecteur d'écran — et pas un `order` de CSS qui les laisserait tous les

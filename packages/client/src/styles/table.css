@@ -28,25 +28,6 @@
   padding: var(--e-5);
 }
 
-.fr-table__entete {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--e-4);
-  flex-wrap: wrap;
-}
-
-.fr-table__titre {
-  font-size: var(--t-ecran);
-  margin: 0;
-}
-
-.fr-table__etat {
-  font-size: var(--t-petit);
-  color: var(--texte-discret);
-  margin: 0;
-}
-
 /* LA SURFACE DE JEU (correction 7). Plus sombre que la page, arrondie, sous les
    trois colonnes — et le fond de page reste visible tout autour, parce que
    c'est un cadre posé sur la page et non une seconde page. C'est l'emplacement
@@ -108,6 +89,29 @@
 
 .fr-rail--droite {
   max-width: var(--rail-droite);
+}
+
+/* LE PLAFOND DES COLONNES LATÉRALES, LE MÊME QUE CELUI DU FIL, ET POUR LA MÊME
+   RAISON. Le fil a cessé de pousser la page (correction 1) ; une FICHE longue
+   le pouvait encore — elle n'avait aucune borne, elle rallongeait la surface de
+   jeu, et l'écran redevenait plus haut que l'écran. Donc la même borne, le même
+   jeton, le même palier : `[data-largeur='assise']`, parce qu'en dessous il n'y
+   a plus de place à économiser et que la fiche part de toute façon en tiroir
+   (§4.4).
+
+   ROGNÉ, PAS DÉFILANT, et ce n'est pas une nuance de style : « le SEUL élément
+   qui défile verticalement est le fil … tout le reste tient sur un écran, donc
+   il doit se comprimer, se casser, ou être ROGNÉ par le cadre » (le principe
+   que `tokens.test.ts` tient). Une seconde barre de défilement ici serait un
+   second endroit où chercher ce qu'on ne voit pas.
+
+   CE QUE ÇA COÛTE, DIT PLUTÔT QUE TU : une fiche plus haute que le plafond est
+   coupée en bas, et il n'y a pas aujourd'hui de « voir tout » à ce palier. Le
+   tiroir de la §4.4 est la réponse durable ; l'ouvrir à `assise` est un
+   arbitrage du porteur, pas une correction de recette. */
+.fr-table[data-largeur='assise'] .fr-rail {
+  max-height: var(--ecran-fil-hauteur);
+  overflow: hidden;
 }
 
 .fr-rail__titre {
@@ -373,6 +377,25 @@
   color: var(--accent);
 }
 
+/* SIGNALÉ, PAS TRANCHÉ : L'AZUR VEUT DIRE DEUX CHOSES DANS LA MÊME CARTE.
+   `--accent` et `--portee-publique` se résolvent sur la MÊME primitive. Dans le
+   fil, ce rail azur veut dire « oracle » ; dans le compositeur, douze lignes
+   plus bas et à l'écran juste en dessous, un filet azur veut dire « à toute la
+   table ». Et ce rail en donne un à un bloc PUBLIC, ce que l'arbitrage 3
+   interdit par ailleurs — le public n'a ni rail, ni indentation, ni glyphe.
+
+   DEUX ARBITRAGES DU PORTEUR SE CONTREDISENT, et c'est pour ça que cette règle
+   n'est pas touchée ici. Les sorties possibles, avec ce qu'elles coûtent :
+
+     1. l'oracle perd son rail et se distingue par ce qu'il a déjà — le format
+        « question — RÉPONSE », sa réponse en gras, `data-voix="oracle"`. Coût :
+        la correction 13 demandait « son rail » en toutes lettres ;
+     2. l'oracle garde son rail dans une teinte à lui. Coût : une SEPTIÈME
+        teinte, alors que le budget de six du §2.1 est déjà dépassé — c'est la
+        décision du porteur, pas celle d'une passe de correction ;
+     3. le public cesse d'être nu pour les blocs de voix. Coût : l'arbitrage 3.
+
+   Choisir au hasard entre trois arbitrages du porteur serait en casser deux. */
 .fr-journal__ligne--oracle {
   border-left: var(--filet-large) solid var(--accent);
   padding-left: var(--e-3);
@@ -530,6 +553,7 @@
 }
 
 .fr-destinataire__manque,
+.fr-presence__manque,
 .fr-fiche__manque {
   font-size: var(--t-micro);
   color: var(--texte-discret);

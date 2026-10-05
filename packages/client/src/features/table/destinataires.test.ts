@@ -7,6 +7,8 @@ import {
   cleDeGroupe,
   enumerer,
   groupeDe,
+  joueurDuPersonnage,
+  nomDuPersonnage,
   phraseDesManquants,
   phraseDuGroupe,
 } from './destinataires.js';
@@ -129,5 +131,42 @@ describe('l’énumération', () => {
     [['Kevin', 'Théo', 'Ana'], 'Kevin, Théo et Ana'],
   ])('%j se dit « %s »', (noms, attendu) => {
     expect(enumerer(noms)).toBe(attendu);
+  });
+});
+
+describe('la jointure, dans les deux sens', () => {
+  /**
+   * LES DEUX MOITIÉS DU MÊME CHEMIN. Le protocole dit `playerId` d'un côté
+   * (les destinataires d'une enveloppe, ADR 0008) et `characterId` de l'autre
+   * (le locuteur d'une ligne, `ws/journal.ts`) ; la présence est la seule
+   * chose qui porte les deux. L'écran a besoin du sens personnage → nom pour
+   * écrire qui parle, et du sens personnage → joueur pour savoir si celui qui
+   * parle était destinataire (`fil.ts`, correction 10).
+   *
+   * CHAQUE CAS A DEUX PERSONNAGES : à un seul, « trouve le bon » est vrai de
+   * n'importe quelle implémentation, y compris « rends toujours le premier ».
+   */
+  it('nomme un personnage de l’instantané, et rend null quand il n’y est pas', () => {
+    const etat = instantane();
+    expect(nomDuPersonnage(PERSO_1, etat)).toBe('Kevin');
+    expect(nomDuPersonnage(PERSO_2, etat)).toBe('Théo');
+    expect(nomDuPersonnage(anId('character', 9), etat)).toBeNull();
+    expect(nomDuPersonnage(null, etat)).toBeNull();
+    expect(nomDuPersonnage(PERSO_1, null)).toBeNull();
+  });
+
+  it('retrouve le joueur derrière un personnage, et personne quand la présence ne le porte pas', () => {
+    const presents = presence(
+      { id: JOUEUR_1, perso: PERSO_1 },
+      { id: JOUEUR_2, perso: PERSO_2 },
+      { id: JOUEUR_3, perso: null },
+    );
+    expect(joueurDuPersonnage(PERSO_2, presents)).toBe(JOUEUR_2);
+    expect(joueurDuPersonnage(PERSO_1, presents)).toBe(JOUEUR_1);
+    expect(joueurDuPersonnage(anId('character', 9), presents)).toBeNull();
+    // `null` ne doit PAS tomber sur le joueur sans personnage : deux absences
+    // ne sont pas une correspondance, et c'est l'erreur facile à écrire ici.
+    expect(joueurDuPersonnage(null, presents)).toBeNull();
+    expect(joueurDuPersonnage(PERSO_1, [])).toBeNull();
   });
 });

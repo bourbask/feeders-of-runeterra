@@ -1,7 +1,8 @@
 import type { JournalLine } from '../../ws/journal.js';
 import { isReadable } from '../../ws/journal.js';
+import type { PresenceMember } from '../../ws/store.js';
 import { avertissementDeclassification } from './Destinataire.js';
-import { cleDeGroupe } from './destinataires.js';
+import { cleDeGroupe, joueurDuPersonnage } from './destinataires.js';
 import { porteeVue } from './portee.js';
 
 /**
@@ -27,11 +28,26 @@ import { porteeVue } from './portee.js';
  *    saying so, « les rails apparaissent sans explication ».
  *
  * 3. A PROMOTED BLOCK IS THE PLAYER'S DOING, NOT THE SYSTEM'S (correction 10),
- *    and the predicate is NOT retyped here: it is
+ *    and the scope predicate is NOT retyped here: it is
  *    `avertissementDeclassification`, the very function §7.2 uses to warn
  *    BEFORE the send. The warning before and the mark after are the same rule
  *    read twice, so they cannot drift — if one day group → public stops being a
  *    declassification, both change together or neither does.
+ *
+ *    BUT THE SCOPE PREDICATE IS ONLY HALF THE RULE, AND THE MISSING HALF IS WHO
+ *    SPEAKS. §7.2 warns ME about what I am about to send: the actor is me, by
+ *    construction, so the scopes alone decide. In the feed the actor is ANYONE,
+ *    so the same two scopes say nothing: « le conteur me parle en privé, un
+ *    AUTRE joueur parle ensuite en public » has exactly the shape of a
+ *    declassification and is none — that player received nothing. Writing
+ *    « il l'a rendu public, personne d'autre » under his name would be a NAMED
+ *    ACCUSATION, false, in front of the whole table. So a block is promoted
+ *    only when THE SPEAKER IS ONE OF THE RECIPIENTS of the restricted block he
+ *    answers, and that is a join: a line names its speaker by CHARACTER, an
+ *    envelope names its recipients by PLAYER, and `destinataires.ts` joins the
+ *    two through presence. Without presence, nobody is accused — the mark is
+ *    an accusation, and the silent answer to « I cannot tell » is silence.
+ *    `fil.test.ts` holds it with TWO ACTORS; one actor cannot see this at all.
  *
  * 4. THE DICE ARE SET ASIDE (correction 11). « Pourquoi ? » no longer sits on
  *    the turn that rolled: it is attached to the FIRST READABLE BLOCK THAT
@@ -47,7 +63,11 @@ export interface BlocDuFil {
   readonly ouvreUneSuite: boolean;
   /** « le groupe s'est séparé », rendered ABOVE this block (correction 9). */
   readonly rupture: boolean;
-  /** The player answered in public what he alone had been told (correction 10). */
+  /**
+   * THIS SPEAKER answered in public what he himself had been told in private
+   * (correction 10). False for anyone who was not a recipient of the block he
+   * answers, and false when presence cannot tell.
+   */
   readonly promu: boolean;
   /** The turn whose « Pourquoi ? » this block carries, or `null` (correction 11). */
   readonly preuveDuTour: string | null;
@@ -80,7 +100,38 @@ function dernierJetParTour(lignes: readonly JournalLine[]): ReadonlyMap<string, 
   return derniers;
 }
 
-export function composerLeFil(toutes: readonly JournalLine[]): readonly BlocDuFil[] {
+/**
+ * Did the person speaking receive the restricted block just above?
+ *
+ * THE JOIN, AND WHAT IT ANSWERS WITH WHEN IT CANNOT TELL. `ligne.speaker` is a
+ * character id (`ws/journal.ts`), `precedente.recipients` are player ids (ADR
+ * 0008), and presence is the only thing that holds both. A missing speaker, an
+ * absent presence, a recipient list that is empty: each of them means « I do
+ * not know who this is », and the answer to that is FALSE — no mark, no
+ * sentence, no name. The mark accuses; an accusation is not a default.
+ */
+function leLocuteurAvaitRecu(
+  ligne: JournalLine,
+  precedente: JournalLine,
+  presence: readonly PresenceMember[],
+): boolean {
+  const destinataires = precedente.recipients ?? [];
+  if (destinataires.length === 0) return false;
+  const joueur = joueurDuPersonnage(ligne.speaker, presence);
+  if (joueur === null) return false;
+  return destinataires.includes(joueur);
+}
+
+/**
+ * `presence` is NOT optional and has no default, on purpose: a default would
+ * make every existing call site compile unchanged and silently fall back to
+ * « nobody is ever promoted », which is the failure this parameter exists to
+ * prevent. A caller that has no presence passes `[]` and says so.
+ */
+export function composerLeFil(
+  toutes: readonly JournalLine[],
+  presence: readonly PresenceMember[],
+): readonly BlocDuFil[] {
   const lisibles = toutes.filter(isReadable);
   const jets = dernierJetParTour(toutes);
 
@@ -117,7 +168,8 @@ export function composerLeFil(toutes: readonly JournalLine[]): readonly BlocDuFi
       promu:
         ligne.kind === 'joueur' &&
         precedente !== null &&
-        avertissementDeclassification(precedente.scope, ligne.scope) !== null,
+        avertissementDeclassification(precedente.scope, ligne.scope) !== null &&
+        leLocuteurAvaitRecu(ligne, precedente, presence),
       preuveDuTour: porteurs.get(cle) ?? null,
     });
 

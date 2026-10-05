@@ -1,13 +1,20 @@
 import type { C2SMessage } from '@for/contracts';
-import type { EventScope, GameEventType } from '@for/engine';
+import type { CharacterId, EventScope, GameEventType } from '@for/engine';
 import { EVENT_SCOPES, GAME_EVENT_TYPES } from '@for/engine';
-import { aCorrelationId, anEvent, anId } from '@for/testkit';
+import { aCharacter, aCorrelationId, anEvent, anId } from '@for/testkit';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { StoreApi } from 'zustand/vanilla';
 
-import { aTurnProof, eventFrame, turnProofFrame } from '../../test/frames.js';
+import {
+  aTableStateDto,
+  aTurnProof,
+  eventFrame,
+  presenceFrame,
+  snapshotFrame,
+  turnProofFrame,
+} from '../../test/frames.js';
 import { TableStoreProvider } from '../../ws/context.js';
 import { ROLL_EVENT_TYPES } from '../../ws/journal.js';
 import type { TableState } from '../../ws/store.js';
@@ -422,21 +429,63 @@ describe('la parole et le récit', () => {
 
 // ----------------------------------------------------- le bloc promu (§10)
 
+/**
+ * LE MÊME ÉCRAN, À DEUX JOUEURS. `fil.test.ts` tient la règle sans rendre une
+ * page ; ce fichier-ci tient le CÂBLAGE — que la présence arrive bien jusqu'à
+ * `composerLeFil`, et que la phrase ne s'affiche que sous le bon nom.
+ *
+ * Les deux moitiés sont nécessaires : la règle peut être juste et le composant
+ * ne jamais lui passer la présence, auquel cas plus personne n'est jamais
+ * marqué et la correction 10 disparaît en silence. Le cas « Kevin » et le cas
+ * « Théo » sont donc rendus tous les deux, depuis le même magasin.
+ */
 describe('le bloc promu', () => {
-  const reponsePublique = anEvent({
-    seq: 414,
+  const KEVIN = anId('player', 1);
+  const THEO = anId('player', 2);
+  const PERSONNAGE_DE_KEVIN = anId('character', 1);
+  const PERSONNAGE_DE_THEO = anId('character', 2);
+
+  /** Le conteur parle à Kevin, et à lui seul. */
+  const secret = anEvent({
+    seq: 413,
     correlationId: TOUR,
-    scope: 'table',
-    recipients: null,
-    type: 'narration.player_message',
-    payload: { text: 'Il y a une trappe sous la neige.', kind: 'ic' },
+    scope: 'private',
+    recipients: [KEVIN],
+    type: 'narration.gm_message',
+    payload: {
+      text: 'Tu vois la trappe.',
+      aiCallId: anId('aicall'),
+      model: 'stub',
+      promptVersion: 'conteur/2.0.0',
+      source: 'ai',
+      citedEventSeqs: [],
+    },
   });
 
-  it('surligne la réponse publique à ce qu’un joueur seul avait reçu', () => {
+  const parole = (personnage: CharacterId, texte: string) =>
+    anEvent({
+      seq: 414,
+      correlationId: TOUR,
+      scope: 'table',
+      recipients: null,
+      actorKind: 'player',
+      subjectCharacterId: personnage,
+      type: 'narration.player_message',
+      payload: { text: texte, kind: 'ic', characterId: personnage },
+    });
+
+  const laTable = () =>
+    presenceFrame([
+      { playerId: KEVIN, characterId: PERSONNAGE_DE_KEVIN },
+      { playerId: THEO, characterId: PERSONNAGE_DE_THEO },
+    ]);
+
+  it('surligne la réponse publique du joueur QUI avait reçu', () => {
     afficher();
     recevoir(
-      eventFrame(413, 1, prose(413, 'Tu vois la trappe.', 'private')),
-      eventFrame(414, 2, reponsePublique),
+      laTable(),
+      eventFrame(413, 1, secret),
+      eventFrame(414, 2, parole(PERSONNAGE_DE_KEVIN, 'Il y a une trappe sous la neige.')),
     );
 
     const promus = globalThis.document.querySelectorAll('[data-promu]');
@@ -446,17 +495,103 @@ describe('le bloc promu', () => {
     expect(screen.getByText(/il l’a rendu public, personne d’autre/u)).toBeDefined();
   });
 
-  it('ne surligne pas une réponse publique à du public', () => {
-    // L'autre sens, et il mord : sans lui, « tout bloc de joueur est promu »
-    // passerait le test précédent.
+  it('n’accuse PAS l’autre joueur, qui n’avait rien reçu', () => {
+    // LE DÉFAUT CORRIGÉ, rendu. Même fil, même portée, même bloc privé
+    // au-dessus : seul le locuteur change. Théo n'a jamais vu la trappe, et
+    // écrire sous son nom qu'il l'a rendue publique est une accusation
+    // nominative fausse, affichée à toute la table.
     afficher();
     recevoir(
-      eventFrame(413, 1, prose(413, 'La corde tient.', 'table')),
-      eventFrame(414, 2, reponsePublique),
+      laTable(),
+      eventFrame(413, 1, secret),
+      eventFrame(414, 2, parole(PERSONNAGE_DE_THEO, 'J’ai froid.')),
     );
 
     expect(blocs()).toHaveLength(2);
     expect(globalThis.document.querySelectorAll('[data-promu]')).toHaveLength(0);
+    expect(screen.queryByText(/il l’a rendu public, personne d’autre/u)).toBeNull();
+  });
+
+  it('ne surligne pas une réponse publique à du public', () => {
+    // L'autre sens, et il mord : sans lui, « tout bloc de joueur est promu »
+    // passerait le premier test.
+    afficher();
+    recevoir(
+      laTable(),
+      eventFrame(413, 1, prose(413, 'La corde tient.', 'table')),
+      eventFrame(414, 2, parole(PERSONNAGE_DE_KEVIN, 'Il y a une trappe sous la neige.')),
+    );
+
+    expect(blocs()).toHaveLength(2);
+    expect(globalThis.document.querySelectorAll('[data-promu]')).toHaveLength(0);
+  });
+});
+
+// ------------------------------------------------- le nom de qui parle (M1)
+
+describe('le locuteur d’une parole', () => {
+  it('porte son NOM, joint à l’instantané, et jamais un identifiant brut', () => {
+    // LE DÉFAUT : le bandeau du fil disait « vous 2 — Kevin et Théo » pendant
+    // que la ligne juste en dessous écrivait `0CHARACTER…0002` au-dessus de la
+    // parole. Le même écran, le même instant, deux façons de nommer les mêmes
+    // gens. La jointure est celle de `destinataires.ts` : personnage →
+    // `displayName` de l'instantané.
+    const personnage = anId('character', 1);
+    const etat = aTableStateDto({
+      characters: [aCharacter({ id: personnage, displayName: 'Théo' })],
+    });
+
+    afficher();
+    recevoir(
+      snapshotFrame(etat, 0, 0),
+      eventFrame(
+        414,
+        1,
+        anEvent({
+          seq: 414,
+          correlationId: TOUR,
+          scope: 'table',
+          recipients: null,
+          actorKind: 'player',
+          subjectCharacterId: personnage,
+          type: 'narration.player_message',
+          payload: { text: 'Il y a une trappe.', kind: 'ic', characterId: personnage },
+        }),
+      ),
+    );
+
+    const qui = globalThis.document.querySelector('.fr-journal__qui');
+    expect(qui?.textContent).toBe('Théo');
+    // Et l'identifiant n'est plus nulle part dans le bloc : c'est l'assertion
+    // qui mord, « contient le nom » resterait vraie à côté de l'identifiant.
+    expect(blocs()[0]?.textContent).not.toContain(personnage);
+  });
+
+  it('retombe sur l’identifiant quand l’instantané ne porte pas le personnage', () => {
+    // Le miroir JOINT, il n'invente pas. Sans personnage dans l'instantané, il
+    // n'y a pas de nom à écrire — et un nom fabriqué serait pire.
+    const personnage = anId('character', 9);
+
+    afficher();
+    recevoir(
+      snapshotFrame(aTableStateDto(), 0, 0),
+      eventFrame(
+        414,
+        1,
+        anEvent({
+          seq: 414,
+          correlationId: TOUR,
+          scope: 'table',
+          recipients: null,
+          actorKind: 'player',
+          subjectCharacterId: personnage,
+          type: 'narration.player_message',
+          payload: { text: 'Il y a une trappe.', kind: 'ic', characterId: personnage },
+        }),
+      ),
+    );
+
+    expect(globalThis.document.querySelector('.fr-journal__qui')?.textContent).toBe(personnage);
   });
 });
 
