@@ -98,6 +98,28 @@ for (const paquet of paquets) {
   for (const script of SCRIPTS_DE_PAQUET) {
     if (!m.scripts?.[script]) soucis.push(`packages/${paquet} : le script « ${script} » manque`);
   }
+  /**
+   * UN SCRIPT QUI LIT LE `.env` DE LA RACINE DOIT DÉMARRER DEPUIS LA RACINE.
+   *
+   * npm lance le script d'un paquet depuis le dossier de ce paquet. Les
+   * chemins du `.env` sont relatifs au processus, pas au dépôt : `pnpm
+   * db:reset` part de la racine, donc `DATABASE_PATH=./data/app.db` y désigne
+   * `data/app.db` ; le même réglage lu depuis `packages/server/` en désigne un
+   * autre.
+   *
+   * Mesuré le 5 octobre, et c'est le défaut que cette règle garde : `pnpm dev`
+   * a créé une SECONDE base, vide, dans `packages/server/data/`, pendant que
+   * le seed remplissait celle de la racine. Le joueur se connectait, la table
+   * n'était jamais là, et les deux bases étaient parfaitement saines.
+   */
+  const dev = m.scripts?.['dev'];
+  if (dev !== undefined && dev.includes('--env-file') && !dev.startsWith('cd ../..')) {
+    soucis.push(
+      `packages/${paquet} : le script « dev » lit un .env mais ne part pas de la racine ` +
+        `— les chemins relatifs du .env désigneraient alors packages/${paquet}/`,
+    );
+  }
+
   if (m.name !== `@for/${paquet}`) {
     soucis.push(
       `packages/${paquet} : le nom devrait être « @for/${paquet} », il est « ${m.name ?? '(absent)'} »`,
