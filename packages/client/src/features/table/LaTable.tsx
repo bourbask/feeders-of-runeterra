@@ -29,8 +29,12 @@ export function LaTable(props: {
 
   return (
     <div className="fr-cote">
-      <h2 className="fr-rail__titre">La table</h2>
-
+      {/* LE TITRE « LA TABLE » A DISPARU (correction 5). Il est remonté dans la
+          barre du haut, sous la forme du NOM DE L'AVENTURE — « la table » ne
+          nommait rien, c'était l'étiquette d'un panneau qui est déjà le
+          panneau de la table. Le nom accessible, lui, reste : il est porté par
+          l'`aria-label` de la section, dans `TableRoom.tsx`, pour qu'un lecteur
+          d'écran sache toujours dans quel panneau il est (§2.2). */}
       {props.presence.length === 0 ? (
         <EmptyState>Personne d’autre n’est connecté.</EmptyState>
       ) : (

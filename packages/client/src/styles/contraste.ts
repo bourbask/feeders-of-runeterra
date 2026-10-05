@@ -193,6 +193,39 @@ export const PAIRES_TEXTE: readonly Paire[] = [
     mesure: 11.98,
     quoi: 'le texte sur pastille active',
   },
+  // La surface de jeu (correction 7) est un FOND : tout ce qui s'écrit dessus
+  // se mesure dessus, sans quoi elle serait le seul aplat de l'écran dont
+  // personne ne connaît le contraste.
+  {
+    devant: '--texte',
+    sur: '--fond-jeu',
+    minimum: 4.5,
+    mesure: 14.56,
+    quoi: 'le texte sur la surface de jeu',
+  },
+  {
+    devant: '--texte-discret',
+    sur: '--fond-jeu',
+    minimum: 4.5,
+    mesure: 6.68,
+    quoi: 'les libellés sur la surface de jeu',
+  },
+  // La troisième teinte de portée (arbitrage A), sur les deux fonds où elle
+  // apparaît : le rail d'un bloc personnel, et le filet de la position 3.
+  {
+    devant: '--portee-personnelle',
+    sur: '--fond',
+    minimum: 4.5,
+    mesure: 8.48,
+    quoi: 'le rail personnel',
+  },
+  {
+    devant: '--portee-personnelle',
+    sur: '--fond-panneau',
+    minimum: 4.5,
+    mesure: 8.92,
+    quoi: 'le rail personnel en panneau',
+  },
 ];
 
 /**

@@ -14,7 +14,7 @@ import { CampaignList } from './routes/CampaignList.js';
 import { CharacterPicker } from './routes/CharacterPicker.js';
 import { DesignShowcase } from './routes/DesignShowcase.js';
 import { Login } from './routes/Login.js';
-import { TableRoom } from './routes/TableRoom.js';
+import { BarreTechnique, TableRoom } from './routes/TableRoom.js';
 import { parseRoute, type Route } from './routes/route.js';
 import { TableStoreProvider } from './ws/context.js';
 import type { SocketHandle } from './ws/socket.js';
@@ -38,12 +38,30 @@ function useHash(): string {
   return hash;
 }
 
+/** What the top bar needs about the player, whatever route is on screen. */
+interface Entete {
+  readonly joueur: MeResponse['player'];
+  readonly onDeconnexion: () => void;
+  readonly enCours: boolean;
+}
+
 /**
  * The table screen plus its socket. ONE STORE PER CAMPAIGN, created with the
  * connection and dropped with it: a store that outlived a table would show one
  * table's journal under another table's name.
+ *
+ * IT RENDERS THE TOP BAR ITSELF, and that is correction 4 and nothing else.
+ * The bar carries « Liaison : connectée · contenu … · journal n° 248 », which
+ * is read off the table store — so the bar has to be INSIDE the provider. The
+ * other routes keep their bar in `Ecran`, where it always was.
  */
-function TableScreen(props: { readonly campaignId: string; readonly http: HttpDeps }): ReactNode {
+function TableScreen(props: {
+  readonly campaignId: string;
+  readonly http: HttpDeps;
+  readonly entete: Entete;
+  /** Le nom de l'aventure, à gauche dans la barre (correction 5). */
+  readonly aventure: string | null;
+}): ReactNode {
   const transport = useRef<SocketHandle | null>(null);
 
   const store = useMemo(
@@ -100,6 +118,13 @@ function TableScreen(props: { readonly campaignId: string; readonly http: HttpDe
 
   return (
     <TableStoreProvider store={store}>
+      <AppHeader
+        joueur={props.entete.joueur}
+        onDeconnexion={props.entete.onDeconnexion}
+        enCours={props.entete.enCours}
+        aventure={props.aventure}
+        technique={<BarreTechnique />}
+      />
       <TableRoom />
     </TableStoreProvider>
   );
@@ -148,16 +173,18 @@ export function App(props: { readonly http: HttpDeps }): ReactNode {
   }
 
   return (
-    <>
-      <AppHeader
-        joueur={me.data.player}
-        onDeconnexion={() => {
+    <Ecran
+      route={route}
+      me={me.data}
+      http={props.http}
+      entete={{
+        joueur: me.data.player,
+        onDeconnexion: () => {
           deconnexion.mutate();
-        }}
-        enCours={deconnexion.isPending}
-      />
-      <Ecran route={route} me={me.data} http={props.http} />
-    </>
+        },
+        enCours: deconnexion.isPending,
+      }}
+    />
   );
 }
 
@@ -173,25 +200,60 @@ export function App(props: { readonly http: HttpDeps }): ReactNode {
  * L'exclure ICI rend les deux intentions compatibles : aucun `case 'design'` à
  * écrire, et un nom ajouté à `Route` sans être traité fait toujours échouer la
  * compilation. C'est le mécanisme que la PR 104 voulait, préservé.
+ *
+ * LA TABLE SORT DU `switch` PAR LE HAUT, pour la même raison qu'elle a sa
+ * propre barre : elle est le seul écran dont l'en-tête lit l'état de la table,
+ * donc le seul dont l'en-tête vit sous le fournisseur de magasin. Le `switch`
+ * de `Contenu` reste exhaustif sur ce qui reste, et un nom ajouté à `Route`
+ * sans être traité fait toujours échouer la compilation.
  */
 function Ecran(props: {
   readonly route: Exclude<Route, { readonly nom: 'design' }>;
   readonly me: MeResponse;
   readonly http: HttpDeps;
+  readonly entete: Entete;
+}): ReactNode {
+  const route = props.route;
+
+  if (route.nom === 'table') {
+    const campagne = props.me.campaigns.find((candidate) => candidate.id === route.campaignId);
+    return (
+      <TableScreen
+        campaignId={route.campaignId}
+        http={props.http}
+        entete={props.entete}
+        aventure={campagne?.name ?? null}
+      />
+    );
+  }
+
+  return (
+    <>
+      <AppHeader
+        joueur={props.entete.joueur}
+        onDeconnexion={props.entete.onDeconnexion}
+        enCours={props.entete.enCours}
+      />
+      <Contenu route={route} me={props.me} />
+    </>
+  );
+}
+
+function Contenu(props: {
+  readonly route: Exclude<Route, { readonly nom: 'design' } | { readonly nom: 'table' }>;
+  readonly me: MeResponse;
 }): ReactNode {
   switch (props.route.nom) {
-    case 'table':
-      return <TableScreen campaignId={props.route.campaignId} http={props.http} />;
     case 'personnage':
       return (
         <CharacterPicker campaignId={props.route.campaignId} personnages={props.me.characters} />
       );
     case 'campagnes':
       return <CampaignList campagnes={props.me.campaigns} />;
-    // Pas de `case 'design'` : le retour plus haut a déjà narrowed le type, et
-    // TS le refuse ici. C'est le mécanisme qu'on veut — un nom ajouté à `Route`
-    // sans être traité fait échouer la compilation, qu'on l'ait oublié avant ou
-    // après le portillon.
+    // Pas de `case 'design'` ni de `case 'table'` : les deux retours plus haut
+    // ont déjà narrowed le type, et TS les refuse ici. C'est le mécanisme qu'on
+    // veut — un nom ajouté à `Route` sans être traité fait échouer la
+    // compilation, qu'on l'ait oublié avant ou après le portillon.
     case 'inconnue':
       return <p className="fr-erreur">Cette page n’existe pas.</p>;
   }

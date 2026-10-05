@@ -277,8 +277,22 @@ describe('la vitrine /design', { timeout: 30_000 }, () => {
     expect(PORTEES_ORDONNEES).toHaveLength(3);
     for (const vue of PORTEES_ORDONNEES) {
       expect(screen.getAllByText(vue.libelle).length).toBeGreaterThan(0);
+    }
+
+    // LE GLYPHE, SEULEMENT POUR CEUX QUI EN ONT UN, et c'est un garde-fou
+    // contre le mode 9 et pas une complaisance. Depuis la correction 3 le
+    // public n'a plus de glyphe : `getAllByText('')` passerait sur n'importe
+    // quelle page, parce que tout élément vide y répond. Un critère vrai du
+    // vide est un critère qui ne mesure rien. On exige donc le glyphe des deux
+    // portées marquées, et on exige en toutes lettres que celui du public soit
+    // absent.
+    const marquees = PORTEES_ORDONNEES.filter((vue) => vue.marque);
+    expect(marquees).toHaveLength(2);
+    for (const vue of marquees) {
+      expect(vue.glyphe).not.toBe('');
       expect(screen.getAllByText(vue.glyphe).length).toBeGreaterThan(0);
     }
+    expect(PORTEES_ORDONNEES.filter((vue) => !vue.marque).map((vue) => vue.glyphe)).toEqual(['']);
 
     // La jauge rendue est bien celle du produit : son marqueur de position, en
     // toutes lettres, est dans les DEUX vignettes — avec et sans teinte.

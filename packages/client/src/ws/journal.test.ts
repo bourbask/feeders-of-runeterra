@@ -1,4 +1,4 @@
-import type { GameEvent } from '@for/engine';
+import type { GameEvent, GameEventType } from '@for/engine';
 import { GAME_EVENT_TYPES } from '@for/engine';
 import { anEvent, anId } from '@for/testkit';
 import { describe, expect, it } from 'vitest';
@@ -122,12 +122,103 @@ describe('la liste des types narratifs et la fonction disent la même chose', ()
       type: 'system.note',
       payload: { text: 'Pause.', byPlayerId: anId('player') },
     }),
+    'roll.oracle_resolved': anEvent({
+      seq: 7,
+      type: 'roll.oracle_resolved',
+      payload: {
+        rollId: anId('roll'),
+        tableId: 'rencontres-du-col',
+        tableVersion: '1.0.0',
+        dieSize: 100,
+        value: 73,
+        entryId: 'loup-blesse',
+        text: 'Un loup blessé, et personne pour l’avoir blessé.',
+        tags: [],
+        question: 'Qu’y a-t-il derrière la corniche ?',
+      },
+    }),
+    'roll.yes_no_resolved': anEvent({
+      seq: 8,
+      type: 'roll.yes_no_resolved',
+      payload: {
+        rollId: anId('roll'),
+        question: 'La porte est-elle gardée ?',
+        likelihood: 'probable',
+        threshold: 75,
+        value: 42,
+        answer: 'oui',
+        isExtreme: false,
+      },
+    }),
   };
 
   it.each([...NARRATIVE_EVENT_TYPES])('« %s » produit bien une ligne lisible', (type) => {
     const ligne = lineOfEvent(EXEMPLES[type], 1);
     expect(ligne.kind).not.toBe('mecanique');
     expect(ligne.text).not.toBeNull();
+  });
+
+  /**
+   * LA LISTE EST UNE MESURE, PAS UNE DÉCLARATION — et elle ne l'était pas.
+   *
+   * SONDE QUI A SERVI, mode 6 de la recette : retirer les deux oracles de
+   * `NARRATIVE_EVENT_TYPES` laissait les 53 tests de ce fichier et du fil AU
+   * VERT. `proseOf` leur donnait toujours leur texte, et la liste n'était plus
+   * qu'un commentaire qui se trouvait compiler. Seul `typecheck:tests` —
+   * c'est-à-dire le travail 4 de la CI, pas les quatre portes locales — le
+   * voyait, par la clé en trop du dictionnaire ci-dessus.
+   *
+   * Donc : le NOM des types est écrit ici en toutes lettres, indépendamment de
+   * la liste, et ce qui est comparé est « ce que la fonction rend lisible »
+   * contre « ce que la liste annonce ». Vider la liste fait tomber ce test.
+   */
+  const TOUS: readonly (readonly [GameEventType, GameEvent])[] = [
+    ['scene.started', EXEMPLES['scene.started']],
+    ['scene.ended', EXEMPLES['scene.ended']],
+    ['narration.gm_message', EXEMPLES['narration.gm_message']],
+    ['narration.gm_failed', EXEMPLES['narration.gm_failed']],
+    ['narration.player_message', EXEMPLES['narration.player_message']],
+    ['system.note', EXEMPLES['system.note']],
+    ['roll.oracle_resolved', EXEMPLES['roll.oracle_resolved']],
+    ['roll.yes_no_resolved', EXEMPLES['roll.yes_no_resolved']],
+    // Les deux mécaniques, pour que la mesure ait quelque chose à EXCLURE : une
+    // comparaison dont tous les cas tombent du même côté ne mesure rien.
+    [
+      'character.gauge_changed',
+      anEvent({
+        seq: 9,
+        type: 'character.gauge_changed',
+        payload: {
+          characterId: anId('character'),
+          gauge: 'vigueur',
+          delta: -1,
+          from: 5,
+          to: 4,
+          clamped: false,
+          cause: 'prix',
+        },
+      }),
+    ],
+    [
+      'move.aborted',
+      anEvent({
+        seq: 10,
+        type: 'move.aborted',
+        payload: { moveId: 'face-danger', characterId: anId('character'), reason: 'timeout' },
+      }),
+    ],
+  ];
+
+  it('annonce exactement les types que la fonction rend lisibles', () => {
+    const lisibles = TOUS.filter(([, evenement]) => isReadable(lineOfEvent(evenement, 1))).map(
+      ([type]) => type,
+    );
+
+    // La mesure trouve bien les deux bords : des lisibles ET des muets.
+    expect(lisibles.length).toBeGreaterThan(0);
+    expect(lisibles.length).toBeLessThan(TOUS.length);
+
+    expect([...lisibles].sort()).toEqual([...NARRATIVE_EVENT_TYPES].sort());
   });
 });
 
@@ -220,5 +311,75 @@ describe('un événement narratif', () => {
 
     expect(ligne.text).toBe('Le col battu par la tempête');
     expect(ligne.text).not.toContain('0SCENE');
+  });
+});
+
+/**
+ * L'ORACLE (correction 13). Il n'est ni du récit ni de la parole, et c'est
+ * pour ça qu'il a son propre `kind` : une voix de synthèse doit pouvoir le
+ * laisser de côté, et un `kind` emprunté au conteur le lui rendrait invisible.
+ *
+ * CE QUI EST MESURÉ ICI, ET QUI N'EST PAS « il y a du texte » : la QUESTION et
+ * la RÉPONSE arrivent dans DEUX champs distincts, et AUCUN des cinq nombres de
+ * la charge utile n'arrive nulle part. Un oracle qui pousserait son `value` ou
+ * son `threshold` dans le fil serait exactement le défaut que le §12 interdit
+ * au reste du fil.
+ */
+describe('un oracle', () => {
+  const question = anEvent({
+    seq: 20,
+    type: 'roll.yes_no_resolved',
+    payload: {
+      rollId: anId('roll'),
+      question: 'La porte est-elle gardée ?',
+      likelihood: 'probable',
+      threshold: 75,
+      value: 42,
+      answer: 'non',
+      isExtreme: false,
+    },
+  });
+
+  it('porte sa question et sa réponse dans deux champs, pas dans une phrase', () => {
+    const ligne = lineOfEvent(question, 1);
+    expect(ligne.kind).toBe('oracle');
+    expect(ligne.speaker).toBe('La porte est-elle gardée ?');
+    expect(ligne.text).toBe('NON');
+    expect(isReadable(ligne)).toBe(true);
+  });
+
+  it('est aussi un jet, donc sa preuve reste consultable', () => {
+    expect(lineOfEvent(question, 1).hasRoll).toBe(true);
+  });
+
+  it('ne laisse passer aucun des nombres de sa charge utile', () => {
+    // Les cinq valeurs du tirage, nommées en toutes lettres : « 75 », « 42 »,
+    // la vraisemblance, l'identifiant de jet et le drapeau d'extrême.
+    const serialise = JSON.stringify({ ...lineOfEvent(question, 1), seq: 0, deliverySeq: 0 });
+    for (const interdit of ['75', '42', 'probable', 'isExtreme', 'rollId']) {
+      expect(serialise).not.toContain(interdit);
+    }
+  });
+
+  it('copie le texte de contenu tel quel quand l’oracle est une table', () => {
+    const tire = anEvent({
+      seq: 21,
+      type: 'roll.oracle_resolved',
+      payload: {
+        rollId: anId('roll'),
+        tableId: 'rencontres-du-col',
+        tableVersion: '1.0.0',
+        dieSize: 100,
+        value: 73,
+        entryId: 'loup-blesse',
+        text: 'Un loup blessé.',
+        tags: [],
+        question: 'Qu’y a-t-il derrière la corniche ?',
+      },
+    });
+    const ligne = lineOfEvent(tire, 1);
+    expect(ligne.text).toBe('Un loup blessé.');
+    expect(ligne.speaker).toBe('Qu’y a-t-il derrière la corniche ?');
+    expect(JSON.stringify(ligne)).not.toContain('73');
   });
 });
