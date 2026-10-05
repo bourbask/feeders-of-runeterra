@@ -1,0 +1,448 @@
+/*
+ * L'écran de table (docs/design/05-interface.md §4, §5, §6).
+ *
+ * AUCUNE VALEUR EN DUR ICI. Pas un hexadécimal, pas un pixel, pas un `rem`
+ * écrit à la main : tout vient de `tokens.css`, étages 2 et 3. Le cliquet de
+ * `tokens.test.ts` compte les `rem` littéraux des feuilles du paquet et refuse
+ * la seizième — ce fichier n'en ajoute aucune.
+ *
+ * LA SEULE DÉCLARATION DE MISE EN PAGE DU DOCUMENT est `.fr-table__grille`, et
+ * c'est celle du §4.1, recopiée telle quelle. Les trois planchers sont à
+ * `0rem` : c'est tout le mécanisme. Une piste `fr` à plancher `auto` refuse de
+ * descendre sous son contenu, donc la grille DÉBORDE au lieu de rétrécir. À
+ * zéro, les deux pistes élastiques absorbent le manque et tombent ensemble,
+ * dans la proportion 1 : 1,15 — « pas de carnet à droite pendant qu'une marge
+ * reste vide à gauche ».
+ */
+
+.fr-table {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-4);
+  padding: var(--e-5);
+}
+
+.fr-table__entete {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--e-4);
+  flex-wrap: wrap;
+}
+
+.fr-table__titre {
+  font-size: var(--t-ecran);
+  margin: 0;
+}
+
+.fr-table__etat {
+  font-size: var(--t-petit);
+  color: var(--texte-discret);
+  margin: 0;
+}
+
+/* Les quatre colonnes, dont deux élastiques (§4.1). */
+.fr-table__grille {
+  display: grid;
+  grid-template-columns:
+    [gauche] minmax(0rem, 1fr)
+    [centre] minmax(0rem, var(--ecran-lecture))
+    [droite] minmax(0rem, 1.15fr);
+  gap: var(--e-5);
+  align-items: start;
+}
+
+.fr-table__cellule {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+  min-width: 0;
+}
+
+/* Un rail ne s'étire pas au-delà de sa largeur : la marge, c'est ce qui reste.
+   C'est la fusion piste/marge du §4.1, et c'est elle qui permet à une marge de
+   ne pas être un panneau vide qui occupe de la place. */
+.fr-rail {
+  width: 100%;
+  background: var(--fond-panneau);
+  border: var(--filet-fin) solid var(--trait);
+  border-radius: var(--r-m);
+  padding: var(--e-3);
+  min-width: 0;
+}
+
+.fr-rail--gauche {
+  max-width: var(--rail-gauche);
+}
+
+.fr-rail--droite {
+  max-width: var(--rail-droite);
+}
+
+.fr-rail__titre {
+  font-size: var(--t-micro);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texte-discret);
+  margin: 0 0 var(--e-2);
+}
+
+/* ------------------------------------------------- les tiroirs (§4.4) --- */
+
+/* UN TIROIR PREND LA PLACE D'UNE COLONNE, IL NE LA RECOUVRE PAS. Donc pas de
+   `position: fixed`, pas de `z-index` : il est dans le flux de la colonne du
+   centre, au-dessus du fil, et le fil reste lisible en dessous. Deux panneaux
+   l'un sur l'autre n'existent pas dans ce produit (règle 7). */
+.fr-tiroir {
+  background: var(--fond-panneau);
+  border: var(--filet-fin) solid var(--trait);
+  border-radius: var(--r-m);
+  padding: var(--e-3);
+  margin-bottom: var(--e-3);
+}
+
+.fr-tiroir__entete {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--e-3);
+}
+
+.fr-tiroir__titre {
+  font-size: var(--t-micro);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texte-discret);
+  margin: 0 0 var(--e-2);
+}
+
+/* L'ordre de ces deux boutons est un arbitrage de game design (§4.4) : la
+   droite d'abord. Le CSS ne le fabrique pas — c'est l'ordre du DOM, pour que
+   le clavier et le lecteur d'écran le lisent pareil. */
+.fr-table__poussoirs {
+  display: flex;
+  gap: var(--e-3);
+}
+
+.fr-bouton-tiroir {
+  font: inherit;
+  font-size: var(--t-petit);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-1);
+  background: var(--fond-panneau);
+  border: var(--filet-fin) solid var(--accent);
+  border-radius: var(--r-s);
+  color: var(--texte);
+  padding: var(--e-2) var(--e-3);
+  cursor: pointer;
+}
+
+.fr-bouton-tiroir:focus-visible {
+  outline: var(--filet-large) solid var(--trait-fort);
+}
+
+.fr-bouton-tiroir__compte {
+  color: var(--texte-discret);
+}
+
+/* -------------------------------------------------- le calque (§4.5) --- */
+
+/* Le calque naît dans la colonne du centre, et il n'y en a qu'un (règles 7
+   et 8). `--z-dialogue` le pose au-dessus du fil sans le sortir de sa
+   colonne : c'est ce qui rend la règle 8 vérifiable depuis l'arbre. */
+.fr-calque {
+  position: relative;
+  z-index: var(--z-dialogue);
+}
+
+.fr-modale {
+  background: var(--fond-panneau);
+  border: var(--filet-fin) solid var(--trait-fort);
+  border-radius: var(--r-l);
+  padding: var(--e-4);
+  margin-bottom: var(--e-3);
+}
+
+.fr-modale__entete {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--e-3);
+}
+
+.fr-modale__titre {
+  font-size: var(--t-titre);
+  margin: 0 0 var(--e-2);
+}
+
+/* ------------------------------------------------------ le fil (§5) --- */
+
+/* LE SEUL ÉLÉMENT QUI DÉFILE VERTICALEMENT. C'est le seul contenu borné par le
+   temps et pas par la place ; tout le reste tient sur un écran. Et rien ne
+   défile latéralement, nulle part : une information qu'on fait glisser pour la
+   lire est une information mal posée. */
+.fr-fil {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  min-height: 0;
+}
+
+/* Les trois rails. L'INDENTATION est le deuxième canal du §5.2 ; le glyphe est
+   le troisième ; le libellé en texte est le premier, et c'est le seul qui ne
+   dépend d'aucune perception de la couleur. La teinte ci-dessous redouble, elle
+   n'informe pas. */
+.fr-journal__ligne {
+  border-left: var(--filet-large) solid var(--trait);
+  padding: var(--e-2) 0 var(--e-2) var(--e-3);
+  border-bottom: var(--filet-fin) solid var(--trait);
+}
+
+.fr-journal__ligne[data-niveau='1'] {
+  margin-left: var(--e-7);
+}
+
+.fr-journal__ligne[data-niveau='2'] {
+  margin-left: var(--e-10);
+}
+
+.fr-journal__ligne[data-portee='table'] {
+  border-left-color: var(--portee-publique);
+}
+
+.fr-journal__ligne[data-portee='subset'],
+.fr-journal__ligne[data-portee='private'] {
+  border-left-color: var(--portee-restreinte);
+}
+
+.fr-bloc__portee {
+  display: block;
+  font-size: var(--t-micro);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texte-discret);
+}
+
+.fr-bloc__glyphe {
+  margin-right: var(--e-1);
+}
+
+.fr-journal__texte {
+  font-size: var(--t-lecture);
+  line-height: 1.6;
+}
+
+/* ---------------------------------------------------- les jauges (§6) --- */
+
+/* UN SEUL BLOC, TROIS RANGS FIXES. « Laquelle a changé » est une question
+   d'emplacement, pas de couleur (§6.2) : l'ordre ne varie jamais. */
+.fr-jauges {
+  list-style: none;
+  margin: 0 0 var(--e-3);
+  padding: 0;
+  display: grid;
+  gap: var(--e-2);
+}
+
+.fr-jauges[data-disposition='horizontale'] {
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0rem, 1fr);
+}
+
+.fr-jauges[data-etat='desactive'] {
+  opacity: 0.5;
+}
+
+.fr-jauge {
+  display: grid;
+  grid-template-columns: auto minmax(0rem, 1fr) auto;
+  align-items: center;
+  gap: var(--e-2);
+  font-size: var(--t-petit);
+}
+
+.fr-jauge__nom {
+  color: var(--texte);
+}
+
+.fr-jauge__valeur {
+  font-variant-numeric: tabular-nums;
+  color: var(--texte);
+}
+
+/* Le tube. Sa hauteur EST sa forme, donc un cran d'échelle y est correct :
+   ce n'est pas une zone à contenu libre. */
+.fr-jauge__tube {
+  grid-column: 1 / -1;
+  display: block;
+  height: var(--e-1);
+  background: var(--surface-haute);
+  border-radius: var(--r-s);
+}
+
+.fr-jauge__plein {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-s);
+  background: var(--texte-discret);
+}
+
+.fr-jauge[data-jauge='vigueur'] .fr-jauge__plein {
+  background: var(--vigueur-aplat);
+}
+
+.fr-jauge[data-jauge='ame'] .fr-jauge__plein {
+  background: var(--ame-aplat);
+}
+
+.fr-jauge__pastilles {
+  letter-spacing: 0.1em;
+  color: var(--vivres-aplat);
+}
+
+/* Le quatrième état du §6.2 : le trait passe en `--accent` pendant le tour. La
+   marque en toutes lettres est au-dessus, dans le composant — la couleur seule
+   ne dit rien (règle 2). */
+.fr-jauge[data-modifiee='true'] {
+  border-left: var(--filet-large) solid var(--accent);
+  padding-left: var(--e-2);
+}
+
+.fr-jauge__marque,
+.fr-jauge__erreur {
+  grid-column: 1 / -1;
+  font-size: var(--t-micro);
+  color: var(--texte-discret);
+}
+
+.fr-jauge__erreur {
+  color: var(--annule);
+}
+
+/* L'élan n'est PAS une jauge (§6.3) : un badge chiffré, pas une barre. Pas de
+   tube, pas de remplissage, rien de cliquable. */
+.fr-elan {
+  font-size: var(--t-petit);
+  margin: 0 0 var(--e-3);
+}
+
+.fr-elan__valeur {
+  font-variant-numeric: tabular-nums;
+  border: var(--filet-fin) solid var(--trait);
+  border-radius: var(--r-s);
+  padding: 0 var(--e-1);
+}
+
+/* ---------------------------------------- le compositeur (§7) --- */
+
+.fr-compositeur {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+  border-top: var(--filet-fin) solid var(--trait);
+  padding-top: var(--e-3);
+}
+
+.fr-destinataire__positions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-2);
+}
+
+.fr-destinataire__position {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-1);
+  font-size: var(--t-petit);
+  border: var(--filet-fin) solid var(--trait);
+  border-radius: var(--r-s);
+  padding: var(--e-1) var(--e-2);
+}
+
+.fr-destinataire__avertissement {
+  border: var(--filet-large) solid var(--annule);
+  background: var(--annule-aplat);
+  border-radius: var(--r-s);
+  padding: var(--e-2);
+  font-size: var(--t-petit);
+}
+
+.fr-destinataire__manque,
+.fr-fiche__manque {
+  font-size: var(--t-micro);
+  color: var(--texte-discret);
+}
+
+.fr-compositeur__champ {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+}
+
+.fr-compositeur__etiquette {
+  font-size: var(--t-micro);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texte-discret);
+}
+
+.fr-compositeur__champ textarea {
+  font: inherit;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  background: var(--fond-panneau);
+  color: var(--texte);
+  border: var(--filet-fin) solid var(--trait);
+  border-radius: var(--r-s);
+  padding: var(--e-2);
+  resize: vertical;
+}
+
+.fr-compositeur__champ textarea:focus-visible {
+  outline: var(--filet-large) solid var(--trait-fort);
+}
+
+.fr-compositeur__pied {
+  display: flex;
+  align-items: baseline;
+  gap: var(--e-2);
+  flex-wrap: wrap;
+  font-size: var(--t-micro);
+  color: var(--texte-discret);
+  margin: 0;
+}
+
+/* ---------------------------------------------------- la fiche (§4.3) --- */
+
+.fr-fiche__identite {
+  display: flex;
+  flex-direction: column;
+  margin: 0 0 var(--e-3);
+}
+
+.fr-fiche__nom {
+  font-size: var(--t-titre);
+}
+
+.fr-fiche__champion,
+.fr-fiche__sous-titre,
+.fr-cote__sous-titre {
+  font-size: var(--t-micro);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texte-discret);
+  margin: var(--e-3) 0 var(--e-1);
+}
+
+.fr-fiche__traits,
+.fr-fiche__atouts,
+.fr-cote__liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: var(--t-petit);
+}

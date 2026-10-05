@@ -14,17 +14,53 @@ import { NARRATIVE_EVENT_TYPES, isReadable, lineOfEvent } from './journal.js';
 const CHAMPS_ATTENDUS = [
   'correlationId',
   'deliverySeq',
+  'hasRoll',
   'kind',
+  'recipients',
   'revoked',
+  'scope',
   'seq',
   'speaker',
   'text',
 ];
 
 describe('la ligne de journal', () => {
-  it('n’a que sept champs, et aucun ne peut porter un chiffre de jeu', () => {
+  it('n’a que dix champs, et aucun ne peut porter un chiffre de jeu', () => {
     const ligne = lineOfEvent(anEvent({ seq: 1 }), 1);
     expect(Object.keys(ligne).sort()).toEqual(CHAMPS_ATTENDUS);
+  });
+
+  it('recopie la portée de l’enveloppe, et n’en décide aucune', () => {
+    // ADR 0008 : c'est le SERVEUR qui renseigne `scope` et `recipients`. Le
+    // client les relit pour dessiner le rail du §5.2 ; il ne les calcule pas,
+    // et il ne filtre rien avec.
+    const destinataires = [anId('player', 1), anId('player', 2)];
+    const ligne = lineOfEvent(anEvent({ seq: 2, scope: 'subset', recipients: destinataires }), 2);
+    expect(ligne.scope).toBe('subset');
+    expect(ligne.recipients).toEqual(destinataires);
+  });
+
+  it('marque un jet comme un jet, et une prose comme pas un jet', () => {
+    // Les deux sens : « tout est un jet » et « rien n'est un jet » passeraient
+    // chacun la moitié de cette assertion.
+    const unJet = lineOfEvent(
+      anEvent({
+        seq: 3,
+        type: 'roll.yes_no_resolved',
+        payload: {
+          rollId: anId('roll'),
+          question: 'Est-elle encore là ?',
+          likelihood: 'probable',
+          threshold: 75,
+          value: 42,
+          answer: 'oui',
+          isExtreme: false,
+        },
+      }),
+      3,
+    );
+    expect(unJet.hasRoll).toBe(true);
+    expect(lineOfEvent(anEvent({ seq: 4 }), 4).hasRoll).toBe(false);
   });
 
   it('les types narratifs existent tous dans le catalogue du moteur', () => {

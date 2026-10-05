@@ -1,6 +1,10 @@
 import type { ReactNode } from 'react';
 
 import { Button } from '../components/ui/Button.js';
+import { Destinataire } from '../features/table/Destinataire.js';
+import { Elan } from '../features/table/Elan.js';
+import { Jauges as JaugesReelles } from '../features/table/Jauge.js';
+import { PORTEES_ORDONNEES } from '../features/table/portee.js';
 import type { Paire } from '../styles/contraste.js';
 import { PAIRES_COMPOSANT, PAIRES_TEXTE } from '../styles/contraste.js';
 import '../styles/design.css';
@@ -1310,6 +1314,86 @@ function Etats(): ReactNode {
 
 /* ---------------------------------------------------------------- page --- */
 
+/**
+ * CE QUE CETTE SECTION A DE DIFFÉRENT : tout le reste de la page est un
+ * DESSIN — du balisage écrit ici pour montrer une intention. Ici, ce sont les
+ * composants de `features/table/`, importés tels quels. C'est le seul endroit
+ * de la vitrine qui ne peut pas mentir sur le produit, parce que c'est le
+ * produit.
+ *
+ * Et c'est aussi la démonstration du §6 et du §5.3 : la même chose, avec ses
+ * teintes et sans. `.dz-sans-couleur` redéfinit les jetons de teinte en gris ;
+ * si l'information disparaît, elle n'était portée que par la couleur.
+ */
+function AuNaturel(): ReactNode {
+  return (
+    <section className="dz-section" id="reels">
+      <h2>§4–§7 — les composants du produit, importés tels quels</h2>
+      <p className="dz-lede">
+        Cette section n’est pas un dessin. Elle importe <code>Jauge.tsx</code>,{' '}
+        <code>Elan.tsx</code>, <code>Destinataire.tsx</code> et <code>portee.ts</code> depuis{' '}
+        <code>features/table/</code>. Un glyphe qui change là-bas change ici.
+      </p>
+
+      <h3>Les trois jauges, telles que l’écran les rend</h3>
+      <div className="dz-paires">
+        <figure className="dz-largeur">
+          <figcaption>Teintes en place</figcaption>
+          <JaugesReelles valeurs={{ vigueur: 4, ame: 2, vivres: 1 }} modifiee="ame" />
+          <Elan valeur={5} fenetreOuverte={false} />
+        </figure>
+        <figure className="dz-largeur dz-sans-couleur">
+          <figcaption>Teintes neutralisées</figcaption>
+          <JaugesReelles valeurs={{ vigueur: 4, ame: 2, vivres: 1 }} modifiee="ame" />
+          <Elan valeur={5} fenetreOuverte={false} />
+        </figure>
+      </div>
+
+      <h3>Les trois portées, lues dans `portee.ts`</h3>
+      <table className="dz-tableau">
+        <thead>
+          <tr>
+            <th>Portée</th>
+            <th>Glyphe</th>
+            <th>Libellé, en texte</th>
+            <th>Indentation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {PORTEES_ORDONNEES.map((vue) => (
+            <tr key={vue.scope}>
+              <td>
+                <code>{vue.scope}</code>
+              </td>
+              <td>{vue.glyphe}</td>
+              <td>{vue.libelle}</td>
+              <td>niveau {vue.niveau}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <h3>Le sélecteur, en position « réponse publique à du privé »</h3>
+      <p className="dz-note">
+        C’est le seul avertissement bloquant du produit (§7.2). Il est rendu ici dans l’état où un
+        joueur le rencontre, pour qu’on puisse juger s’il se voit assez.
+      </p>
+      <div className="dz-largeur">
+        <Destinataire
+          portee="table"
+          onPortee={() => undefined}
+          presents={[]}
+          choisis={[]}
+          onOuvrirListe={() => undefined}
+          porteeDuBloc="private"
+          declassificationAcceptee={false}
+          onAccepterDeclassification={() => undefined}
+        />
+      </div>
+    </section>
+  );
+}
+
 export function DesignShowcase(): ReactNode {
   return (
     <main className="dz">
@@ -1326,11 +1410,13 @@ export function DesignShowcase(): ReactNode {
           est une maquette qu’on ne regarde plus.
         </p>
         <p className="dz-avertissement">
-          <strong>Ceci n’est pas le produit.</strong> Les colonnes, les tiroirs, la carte annotable
-          et la toile de dessin n’existent pas encore dans
+          <strong>Ceci n’est pas le produit.</strong> La carte annotable, la toile de dessin et le
+          carnet d’objets n’existent pas encore dans
           <code> features/table/</code> : ce sont des dessins, et ils sont ici pour être jugés avant
           d’être écrits. Les noms, les chiffres et les objets sont écrits en dur dans{' '}
-          <code>design-data.ts</code> et ne viennent d’aucune requête.
+          <code>design-data.ts</code> et ne viennent d’aucune requête. Depuis UI-01, la section
+          <a href="#reels"> §4–§7 au naturel</a> fait exception : ce sont les composants du produit,
+          importés tels quels — s’ils changent, cette page change avec eux.
         </p>
       </header>
 
@@ -1344,6 +1430,7 @@ export function DesignShowcase(): ReactNode {
         <a href="#destinataires">§7 destinataires</a>
         <a href="#carnet">§8 carnet</a>
         <a href="#etats">§9 états</a>
+        <a href="#reels">§4–§7 au naturel</a>
       </nav>
 
       <Regles />
@@ -1355,6 +1442,7 @@ export function DesignShowcase(): ReactNode {
       <Destinataires />
       <Carnet />
       <Etats />
+      <AuNaturel />
     </main>
   );
 }
