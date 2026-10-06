@@ -32,8 +32,15 @@
    trois colonnes — et le fond de page reste visible tout autour, parce que
    c'est un cadre posé sur la page et non une seconde page. C'est l'emplacement
    futur de l'inventaire physique. */
+/* UN FILET, PAS UN FOND PLUS SOMBRE.
+   La surface ne vaut que 1,07:1 contre le fond de page — mais c'est la grammaire
+   de la maison : les panneaux blancs sont a 1,05:1 et le jeton le dit, « le
+   panneau se lit comme du papier ». Ce qui manquait n'etait pas de l'ombre,
+   c'etait un BORD. L'assombrir aurait demande de bouger la rampe entiere, ou de
+   donner un second role a `--trait` — le defaut meme qu'on reproche a l'azur. */
 .fr-table__jeu {
   background: var(--fond-jeu);
+  border: var(--filet-fin) solid var(--trait);
   border-radius: var(--r-l);
   padding: var(--e-4);
 }

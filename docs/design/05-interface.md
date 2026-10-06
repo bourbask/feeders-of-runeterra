@@ -97,32 +97,39 @@ origine ici.
 
 | Jeton | Valeur | Note |
 |---|---|---|
-| `--p-glace-1000` | `#0a0e13` | fond de vignette, jamais en fond de page |
-| `--p-glace-900` | `#0d1117` | le `--fond` d'aujourd'hui |
-| `--p-glace-800` | `#151b23` | le `--fond-panneau` d'aujourd'hui |
-| `--p-glace-700` | `#2e3541` | surface élevée : un panneau posé sur un panneau |
-| `--p-glace-600` | `#2a3441` | le `--trait` d'aujourd'hui |
-| `--p-glace-500` | `#76808d` | trait marqué : **anneau de focus** — le seul filet qui doit passer 3:1 |
-| `--p-brume-400` | `#6b7a8a` | trait désactivé, et `--ame-aplat` : le remplissage de la jauge d'âme |
-| `--p-brume-300` | `#9aa7b4` | le `--texte-discret` d'aujourd'hui |
-| `--p-brume-100` | `#e6edf3` | le `--texte` d'aujourd'hui |
-| `--p-blanc-000` | `#f2f7fb` | texte sur aplat clair, réservé aux jetons de fond clair |
-| `--p-azure-700` | `#2b4a5c` | accent en aplat, fond de pastille |
-| `--p-azure-500` | `#6fb3d2` | l'`--accent` d'aujourd'hui |
-| `--p-azure-300` | `#a8d4e8` | accent en texte sur fond sombre accentué |
-| `--p-braise-600` | `#7d3a3a` | erreur en aplat |
-| `--p-braise-500` | `#b06a6a` | l'`--annule` d'aujourd'hui — **vaut 4,22:1, voir §2.2** — et `--vigueur-aplat` |
-| `--p-braise-300` | `#e08f8f` | erreur en texte (7,00:1) |
-| `--p-ambre-500` | `#b39a4a` | vivres, en aplat |
-| `--p-ambre-300` | `#e0b558` | vivres, en texte (9,00:1) |
-| `--p-verde-500` | `#4f7a63` | succès, en aplat |
-| `--p-verde-300` | `#8fd3b0` | succès, en texte (9,99:1) |
-| `--p-violet-500` | `#6b5a8f` | l' Personal, en aplat |
-| `--p-violet-300` | `#c9b6f0` | perso, en texte (9,43:1) |
+| `--p-glace-1000` | `#f4f1ea` | `--fond-jeu` : la surface qui porte les trois colonnes |
+| `--p-glace-900` | `#fbf9f5` | `--fond` : le fond de page |
+| `--p-glace-800` | `#ffffff` | `--fond-panneau` : le panneau se lit comme du papier |
+| `--p-glace-700` | `#f0ece2` | `--surface-haute` : un panneau posé sur un panneau |
+| `--p-glace-600` | `#ddd6c7` | `--trait` |
+| `--p-glace-500` | `#6b6357` | `--trait-fort` : **anneau de focus** — le seul filet qui doit passer 3:1 |
+| `--p-brume-400` | `#8a7a5e` | `--ame-aplat` : le remplissage de la jauge d'âme |
+| `--p-brume-300` | `#5c5348` | `--texte-discret` |
+| `--p-brume-100` | `#221f1a` | `--texte` |
+| `--p-blanc-000` | `#ffffff` | `--texte-inverse` : texte sur aplat sombre |
+| `--p-azure-700` | `#1b3a4b` | `--accent-aplat` : fond de pastille |
+| `--p-azure-500` | `#2a5f7d` | `--accent` **et** `--portee-publique` — deux rôles, une valeur |
+| `--p-azure-300` | `#3d7ea3` | accent clair — déclaré, aucun rôle sémantique aujourd'hui |
+| `--p-braise-600` | `#f7dcdc` | `--annule-aplat` |
+| `--p-braise-500` | `#a8323c` | `--vigueur-aplat` |
+| `--p-braise-300` | `#8c2029` | `--annule` **et** `--portee-personnelle` — deux rôles, une valeur |
+| `--p-ambre-500` | `#8a6d1f` | `--vivres-aplat` |
+| `--p-ambre-300` | `#6d551a` | `--vivres` |
+| `--p-verde-500` | `#2f5c3f` | succès en aplat — déclaré, aucun rôle sémantique aujourd'hui |
+| `--p-verde-300` | `#244a32` | `--succes` |
+| `--p-violet-500` | `#4a3a63` | restreint en aplat — déclaré, aucun rôle sémantique aujourd'hui |
+| `--p-violet-300` | `#3a2d4d` | `--portee-restreinte` |
 
 Vingt-deux valeurs brutes. C'est tout le budget : un rôle qui n'a pas son jeton
 n'est pas inventé à la demande, il est ajouté ici en même temps qu'il est
 justifié, ou il est fait en CSS pur (`currentColor`).
+
+**Ce tableau est tenu par un test.** Les vingt-deux valeurs ci-dessus ont été
+fausses pendant tout le passage au mode clair — elles décrivaient la rampe
+sombre d'avant, et **deux relecteurs indépendants** ont mesuré sur elles un mode
+sombre qui n'existe plus nulle part. `tokens.test.ts` compare désormais chaque
+hexadécimal écrit ici au jeton qu'il nomme : une valeur qui dérive fait rougir
+la CI.
 
 ### 1.3 Étage 2 — sémantique
 
@@ -200,15 +207,42 @@ fermée est refusé par le serveur.
 
 ### 2.1 Le compte
 
-Sur une page de table, en fonctionnement normal, **six teintes au maximum** sont
-visibles simultanément :
+Deux plafonds, pas un, parce que le premier seul mesurait mal.
 
-`#0d1117` · `#151b23` · `#e6edf3` (+ `#9aa7b4` en métadonnées) · `#2a3441` ·
-`#6fb3d2` (accent) · et **une seule** couleur de jauge à la fois, parce qu'un
-personnage n'a qu'un personnage.
+| Plafond | Combien | Ce qu'il compte |
+|---|---|---|
+| **teintes** | **13** | toute valeur distincte affichable en même temps sur une page de table, fonds et gris de texte compris |
+| **accents** | **4** | les seules teintes qui *disent* quelque chose : les trois portées et la couleur de jauge du moment |
 
-Un personnage qui vit dans le Freljord froid, sous un surlignage de danger, avec
-une erreur : trois accents de couleur, pas dix. C'est le budget.
+**Pourquoi deux chiffres.** Le budget d'origine disait six, et comptait ensemble
+quatre gris de fond qui tiennent dans un mouchoir — `#f4f1ea`, `#fbf9f5`,
+`#ffffff`, `#ddd6c7` — et les couleurs qui portent un sens. Mélanger les deux
+donne un nombre qu'on dépasse sans rien avoir abîmé.
+
+La phrase d'origine reste la bonne, et c'est elle que le second plafond tient :
+*trois accents de couleur, pas dix.* Ils sont quatre aujourd'hui — azur, violet,
+rouge, plus une jauge à la fois, parce qu'un joueur n'a qu'un personnage.
+
+**Les onze, telles qu'elles sont atteignables aujourd'hui :**
+
+`#221f1a` texte · `#5c5348` métadonnées · `#6b6357` filet marqué ·
+`#ddd6c7` filet · `#f0ece2` surface haute · `#f4f1ea` surface de jeu ·
+`#f7dcdc` fond d'annulation · `#fbf9f5` fond · `#ffffff` panneau ·
+`#2a5f7d` azur *(accent **et** portée publique)* · `#3a2d4d` portée restreinte ·
+`#8c2029` rouge *(annulation **et** portée personnelle)* · **une** jauge.
+
+**Ce que le plafond ne voit pas**, et qu'il faut savoir en le lisant : **deux
+teintes servent deux fois**. L'azur est `--accent` et `--portee-publique` — à
+l'écran, un filet azur veut dire « oracle » dans le fil et « à toute la table »
+dans le compositeur juste dessous. Le rouge est `--annule` et
+`--portee-personnelle` : **une ligne annulée a la couleur d'un message privé.**
+Le compte n'en voit qu'une à chaque fois. Un plafond compte des valeurs ; il ne
+dit rien d'une ambiguïté, et les deux sont à trancher.
+
+Relevé de six à treize le 5 octobre, en même temps que la troisième teinte de
+portée et la surface de jeu ont été arbitrées. Les deux plafonds sont tenus par
+`tokens.test.ts`, et une douzième teinte comme un cinquième accent font rougir
+la CI.
 
 ### 2.2 Ce que la mesure a trouvé
 

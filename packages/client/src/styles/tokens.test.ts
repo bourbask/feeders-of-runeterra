@@ -490,5 +490,135 @@ describe('les jetons du client', () => {
   });
 });
 
+/**
+ * LA SPEC ÉCRIT DES HEXADÉCIMAUX, ET ILS ONT ÉTÉ FAUX PENDANT DES MOIS.
+ *
+ * `05-interface.md` §1.2 tabule les vingt-deux primitives avec leur valeur. Au
+ * passage du sombre au clair, `tokens.css` a changé et le document n'a pas
+ * bougé : les VINGT-DEUX valeurs décrivaient l'ancienne rampe. Deux relecteurs
+ * indépendants ont calculé sur elles le contraste d'un mode sombre qui n'existe
+ * plus nulle part dans le client — `global.css` déclare `color-scheme: light`
+ * et aucun fichier ne porte de `prefers-color-scheme`.
+ *
+ * Un document que les agents lisent avant d'écrire une ligne vaut un test.
+ */
+const SPEC_FILE = join(SRC, '..', '..', '..', 'docs', 'design', '05-interface.md');
+
+describe('la spec et les jetons disent la même chose', () => {
+  it('chaque hexadécimal écrit dans §1.2 est la valeur du jeton qu’il nomme', () => {
+    const spec = readFileSync(SPEC_FILE, 'utf8');
+    const ecrits = [...spec.matchAll(/`(--p-[a-z]+-\d+)`\s*\|\s*`(#[0-9a-fA-F]{6})`/gu)];
+
+    // Non vacuité : la §1.2 annonce « Vingt-deux valeurs brutes » en toutes
+    // lettres. Une table vidée ferait passer une boucle vide.
+    expect(ecrits).toHaveLength(22);
+
+    const ecarts = ecrits
+      .map(([, nom, valeur]) => ({
+        nom: nom!,
+        ecrit: valeur!.toLowerCase(),
+        reel: jetons.get(nom!),
+      }))
+      .filter((paire) => paire.reel?.toLowerCase() !== paire.ecrit)
+      .map(
+        (paire) =>
+          `${paire.nom} : la spec dit ${paire.ecrit}, tokens.css dit ${paire.reel ?? '(absent)'}`,
+      );
+
+    expect(ecarts).toEqual([]);
+  });
+});
+
+/**
+ * LES DEUX PLAFONDS DE LA §2.1, et pourquoi il en faut deux.
+ *
+ * Le budget d'origine disait six teintes et comptait ensemble quatre gris de
+ * fond qui tiennent dans un mouchoir et les couleurs qui portent un sens. On le
+ * dépassait sans rien avoir abîmé. Relevé à onze le 5 octobre, avec un second
+ * plafond sur les seuls ACCENTS — c'est lui qui tient la phrase d'origine,
+ * « trois accents de couleur, pas dix ».
+ *
+ * LES DEUX NOMBRES SONT ÉCRITS EN TOUTES LETTRES ici, et relus dans la §2.1 :
+ * ils viennent d'un arbitrage, pas de `tokens.css`. Les compter depuis le code
+ * ferait un chiffre qui s'accorde avec lui-même (ADR 0007).
+ */
+const PLAFOND_TEINTES = 13;
+const PLAFOND_ACCENTS = 4;
+
+/**
+ * LES RÔLES NE SONT PAS ÉCRITS ICI, ILS SONT LUS DANS LES FEUILLES.
+ *
+ * Une liste écrite à la main serait sa propre source : un rôle de couleur
+ * ajouté à `table.css` ne la ferait pas grandir, et le plafond ne verrait rien.
+ * Mesuré en écrivant ce test — une première version portait la liste, et une
+ * douzième teinte passait sans faire rougir. C'est le mode 6 de `RECETTE.md`.
+ *
+ * Donc : on lit les `var(--x)` des feuilles qui habillent la table, on les
+ * résout jusqu'à leur valeur brute, et on ne garde que ce qui est une couleur.
+ */
+const FEUILLES_DE_TABLE = [join(STYLES, 'table.css'), GLOBAL_FILE];
+
+/**
+ * Les trois aplats de jauge comptent pour UN : §2.1, « une seule couleur de
+ * jauge à la fois, parce qu'un personnage n'a qu'un personnage ».
+ */
+const APLATS_DE_JAUGE = ['--vigueur-aplat', '--ame-aplat', '--vivres-aplat'];
+
+const EST_COULEUR = /^#[0-9a-fA-F]{6}$/u;
+
+function teintesDesFeuilles(): Set<string> {
+  const vues = new Set<string>();
+  for (const feuille of FEUILLES_DE_TABLE) {
+    const texte = readFileSync(feuille, 'utf8');
+    for (const [, nom] of texte.matchAll(/var\((--[\w-]+)\)/gu)) {
+      if (nom === undefined || APLATS_DE_JAUGE.includes(nom)) continue;
+      const valeur = resout(jetons, nom);
+      if (valeur !== undefined && EST_COULEUR.test(valeur)) vues.add(valeur.toLowerCase());
+    }
+  }
+  return vues;
+}
+
+/** Les rôles qui DISENT quelque chose : lus eux aussi, jamais listés. */
+function accentsDeclares(): Set<string> {
+  const tokens = readFileSync(TOKENS_FILE, 'utf8');
+  const valeurs = new Set<string>();
+  for (const [, nom] of tokens.matchAll(/(--portee-[\w-]+):/gu)) {
+    const valeur = nom === undefined ? undefined : resout(jetons, nom);
+    if (valeur !== undefined) valeurs.add(valeur.toLowerCase());
+  }
+  return valeurs;
+}
+
+describe('le budget de couleurs de la §2.1', () => {
+  it(`n’affiche pas plus de ${String(PLAFOND_TEINTES)} teintes à la fois`, () => {
+    const teintes = teintesDesFeuilles();
+    // Non vacuité : une lecture qui ne trouverait rien passerait tous les
+    // plafonds du monde. Le plancher vient de la §2.1, qui en énumère dix.
+    expect(teintes.size).toBeGreaterThanOrEqual(6);
+    // Le dernier est la jauge du moment : une seule, jamais trois.
+    expect(teintes.size + 1).toBeLessThanOrEqual(PLAFOND_TEINTES);
+  });
+
+  it(`n’affiche pas plus de ${String(PLAFOND_ACCENTS)} accents`, () => {
+    const accents = accentsDeclares();
+    expect(accents.size).toBeGreaterThanOrEqual(3);
+    expect(accents.size + 1).toBeLessThanOrEqual(PLAFOND_ACCENTS);
+  });
+
+  it('les trois portées ont trois valeurs DISTINCTES', () => {
+    // L'arbitrage du 5 octobre : trois teintes bien distinctes, et non deux.
+    expect(accentsDeclares().size).toBe(3);
+  });
+
+  it('la §2.1 écrit les deux mêmes nombres que ce test', () => {
+    // Le document et le test se contrôlent l'un l'autre : changer l'un sans
+    // l'autre fait rougir, dans les deux sens.
+    const spec = readFileSync(SPEC_FILE, 'utf8');
+    expect(spec).toContain(`| **teintes** | **${String(PLAFOND_TEINTES)}** |`);
+    expect(spec).toContain(`| **accents** | **${String(PLAFOND_ACCENTS)}** |`);
+  });
+});
+
 /** Distinct `rem` values still written by hand in the client's stylesheets. */
 const DETTE_REM = 15;
