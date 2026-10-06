@@ -1,9 +1,10 @@
 import type { CharacterStateDto } from '@for/contracts';
-import type { AttributeId, GaugeId } from '@for/engine';
+import type { GaugeId } from '@for/engine';
 import { ATTRIBUTES } from '@for/engine';
 import type { ReactNode } from 'react';
 
 import { EmptyState } from '../../components/ui/EmptyState.js';
+import { ATTRIBUTS } from './attributs.js';
 import { Elan } from './Elan.js';
 import { Jauges } from './Jauge.js';
 
@@ -30,14 +31,6 @@ import { Jauges } from './Jauge.js';
  *
  * Reported in the PR, not worked around.
  */
-
-const ATTRIBUTS: Readonly<Record<AttributeId, string>> = {
-  vif: 'Vif',
-  coeur: 'Cœur',
-  fer: 'Fer',
-  ombre: 'Ombre',
-  esprit: 'Esprit',
-};
 
 export function Fiche(props: {
   readonly personnage: CharacterStateDto | null;

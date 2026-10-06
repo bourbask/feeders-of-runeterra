@@ -1168,6 +1168,7 @@ Depassement : `s2c.error { code: 'rate_limited' }`, puis fermeture `4008` au tro
 | `GET` | `/api/campaigns/:id` | metadonnees + `lastSeq` |
 | `GET` | `/api/campaigns/:id/log?sinceSeq=` | journal pagine (rendu du carnet de campagne) |
 | `GET` | `/api/content/manifest` | `{ contentVersion, counts, etag }` |
+| `GET` | `/api/content/champions` | catalogue de l'ecran de choix : `{ contentVersion, champions[], namedInIndex }`, cache `no-cache` — l'URL ne porte aucune version |
 | `GET` | `/api/content/:kind/:id` | fiche de contenu (cache `immutable` clefe sur `contentVersion`) |
 | `GET` | `/api/admin/health` | **admin uniquement** : `quick_check`, taille du WAL, age de la derniere sauvegarde, espace disque, hash de contenu (03-donnees.md §6.7) |
 

@@ -16,6 +16,7 @@
 
 import { z } from 'zod';
 
+import { zAttributeSpread } from '../core/attributes.js';
 import { zSlug } from '../primitives.js';
 
 export const zContentManifestResponse = z.strictObject({
@@ -42,3 +43,49 @@ export const CONTENT_CACHE_CONTROL = 'public, max-age=31536000, immutable';
 export type ContentManifestResponse = z.output<typeof zContentManifestResponse>;
 export type ContentDocParams = z.output<typeof zContentDocParams>;
 export type ContentDocResponse = z.output<typeof zContentDocResponse>;
+
+/**
+ * `GET /api/content/champions` — the catalogue the character-choice screen
+ * draws its cards from (UI-03).
+ *
+ * WHY A LIST ROUTE AT ALL. `/api/content/:kind/:id` serves ONE document and
+ * the manifest serves only COUNTS, so a browser had no way to learn which
+ * champions exist: the client may not import `@for/content`
+ * (`.dependency-cruiser.cjs`, `client-ne-voit-que-les-contrats-et-le-moteur`),
+ * and game content reaches it through this surface or not at all.
+ *
+ * IT IS A CARD, NOT A SHEET. A champion document carries perception traits, a
+ * voice, sample lines and starting bonds; a card carries what a player reads
+ * before choosing. `strictObject` is what keeps the two apart: a field added
+ * to the sheet does not silently reach the browser.
+ *
+ * `attributes` IS `zAttributeSpread`, AND THAT IS THE POINT. The sheet fixes
+ * the five values and the engine accepts exactly 3/2/2/1/1
+ * (`decideCreateDraft`), so the screen has nothing to let a player distribute:
+ * it shows the sheet's spread and sends it back unchanged.
+ */
+export const zChampionCard = z.strictObject({
+  id: zSlug,
+  name: z.string().min(1).max(120),
+  title: z.string().min(1).max(200),
+  pitch: z.string().min(1).max(2000),
+  regionId: zSlug,
+  /** `null` when no region document carries that identifier. */
+  regionName: z.string().min(1).max(200).nullable(),
+  attributes: zAttributeSpread,
+});
+
+export const zChampionCatalogueResponse = z.strictObject({
+  contentVersion: z.string().min(1),
+  /** Sorted by `name`, so two readers see the same grid. */
+  champions: z.array(zChampionCard),
+  /**
+   * How many champions the directory NAMES, sheets or not
+   * (`content/champions-index.json`). The screen says the difference out loud
+   * rather than letting a player believe the Freljord holds three people.
+   */
+  namedInIndex: z.number().int().nonnegative(),
+});
+
+export type ChampionCard = z.output<typeof zChampionCard>;
+export type ChampionCatalogueResponse = z.output<typeof zChampionCatalogueResponse>;

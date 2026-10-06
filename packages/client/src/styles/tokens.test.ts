@@ -556,7 +556,34 @@ const PLAFOND_ACCENTS = 4;
  * Donc : on lit les `var(--x)` des feuilles qui habillent la table, on les
  * résout jusqu'à leur valeur brute, et on ne garde que ce qui est une couleur.
  */
-const FEUILLES_DE_TABLE = [join(STYLES, 'table.css'), GLOBAL_FILE];
+/**
+ * ── LA LISTE DES FEUILLES EST LUE, PAS ÉCRITE ─────────────────────────────
+ *
+ * Elle était écrite à la main — `table.css` et `global.css` — et le plafond ne
+ * voyait donc QUE ces deux fichiers. Mesuré en écrivant UI-03 : une feuille
+ * neuve (`personnage.css`) pouvait introduire une quatorzième teinte sans
+ * qu'une ligne tombe, parce qu'elle n'était dans aucune liste. C'est le mode 6
+ * de `RECETTE.md`, appliqué à un fichier au lieu d'un tableau.
+ *
+ * On lit donc TOUTES les feuilles de `styles/`, et on en retire deux, chacune
+ * avec sa raison :
+ *
+ *   - `tokens.css` : c'est la DÉFINITION des teintes. Les compter là
+ *     reviendrait à mesurer le catalogue, pas l'écran.
+ *   - `design.css` : la vitrine `/design` EXPOSE la palette — elle affiche
+ *     chaque primitive à côté de son rôle (§0.2 : « ce n'est pas un produit »).
+ *     Elle touche donc légitimement des teintes qu'aucun écran de jeu
+ *     n'affiche, et son décompte dirait combien de couleurs EXISTENT, jamais
+ *     combien un joueur en voit à la fois.
+ *
+ * Une feuille de produit ajoutée demain est comptée sans que personne y pense ;
+ * l'en exclure demande un acte, et cet acte se voit en diff.
+ */
+const HORS_PRODUIT = new Set(['tokens.css', 'design.css']);
+
+const FEUILLES_DE_TABLE = fichiersRacines(STYLES, FEUILLE).filter(
+  (chemin) => !HORS_PRODUIT.has(chemin.slice(STYLES.length + 1)),
+);
 
 /**
  * Les trois aplats de jauge comptent pour UN : §2.1, « une seule couleur de
@@ -591,6 +618,19 @@ function accentsDeclares(): Set<string> {
 }
 
 describe('le budget de couleurs de la §2.1', () => {
+  it('lit toutes les feuilles de produit, et pas seulement celles d’hier', () => {
+    // Sans ce cas, un filtre trop large viderait `FEUILLES_DE_TABLE` et le
+    // plafond passerait sur rien. Les deux écrans du produit sont nommés ici
+    // parce qu'ils EXISTENT ; le jour où un troisième arrive, il est lu sans
+    // que cette ligne bouge.
+    const noms = FEUILLES_DE_TABLE.map((chemin) => chemin.slice(STYLES.length + 1)).sort();
+    expect(noms).toContain('global.css');
+    expect(noms).toContain('table.css');
+    expect(noms).toContain('personnage.css');
+    expect(noms).not.toContain('tokens.css');
+    expect(noms).not.toContain('design.css');
+  });
+
   it(`n’affiche pas plus de ${String(PLAFOND_TEINTES)} teintes à la fois`, () => {
     const teintes = teintesDesFeuilles();
     // Non vacuité : une lecture qui ne trouverait rien passerait tous les

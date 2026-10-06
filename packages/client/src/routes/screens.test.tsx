@@ -1,5 +1,12 @@
-import type { TableStateDto } from '@for/contracts';
-import type { EventScope, GameEvent } from '@for/engine';
+import type {
+  ChampionCard,
+  ChampionCatalogueResponse,
+  CharacterSummary,
+  TableStateDto,
+} from '@for/contracts';
+import { zC2SMessage } from '@for/contracts';
+import type { ChampionLockKind, EventScope, GameEvent } from '@for/engine';
+import { ATTRIBUTES, CHAMPION_LOCK_KINDS } from '@for/engine';
 import { aCharacter, aClock, aCorrelationId, aVow, anEvent, anId } from '@for/testkit';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -12,7 +19,9 @@ import type { StoreApi } from 'zustand/vanilla';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 
+import { RULE_VIOLATION_MESSAGES } from '../api/error-messages.js';
 import { Compositeur, LIMITE_TEXTE } from '../features/table/Compositeur.js';
+import { ATTRIBUTS } from '../features/table/attributs.js';
 import { JETONS_DES_SEUILS, SEUILS_REM, largeurDe } from '../features/table/largeur.js';
 import { jetonsDe } from '../styles/contraste.js';
 import {
@@ -23,10 +32,10 @@ import {
   snapshotFrame,
   welcomeFrame,
 } from '../test/frames.js';
-import { rendreTable, unStore } from '../test/table.js';
+import { envelopper, rendreTable, unStore } from '../test/table.js';
 import type { TableState } from '../ws/store.js';
 import { CampaignList } from './CampaignList.js';
-import { CharacterPicker } from './CharacterPicker.js';
+import { CharacterPicker, FAMILLES } from './CharacterPicker.js';
 import { Login } from './Login.js';
 
 const campagne = {
@@ -61,29 +70,257 @@ describe('la liste des tables', () => {
   });
 });
 
+// ===========================================================================
+// LE CHOIX DU CHAMPION (UI-03)
+// ===========================================================================
+
+/**
+ * LE CATALOGUE EST UNE ENTRÉE, PAS UN GARDE-FOU. Il est écrit à la main parce
+ * que c'est ce que le serveur fournit à l'écran ; ce qui NE DOIT PAS être
+ * écrit à la main, ce sont les attentes qu'on en tire — elles se dérivent de
+ * cette constante et des listes fermées du moteur (`ATTRIBUTES`,
+ * `CHAMPION_LOCK_KINDS`), jamais recopiées à côté.
+ *
+ * Les trois fiches sont celles de `content/champions/`, avec leur vraie
+ * répartition : un test qui enverrait une répartition inventée prouverait que
+ * l'écran sait recopier une constante de test, pas qu'il envoie la fiche.
+ */
+const CATALOGUE: ChampionCatalogueResponse = {
+  contentVersion: '1.0.0',
+  namedInIndex: 14,
+  champions: [
+    {
+      id: 'ashe',
+      name: 'Ashe',
+      title: 'L’Archère de Givre',
+      pitch: 'Une couronne qu’elle n’a pas demandée, et des comptes de grain à jour.',
+      regionId: 'avarosa-reach',
+      regionName: 'La Marche d’Avarosa',
+      attributes: { vif: 3, coeur: 2, fer: 1, ombre: 1, esprit: 2 },
+    },
+    {
+      id: 'braum',
+      name: 'Braum',
+      title: 'Le Cœur du Freljord',
+      pitch: 'Une porte de grange portée comme un bouclier.',
+      regionId: 'rakelstake',
+      regionName: 'Rakelstake',
+      attributes: { vif: 1, coeur: 3, fer: 2, ombre: 1, esprit: 2 },
+    },
+    {
+      id: 'sejuani',
+      name: 'Sejuani',
+      title: 'La Fureur du Nord',
+      pitch: 'Une bande de guerre, et un sanglier de mauvaise humeur.',
+      regionId: 'ice-reaches',
+      regionName: 'Les Étendues Gelées',
+      attributes: { vif: 2, coeur: 1, fer: 3, ombre: 2, esprit: 1 },
+    },
+  ],
+};
+
+const UN_CHAMPION = (id: string): ChampionCard => {
+  const trouve = CATALOGUE.champions.find((champion) => champion.id === id);
+  if (trouve === undefined) throw new Error(`pas de ${id} dans le catalogue de test`);
+  return trouve;
+};
+
+function unVerrou(championId: string, lockKind: ChampionLockKind) {
+  return { championId, lockKind, reason: 'pour le test', setSeq: 1 };
+}
+
+/** Les noms des cartes actuellement dans la grille, dans l'ordre du DOM. */
+function cartesAffichees(): (string | null)[] {
+  return [...globalThis.document.querySelectorAll('.fr-champion__nom')].map(
+    (titre) => titre.textContent,
+  );
+}
+
+function rendrePicker(
+  options: {
+    readonly envoyes?: unknown[];
+    readonly verrous?: readonly { championId: string; lockKind: ChampionLockKind }[];
+    readonly personnages?: readonly CharacterSummary[];
+    readonly catalogue?: ChampionCatalogueResponse | null;
+  } = {},
+): StoreApi<TableState> {
+  const store = unStore(options.envoyes ?? []);
+  if (options.verrous !== undefined) {
+    act(() => {
+      store.getState().receive(welcomeFrame(1, 1));
+      store.getState().receive(
+        snapshotFrame(
+          aTableStateDto({
+            championLocks: options.verrous!.map((verrou) =>
+              unVerrou(verrou.championId, verrou.lockKind),
+            ),
+          }),
+          1,
+          1,
+        ),
+      );
+    });
+  }
+  render(
+    envelopper(
+      store,
+      <CharacterPicker
+        campaignId={campagne.id}
+        personnages={options.personnages ?? []}
+        catalogue={options.catalogue === undefined ? CATALOGUE : options.catalogue}
+        erreurCatalogue={null}
+      />,
+    ),
+  );
+  return store;
+}
+
 describe('le choix du champion', () => {
   const personnage = {
     id: anId('character'),
     campaignId: campagne.id,
     championId: 'braum',
-    displayName: 'Braum',
+    displayName: 'Braum le gardien',
     sheetSource: 'handwritten' as const,
     status: 'active' as const,
   };
 
   it('ne montre que les personnages de CETTE table', () => {
-    render(
-      <CharacterPicker
-        campaignId={campagne.id}
-        personnages={[personnage, { ...personnage, campaignId: anId('campaign', 2) }]}
-      />,
-    );
-    expect(screen.getAllByText(/Braum/u)).toHaveLength(1);
+    rendrePicker({
+      personnages: [personnage, { ...personnage, campaignId: anId('campaign', 2) }],
+    });
+    expect(screen.getAllByText(/Braum le gardien/u)).toHaveLength(1);
   });
 
-  it('annonce la tâche qui remplira l’écran quand il est vide', () => {
-    render(<CharacterPicker campaignId={campagne.id} personnages={[]} />);
-    expect(screen.getByText(/M0-24/u)).toBeDefined();
+  it('montre le nom, la région, l’accroche et les CINQ attributs de chaque fiche', () => {
+    rendrePicker();
+
+    // Dérivé du catalogue, jamais recopié : ajouter une fiche à la constante
+    // fait porter l'assertion sur elle aussi.
+    expect(cartesAffichees()).toEqual(CATALOGUE.champions.map((champion) => champion.name));
+    for (const champion of CATALOGUE.champions) {
+      expect(screen.getByText(champion.regionName!)).toBeDefined();
+      expect(screen.getByText(champion.pitch)).toBeDefined();
+    }
+
+    // Les cinq attributs viennent de la liste fermée du moteur. Vider
+    // `ATTRIBUTES` ferait disparaître les cas, donc on exige d'abord qu'il y en
+    // ait cinq — le chiffre vient de `docs/design/05-interface.md` et de la
+    // fiche de personnage, pas de `ATTRIBUTES.length`.
+    expect(ATTRIBUTES).toHaveLength(5);
+    const carte = screen.getByText('Ashe').closest('li')!;
+    for (const attribut of ATTRIBUTES) {
+      expect(carte.textContent).toContain(ATTRIBUTS[attribut]);
+      expect(carte.textContent).toContain(String(UN_CHAMPION('ashe').attributes[attribut]));
+    }
+  });
+
+  it('cherche sur le NOM', async () => {
+    rendrePicker();
+    await userEvent.type(screen.getByRole('searchbox'), 'braum');
+    expect(cartesAffichees()).toEqual(['Braum']);
+  });
+
+  it('cherche AUSSI sur la région, sans se soucier des accents', async () => {
+    // « Étendues » est la région de Sejuani et n'est dans aucun NOM : une
+    // recherche qui ne regarderait que le nom rendrait une grille vide. Et le
+    // texte tapé est sans accent, ce que seule la forme normale de
+    // `normalizeAlias` rattrape.
+    rendrePicker();
+    await userEvent.type(screen.getByRole('searchbox'), 'etendues');
+    expect(cartesAffichees()).toEqual(['Sejuani']);
+  });
+
+  it('retire de la grille un champion verrouillé, et garde un PNJ autorisé', () => {
+    // LES DEUX SENS, dans une seule mesure : `reserved_pc` est ce que le moteur
+    // refuse (`decideCreateDraft`), `allowed_npc` est ce qu'il accepte. Le
+    // tableau exact est ce qui rend l'assertion non vide.
+    rendrePicker({
+      verrous: [
+        { championId: 'ashe', lockKind: 'reserved_pc' },
+        { championId: 'braum', lockKind: 'allowed_npc' },
+        { championId: 'sejuani', lockKind: 'banned' },
+      ],
+    });
+    expect(cartesAffichees()).toEqual(['Braum']);
+  });
+
+  it('envoie `c2s.intent` avec le slug, la répartition DE LA FICHE et le texte saisi', async () => {
+    const envoyes: unknown[] = [];
+    rendrePicker({ envoyes });
+
+    await userEvent.type(screen.getByLabelText(/raconte de lui/u), 'Il tient la porte.');
+    await userEvent.click(screen.getByRole('button', { name: 'Prendre Braum' }));
+
+    expect(envoyes).toHaveLength(1);
+    const trame = envoyes[0] as { t: string; p: { intent: unknown } };
+    expect(trame.t).toBe('c2s.intent');
+    expect(trame.p.intent).toEqual({
+      type: 'character.create_draft',
+      championSlug: 'braum',
+      // L'OPÉRANDE VIENT DU CATALOGUE, pas d'une répartition retapée : si
+      // l'écran en inventait une, les deux ne seraient pas égales.
+      spread: UN_CHAMPION('braum').attributes,
+      background: 'Il tient la porte.',
+    });
+    // ET LA TRAME EST VALIDE POUR LE CONTRAT : le serveur la refuserait sinon,
+    // et aucun test du client ne le verrait.
+    expect(zC2SMessage.safeParse(trame).success).toBe(true);
+  });
+
+  it('n’invente aucun résultat : rien ne change tant que le serveur n’a rien dit', async () => {
+    rendrePicker();
+    await userEvent.click(screen.getByRole('button', { name: 'Prendre Braum' }));
+
+    // Le champion n'est pas marqué pris, la grille n'a pas bougé, et l'écran
+    // dit seulement qu'il attend.
+    expect(cartesAffichees()).toEqual(CATALOGUE.champions.map((champion) => champion.name));
+    expect(screen.getByRole('status').textContent).toContain('attend la réponse du serveur');
+  });
+
+  it('montre le refus du serveur, avec son code', async () => {
+    const envoyes: unknown[] = [];
+    const store = rendrePicker({ envoyes });
+    await userEvent.click(screen.getByRole('button', { name: 'Prendre Braum' }));
+
+    const intentId = (envoyes[0] as { id: string }).id;
+    act(() => {
+      store.getState().receive(rejectedFrame({ intentId, code: 'champion_locked' }));
+    });
+
+    const bandeau = screen.getByRole('alert');
+    expect(bandeau.textContent).toContain(RULE_VIOLATION_MESSAGES['champion_locked']);
+    expect(bandeau.textContent).toContain('champion_locked');
+    // Et l'attente est close : le serveur a répondu.
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('affiche les TROIS familles de verrous, et dit que l’édition n’existe pas', () => {
+    // La correspondance est mesurée entre DEUX origines : le tuple fermé du
+    // moteur et le dictionnaire de l'écran. Un genre ajouté au moteur et oublié
+    // ici ne compile pas ; un genre retiré du dictionnaire fait tomber ceci.
+    expect(Object.keys(FAMILLES).sort()).toEqual([...CHAMPION_LOCK_KINDS].sort());
+
+    rendrePicker({ verrous: [{ championId: 'ashe', lockKind: 'reserved_pc' }] });
+
+    for (const genre of CHAMPION_LOCK_KINDS) {
+      expect(screen.getByText(FAMILLES[genre].titre)).toBeDefined();
+    }
+    expect(
+      screen.getByText(/aucune intention du protocole ne pose ni ne lève un verrou/u),
+    ).toBeDefined();
+  });
+
+  it('dit combien de fiches existent pour combien de noms, au lieu de les inventer', () => {
+    rendrePicker();
+    const manque = screen.getByText(/fiche\(s\) jouable\(s\)/u);
+    expect(manque.textContent).toContain(String(CATALOGUE.champions.length));
+    expect(manque.textContent).toContain(String(CATALOGUE.namedInIndex));
+  });
+
+  it('dit qu’il attend la table tant que l’instantané n’est pas arrivé', () => {
+    rendrePicker();
+    expect(screen.getByText(/La table n’a pas encore envoyé son état/u)).toBeDefined();
   });
 });
 

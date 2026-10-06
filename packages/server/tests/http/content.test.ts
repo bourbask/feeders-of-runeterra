@@ -10,12 +10,18 @@
  */
 
 import { GENERATED_FILES } from '@for/content';
-import { CONTENT_CACHE_CONTROL, zAppErrorPayload, zContentManifestResponse } from '@for/contracts';
+import {
+  CONTENT_CACHE_CONTROL,
+  zAppErrorPayload,
+  zChampionCatalogueResponse,
+  zContentManifestResponse,
+} from '@for/contracts';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { bench, signIn } from '../../src/auth/testing.js';
-import { KINDS } from '../../src/http/content.routes.js';
+import { KINDS, championCards } from '../../src/http/content.routes.js';
 
+import type { ContentBundle } from '@for/content';
 import type { Bench } from '../../src/auth/testing.js';
 
 const open: Bench[] = [];
@@ -169,5 +175,100 @@ describe('GET /api/content/:kind/:id', () => {
     const badId = await b.app.inject({ method: 'GET', url: '/api/content/champions/personne' });
     expect(badId.statusCode).toBe(404);
     expect(zAppErrorPayload.parse(badId.json()).code).toBe('content_not_found');
+  });
+});
+
+/**
+ * LE CATALOGUE DE L'ÉCRAN DE CHOIX (UI-03).
+ *
+ * `/api/content/:kind/:id` sert UNE fiche et le manifeste ne sert que des
+ * COMPTES : un navigateur n'avait aucun moyen d'apprendre quels champions
+ * existent, et il n'a pas le droit d'importer `@for/content`. Cette route est
+ * le seul chemin, donc elle est mesurée comme tel.
+ */
+describe('GET /api/content/champions', () => {
+  it('sert une carte par FICHIER de `content/champions/`, pas par entrée du registre', async () => {
+    const b = await bed();
+
+    const response = await b.app.inject({ method: 'GET', url: '/api/content/champions' });
+
+    expect(response.statusCode).toBe(200);
+    const body = zChampionCatalogueResponse.parse(response.json());
+    // Deux lectures indépendantes : la route lit le paquet validé, `filesUnder`
+    // lit le texte brut des fichiers.
+    expect(filesUnder('champions')).toBeGreaterThan(0);
+    expect(body.champions).toHaveLength(filesUnder('champions'));
+  });
+
+  it('porte la répartition ÉCRITE DANS LA FICHE, pas une répartition recalculée', async () => {
+    const b = await bed();
+
+    const body = zChampionCatalogueResponse.parse(
+      (await b.app.inject({ method: 'GET', url: '/api/content/champions' })).json(),
+    );
+
+    // L'AUTRE OPÉRANDE EST LE FICHIER JSON LUI-MÊME. Comparer la carte au
+    // paquet que la route a lu serait un chiffre comparé à lui-même.
+    for (const carte of body.champions) {
+      const brut = GENERATED_FILES[`champions/${carte.id}.json`];
+      expect(brut).toBeDefined();
+      const fiche = JSON.parse(brut!) as { name: string; attributes: unknown; pitch: string };
+      expect(carte.name).toBe(fiche.name);
+      expect(carte.pitch).toBe(fiche.pitch);
+      expect(carte.attributes).toEqual(fiche.attributes);
+    }
+  });
+
+  it('range les champions par nom, même servis à l’envers', async () => {
+    const b = await bed();
+    const bundle = b.deps.content.bundle;
+
+    // MODE 7 : une fixture déjà triée ne prouve rien sur un tri. On retourne la
+    // carte du paquet et on exige le TABLEAU EXACT, comparé à une liste de noms
+    // triée indépendamment.
+    const envers: ContentBundle = {
+      ...bundle,
+      champions: new Map([...bundle.champions].reverse()),
+    };
+    const attendu = [...bundle.champions.values()]
+      .map((champion) => champion.name)
+      .sort((a, b2) => a.localeCompare(b2, 'fr'));
+
+    expect(attendu.length).toBeGreaterThan(1);
+    expect(championCards(envers).map((carte) => carte.name)).toEqual(attendu);
+  });
+
+  it('n’est PAS servi en cache immuable : son URL ne porte aucune version', async () => {
+    const b = await bed();
+
+    const response = await b.app.inject({ method: 'GET', url: '/api/content/champions' });
+
+    // `immutable` sur cette URL rendrait invisible une quatrième fiche pour
+    // tout navigateur ayant déjà posé la question une fois.
+    expect(response.headers['cache-control']).toBe('no-cache');
+    expect(response.headers['cache-control']).not.toBe(CONTENT_CACHE_CONTROL);
+  });
+
+  it('compte à part les champions NOMMÉS, et ils sont plus nombreux que les fiches', async () => {
+    const b = await bed();
+
+    const body = zChampionCatalogueResponse.parse(
+      (await b.app.inject({ method: 'GET', url: '/api/content/champions' })).json(),
+    );
+
+    // DEUX FICHIERS, DEUX LECTURES : l'annuaire d'un côté, le dossier des
+    // fiches de l'autre. C'est l'écart entre les deux que l'écran annonce au
+    // lieu de laisser croire que le Freljord compte trois personnes.
+    const annuaire = JSON.parse(GENERATED_FILES['champions-index.json']!) as {
+      champions: readonly unknown[];
+    };
+    expect(body.namedInIndex).toBe(annuaire.champions.length);
+    expect(body.namedInIndex).toBeGreaterThan(body.champions.length);
+  });
+
+  it('est public : aucune session, et pas de 401', async () => {
+    const b = await bed();
+    const response = await b.app.inject({ method: 'GET', url: '/api/content/champions' });
+    expect(response.statusCode).toBe(200);
   });
 });

@@ -8,6 +8,23 @@ import type { HttpDeps } from './api/http.js';
 
 const CAMPAGNE = anId('campaign');
 
+/**
+ * LE PERSONNAGE EST CE QUI OUVRE LA PORTE, donc il est ABSENT de `ME`.
+ *
+ * `ME` est le porteur du projet le jour où il s'est connecté : membre d'une
+ * table, sans fiche. C'est l'état que la porte doit refuser, et le laisser par
+ * défaut est ce qui fait qu'un test qui montre la table doit DIRE qu'il donne
+ * un personnage.
+ */
+const PERSONNAGE = {
+  id: anId('character'),
+  campaignId: CAMPAGNE,
+  championId: 'braum',
+  displayName: 'Braum',
+  sheetSource: 'handwritten' as const,
+  status: 'active' as const,
+};
+
 const ME = {
   player: {
     id: anId('player'),
@@ -16,7 +33,7 @@ const ME = {
     locale: 'fr',
     isAdmin: false,
   },
-  characters: [],
+  characters: [] as (typeof PERSONNAGE)[],
   campaigns: [
     {
       id: CAMPAGNE,
@@ -30,6 +47,9 @@ const ME = {
     },
   ],
 };
+
+/** Le même joueur, mais avec une fiche à cette table : la porte s'ouvre. */
+const ME_AVEC_PERSO = { ...ME, characters: [PERSONNAGE] };
 
 /** Une socket qui n'ouvre rien : le test mesure le montage, pas le réseau. */
 class SocketMuette {
@@ -67,14 +87,16 @@ function depsRendant(corps: unknown, status = 200): HttpDeps {
  * cookie parte. Un double qui ne rend qu'une réponse laisserait passer une
  * déconnexion qui n'appelle rien.
  */
-function depsNotant(): HttpDeps & { readonly appels: { url: string; init: RequestInit }[] } {
+function depsNotant(
+  moi: typeof ME = ME,
+): HttpDeps & { readonly appels: { url: string; init: RequestInit }[] } {
   const appels: { url: string; init: RequestInit }[] = [];
   return {
     baseUrl: '',
     appels,
     fetch: ((url: string, init: RequestInit) => {
       appels.push({ url, init });
-      const corps = url.includes('/api/auth/logout') ? { ok: true } : ME;
+      const corps = url.includes('/api/auth/logout') ? { ok: true } : moi;
       return Promise.resolve(
         new Response(JSON.stringify(corps), {
           status: 200,
@@ -146,7 +168,7 @@ describe('l’application', () => {
 
     it('revient à la racine, pour ne pas laisser la table de celui qui part', async () => {
       globalThis.location.hash = `#/campagnes/${CAMPAGNE}`;
-      const deps = depsNotant();
+      const deps = depsNotant(ME_AVEC_PERSO);
       afficher(deps);
 
       (await screen.findByRole('button', { name: /déconnecter/iu })).click();
@@ -171,7 +193,7 @@ describe('l’application', () => {
 
   it('ouvre la table et branche la socket sur la campagne de l’URL', async () => {
     globalThis.location.hash = `#/campagnes/${CAMPAGNE}`;
-    afficher(depsRendant(ME));
+    afficher(depsRendant(ME_AVEC_PERSO));
 
     expect(await screen.findByText(/Rien ne s’est encore passé/u)).toBeDefined();
     expect(SocketMuette.ouvertes).toHaveLength(1);
@@ -189,7 +211,7 @@ describe('l’application', () => {
    */
   it('porte le nom de l’aventure et l’état de la liaison dans la barre du haut', async () => {
     globalThis.location.hash = `#/campagnes/${CAMPAGNE}`;
-    afficher(depsRendant(ME));
+    afficher(depsRendant(ME_AVEC_PERSO));
 
     const barre = await screen.findByRole('banner');
     expect(barre.textContent).toContain('Le col de Rakelstake');
@@ -222,7 +244,54 @@ describe('l’application', () => {
   it('ouvre le choix du champion sur sa route', async () => {
     globalThis.location.hash = `#/campagnes/${CAMPAGNE}/personnage`;
     afficher(depsRendant(ME));
-    expect(await screen.findByText(/M0-24/u)).toBeDefined();
+    expect(await screen.findByRole('heading', { name: 'Choisis ton champion' })).toBeDefined();
+  });
+
+  /**
+   * ══ LA PORTE ═════════════════════════════════════════════════════════════
+   *
+   * « On ne devrait pas pouvoir rentrer sur une table sans perso. » Pas un
+   * bandeau, pas un avertissement : la table n'est PAS RENDUE. Ce que ces deux
+   * cas mesurent est l'absence de la zone de saisie du jeu — c'est elle qui
+   * fait qu'on joue, et un écran qui la porte est un écran de table quoi
+   * qu'affiche le reste.
+   *
+   * CASSER LA PORTE FAIT TOMBER LE PREMIER CAS, NOMMÉMENT : remplacer
+   * `vue={route.nom === 'table' && aPersonnage ? 'table' : 'personnage'}` par
+   * `vue={route.nom === 'table' ? 'table' : 'personnage'}` dans `App.tsx` rend
+   * « un joueur SANS personnage ne voit pas la table » rouge, et lui seul.
+   */
+  describe('la porte du personnage', () => {
+    it('un joueur SANS personnage ne voit pas la table, il voit le choix du champion', async () => {
+      globalThis.location.hash = `#/campagnes/${CAMPAGNE}`;
+      afficher(depsRendant(ME));
+
+      expect(await screen.findByRole('heading', { name: 'Choisis ton champion' })).toBeDefined();
+      // LA TABLE N'EST PAS LÀ : ni la saisie, ni le fil.
+      expect(screen.queryByLabelText('Ce que tu fais')).toBeNull();
+      expect(screen.queryByText(/Rien ne s’est encore passé/u)).toBeNull();
+    });
+
+    it('et l’URL le suit : il est ENVOYÉ au choix, il n’y est pas seulement montré', async () => {
+      globalThis.location.hash = `#/campagnes/${CAMPAGNE}`;
+      afficher(depsRendant(ME));
+
+      await screen.findByRole('heading', { name: 'Choisis ton champion' });
+      await waitFor(() => {
+        expect(globalThis.location.hash).toBe(`#/campagnes/${CAMPAGNE}/personnage`);
+      });
+    });
+
+    it('l’autre sens : avec un personnage, la table s’ouvre et le choix n’apparaît pas', async () => {
+      // Sans ce cas, « la table ne s'affiche pas » serait vrai d'une porte
+      // fermée pour tout le monde.
+      globalThis.location.hash = `#/campagnes/${CAMPAGNE}`;
+      afficher(depsRendant(ME_AVEC_PERSO));
+
+      expect(await screen.findByLabelText('Ce que tu fais')).toBeDefined();
+      expect(screen.queryByRole('heading', { name: 'Choisis ton champion' })).toBeNull();
+      expect(globalThis.location.hash).toBe(`#/campagnes/${CAMPAGNE}`);
+    });
   });
 
   it('montre l’erreur du serveur plutôt qu’un écran blanc', async () => {
