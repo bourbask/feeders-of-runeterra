@@ -382,6 +382,101 @@ describe('le chemin d’une intention', () => {
   });
 
   /**
+   * ══ LE TROU DU CHEMIN PRODUIT, MESURÉ PLUTÔT QUE CONTOURNÉ (UI-03) ══════
+   *
+   * `character.create_draft` est la première intention que le client envoie,
+   * et elle est censée donner un personnage à un joueur qui n'en a pas. Elle
+   * ne le peut pas aujourd'hui, pour DEUX raisons indépendantes, et chacune
+   * est mesurée ici :
+   *
+   *   1. `resolveActor` cherche le personnage du joueur pour TOUTE intention,
+   *      y compris celle-ci. Un joueur sans fiche est donc refusé
+   *      `character_not_in_campaign` — par l'intention même qui devait lui en
+   *      donner une.
+   *   2. Même pour un joueur QUI A une fiche, `decideCreateDraft` ne produit
+   *      aucun événement : c'est `character.created`, écrit par la forge
+   *      (M0-29), qui pose le verrou. Le journal ne bouge pas, donc aucun
+   *      verrou n'est posé.
+   *
+   * L'écran de UI-03 envoie la trame et affiche le refus ; il n'invente ni
+   * l'une ni l'autre moitié. Le jour où la forge arrive, ce bloc est ce qui
+   * dira que le trou est bouché.
+   */
+  describe('`character.create_draft` ne crée encore aucun personnage', () => {
+    const CREATE_DRAFT: Intent = {
+      type: 'character.create_draft',
+      championSlug: 'sejuani',
+      spread: { vif: 2, coeur: 1, fer: 3, ombre: 2, esprit: 1 },
+      background: 'Elle a conduit la horde jusqu’au col.',
+    };
+
+    it('refuse en `character_not_in_campaign` le joueur SANS fiche — celui-là même qu’elle vise', async () => {
+      const table = aTable();
+      try {
+        const orphan = '0000000000000000000000PYRD' as PlayerId;
+        upsertPlayer(table.connection, {
+          id: orphan,
+          discordUserId: 'discord-orphan-2',
+          discordUsername: 'Sans fiche',
+          createdAt: 0,
+        });
+        addMember(table.connection, {
+          id: `${orphan}-member`,
+          campaignId: CAMPAIGN_ID,
+          playerId: orphan,
+          joinedAt: 0,
+        });
+
+        const before = journal(table.connection).length;
+        const outcome = await runIntent(table.deps, {
+          campaignId: CAMPAIGN_ID,
+          playerId: orphan,
+          intentId: uuidAt(41),
+          intent: CREATE_DRAFT,
+        });
+
+        expect(outcome.kind).toBe('rejected');
+        if (outcome.kind !== 'rejected') return;
+        expect(outcome.violation.code).toBe('character_not_in_campaign');
+        expect(journal(table.connection)).toHaveLength(before);
+      } finally {
+        table.close();
+      }
+    });
+
+    it('et même acceptée, elle n’écrit rien : aucun `character.created`, aucun verrou', async () => {
+      const table = aTable();
+      try {
+        const before = journal(table.connection).length;
+        const outcome = await runIntent(table.deps, {
+          campaignId: CAMPAIGN_ID,
+          playerId: PLAYER_ID,
+          intentId: uuidAt(42),
+          intent: CREATE_DRAFT,
+        });
+
+        expect(outcome.kind).toBe('accepted');
+        if (outcome.kind !== 'accepted') return;
+        // LE MOTEUR NE DÉCIDE RIEN ICI : `decideCreateDraft` rend zéro
+        // événement, et ce qui s'ajoute au journal est la PROSE du conteur sur
+        // un brief vide — pas une fiche.
+        expect(outcome.events).toHaveLength(0);
+        const ajoutes = journal(table.connection).slice(before);
+        expect(ajoutes.map((entree) => entree.type)).toEqual(['narration.gm_message']);
+
+        // Et l'état relu ne connaît toujours ni le personnage ni le verrou.
+        const state = loadReplay(table.connection, CAMPAIGN_ID).state;
+        expect(state.championLocks['sejuani']).toBeUndefined();
+        expect(
+          Object.values(state.characters).some((character) => character.championId === 'sejuani'),
+        ).toBe(false);
+      } finally {
+        table.close();
+      }
+    });
+  });
+
+  /**
    * UNE PANNE DU CONTEUR NE PERD JAMAIS UNE PARTIE (`02-mj-ia.md` §0.2 : « on
    * dégrade la prose, jamais l'équité »). L'état était déjà juste et déjà
    * durable avant que le port ne soit appelé ; ce qui se mesure ici est que

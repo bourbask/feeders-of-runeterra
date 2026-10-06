@@ -32,6 +32,7 @@
 import { contentVersion } from '@for/content';
 import {
   CONTENT_CACHE_CONTROL,
+  zChampionCatalogueResponse,
   zContentDocParams,
   zContentDocResponse,
   zContentManifestResponse,
@@ -41,6 +42,7 @@ import { z } from 'zod';
 import { AppError } from '../errors.js';
 
 import type { ContentBundle } from '@for/content';
+import type { ChampionCard } from '@for/contracts';
 import type { FastifyPluginCallback } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import type { AppPluginOptions } from '../deps.js';
@@ -68,6 +70,33 @@ export type ContentKind = keyof typeof KINDS;
 
 function isKind(value: string): value is ContentKind {
   return Object.hasOwn(KINDS, value);
+}
+
+/**
+ * The cards of `GET /api/content/champions`, SORTED BY NAME.
+ *
+ * Exported and pure so the ordering can be measured on an input whose order is
+ * not already the answer: `tests/http/content.test.ts`, « range les champions
+ * par nom, même servis à l'envers », hands it the bundle's map reversed and
+ * compares the whole array. A fixture already in order would have proved
+ * nothing (`docs/RECETTE.md`, mode 7).
+ *
+ * The region NAME is resolved here and `null` when no region document carries
+ * the identifier — the card then shows the identifier, which is a content
+ * defect a player can report, rather than an empty line nobody notices.
+ */
+export function championCards(bundle: ContentBundle): readonly ChampionCard[] {
+  return [...bundle.champions.values()]
+    .map((champion) => ({
+      id: champion.id,
+      name: champion.name,
+      title: champion.title,
+      pitch: champion.pitch,
+      regionId: champion.origin.regionId,
+      regionName: bundle.regions.get(champion.origin.regionId)?.name ?? null,
+      attributes: champion.attributes,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'fr'));
 }
 
 export const contentRoutes: FastifyPluginCallback<AppPluginOptions> = (app, options, done) => {
@@ -120,6 +149,37 @@ export const contentRoutes: FastifyPluginCallback<AppPluginOptions> = (app, opti
         .header('cache-control', 'no-cache')
         .status(200)
         .send({ contentVersion: version, counts, etag });
+    },
+  );
+
+  /**
+   * The catalogue the character-choice screen reads. PUBLIC, like the
+   * manifest, and for the same reason: it says what a deployment offers,
+   * which is what a player needs before they have chosen anything.
+   *
+   * `no-cache`, NOT `immutable`. `CONTENT_CACHE_CONTROL` is safe only on a URL
+   * keyed on a content version; this one is not, so a deployment that shipped
+   * a fourth champion would be invisible to every browser that had already
+   * answered the question once.
+   *
+   * `namedInIndex` is read from `championIndex`, which is a DIFFERENT file
+   * from the sheets (`content/champions-index.json`): the two numbers are what
+   * let the screen say « trois fiches, quatorze noms » instead of pretending
+   * the Freljord holds three people.
+   */
+  routes.get(
+    '/api/content/champions',
+    { schema: { response: { 200: zChampionCatalogueResponse } } },
+    (_request, reply) => {
+      const bundle = deps.content.bundle;
+      void reply
+        .header('cache-control', 'no-cache')
+        .status(200)
+        .send({
+          contentVersion: contentVersion(bundle.version, bundle.hash),
+          champions: [...championCards(bundle)],
+          namedInIndex: bundle.championIndex.size,
+        });
     },
   );
 

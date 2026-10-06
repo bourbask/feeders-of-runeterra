@@ -25,6 +25,13 @@
  *      so insertion order is NOT reading order. `store.test.ts` delivers 3, 1,
  *      2 and expects [1, 2, 3]: drop the sort in `applyEvent` and it goes red.
  *
+ * AND IT SENDS EXACTLY ONE KIND OF WRITE: `c2s.intent`, through `sendIntent`.
+ * A question, never an answer — `zC2SIntent` carries an `Intent` and nothing
+ * else, and this store records only that it is WAITING. It never marks a
+ * champion as taken, never opens a screen and never writes a line of its own:
+ * the outcome arrives as `s2c.rejected` or as journal entries, like everything
+ * else here.
+ *
  * THE STORE NEVER RECOMPOSES A PROOF. `proofs` holds what `s2c.turn_proof`
  * delivered, verbatim. There is no code path from an event to a proof entry,
  * on purpose: a proof assembled from local state would be a client inventing
@@ -39,7 +46,7 @@ import type {
   TurnProofDto,
 } from '@for/contracts';
 import { zS2CEnvelope } from '@for/contracts';
-import type { GameEvent } from '@for/engine';
+import type { GameEvent, Intent } from '@for/engine';
 import type { StoreApi } from 'zustand/vanilla';
 import { createStore } from 'zustand/vanilla';
 
@@ -79,6 +86,20 @@ export interface Rejection {
   readonly code: RejectionCode;
 }
 
+/**
+ * An intent that is on the wire and has had no answer yet.
+ *
+ * IT IS NOT A RESULT, AND IT NEVER BECOMES ONE. The client knows what it
+ * asked and nothing about what will happen: the server answers with an
+ * `s2c.rejected` carrying this `intentId`, or with the journal entries the
+ * decision produced. Nothing in this file turns a `pendingIntent` into a
+ * success — that would be the mirror inventing an outcome (invariant 3).
+ */
+export interface PendingIntent {
+  readonly intentId: string;
+  readonly type: Intent['type'];
+}
+
 export interface TableState {
   readonly status: ConnectionStatus;
   readonly welcome: WelcomeInfo | null;
@@ -114,6 +135,8 @@ export interface TableState {
   /** Turns whose `c2s.why` is in flight, so one click never sends twice. */
   readonly pendingProofs: readonly string[];
   readonly lastRejection: Rejection | null;
+  /** The intent in flight, if any. Cleared by its refusal, never by a guess. */
+  readonly pendingIntent: PendingIntent | null;
   /** Frames that did not parse. Observable, because silence is not a report. */
   readonly malformedFrames: number;
   /** How many times the client asked the server to repeat itself. */
@@ -124,6 +147,11 @@ export interface TableState {
   readonly hello: () => void;
   readonly toggleProof: (correlationId: string) => void;
   readonly requestResume: () => void;
+  /**
+   * Sends ONE intent and returns the `intentId` the server will answer under.
+   * The only mutating frame this client has (`zC2SIntent`).
+   */
+  readonly sendIntent: (intent: Intent) => string;
   /** Hands the HTTP journal page to the store. Replaces, never appends. */
   readonly backfill: (
     entries: readonly { readonly seq: number; readonly event: GameEvent }[],
@@ -151,6 +179,7 @@ const EMPTY: Omit<
   | 'hello'
   | 'toggleProof'
   | 'requestResume'
+  | 'sendIntent'
   | 'backfill'
   | 'history'
   | 'status'
@@ -167,6 +196,7 @@ const EMPTY: Omit<
   openProofs: [],
   pendingProofs: [],
   lastRejection: null,
+  pendingIntent: null,
   malformedFrames: 0,
   resyncRequests: 0,
 };
@@ -392,7 +422,15 @@ export function createTableStore(deps: TableStoreDeps): StoreApi<TableState> {
           return;
 
         case 's2c.rejected':
-          set({ lastRejection: { intentId: frame.p.intentId, code: frame.p.code } });
+          // THE REFUSAL CLOSES THE INTENT IT NAMES, AND ONLY THAT ONE. An
+          // `intentId` that is not the one in flight is still shown — the
+          // server refused something — but it does not clear a request that
+          // is still waiting for its own answer.
+          set((state) => ({
+            lastRejection: { intentId: frame.p.intentId, code: frame.p.code },
+            pendingIntent:
+              state.pendingIntent?.intentId === frame.p.intentId ? null : state.pendingIntent,
+          }));
           return;
 
         case 's2c.ping':
@@ -448,6 +486,24 @@ export function createTableStore(deps: TableStoreDeps): StoreApi<TableState> {
       },
 
       requestResume,
+
+      /**
+       * THE CLIENT'S ONLY WRITE. It puts a question on the wire and records
+       * that it is waiting; it writes no line, marks no champion as taken and
+       * opens no screen. What happens next arrives as `s2c.rejected` or as
+       * journal entries — `store.test.ts`, « envoie `c2s.intent` et n'invente
+       * aucun résultat ».
+       *
+       * The previous refusal is dropped at the same time: a banner left over
+       * from the last attempt, still on screen while a new one is in flight,
+       * reads as the answer to the new one.
+       */
+      sendIntent: (intent: Intent): string => {
+        const intentId = deps.newId();
+        set({ pendingIntent: { intentId, type: intent.type }, lastRejection: null });
+        emit({ v: 1, t: 'c2s.intent', id: intentId, p: { intent } });
+        return intentId;
+      },
 
       backfill: (entries): void => {
         // `deliverySeq` vaut zéro : la page HTTP n'en porte pas, et aucune de

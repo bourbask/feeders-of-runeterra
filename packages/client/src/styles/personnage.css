@@ -1,0 +1,170 @@
+/*
+ * L'écran de choix de personnage.
+ *
+ * AUCUNE VALEUR EN DUR ICI, et aucune teinte nouvelle : tout vient de l'étage 2
+ * et de l'étage 3 de `tokens.css`. Le budget de la §2.1 est de treize teintes et
+ * quatre accents, et cet écran n'en dépense aucune de plus — il réemploie
+ * `--accent`, `--annule`, `--texte-discret` et les surfaces.
+ *
+ * Les deux seules longueurs écrites en chiffres, `16rem` et `60rem`, existaient
+ * déjà dans `global.css` : la dette de `tokens.test.ts` ne bouge pas d'une
+ * valeur. Le plancher de la grille, 16rem, est sous le seuil de colonne unique,
+ * donc la grille ne peut pas déborder l'écran le plus étroit.
+ */
+
+.fr-personnage__titre {
+  font-size: var(--t-ecran);
+  margin: 0 0 var(--e-4);
+}
+
+.fr-recherche {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+  margin-bottom: var(--e-4);
+}
+
+.fr-recherche__libelle {
+  font-size: var(--t-micro);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texte-discret);
+}
+
+.fr-recherche__champ {
+  font: inherit;
+  color: var(--texte);
+  background: var(--fond-panneau);
+  border: var(--filet-fin) solid var(--trait);
+  border-radius: var(--r-m);
+  padding: var(--e-2) var(--e-3);
+}
+
+.fr-recherche__champ:focus-visible {
+  outline: var(--filet-large) solid var(--trait-fort);
+  outline-offset: var(--filet-fin);
+}
+
+/* La grille de cartes. `auto-fill` plutôt qu'un nombre de colonnes : le nombre
+   de champions est du contenu, et une mise en page qui dépend du contenu est
+   une mise en page qui casse le jour où le contenu grandit. */
+.fr-champions {
+  list-style: none;
+  margin: 0 0 var(--e-6);
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: var(--e-4);
+}
+
+.fr-champion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+  background: var(--fond-panneau);
+  border: var(--filet-fin) solid var(--trait);
+  border-radius: var(--r-m);
+  padding: var(--e-4);
+}
+
+.fr-champion__nom {
+  font-size: var(--t-titre);
+  margin: 0;
+}
+
+/* La région est la seule information de la carte qui serve aussi à chercher :
+   elle se lit donc d'un coup d'œil, au-dessus du titre. */
+.fr-champion__region {
+  font-size: var(--t-micro);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0;
+}
+
+.fr-champion__titre {
+  font-size: var(--t-petit);
+  color: var(--texte-discret);
+  margin: 0;
+}
+
+.fr-champion__accroche {
+  font-size: var(--t-base);
+  margin: 0;
+  flex: 1;
+}
+
+.fr-champion__attributs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-2);
+}
+
+.fr-champion__attribut-nom {
+  font-size: var(--t-micro);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texte-discret);
+}
+
+.fr-champion__attribut-valeur {
+  font-size: var(--t-base);
+}
+
+/* Le refus porte une couleur ET un mot : la couleur ne porte jamais seule une
+   information (05-interface.md règle 2), donc le code du serveur est écrit à
+   côté de la phrase. */
+.fr-personnage__refus {
+  background: var(--annule-aplat);
+  color: var(--annule);
+  border-radius: var(--r-m);
+  padding: var(--e-2) var(--e-3);
+  margin: 0 0 var(--e-4);
+}
+
+.fr-personnage__code {
+  font-family: ui-monospace, monospace;
+  font-size: var(--t-petit);
+}
+
+.fr-personnage__attente {
+  background: var(--surface-haute);
+  border-radius: var(--r-m);
+  padding: var(--e-2) var(--e-3);
+  margin: 0 0 var(--e-4);
+}
+
+.fr-personnage__manque {
+  font-size: var(--t-petit);
+  color: var(--texte-discret);
+  margin: 0 0 var(--e-4);
+}
+
+.fr-distribution {
+  margin-bottom: var(--e-4);
+}
+
+.fr-distribution__titre {
+  font-size: var(--t-base);
+  margin: 0;
+}
+
+.fr-distribution__explication {
+  font-size: var(--t-petit);
+  color: var(--texte-discret);
+  margin: 0 0 var(--e-2);
+}
+
+.fr-distribution__liste {
+  margin: 0;
+  padding-left: var(--e-5);
+}
+
+@media (max-width: 60rem) {
+  .fr-champions {
+    grid-template-columns: 1fr;
+  }
+}

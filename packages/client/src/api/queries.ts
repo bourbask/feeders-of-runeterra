@@ -17,6 +17,7 @@ import {
   zCampaignDetailResponse,
   zCampaignListResponse,
   zCampaignLogResponse,
+  zChampionCatalogueResponse,
   zLogoutResponse,
   zMeResponse,
 } from '@for/contracts';
@@ -31,6 +32,7 @@ export const queryKeys = {
   campaigns: () => ['campaigns'] as const,
   campaign: (id: CampaignId) => ['campaigns', id] as const,
   campaignLog: (id: CampaignId, sinceSeq: number) => ['campaigns', id, 'log', sinceSeq] as const,
+  champions: () => ['content', 'champions'] as const,
 };
 
 export const fetchMe = async (deps: HttpDeps) =>
@@ -81,6 +83,27 @@ export const campaignsQuery = (deps: HttpDeps) => ({
 export const campaignLogQuery = (deps: HttpDeps, id: CampaignId) => ({
   queryKey: queryKeys.campaignLog(id, 0),
   queryFn: async () => fetchCampaignLog(deps, id, 0),
+});
+
+/**
+ * The champions a player may choose from.
+ *
+ * CONTENT REACHES THE BROWSER BY HTTP, NEVER BY THE BUNDLE
+ * (01-architecture.md section 2.5): `@for/content` is forbidden to this
+ * package by `.dependency-cruiser.cjs`, so this read is the only way the
+ * screen learns that Ashe exists.
+ *
+ * NOT IN THE SOCKET STORE, deliberately. The catalogue is the same for every
+ * table and for every player; the store holds what the SERVER SAID ABOUT THIS
+ * TABLE, and a snapshot wipes it. A catalogue wiped by a snapshot would blank
+ * the choice screen on every reconnection.
+ */
+export const fetchChampions = async (deps: HttpDeps) =>
+  request(deps, { path: '/api/content/champions', schema: zChampionCatalogueResponse });
+
+export const championsQuery = (deps: HttpDeps) => ({
+  queryKey: queryKeys.champions(),
+  queryFn: async () => fetchChampions(deps),
 });
 
 export const campaignQuery = (deps: HttpDeps, id: CampaignId) => ({

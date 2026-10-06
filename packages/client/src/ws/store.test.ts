@@ -1,4 +1,5 @@
 import type { C2SMessage } from '@for/contracts';
+import { zC2SMessage } from '@for/contracts';
 import { aCorrelationId, aTableState, anEvent, anId } from '@for/testkit';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { StoreApi } from 'zustand/vanilla';
@@ -572,6 +573,84 @@ describe('le flux de narration', () => {
 
     expect(store.getState().narrations[NARRATION]?.status).toBe('failed');
     expect(store.getState().lines).toEqual([]);
+  });
+});
+
+/**
+ * LA PREMIÈRE INTENTION QUE CE CLIENT ENVOIE (UI-03).
+ *
+ * `c2s.intent` est la SEULE trame mutante du protocole, et ce bloc mesure les
+ * deux moitiés de l'invariant 3 : ce qui part est exactement ce qu'on a
+ * demandé, et ce qui revient est la seule chose qui change l'écran.
+ */
+describe('l’envoi d’une intention', () => {
+  const DEMANDE = {
+    type: 'character.create_draft',
+    championSlug: 'sejuani',
+    spread: { vif: 2, coeur: 1, fer: 3, ombre: 2, esprit: 1 },
+    background: 'Elle a conduit la horde.',
+  } as const;
+
+  it('met UNE trame `c2s.intent` sur le fil, avec l’intention mot pour mot', () => {
+    const intentId = store.getState().sendIntent(DEMANDE);
+
+    expect(envoyes).toHaveLength(1);
+    expect(envoyes[0]).toEqual({ v: 1, t: 'c2s.intent', id: intentId, p: { intent: DEMANDE } });
+    // Et la trame passe le contrat : une trame que le serveur refuserait au
+    // schéma serait verte ici sans cette ligne.
+    expect(zC2SMessage.safeParse(envoyes[0]).success).toBe(true);
+  });
+
+  it('n’invente aucun résultat : ni ligne, ni état de table, ni curseur', () => {
+    store.getState().sendIntent(DEMANDE);
+
+    const etat = store.getState();
+    expect(etat.lines).toEqual([]);
+    expect(etat.table).toBeNull();
+    expect(etat.lastSeq).toBe(0);
+    expect(etat.lastDeliverySeq).toBe(0);
+    // Ce qu'il retient est qu'il ATTEND, et le type de ce qu'il a demandé.
+    expect(etat.pendingIntent).toEqual({
+      intentId: etat.pendingIntent?.intentId,
+      type: DEMANDE.type,
+    });
+  });
+
+  it('le refus qui PORTE SON identifiant clôt l’attente', () => {
+    const intentId = store.getState().sendIntent(DEMANDE);
+    store.getState().receive({
+      v: 1,
+      t: 's2c.rejected',
+      id: aCorrelationId(9),
+      ts: 1,
+      p: { intentId, code: 'champion_locked', message: 'x' },
+    });
+
+    expect(store.getState().pendingIntent).toBeNull();
+    expect(store.getState().lastRejection).toEqual({ intentId, code: 'champion_locked' });
+  });
+
+  it('un refus qui en nomme une AUTRE ne clôt pas celle qui attend', () => {
+    // L'AUTRE SENS, et il est le vrai garde-fou : sans la comparaison
+    // d'identifiants, le refus d'un geste quelconque effacerait l'attente de
+    // celui-ci, et l'écran se dirait servi alors qu'il attend toujours.
+    const intentId = store.getState().sendIntent(DEMANDE);
+    store.getState().receive({
+      v: 1,
+      t: 's2c.rejected',
+      id: aCorrelationId(10),
+      ts: 1,
+      p: { intentId: aCorrelationId(11), code: 'rate_limited', message: 'x' },
+    });
+
+    expect(store.getState().pendingIntent?.intentId).toBe(intentId);
+  });
+
+  it('un instantané efface l’attente : le serveur a tout réécrit', () => {
+    store.getState().sendIntent(DEMANDE);
+    store.getState().receive(snapshotFrame(aTableStateDto({ seq: 3 }), 3, 1));
+
+    expect(store.getState().pendingIntent).toBeNull();
   });
 });
 
